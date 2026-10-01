@@ -157,8 +157,8 @@ class CameraPageTests(SimpleTestCase):
     def test_page_and_script(self):
         """Functionality: 页面及 JavaScript 文件具有正确响应。
         Inputs: self.client 与仓库前端文件。
-        Outputs: 状态、摄像头权限头和 MIME 断言；关闭文件响应。
-        Logic: 读取并关闭 FileResponse，避免文件句柄残留。
+        Outputs: 状态、摄像头权限头和 MIME 断言；关闭响应。
+        Logic: 读取普通响应正文，文件由视图读取时自动关闭。
         Constraints: 不代表真实手机页面布局已验证。
         """
         for path, mime in [("/", "text/html"), ("/assets/camera.js", "text/javascript")]:
@@ -167,7 +167,7 @@ class CameraPageTests(SimpleTestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertIn(mime, response["Content-Type"])
                 self.assertEqual(response["Permissions-Policy"], "camera=(self), microphone=()")
-                self.assertTrue(b"".join(response.streaming_content))
+                self.assertTrue(response.content)
             finally:
                 response.close()
 
