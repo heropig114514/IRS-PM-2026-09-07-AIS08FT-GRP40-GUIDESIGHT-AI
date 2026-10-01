@@ -19,7 +19,7 @@ Copy-Item .env.example .env
 ```powershell
 .\.venv\Scripts\python.exe manage.py migrate
 .\.venv\Scripts\python.exe manage.py check
-.\.venv\Scripts\python.exe -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --lifespan off
+.\.venv\Scripts\python.exe -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --lifespan off --ws websockets-sansio --ws-max-size 1048576 --ws-per-message-deflate false
 ```
 
 仅首次创建 `.env` 时复制模板，避免覆盖自己的配置。已有进程环境变量优先于 `.env`。密钥缺失时启动失败；SQLite 默认文件是 `backend/db.sqlite3`，不会提交。
@@ -28,7 +28,7 @@ Copy-Item .env.example .env
 
 健康检查：<http://127.0.0.1:8766/api/health/>。正常响应为 `{"status":"ok","database":"sqlite"}`；数据库故障返回 503，不重试、不返回连接凭据。
 
-`/` 暂无页面，返回 404 是预期结果。`/admin/` 为 Django 管理后台，需先创建管理员：
+`/` 为手机摄像头回传页；`/ws/echo/` 为单实例内存回传 WebSocket。`/admin/` 为 Django 管理后台，需先创建管理员：
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py createsuperuser
@@ -53,7 +53,9 @@ Copy-Item .env.example .env
 
 API 默认要求登录，仅健康检查显式允许匿名。新业务应用放在本目录，例如执行 `manage.py startapp detection`，再将应用加入 `INSTALLED_APPS`、在 `config/urls.py` 注册路由。按 `models.py`（ORM）、`serializers.py`（契约）、`services.py`（业务规则）、`views.py`（HTTP 适配）划分职责；有实际功能时才创建相应文件。
 
-当前没有业务表、文件存储、推理模型、队列、注册/登录 API 或 WebSocket 路由。Django 管理后台提供管理员登录；后续产品账号接口需独立设计。ASGI 入口为后续扩展保留运行方式，不代表已有实时推理能力。
+`core/echo.py` 提供二进制原样回传和应用级 ping/pong。每连接 15 秒无输入时关闭；单帧最多 1 MiB、文本最多 1024 字节，进程内最多 4 个连接。只允许明确配置的 Origin 与一致 Host。必须使用一个 Uvicorn worker；上限不在多进程间共享。
+
+`core/camera.py` 从根目录 frontend 的固定白名单读取页面/资源，不暴露任意文件。匿名诊断入口不保存媒体，也不依赖管理后台账号。协议、默认图像参数及客户端测试见 [前端说明](../frontend/README.md)。当前没有业务表、文件存储、推理模型、队列或产品账号接口。
 
 前端优先通过同源代理访问后端，不开放通配 CORS。会话认证下的业务写请求需有效 CSRF token。接口失败不得隐式重试或改用其他算法；实验参数修改须获得用户明确授权。
 
@@ -71,8 +73,12 @@ API 默认要求登录，仅健康检查显式允许匿名。新业务应用放�
 
 测试使用临时数据库，不修改本地开发数据库。`.github/workflows/backend.yml` 在 Python 3.12 中执行以上自动检查。当前没有 `tools/check_docs.py`；注释和声明/变量索引需要人工复核，CI 不宣称检查了注释语义。
 
+前端另运行 `node --test ../frontend/tests/*.test.mjs`，Node 22+。后端队列测试与前端 socket mock 不验证真实手机权限或摄像头。
+
 ## 生产配置边界
 
 显式安装 `requirements-production.txt`，设置 `DJANGO_SETTINGS_MODULE=config.production`，以及模板所列的全部 `DJANGO_ALLOWED_HOSTS` 和 `POSTGRES_*` 变量，再运行迁移与服务。缺失配置或 PostgreSQL 故障不会回退到 SQLite。
 
-本框架未包含真实服务器、TLS 或反向代理部署。HTTPS 终止在代理时，需先明确可信代理边界，再配置 `SECURE_PROXY_SSL_HEADER` 等项；当前不信任任意转发协议头。静态资源须先 `manage.py collectstatic --noinput`，然后由 Web 服务器提供。正式部署前运行 `manage.py check --deploy` 并处理部署相关项。
+当前摄像头服务器使用独立 `config.camera_server`，显式指定本应用 SQLite 数据路径，并通过现有可信同机 Nginx 的 `/prs/` 路由接入 HTTPS；不使用 PostgreSQL 配置。独立系统用户、环境和资源限制见 [部署说明](deploy/README.md)。这属于明确的独立部署配置，不是 PostgreSQL 故障后的回退。
+
+未来正式业务若使用 PostgreSQL，继续显式选择 `config.production`；HTTPS 代理边界确认后才能配置协议头信任。管理后台静态资源需 `manage.py collectstatic --noinput` 并交给 Web 服务器。摄像头部署不公开 `/prs/admin/`，诊断页面不需要管理后台。

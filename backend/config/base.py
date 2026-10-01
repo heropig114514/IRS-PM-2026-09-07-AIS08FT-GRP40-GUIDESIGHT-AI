@@ -1,6 +1,6 @@
 """Responsibilities: HTTP、ORM、会话认证、管理后台与日志的共享配置。
 Implementation: 读取 backend/.env，必填密钥缺失时停止启动；数据库由环境配置模块定义。
-Related Modules: config.settings/production 选择数据库；core 提供公共 API。
+Related Modules: config.settings/production/camera_server 选择数据库；core 提供公共 API 与回传。
 Declaration Index: None。
 Variable Index:
 - BASE_DIR — backend 的绝对路径；SECRET_KEY — 必填 Django 密钥。
@@ -13,6 +13,7 @@ Variable Index:
 - STATIC_URL/STATIC_ROOT — 管理后台静态资源地址和收集目录。
 - REST_FRAMEWORK — JSON 接口、会话认证、默认登录权限及错误处理。
 - LOGGING — core 与 Django 请求错误的控制台日志。
+- CAMERA_ALLOWED_ORIGINS — 本地摄像头 WebSocket 的明确同源白名单。
 """
 
 import os
@@ -72,6 +73,7 @@ AUTH_PASSWORD_VALIDATORS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True
 TIME_ZONE = "UTC"
+CAMERA_ALLOWED_ORIGINS = ("http://127.0.0.1:8766", "http://localhost:8766")
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 REST_FRAMEWORK = {

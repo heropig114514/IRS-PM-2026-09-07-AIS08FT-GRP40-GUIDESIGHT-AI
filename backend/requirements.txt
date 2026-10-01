@@ -1,5 +1,5 @@
 # Responsibilities: Django/DRF/ASGI 运行依赖，沿用参考项目本地已安装版本。
-# Implementation: 直接依赖固定版本，不安装面试、LLM 或模型推理依赖。
+# Implementation: 固定直接依赖；websockets 支持二进制回传，不安装面试或推理依赖。
 # Related Modules: requirements-dev.txt, requirements-production.txt。
 # Declaration Index: None。
 # Variable Index: None。
@@ -7,3 +7,4 @@ Django==5.2.17
 djangorestframework==3.18.1
 uvicorn==0.52.4
 python-dotenv==1.2.3
+websockets==16.1.1

@@ -1,0 +1,110 @@
+<!doctype html>
+<!-- Responsibilities: 手机摄像头回传工作台的语义结构。
+Implementation: 本地 video 与只显示服务端回传内容的 img 分开；脚本由外部模块加载。
+Related Modules: camera.css, camera.js, echo-client.js。
+Declaration Index: None。
+Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头数据。 -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f4f7fa" />
+    <title>PRS · 摄像头回传</title>
+    <link rel="stylesheet" href="./assets/camera.css" />
+    <script type="module" src="./assets/camera.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="./"><span class="brand-mark">P</span> PRS LAB</a
+        ><span class="top-note">CAMERA ECHO · 01</span>
+      </header>
+      <main>
+        <section class="intro">
+          <p class="eyebrow">连接，从看见开始</p>
+          <h1>镜头里的此刻，<br /><span>由服务端传回来。</span></h1>
+          <p class="subtitle">
+            打开手机摄像头，验证图像从采集、传输到回显的完整链路。
+          </p>
+        </section>
+        <section class="workspace" aria-label="摄像头回传工作台">
+          <div class="workspace-header">
+            <div><span class="live-dot"></span><strong>图像回传</strong></div>
+            <span id="status" class="status" role="status">尚未连接</span>
+          </div>
+          <div class="screens">
+            <article class="screen">
+              <div class="screen-label">
+                <span>01 / 本地镜头</span><span class="tag">采集端</span>
+              </div>
+              <div class="media">
+                <video id="preview" muted autoplay playsinline></video>
+                <div id="local-placeholder" class="placeholder">
+                  <span class="camera-symbol">◎</span
+                  ><strong>准备好你的镜头</strong
+                  ><small>点击下方按钮开启摄像头</small>
+                </div>
+              </div>
+            </article>
+            <article class="screen returned">
+              <div class="screen-label">
+                <span>02 / 服务端回显</span><span class="tag">接收端</span>
+              </div>
+              <div class="media">
+                <img id="echo" alt="服务端原样返回的摄像头图像" hidden />
+                <div id="echo-placeholder" class="placeholder">
+                  <span class="return-symbol">↵</span
+                  ><strong>等待第一帧返回</strong
+                  ><small>这里显示经过服务端的图像</small>
+                </div>
+                <span id="verified" class="verified" hidden>字节一致 ✓</span>
+              </div>
+            </article>
+          </div>
+          <div class="controls">
+            <label class="camera-select"
+              >摄像头<select id="camera">
+                <option value="environment">后置摄像头</option>
+                <option value="user">前置摄像头</option>
+              </select></label
+            ><button id="start" class="button primary">
+              开启摄像头并回传 <span>↗</span></button
+            ><button id="stop" class="button secondary" disabled>停止</button
+            ><button id="ping" class="button text-button">测试连接</button>
+          </div>
+          <p id="message" class="message" aria-live="polite">
+            仅申请摄像头权限。图像只在内存中回传，不录制、不保存。
+          </p>
+        </section>
+        <section class="metrics" aria-label="实时传输统计">
+          <div>
+            <span>往返延迟</span
+            ><strong><b id="latency">—</b><small>ms</small></strong>
+          </div>
+          <div>
+            <span>已发送 / 已返回</span
+            ><strong><b id="frames">0 / 0</b><small>帧</small></strong>
+          </div>
+          <div>
+            <span>当前帧大小</span
+            ><strong><b id="size">—</b><small>KB</small></strong>
+          </div>
+          <div>
+            <span>实际回传速率</span
+            ><strong><b id="fps">—</b><small>fps</small></strong>
+          </div>
+        </section>
+        <section class="flow" aria-label="数据流程">
+          <span>手机镜头</span><i>→</i><span>安全传输</span><i>→</i
+          ><span>服务端原样回传</span><i>→</i><span>屏幕回显</span>
+        </section>
+      </main>
+      <footer>
+        <span>PRS Practice Module</span><span>第一阶段 · 连接验证</span>
+      </footer>
+    </div>
+  </body>
+</html>

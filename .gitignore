@@ -26,3 +26,4 @@ node_modules/
 dist/
 media/
 staticfiles/
+test-results/
