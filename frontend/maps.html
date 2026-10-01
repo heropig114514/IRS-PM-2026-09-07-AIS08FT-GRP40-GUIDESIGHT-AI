@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Responsibilities: OSM 位置与 ORS 步行路线测试界面。
-Implementation: 固定 Leaflet 1.9.4/SRI；用户明确定位、选点、示例和规划；nonce 由 core.maps 替换。
+Implementation: 固定 Leaflet 1.9.4/SRI；明确定位、选点、示例和规划；复用 button 触控样式；nonce 由 core.maps 替换。
 Related Modules: maps-client.js, maps-page.js, camera.css, core.maps/services。
 Declaration Index: None。
 Variable Index: __CSP_NONCE__ — CSS nonce；表单 id 供控制器引用；Leaflet URL/integrity — 固定依赖。 -->
@@ -122,9 +122,11 @@ Variable Index: __CSP_NONCE__ — CSS nonce；表单 id 供控制器引用；Lea
             NUS 区域预览，并非设备位置。
           </div>
           <div class="map-controls">
-            <button id="locate" class="primary" disabled>
+            <button id="locate" class="button primary" disabled>
               获取当前位置作为起点</button
-            ><button id="example" disabled>填入 NUS 测试示例</button>
+            ><button id="example" class="button secondary" disabled>
+              填入 NUS 测试示例
+            </button>
           </div>
           <p id="maps-message" class="location-details" role="status">
             正在检查 ORS 配置。
@@ -181,7 +183,7 @@ Variable Index: __CSP_NONCE__ — CSS nonce；表单 id 供控制器引用；Lea
               </fieldset>
             </div>
             <div class="map-controls">
-              <button id="plan" class="primary" type="submit" disabled>
+              <button id="plan" class="button primary" type="submit" disabled>
                 规划步行路线
               </button>
             </div>
