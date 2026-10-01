@@ -1,115 +1,256 @@
-/* Responsibilities: 地图页面状态、配置获取和用户发起的定位显示。
- * Implementation: SDK 初始化一次；点击后设备定位，等待瓦片；错误明确呈现且无隐式重试。
- * Related Modules: maps-client.js, maps.html, core.maps。
- * Declaration Index: showFailure — 错误状态；initialize — 初始化配置；locate — 定位并创建地图。
- * Variable Index: button/status/message — 状态 DOM；maps — SDK；authenticationFailed — 认证失败锁。
+/* Responsibilities: Leaflet/OSM 地图、设备位置、显式示例和步行路线界面。
+ * Implementation: 初始化一次地图；串行用户操作；错误和底图状态分别呈现；无隐式重试。
+ * Related Modules: maps-client.js, maps.html, core.maps/services。
+ * Declaration Index: setCoordinates — 填坐标；setBusy — 操作锁；clearRoute — 清旧路线；
+ * showFailure — 错误展示；initialize — 配置/地图；locate — 设备起点；useExample — 显式示例；plan — 请求路线。
+ * Variable Index: button/planButton/exampleButton/status/message — 状态 DOM；map/tiles — Leaflet 实例；
+ * routeLayer/startMarker/endMarker — 唯一可替换图层；busy — 操作锁；configured — 后端配置状态；
+ * tileFailed — 本轮底图失败；NUS_START/NUS_END — 明确标记的固定测试点。
  */
 import {
   getDevicePosition,
-  loadGoogleMaps,
-  waitForTiles,
+  parseCoordinateInputs,
+  requestWalkingRoute,
+  turnLabel,
 } from "./maps-client.js";
-
 const button = document.querySelector("#locate");
+const planButton = document.querySelector("#plan");
+const exampleButton = document.querySelector("#example");
 const status = document.querySelector("#maps-status");
 const message = document.querySelector("#maps-message");
-let maps;
-let authenticationFailed = false;
+const NUS_START = [103.7766, 1.2971];
+const NUS_END = [103.7735, 1.2991];
+let map, tiles, routeLayer, startMarker, endMarker;
+let busy = false,
+  configured = false,
+  tileFailed = false;
 
-/* Functionality: 呈现诊断错误而不输出敏感值。
- * Inputs: Error、当前 DOM；Outputs: 状态文本与固定控制台错误标识。
- * Logic: 文本通过 textContent 插入；调用方管理按钮及认证锁。
- * Constraints: 不向控制台写入 key、坐标或异常 URL。
+/* Functionality: 填写起点或终点，不调用外部服务。
+ * Inputs: prefix(start/end)、point [经度,纬度]；Outputs: input 值。
+ * Logic: 显示六位小数；Constraints: 调用者必须明确坐标来源。
+ */
+function setCoordinates(prefix, point) {
+  document.querySelector(`#${prefix}-longitude`).value = point[0].toFixed(6);
+  document.querySelector(`#${prefix}-latitude`).value = point[1].toFixed(6);
+}
+
+/* Functionality: 串行操作，防止异步定位和路线相互覆盖。
+ * Inputs: value 布尔值、configured；Outputs: 按钮和字段 disabled。
+ * Logic: 配置只限制路线按钮；地图点选也读取 busy；Constraints: 不排队或重试。
+ */
+function setBusy(value) {
+  busy = value;
+  button.disabled = exampleButton.disabled = value;
+  planButton.disabled = value || !configured;
+  for (const input of document.querySelectorAll("#route-form input"))
+    input.disabled = value;
+}
+
+/* Functionality: 清除旧路线和起终点图层，避免错误后继续展示过期结果。
+ * Inputs: 当前图层/DOM；Outputs: 删除图层与旧列表/汇总。
+ * Logic: Leaflet remove 后置空引用；Constraints: 保留地图、底图和用户输入。
+ */
+function clearRoute() {
+  for (const layer of [routeLayer, startMarker, endMarker]) layer?.remove();
+  routeLayer = startMarker = endMarker = undefined;
+  document.querySelector("#steps").replaceChildren();
+  document.querySelector("#route-summary").textContent = "尚未请求路线";
+}
+
+/* Functionality: 报告失败，不输出位置或密钥到日志。
+ * Inputs: error；Outputs: 状态文本和固定诊断日志。
+ * Logic: textContent 插入安全文本；Constraints: 不宣称成功、不使用示例降级。
  */
 function showFailure(error) {
   status.textContent = "未完成";
   message.textContent = error.message;
-  console.error("[PRS maps] Operation failed; see page diagnostic message.");
+  console.error("[PRS routes] Operation failed; see page diagnostic.");
 }
 
-/* Functionality: 检查配置并连接 SDK，使定位按钮可用。
- * Inputs: 同源 config/ 接口、脚本 nonce、当前页面；Outputs: DOM/SDK 状态。
- * Logic: 未配置时不访问 Google；库加载与后续地图瓦片就绪分别报告。
- * Constraints: SDK 失败后只通过手动刷新重新初始化；无自动重试。
+/* Functionality: 检查后端配置并初始化 OSM 底图。
+ * Inputs: 同源配置、固定 SRI 的 Leaflet；Outputs: 地图/配置状态/事件。
+ * Logic: 初始 NUS 视图标为区域预览；真实位置须用户点击；底图 load 与 tileerror 独立报告。
+ * Constraints: 不预下载、不覆盖瓦片缓存、不隐藏署名；加载失败需用户手动刷新。
  */
 async function initialize() {
   try {
-    const response = await fetch("./config/", { cache: "no-store" });
-    if (response.status === 503)
-      throw new Error(
-        "尚未配置 GOOGLE_MAPS_API_KEY。请提供 Maps JavaScript API key 或官方 Demo Key 后再测试。",
-      );
-    if (!response.ok)
-      throw new Error(`地图配置接口失败（HTTP ${response.status}）。`);
-    const config = await response.json();
-    status.textContent = "连接 Google 中";
-    maps = await loadGoogleMaps(config.apiKey, {
-      nonce: document.querySelector("script[nonce]").nonce,
-      onAuthFailure: () => {
-        authenticationFailed = true;
-        button.disabled = true;
-        showFailure(
-          new Error(
-            "Google Maps 认证失败：检查 key、网站限制、API 启用和配额，然后刷新页面。",
-          ),
-        );
-      },
+    if (!globalThis.L)
+      throw new Error("Leaflet 未加载，请检查 unpkg 网络后刷新页面。");
+    const response = await fetch("./config/", {
+      cache: "no-store",
+      credentials: "omit",
     });
-    if (authenticationFailed) return;
-    status.textContent = "SDK 已加载";
-    message.textContent =
-      "点击显示我的位置。地图瓦片加载完成后才会报告测试成功。";
-    button.disabled = false;
-    console.info("[PRS maps] SDK loaded; waiting for user location request.");
+    const config = await response.json();
+    if (response.status !== 503 && !response.ok)
+      throw new Error("路线配置接口失败。");
+    if (
+      config.provider !== "openrouteservice" ||
+      config.profile !== "foot-walking"
+    )
+      throw new Error("路线配置格式无效。");
+    configured = config.configured === true;
+    map = L.map("map").setView([NUS_START[1], NUS_START[0]], 16);
+    tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    });
+    tiles.on("loading", () => {
+      tileFailed = false;
+      document.querySelector("#tile-status").textContent = "底图加载中";
+    });
+    tiles.on("tileerror", () => {
+      tileFailed = true;
+      document.querySelector("#tile-status").textContent =
+        "部分底图加载失败，请检查设备网络";
+      console.error("[PRS maps] OSM tile failed.");
+    });
+    tiles.on("load", () => {
+      if (!tileFailed)
+        document.querySelector("#tile-status").textContent = "OSM 底图已加载";
+    });
+    tiles.addTo(map);
+    map.on("click", (event) => {
+      if (busy) return;
+      clearRoute();
+      setCoordinates("end", [event.latlng.lng, event.latlng.lat]);
+      endMarker = L.circleMarker(event.latlng, { color: "#147d82", radius: 8 })
+        .addTo(map)
+        .bindTooltip("所选终点");
+      message.textContent = "终点已选定。确认起点后点击规划步行路线。";
+      status.textContent = "待规划";
+    });
+    status.textContent = configured ? "ORS 已配置" : "ORS 未配置";
+    message.textContent = configured
+      ? "可获取设备起点，点击地图选择终点；或填入 NUS 示例后测试路线。"
+      : "服务器未配置 ORS_API_KEY，路线接口暂不可用。";
+    setBusy(false);
+    console.info(
+      "[PRS routes] Map initialized; backend key stays server-side.",
+    );
   } catch (error) {
     showFailure(error);
   }
 }
 
-/* Functionality: 显示真实设备坐标、精度和 Google 地图位置气泡。
- * Inputs: 用户点击、SDK、浏览器位置权限；Outputs: 坐标 DOM、地图、状态日志。
- * Logic: 单次定位后创建中心地图及 InfoWindow，等待 tilesloaded；最终恢复手动按钮。
- * Constraints: 坐标不发给 PRS；认证失败锁优先于异步成功；不回退示例位置。
+/* Functionality: 将一次设备定位作为路线起点。
+ * Inputs: 用户点击、浏览器权限；Outputs: 坐标/精度/来源和起点图层。
+ * Logic: 操作期间禁用输入；失败不采用缓存位置或示例。
+ * Constraints: 此动作不上传位置；只有后续规划请求才发送 PRS/ORS。
  */
 async function locate() {
-  button.disabled = true;
+  setBusy(true);
+  clearRoute();
   status.textContent = "定位中";
   message.textContent = "请允许浏览器使用设备位置。";
-  for (const id of ["latitude", "longitude", "accuracy"]) {
-    document.querySelector(`#${id}`).textContent = "—";
-  }
-  console.info("[PRS maps] User requested device location.");
+  document.querySelector("#location-source").textContent = "等待设备定位";
+  document.querySelector("#accuracy").textContent = "—";
+  document.querySelector("#start-longitude").value = document.querySelector(
+    "#start-latitude",
+  ).value = "";
   try {
     const { coords } = await getDevicePosition();
-    if (authenticationFailed) return;
-    const position = { lat: coords.latitude, lng: coords.longitude };
-    document.querySelector("#latitude").textContent =
-      coords.latitude.toFixed(6);
-    document.querySelector("#longitude").textContent =
-      coords.longitude.toFixed(6);
+    setCoordinates("start", [coords.longitude, coords.latitude]);
+    document.querySelector("#location-source").textContent = "设备当前位置";
     document.querySelector("#accuracy").textContent =
       `约 ${Math.round(coords.accuracy)} 米`;
-    status.textContent = "加载地图中";
-    message.textContent = "设备位置已获取，正在验证地图瓦片。";
-    const map = new maps.Map(document.querySelector("#map"), {
-      center: position,
-      zoom: 17,
-    });
-    const label = document.createElement("div");
-    label.textContent = "这台设备的位置";
-    new maps.InfoWindow({ position, content: label }).open({ map });
-    await waitForTiles(maps, map);
-    if (authenticationFailed) return;
-    status.textContent = "地图已显示";
-    message.textContent =
-      "Google Maps 瓦片已加载。位置精度由设备报告；再次点击可重新定位。";
-    console.info("[PRS maps] Device location and map tiles displayed.");
+    map.setView([coords.latitude, coords.longitude], 17);
+    startMarker = L.circleMarker([coords.latitude, coords.longitude], {
+      color: "#183047",
+      radius: 8,
+    })
+      .addTo(map)
+      .bindTooltip("设备起点");
+    status.textContent = "起点已定位";
+    message.textContent = "点击地图选择终点，然后规划步行路线。";
+    console.info("[PRS routes] Device position acquired; not yet submitted.");
   } catch (error) {
-    if (!authenticationFailed) showFailure(error);
+    showFailure(error);
   } finally {
-    button.disabled = authenticationFailed;
+    setBusy(false);
+  }
+}
+
+/* Functionality: 明确填入固定 NUS 测试坐标。
+ * Inputs: 用户点击和 NUS_START/NUS_END；Outputs: 表单、来源标签、地图视图。
+ * Logic: 不申请定位、不请求路线；Constraints: 绝不将示例标为设备当前位置。
+ */
+function useExample() {
+  clearRoute();
+  setCoordinates("start", NUS_START);
+  setCoordinates("end", NUS_END);
+  document.querySelector("#location-source").textContent =
+    "NUS 固定示例（不是设备位置）";
+  document.querySelector("#accuracy").textContent = "不适用";
+  map.setView([NUS_START[1], NUS_START[0]], 16);
+  status.textContent = "示例已填入";
+  message.textContent = "点击规划步行路线，真实调用 ORS 验证这组示例起终点。";
+}
+
+/* Functionality: 显示真实 ORS 路线和步骤，供下一阶段 Guidance Manager 接入。
+ * Inputs: 用户 submit event、四个输入值；Outputs: 路线图层、汇总、指令列表。
+ * Logic: 明确提交后清旧数据；经纬度顺序转换为 Leaflet 纬经度；用 DOM 文本保留英文原指令。
+ * Constraints: 当前仅路线规划，不是持续导航、语音调度或避障；失败无自动重试。
+ */
+async function plan(event) {
+  event.preventDefault();
+  setBusy(true);
+  clearRoute();
+  status.textContent = "请求路线中";
+  message.textContent = "起终点将发送 PRS 服务端和 ORS，等待步行路线。";
+  try {
+    const start = parseCoordinateInputs(
+      document.querySelector("#start-longitude").value,
+      document.querySelector("#start-latitude").value,
+    );
+    const end = parseCoordinateInputs(
+      document.querySelector("#end-longitude").value,
+      document.querySelector("#end-latitude").value,
+    );
+    const route = await requestWalkingRoute(start, end);
+    const points = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    routeLayer = L.polyline(points, { color: "#147d82", weight: 5 }).addTo(map);
+    startMarker = L.circleMarker(points[0], { color: "#183047", radius: 8 })
+      .addTo(map)
+      .bindTooltip("路线起点");
+    endMarker = L.circleMarker(points.at(-1), { color: "#147d82", radius: 8 })
+      .addTo(map)
+      .bindTooltip("路线终点");
+    map.fitBounds(routeLayer.getBounds(), { padding: [24, 24] });
+    document.querySelector("#route-summary").textContent =
+      `${Math.round(route.summary.distance_m)} 米 · 约 ${Math.ceil(route.summary.duration_s / 60)} 分钟 · ${route.steps.length} 条指令`;
+    for (const step of route.steps) {
+      const li = document.createElement("li");
+      const label = document.createElement("strong");
+      label.textContent = `${turnLabel(step.type)} · ${Math.round(step.distance_m)} 米`;
+      const detail = document.createElement("p");
+      detail.textContent = step.instruction;
+      li.append(label, detail);
+      document.querySelector("#steps").append(li);
+    }
+    document.querySelector("#route-attribution").textContent =
+      route.attribution;
+    status.textContent = "路线已返回";
+    message.textContent = `ORS 步行路线验证成功。请求编号：${route.request_id}。底图状态见地图下方。`;
+    console.info("[PRS routes] Walking route and instructions rendered.");
+  } catch (error) {
+    clearRoute();
+    showFailure(error);
+  } finally {
+    setBusy(false);
   }
 }
 
 button.addEventListener("click", locate);
+exampleButton.addEventListener("click", useExample);
+document.querySelector("#route-form").addEventListener("submit", plan);
+for (const input of document.querySelectorAll("#route-form input"))
+  input.addEventListener("input", () => {
+    clearRoute();
+    status.textContent = "待规划";
+    if (input.id.startsWith("start-")) {
+      document.querySelector("#location-source").textContent = "手动输入起点";
+      document.querySelector("#accuracy").textContent = "不适用";
+    }
+  });
 initialize();

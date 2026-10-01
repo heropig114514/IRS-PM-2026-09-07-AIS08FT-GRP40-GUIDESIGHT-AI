@@ -1,5 +1,5 @@
 # Responsibilities: 前后端依赖、Django、WebSocket、地图契约和 Ruff 自动检查。
-# Implementation: Ubuntu/Python 3.12/Node 22；临时密钥与测试数据库；前端无第三方依赖。
+# Implementation: Ubuntu/Python 3.12/Node 22；测试无外网；浏览器地图依赖固定 Leaflet/SRI。
 # Related Modules: backend/core/tests.py/test_echo.py/test_maps.py, frontend/tests/*.test.mjs。
 # Declaration Index: None。
 # Variable Index: DJANGO_SECRET_KEY — GITHUB_ENV 中仅供当次运行的随机配置。

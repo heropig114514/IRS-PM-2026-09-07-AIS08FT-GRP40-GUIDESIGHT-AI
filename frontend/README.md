@@ -1,6 +1,6 @@
 # Frontend
 
-手机摄像头回传和 Google Maps 定位页面，采用原生 HTML/CSS/JavaScript，无 npm 运行依赖。摄像头页只加载本地资源，独立地图页按配置加载 Google SDK。Django 从文件白名单提供模块，开发地址 `http://127.0.0.1:8766/`；服务器地址 `https://47.239.50.129/prs/`。
+手机摄像头回传和 Leaflet/OSM 步行路线页面，采用原生 HTML/CSS/JavaScript，无 npm 运行依赖。摄像头页只加载本地资源；独立地图页加载固定 SRI 的 Leaflet 1.9.4。Django 从文件白名单提供模块，开发地址 `http://127.0.0.1:8766/`；服务器地址 `https://47.239.50.129/prs/`。
 
 ## 使用
 
@@ -21,10 +21,10 @@
 
 后端 API 前缀为 `/api/`，服务器代理后为 `/prs/api/`。诊断 WebSocket 为 `/ws/echo/`，服务器为 `/prs/ws/echo/`。当前服务匿名开放回传但校验同源，并限制 4 个连接和 1 MiB 单帧；这不是身份认证系统。部署代理清除 Cookie/Authorization，诊断入口与现有应用会话隔离。业务账号与上传功能须后续独立设计。
 
-## Google Maps 定位
+## 步行路线与设备定位
 
-进入 `/prs/maps/`（开发为 `/maps/`），配置有效后点击“显示我的位置”，允许设备定位。页面分别报告 SDK、定位和瓦片状态；瓦片加载后才显示“地图已显示”。定位错误、Google 认证、网络和超时均明确失败，不自动重试、不以服务器 IP 或示例坐标代替设备位置。需要在设备/浏览器开启定位服务；浏览器可能返回粗略位置，以页面显示的精度为准。
+进入 `/prs/maps/`（开发为 `/maps/`），点击获取设备起点并允许定位，点选地图终点，再点击“规划步行路线”。也可手动填写经纬度。测试接口可点击“填入 NUS 测试示例”再规划；示例标签明确不是设备位置，初始地图只是 NUS 区域预览。浏览器可能返回粗略定位，以显示精度为准。定位与底图状态分别报告，失败不会用 IP 或示例位置替代，不自动重试。
 
-`maps-client.js` 管理 SDK/定位/瓦片契约，`maps-page.js` 管理界面。配置接口只公开网站限制型浏览器 key，不公开服务器凭据；坐标仅用于本页与 Google 地图，不发给 PRS 后端、不保存。地图页有独立 nonce CSP；摄像头页的策略不变。`tests/maps-client.test.mjs` 使用 fake 测试失败边界，不证明真实 Google 认证或设备 GPS。
+`maps-client.js` 管理定位、坐标和同源路线请求契约；`maps-page.js` 管理 Leaflet 图层与界面。浏览器使用 `[经度,纬度]` 的路线坐标，转换为 Leaflet `[纬度,经度]` 显示。`POST ./route/` 超时 25 秒；key 只在后端，配置接口不返回凭据。获取位置只填本页；明确规划时起终点发送 PRS/ORS，不写数据库、localStorage 或文件。ORS 英文 instruction 保留，类型标签中文显示。当前没有连续 GPS 跟踪、偏航重算、语音或 Guidance Manager 风险调度。
 
-Google [Maps JavaScript API key 文档](https://developers.google.com/maps/documentation/javascript/get-api-key)要求配置 key。原型也可申请[官方 Demo Key](https://developers.google.com/maps/documentation/javascript/demo-key)，无需绑定账单，但有额度和功能限制。标准 key 应启用 Maps JavaScript API，并限制网站 `https://47.239.50.129/*` 和对应 API；本地测试另加 localhost 来源。key 不能提交 Git。服务器配置见运维说明。
+地图页使用独立 nonce CSP、固定版本及 SRI；摄像头页策略不变。Leaflet 来源见[官方发布页](https://leafletjs.com/download.html)，ORS 契约见[官方路线文档](https://giscience.github.io/openrouteservice/api-reference/endpoints/directions/requests-and-return-types)。正常浏览器交互加载 `https://tile.openstreetmap.org/{z}/{x}/{y}.png`，保留 Referrer、缓存和可见 OpenStreetMap 署名；不预下载、不做离线或批量瓦片扫描，遵循 [OSM 瓦片政策](https://operations.osmfoundation.org/policies/tiles/)。托管瓦片与 ORS 的生产额度/许可须按实际用途评估。`tests/maps-client.test.mjs` 使用 fake 验证失败和契约，不能证明真实网络、ORS 配额或手机 GPS。服务端 key 配置见运维说明。

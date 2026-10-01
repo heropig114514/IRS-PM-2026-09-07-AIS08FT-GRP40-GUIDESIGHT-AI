@@ -34,7 +34,9 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe manage.py createsuperuser
 ```
 
-`/maps/` 为 Google Maps 设备定位页，`/maps/config/` 返回网站限制型浏览器 key。可在 `.env` 中配置 `GOOGLE_MAPS_API_KEY`，重启本应用生效；未配置返回明确的 503。页面和配置不缓存，位置不会提交至后端或数据库。Google SDK 的真实调用需要有效 key 和设备可访问 Google 的网络，单元测试不证明外部服务已通过。
+`/maps/` 为 Leaflet/OSM 步行路线页，`/maps/config/` 仅返回 ORS 的配置状态，不返回 key。在 `.env` 中配置 `ORS_API_KEY`，重启本应用生效；未配置返回明确的 503。`POST /maps/route/` 接受 `{"start":[经度,纬度],"end":[经度,纬度]}`，要求有效且不同的坐标、严格同源 Origin/Host 和 JSON；不接受额外字段。匿名诊断接口不依赖 Cookie，代理清除会话凭据。返回 `geometry`（GeoJSON LineString）、`summary.distance_m/duration_s`、`steps`（instruction/type/distance_m/duration_s/way_points）和 request_id。ORS 英文原指令保留，前端另显示中文转向类型。
+
+`core/services.py` 固定调用 `api.heigit.org/openrouteservice/v2/directions/foot-walking/geojson`，凭据仅在 HTTPS Authorization 头。单 worker 最多 2 次并发、20 次/分钟；请求 2 KiB、上游响应 1 MiB、网络 I/O 超时 20 秒、客户端请求超时 25 秒。失败明确返回，不重试、不重定向、不生成替代路线。页面、配置和路线响应不缓存；坐标仅处理不持久化，日志不记请求正文、坐标或 key。单元测试 mock 不证明实际 ORS、GPS 或底图已通过。
 
 当前 `DEBUG=False`，Uvicorn 不负责静态资源。若需本地操作管理后台，使用 Django 静态资源处理器启动独立开发服务：
 

@@ -23,9 +23,9 @@ CAMERA_PUBLIC_ORIGIN=https://47.239.50.129
 PRS_DB_PATH=/var/lib/prs-practice/db.sqlite3
 ```
 
-地图入口为 `https://47.239.50.129/prs/maps/`。在 `/etc/prs-camera/app.env` 追加 `GOOGLE_MAPS_API_KEY=<网站限制型 key 或 Maps Demo Key>`，仅重启 `prs-camera`；不修改 Nginx、证书和其他应用环境。浏览器 key 会经 `/prs/maps/config/` 提供给 SDK，因此必须设置网站/API 限制，不得填入服务器专用凭据。未配置时接口明确返回 503，不访问 Google。认证失败须检查 API 启用、网站限制、配额和标准 key 的账单设置；详见前端文档中的 Google 官方链接。
+地图入口为 `https://47.239.50.129/prs/maps/`。在 `/etc/prs-camera/app.env` 设置 `ORS_API_KEY=<服务端 ORS key>`，保持 root 0600，仅重启 `prs-camera`；不修改 Nginx、证书和其他应用环境。`/prs/maps/config/` 只公开 provider/profile/configured/code，key 不进入浏览器或仓库。未配置明确返回 503；认证失败检查 key/账号，429 检查 ORS 配额。服务器须能通过 HTTPS 访问 `api.heigit.org`。本原型的进程内 20 次/分钟、2 次并发限制要求保持单 worker；不能以此视为身份认证或共享配额管理。
 
-真实验证须在可访问 Google 的手机浏览器点定位，允许位置权限并确认经纬度、设备精度和地图瓦片。脚本 HTTP 200、单元测试或 PRS 健康接口均不能替代该验证。地图采用独立 CSP nonce；坐标不送至 PRS，服务端日志不记录 key 或设备位置。
+真实验证先在浏览器点击“填入 NUS 测试示例”，再点“规划步行路线”，检查底图、真实路线和转向指令。真机另点击获取设备起点并允许定位权限，检查设备精度，再选终点规划。示例验证不能替代手机 GPS 验证。浏览器须能访问固定 SRI 的 unpkg Leaflet 与 OSM 瓦片；网络失败不会改用其他地图。地图采用独立 CSP nonce；明确规划后起终点发往 PRS/ORS，不持久化，日志不记录 key 或位置。
 
 ## 发布与检查
 
