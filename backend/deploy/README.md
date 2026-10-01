@@ -23,6 +23,10 @@ CAMERA_PUBLIC_ORIGIN=https://47.239.50.129
 PRS_DB_PATH=/var/lib/prs-practice/db.sqlite3
 ```
 
+地图入口为 `https://47.239.50.129/prs/maps/`。在 `/etc/prs-camera/app.env` 追加 `GOOGLE_MAPS_API_KEY=<网站限制型 key 或 Maps Demo Key>`，仅重启 `prs-camera`；不修改 Nginx、证书和其他应用环境。浏览器 key 会经 `/prs/maps/config/` 提供给 SDK，因此必须设置网站/API 限制，不得填入服务器专用凭据。未配置时接口明确返回 503，不访问 Google。认证失败须检查 API 启用、网站限制、配额和标准 key 的账单设置；详见前端文档中的 Google 官方链接。
+
+真实验证须在可访问 Google 的手机浏览器点定位，允许位置权限并确认经纬度、设备精度和地图瓦片。脚本 HTTP 200、单元测试或 PRS 健康接口均不能替代该验证。地图采用独立 CSP nonce；坐标不送至 PRS，服务端日志不记录 key 或设备位置。
+
 ## 发布与检查
 
 从已经通过本地检查的 Git 提交生成源码归档，仅上传跟踪文件，排除 .env、数据库、虚拟环境及课程材料。解压到新的 SHA 目录，安装本应用依赖，初始化本应用数据库，再安装本目录的 systemd 单元及 Nginx include。不要对旧应用运行 migrate、pip install 或 restart。

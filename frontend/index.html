@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- Responsibilities: 手机摄像头回传工作台的语义结构。
-Implementation: 本地 video 与只显示服务端回传内容的 img 分开；脚本由外部模块加载。
-Related Modules: camera.css, camera.js, echo-client.js。
+Implementation: 本地 video 与服务端回传 img 分开；外部模块加载；链接到独立定位页面。
+Related Modules: camera.css, camera.js, echo-client.js, maps.html。
 Declaration Index: None。
 Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头数据。 -->
 <html lang="zh-CN">
@@ -20,7 +20,7 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
     <div class="shell">
       <header class="topbar">
         <a class="brand" href="./"><span class="brand-mark">P</span> PRS LAB</a
-        ><span class="top-note">CAMERA ECHO · 01</span>
+        ><a class="top-note" href="./maps/">Google Maps · 定位测试 →</a>
       </header>
       <main>
         <section class="intro">

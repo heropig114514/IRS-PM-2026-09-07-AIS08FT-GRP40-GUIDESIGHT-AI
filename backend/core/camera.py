@@ -1,6 +1,6 @@
-"""Responsibilities: 提供摄像头页面和明确白名单中的前端资源。
+"""Responsibilities: 提供摄像头页面和摄像头/地图的白名单前端资源。
 Implementation: 普通响应读取小型静态源码；不接收上传，也不根据用户输入拼接任意路径。
-Related Modules: config.urls, frontend/index.html/camera.css/camera.js/echo-client.js。
+Related Modules: config.urls, core.maps, frontend/index.html 及摄像头/地图模块。
 Declaration Index: camera_page — 主页面；camera_asset — 白名单资源；serve_file — 公共响应头。
 Variable Index: FRONTEND_DIR — 前端目录；ASSETS — 允许文件名与 MIME 的固定映射。
 """
@@ -14,6 +14,8 @@ ASSETS = {
     "camera.css": "text/css",
     "camera.js": "text/javascript",
     "echo-client.js": "text/javascript",
+    "maps-client.js": "text/javascript",
+    "maps-page.js": "text/javascript",
 }
 
 
@@ -22,7 +24,7 @@ def serve_file(name, content_type):
     Inputs: 内部白名单文件名及 MIME；读取 FRONTEND_DIR 和允许 Origin。
     Outputs: HttpResponse；read_bytes 自动关闭文件，缺失文件抛出原文件异常。
     Logic: 小型固定源码直接返回，避免同步文件迭代器在 ASGI 下隐式适配；不缓存页面。
-    Constraints: 此函数只供两个经过限定的视图使用；不接受任意路径。
+    Constraints: 此函数只供摄像头页面和经过限定的资源视图使用；不接受任意路径。
     """
     response = HttpResponse((FRONTEND_DIR / name).read_bytes(), content_type=content_type)
     response["Cache-Control"] = "no-store"
@@ -53,7 +55,7 @@ def camera_page(request):
 
 @require_safe
 def camera_asset(request, name):
-    """Functionality: 提供三个白名单 JavaScript/CSS 文件。
+    """Functionality: 提供固定白名单中的 JavaScript/CSS 文件。
     Inputs: Django request 和路由的单段 name。
     Outputs: 固定 MIME HttpResponse；未知文件抛 Http404。
     Logic: 先查固定映射，验证通过后才读取文件。

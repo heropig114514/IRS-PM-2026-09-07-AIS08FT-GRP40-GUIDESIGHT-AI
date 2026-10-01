@@ -34,6 +34,8 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe manage.py createsuperuser
 ```
 
+`/maps/` 为 Google Maps 设备定位页，`/maps/config/` 返回网站限制型浏览器 key。可在 `.env` 中配置 `GOOGLE_MAPS_API_KEY`，重启本应用生效；未配置返回明确的 503。页面和配置不缓存，位置不会提交至后端或数据库。Google SDK 的真实调用需要有效 key 和设备可访问 Google 的网络，单元测试不证明外部服务已通过。
+
 当前 `DEBUG=False`，Uvicorn 不负责静态资源。若需本地操作管理后台，使用 Django 静态资源处理器启动独立开发服务：
 
 ```powershell
