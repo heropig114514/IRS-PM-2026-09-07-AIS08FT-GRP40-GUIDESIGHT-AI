@@ -1,0 +1,28 @@
+# 职责：仅跟踪开发框架；当前根目录的课程资料保留在本地。
+# 声明索引：None。变量索引：None。
+/*
+!/.gitignore
+!/.gitattributes
+!/AGENTS.md
+!/README.md
+!/.github/
+!/backend/
+!/frontend/
+
+**/__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+*.sqlite3
+*.sqlite3-*
+*.log
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+node_modules/
+dist/
+media/
+staticfiles/

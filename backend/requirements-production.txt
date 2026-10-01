@@ -1,0 +1,7 @@
+# Responsibilities: PostgreSQL 运行驱动与基础后端依赖。
+# Implementation: 生产显式安装；连接故障不会切换到 SQLite。
+# Related Modules: requirements.txt, config/production.py。
+# Declaration Index: None。
+# Variable Index: None。
+-r requirements.txt
+psycopg[binary]==3.3.3
