@@ -26,7 +26,7 @@ python -X utf8 backend/tools/deploy_space.py --publish
 
 浏览器登录不等于服务器 API 身份。服务端可设置 `HF_INFERENCE_TOKEN`，没有设置时配置接口明确返回 `authentication: anonymous`。本机私有 `backend/.env.hf` 可填 `HF_INFERENCE_TOKEN=hf_...`，排除 Git；部署时只进入服务器 root 0600 的 `/etc/prs-camera/app.env`。不要传给前端或 Space 公共 Variables。token 用于推理，无需仓库写权限；若 token 无效，请修正配置，不自动改匿名调用。账号配额、排队和共享 GPU 服务不能保证连续视频帧率。
 
-2026-10-02 真实 Space bus 验证返回5个框，JPEG SHA256与既有 ONNX 基线一致；首次端到端约33.7秒，GPU阶段约715ms，其余包含网络、排队、分配和处理。报告见 `benchmarks/2026-10-02/zerogpu-remote.json`。随后4张验证图测试在第3张遇到真实匿名 runs limit，完整远端4张一致性验证尚未完成，不能将本地13/13作为远端结果。
+2026-10-02 真实 Space bus 验证返回5个框，JPEG SHA256与既有 ONNX 基线一致；首次端到端约33.7秒，GPU阶段约715ms，其余包含网络、排队、分配和处理。报告见 `benchmarks/2026-10-02/zerogpu-remote.json`。匿名调用曾在第3张遇到 runs limit；配置用户 token 后重新完整验证4张，参考目标同类 IoU≥0.5 匹配13/13，平均置信度绝对差约3.90e-7。报告见 `benchmarks/2026-10-02/zerogpu-remote-validation.json`。这是小样例一致性检查，非COCO mAP；远端未返回raw预测哈希，不能证明逐位相等。
 
 本地 GPU smoke test 使用已有 PyTorch2.5.1+cu121，只证明原始权重和共享处理管线工作，不证明 Space 的 PyTorch2.8/Blackwell/CUDA emulation 可用。独立 `.venv-space` 用于本次测试；没有改动 `.venv` 或 `.venv-laptop`。检查结果和真实远端测试记录应分别报告。
 
