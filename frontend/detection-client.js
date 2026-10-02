@@ -1,9 +1,9 @@
 /* Responsibilities: 同源 YOLO 配置和 JPEG 标注请求的客户端契约。
  * Implementation: 单个在途请求、10 秒超时、主动取消；不重试、不切回原样回传。
- * Related Modules: camera.js, echo-client.js 的尺寸/超时常量；backend/core/vision.py。
+ * Related Modules: camera.js, echo-client.js；backend/core/vision.py/laptop_vision.py。
  * Declaration Index: DetectionClient; DetectionClient.constructor; DetectionClient.request;
  * DetectionClient.connect; DetectionClient.sendFrame; DetectionClient.stop。
- * Variable Index: None；每个实例持有 url/fetchFn/timeoutMs/controller/stopped。
+ * Variable Index: None；实例持有 url/fetchFn/timeoutMs/backend/controller/stopped。
  */
 import { MAX_FRAME_BYTES, TIMEOUT_MS } from "./echo-client.js";
 
@@ -12,17 +12,18 @@ import { MAX_FRAME_BYTES, TIMEOUT_MS } from "./echo-client.js";
  * Constraints: 输出图像按 JPEG/模型/计数契约校验，不要求与输入字节相等。
  */
 export class DetectionClient {
-  /* Functionality: 初始化依赖。Inputs: url、可注入 fetchFn/timeoutMs；Outputs: 会话实例。
+  /* Functionality: 初始化依赖。Inputs: url、可注入 fetchFn/timeoutMs/backend；Outputs: 会话实例。
    * Logic: 原生 fetch 绑定全局接收者，保存基础地址与取消状态；不立即联网或申请摄像头。
    * Constraints: 注入的 fetchFn 保留其测试语义；不得以类实例调用未绑定的 Window.fetch。
    */
   constructor(
     url,
-    { fetchFn = globalThis.fetch.bind(globalThis), timeoutMs = TIMEOUT_MS } = {},
+    { fetchFn = globalThis.fetch.bind(globalThis), timeoutMs = TIMEOUT_MS, backend = null } = {},
   ) {
     this.url = url;
     this.fetchFn = fetchFn;
     this.timeoutMs = timeoutMs;
+    this.backend = backend;
     this.controller = null;
     this.stopped = false;
   }
@@ -67,7 +68,11 @@ export class DetectionClient {
       }
       if (
         response.headers.get("Content-Type")?.split(";")[0] !== "image/jpeg" ||
-        response.headers.get("X-Model") !== "yolo26n"
+        response.headers.get("X-Model") !== "yolo26n" ||
+        (this.backend && (
+          response.headers.get("X-Inference-Backend") !== this.backend ||
+          response.headers.get("X-Inference-Precision") !== "FP32"
+        ))
       )
         throw new Error("服务端检测图像格式或模型不匹配");
       const count = response.headers.get("X-Detection-Count");
@@ -116,14 +121,16 @@ export class DetectionClient {
   }
 
   /* Functionality: 确认服务端模型已就绪。Inputs: 实例 url；Outputs: config Promise 或错误。
-   * Logic: 检查固定模型和 80 类契约；Constraints: 配置成功不证明当前画面一定有目标。
+   * Logic: 检查模型/80 类；指定 backend 时还检查 TensorRT/FP32，禁止串用 CPU 响应。
+   * Constraints: 配置成功不证明当前画面一定有目标。
    */
   async connect() {
     const config = await this.request("config/");
     if (
       config.ready !== true ||
       config.model !== "yolo26n" ||
-      config.classes !== 80
+      config.classes !== 80 ||
+      (this.backend && (config.backend !== this.backend || config.precision !== "FP32"))
     )
       throw new Error("YOLO26 检测配置无效");
     return config;

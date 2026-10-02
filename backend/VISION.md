@@ -8,6 +8,10 @@
 | --- | --- | --- |
 | GET `/vision/config/` | 无图像 | ready、model=yolo26n、classes=80、confidence_threshold=0.25 |
 | POST `/vision/frame/` | Origin 与 Host 同源，Content-Type=image/jpeg，JPEG 正文 | JPEG；X-Detection-Count、X-Inference-Ms、X-Model、X-Request-ID |
+| GET `/vision/laptop/config/` | 无图像 | 同一模型/类别/阈值，加 backend=TensorRT、precision=FP32；真实隧道就绪检查 |
+| POST `/vision/laptop/frame/` | 同源 JPEG | Laptop GPU 标注 JPEG；同一元数据，加 X-Inference-Backend/Precision |
+
+Laptop 模式明确通过 SSH 私有隧道计算，断连不换 CPU；资源和启动方法见 [LAPTOP.md](LAPTOP.md)。手机、公网服务器和 laptop 都需在线。GPU推理时长包含张量传输及同步，与CPU的ORT执行时间口径不同。
 
 Nginx 的 `/prs` 前缀由既有代理移除。接口不用 Cookie/Authorization，检测客户端拒绝重定向。输入和返回最大 1 MiB，输入最大边 640；页面沿用 JPEG 0.8、串行请求、每次返回后等待 200 ms、10 秒超时。服务端一个非排队模型操作名额，忙碌返回 429；没有隐式回退、自动重试或训练。停止取消客户端请求并丢弃迟到结果，已经开始的服务器推理仍可能运行至完成。
 

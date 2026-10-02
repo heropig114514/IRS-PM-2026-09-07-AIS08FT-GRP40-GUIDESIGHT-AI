@@ -1,8 +1,9 @@
 /**
- * Responsibilities: 摄像头授权、串行帧采集、原样/YOLO 标注回显和资源生命周期。
+ * Responsibilities: 摄像头授权、串行采集、原样/CPU/laptop YOLO 回显和生命周期。
  * Implementation: 最大边 640 像素、JPEG 0.8、每次回显后等待 200 ms；任何错误停止。
- * Related Modules: index.html, camera.css, echo-client.js, detection-client.js；core.echo/vision。
- * Declaration Index: delay; delay.wait; encodeJpeg; encodeJpeg.encode; encodeJpeg.encode.ready;
+ * Related Modules: index.html, echo-client.js, detection-client.js；core.echo/vision/laptop_vision。
+ * Declaration Index: detectionUrl; delay; delay.wait; encodeJpeg; encodeJpeg.encode;
+ * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.setStatus; CameraApp.handleDisconnect;
  * CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
  * CameraApp.testDetection; CameraApp.stop;
@@ -15,6 +16,15 @@ import { DetectionClient } from "./detection-client.js";
 const FRAME_INTERVAL_MS = 200;
 const MAX_EDGE = 640;
 const JPEG_QUALITY = 0.8;
+
+/** Functionality: 映射显式检测模式。Inputs: processing、href。Outputs: 同源 API URL。
+ * Logic: laptop 只指向 laptop 转发，其余检测指向 CPU。
+ * Constraints: 不接受任意推理主机，不自动探测或切换后端。 */
+export function detectionUrl(processing, href) {
+  if (!["echo", "detect", "laptop"].includes(processing))
+    throw new Error("未知图像处理模式");
+  return new URL(processing === "laptop" ? "./vision/laptop/" : "./vision/", href);
+}
 
 /** Functionality: 控制串行发送间隔。Inputs: milliseconds。Outputs: Promise。
  * Logic: 单次计时，不追赶遗漏帧；Constraints: 停止由调用者的 generation 检查保证。 */
@@ -120,7 +130,7 @@ export class CameraApp {
     this.message.dataset.kind = "idle";
     try {
       const processing = this.processing.value;
-      if (!["echo", "detect"].includes(processing))
+      if (!["echo", "detect", "laptop"].includes(processing))
         throw new Error("未知图像处理模式");
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         throw new Error("摄像头需要 HTTPS，请在手机系统浏览器中打开安全链接");
@@ -146,28 +156,28 @@ export class CameraApp {
       document.getElementById("local-placeholder").hidden = true;
       this.setStatus("正在连接服务端");
       const url = new URL(
-        processing === "detect" ? "./vision/" : "./ws/echo/",
+        processing !== "echo" ? detectionUrl(processing, window.location.href).href : "./ws/echo/",
         window.location.href,
       );
       if (processing === "echo")
         url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const client =
-        processing === "detect"
-          ? new DetectionClient(url.href)
+        processing !== "echo"
+          ? new DetectionClient(url.href, {backend: processing === "laptop" ? "TensorRT" : null})
           : new EchoClient(url.href, this.handleDisconnect);
       this.client = client;
       await client.connect();
       if (token !== this.generation) return;
-      this.setStatus(processing === "detect" ? "正在检测" : "正在回传", "live");
+      this.setStatus(processing !== "echo" ? "正在检测" : "正在回传", "live");
       this.image.alt =
-        processing === "detect"
+        processing !== "echo"
           ? "服务端 YOLO26 标注的摄像头图像"
           : "服务端原样返回的摄像头图像";
       document.getElementById("verified").textContent =
-        processing === "detect" ? "YOLO26 标注" : "字节一致 ✓";
+        processing !== "echo" ? "YOLO26 标注" : "字节一致 ✓";
       this.message.textContent =
-        processing === "detect"
-          ? "YOLO26n 检测 80 类；服务端返回含标注框、类别和置信度的图像。"
+        processing !== "echo"
+          ? `YOLO26n 检测 80 类；${processing === "laptop" ? "Laptop GPU" : "服务器 CPU"} 返回标注图像。`
           : "每帧均经过服务端原样回传，字节校验通过后显示。";
       let sent = 0;
       let received = 0;
@@ -183,7 +193,7 @@ export class CameraApp {
         await this.showFrame(result.bytes, token);
         if (token !== this.generation) break;
         received += 1;
-        if (processing === "detect") {
+        if (processing !== "echo") {
           document.getElementById("verified").textContent =
             `YOLO26 · ${result.detections} 个目标`;
           this.message.textContent = `本帧 ${result.detections} 个目标 · 模型推理 ${result.inferenceMs.toFixed(0)} ms。未检出目标不代表道路安全。`;
@@ -263,12 +273,13 @@ export class CameraApp {
       if (token === this.generation) this.handleDisconnect(error);
     }
   }
-  /** Functionality: 用公开样例验证真实服务端检测。Inputs: 同源固定 JPEG、vision API。
+  /** Functionality: 用公开样例验证当前选择的检测后端。Inputs: processing、同源 JPEG、API。
    * Outputs: 输入/标注图、目标数和往返时间；Logic: 只发送一帧，generation 隔离取消。
-   * Constraints: 明确标注非摄像头；10 秒取消样例读取，不训练、不保存摄像头、不重试。 */
+   * Constraints: 原样模式的样例仍测试 CPU；laptop 模式只测试 GPU，不训练/存帧/重试。 */
   async testDetection() {
     if (this.mode !== "idle") return;
     const token = ++this.generation;
+    const processing = this.processing.value;
     this.mode = "sample";
     this.setStatus("正在测试 YOLO26");
     this.message.dataset.kind = "idle";
@@ -296,7 +307,8 @@ export class CameraApp {
       document.getElementById("local-placeholder").hidden = true;
       this.image.alt = "服务端 YOLO26 标注的公开测试图";
       const client = new DetectionClient(
-        new URL("./vision/", location.href).href,
+        detectionUrl(processing, location.href).href,
+        {backend: processing === "laptop" ? "TensorRT" : null},
       );
       this.client = client;
       await client.connect();
@@ -318,7 +330,7 @@ export class CameraApp {
       this.client = null;
       this.mode = "idle";
       this.setStatus("示例已标注", "live");
-      this.message.textContent = `公开样例检出 ${result.detections} 个目标 · 推理 ${result.inferenceMs.toFixed(0)} ms。此图不是实时摄像头画面。`;
+      this.message.textContent = `公开样例检出 ${result.detections} 个目标 · ${processing === "laptop" ? "Laptop TensorRT" : "服务器 CPU"} 推理 ${result.inferenceMs.toFixed(0)} ms。此图不是实时摄像头画面。`;
     } catch (error) {
       if (token === this.generation) this.handleDisconnect(error);
     } finally {

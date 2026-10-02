@@ -12,6 +12,7 @@
 **/__pycache__/
 *.py[cod]
 .venv/
+.venv-laptop/
 .env
 .env.*
 !.env.example
@@ -32,3 +33,4 @@ backend/models/*.onnx
 backend/models/*.onnx.data
 backend/models/.build-config/
 backend/models/experiments/
+backend/models/*.engine

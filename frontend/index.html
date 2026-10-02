@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Responsibilities: 手机摄像头原样/YOLO 标注回传工作台的语义结构。
+<!-- Responsibilities: 手机摄像头原样/CPU/laptop YOLO 标注回传工作台的语义结构。
 Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认。
 Related Modules: camera.css, camera.js, echo-client.js, detection-client.js, maps.html。
 Declaration Index: None。
@@ -75,6 +75,7 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
               >处理模式<select id="processing">
                 <option value="echo">原样回传</option>
                 <option value="detect">YOLO26 检测 · 80 类</option>
+                <option value="laptop">Laptop GPU · TensorRT · 80 类</option>
               </select></label
             >
             <label class="camera-select"

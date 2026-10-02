@@ -1,0 +1,14 @@
+# Responsibilities: Isolated Windows laptop GPU worker and SSH tunnel dependencies.
+# Implementation: CUDA 12.6 runtime and TensorRT 10.7 match the inspected 566.36 driver.
+# Related Modules: core/gpu_detector.py, tools/build_tensorrt.py, tools/laptop_tunnel.py.
+# Declaration Index: None.
+# Variable Index: None.
+# Install with --index-url https://pypi.org/simple --extra-index-url https://pypi.nvidia.com.
+-r requirements.txt
+numpy==1.26.4
+Pillow==12.3.0
+tensorrt-cu12==10.7.0.post1
+tensorrt-cu12-libs==10.7.0.post1
+tensorrt-cu12-bindings==10.7.0.post1
+nvidia-cuda-runtime-cu12==12.6.77
+paramiko==3.5.1

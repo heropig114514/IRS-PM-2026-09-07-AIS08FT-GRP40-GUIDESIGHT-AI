@@ -6,7 +6,8 @@
  * FakeDocument.createElement; FakeDocument.addEventListener; ignoreWindowEvent; makeApp;
  * testDenied; testDenied.denyCamera; testCancelled; testCancelled.waitForPermission;
  * testCancelled.waitForPermission.register; testCancelled.stopTrack;
- * testCancelled.getTracks; testDecodeCancelled; testDecodeCancelled.waitForDecode;
+ * testCancelled.getTracks; testDetectionUrl; testDecodeCancelled;
+ * testDecodeCancelled.waitForDecode;
  * testDecodeCancelled.waitForDecode.register。
  * Variable Index: None；所有 mock 限于 Node 的独立测试文件进程。
  */
@@ -74,7 +75,18 @@ globalThis.window = {
   isSecureContext: true,
   addEventListener: ignoreWindowEvent,
 };
-const { CameraApp } = await import("../camera.js");
+const { CameraApp, detectionUrl } = await import("../camera.js");
+
+/** Functionality: Check explicit detection destinations. Inputs: mode and existing PRS page URL.
+ * Outputs: fixed same-origin paths or error. Logic: use actual mapping function.
+ * Constraints: no network, model or browser; no automatic CPU substitution for laptop. */
+test("检测模式只映射指定后端", function testDetectionUrl() {
+  assert.equal(detectionUrl("laptop", "https://test.invalid/prs/").href,
+    "https://test.invalid/prs/vision/laptop/");
+  assert.equal(detectionUrl("detect", "https://test.invalid/prs/").href,
+    "https://test.invalid/prs/vision/");
+  assert.throws(() => detectionUrl("unknown", "https://test.invalid/prs/"), /未知/);
+});
 
 /** Functionality: 创建隔离控制器。Inputs: getUserMedia 替身。Outputs: CameraApp。
  * Logic: 更换 fake document/navigator，设置原样模式；Constraints: 测试不验证实际模型。 */
