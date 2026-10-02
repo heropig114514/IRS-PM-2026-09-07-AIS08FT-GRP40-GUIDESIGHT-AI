@@ -46,6 +46,10 @@ cd backend
 
 本次公开样例实测（其他GPU应用运行中，Python perf_counter高精度计时）：平均GPU推理含拷贝/同步 **3.82ms**，平均完整本地解码/预处理/推理/绘制/编码 **8.77ms**。公交车图5个目标，标注JPEG的SHA256与原ORT基线相同。4张val图13/13参考框匹配，置信度平均绝对差约4.03e-7，原始张量不是逐位相同。见 [原始结果](benchmarks/2026-10-02/laptop-tensorrt.json)。不包含网络、手机采集或200ms间隔，不代表手机FPS或完整COCO精度。
 
+部署后经公网/SSH连续10次样例请求全部成功，平均往返519.9ms、GPU含传输平均39.77ms；浏览器样例5个目标、往返460ms、GPU含传输105ms。连续本地测试与独立HTTP请求的时间明显不同，包含线程/执行环境及GPU背景负载差异，尚未逐项归因，不应以3.82ms保证单请求时延。原应用登录页、地图、健康、CPU模式及未授权worker401通过。手动停止隧道后laptop返回503且CPU仍ready，手动重启后TensorRT ready。见 [公网验证](benchmarks/2026-10-02/laptop-public.json)。
+
+52项后端、27项前端测试通过，Django配置/迁移dry-run/Ruff和CI通过；实现与注释/声明索引在同一代码提交。当前Windows后台worker和交互隧道已启动，重启机器后按上方两个命令手动启动，不保存SSH口令。仅重启PRS，其他服务PID与Nginx/systemd配置哈希在部署前后相同。第一次紧随restart的探测曾返回502，随后确认服务启动完成并通过真实请求；部署没有配置自动重试或回退。
+
 从backend运行 Django check、迁移dry-run、test和Ruff，前端Node tests。注释与声明索引人工检查，当前无自动docs检查器。新增测试中的模型/HTTP替身不代表真实GPU/SSH验证。
 
 ```powershell

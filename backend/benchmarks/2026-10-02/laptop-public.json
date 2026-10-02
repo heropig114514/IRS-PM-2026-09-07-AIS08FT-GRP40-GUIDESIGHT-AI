@@ -1,0 +1,11 @@
+{
+  "frames": 10,
+  "mean_public_roundtrip_ms": 519.9,
+  "mean_gpu_with_transfer_ms": 39.77,
+  "jpeg_bit_identical": true,
+  "old_app_maps_health_cpu_and_private_auth": "passed",
+  "manual_tunnel_disconnect": {"laptop_status": 503, "code": "laptop_disconnected", "cpu_ready": true},
+  "manual_tunnel_restore": {"ready": true, "backend": "TensorRT", "precision": "FP32"},
+  "browser_sample": {"detections": 5, "roundtrip_ms": 460, "gpu_with_transfer_ms": 105},
+  "conditions": "Existing GPU applications active; fixed public sample; phone capture not tested; not sustained FPS or mAP"
+}
