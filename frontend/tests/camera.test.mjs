@@ -75,7 +75,7 @@ globalThis.window = {
   isSecureContext: true,
   addEventListener: ignoreWindowEvent,
 };
-const { CameraApp, detectionUrl } = await import("../camera.js");
+const { CameraApp, detectionUrl, detectionSettings } = await import("../camera.js");
 
 /** Functionality: Check explicit detection destinations. Inputs: mode and existing PRS page URL.
  * Outputs: fixed same-origin paths or error. Logic: use actual mapping function.
@@ -85,6 +85,11 @@ test("检测模式只映射指定后端", function testDetectionUrl() {
     "https://test.invalid/prs/vision/laptop/");
   assert.equal(detectionUrl("detect", "https://test.invalid/prs/").href,
     "https://test.invalid/prs/vision/");
+  assert.equal(detectionUrl("hf", "https://test.invalid/prs/").href,
+    "https://test.invalid/prs/vision/hf/");
+  assert.equal(detectionSettings("hf").timeoutMs, 60000);
+  assert.equal(detectionSettings("hf").backend, "PyTorch ZeroGPU");
+  for (const mode of ["echo", "detect", "laptop"]) assert.equal(detectionSettings(mode).timeoutMs, 10000);
   assert.throws(() => detectionUrl("unknown", "https://test.invalid/prs/"), /未知/);
 });
 

@@ -155,7 +155,7 @@ test("stop discards late frame and rejects overlapping requests", async function
 });
 
 /* Functionality: Test abort timeout. Inputs: 5ms injected timer and abort-aware fake fetch.
- * Outputs: timeout rejection; Logic: native AbortController; Constraints: production remains 10s. */
+ * Outputs: timeout rejection; Logic: native AbortController; Constraints: default remains 10s; explicitly selected ZeroGPU uses 60s. */
 test("timeout aborts instead of retrying", async function testTimeout() {
   /* Functionality: Observe abort. Inputs: url/options; Outputs: rejected Promise on abort.
    * Logic: subscribe to signal; Constraints: no network. */
@@ -175,7 +175,7 @@ test("timeout aborts instead of retrying", async function testTimeout() {
   }
   await assert.rejects(
     new DetectionClient(URL, { fetchFn, timeoutMs: 5 }).sendFrame(JPEG.buffer),
-    /超过 10 秒/,
+    /超过 0.005 秒/,
   );
 });
 

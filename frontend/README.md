@@ -33,3 +33,7 @@
 `maps-client.js` 管理定位、坐标和同源路线请求契约；`maps-page.js` 管理 Leaflet 图层与界面。浏览器使用 `[经度,纬度]` 的路线坐标，转换为 Leaflet `[纬度,经度]` 显示。`POST ./route/` 超时 25 秒；key 只在后端，配置接口不返回凭据。获取位置只填本页；明确规划时起终点发送 PRS/ORS，不写数据库、localStorage 或文件。ORS 英文 instruction 保留，类型标签中文显示。当前没有连续 GPS 跟踪、偏航重算、语音或 Guidance Manager 风险调度。
 
 地图页使用独立 nonce CSP、固定版本及 SRI；摄像头页策略不变。Leaflet 来源见[官方发布页](https://leafletjs.com/download.html)，ORS 契约见[官方路线文档](https://giscience.github.io/openrouteservice/api-reference/endpoints/directions/requests-and-return-types)。正常浏览器交互加载 `https://tile.openstreetmap.org/{z}/{x}/{y}.png`，保留 Referrer、缓存和可见 OpenStreetMap 署名；不预下载、不做离线或批量瓦片扫描，遵循 [OSM 瓦片政策](https://operations.osmfoundation.org/policies/tiles/)。托管瓦片与 ORS 的生产额度/许可须按实际用途评估。`tests/maps-client.test.mjs` 使用 fake 验证失败和契约，不能证明真实网络、ORS 配额或手机 GPS。服务端 key 配置见运维说明。
+
+## ZeroGPU 模式
+
+在处理模式明确选择 Hugging Face ZeroGPU，先点击“测试示例识别”。手机经 PRS 云服务器把帧交给 Hugging Face，标注 JPEG 经 PRS 返回；该模式单请求最多60秒，排队、配额或异常都会停止。CPU/laptop 仍10秒；原样回传仍默认。无需本地 GPU 配置，免费资源适合低频演示；连续摄像头会持续消耗配额。停止会取消浏览器请求，但服务端已提交的 GPU 任务可能继续完成。

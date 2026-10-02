@@ -1,5 +1,8 @@
-# 职责：仅跟踪开发框架；当前根目录的课程资料保留在本地。
-# 声明索引：None。变量索引：None。
+# Responsibilities: 跟踪开发源码，课程资料、凭据、运行环境和生成工件保留在本地。
+# Implementation: 根目录白名单，排除 Python 环境、模型二进制及 ZeroGPU 上传/测试工件。
+# Related Modules: backend/tools/deploy_space.py, backend/start_laptop.py, README.md。
+# Declaration Index: None。
+# Variable Index: None。
 /*
 !/.gitignore
 !/.gitattributes
@@ -13,6 +16,8 @@
 *.py[cod]
 .venv/
 .venv-laptop/
+.venv-space/
+backend/.space-bundle/
 .env
 .env.*
 !.env.example

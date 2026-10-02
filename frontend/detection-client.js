@@ -1,6 +1,6 @@
 /* Responsibilities: 同源 YOLO 配置和 JPEG 标注请求的客户端契约。
- * Implementation: 单个在途请求、10 秒超时、主动取消；不重试、不切回原样回传。
- * Related Modules: camera.js, echo-client.js；backend/core/vision.py/laptop_vision.py。
+ * Implementation: 单个在途请求、默认10秒（显式ZeroGPU60秒）、主动取消；不重试。
+ * Related Modules: camera.js, echo-client.js；backend/core/vision.py/laptop_vision.py/hf_vision.py。
  * Declaration Index: DetectionClient; DetectionClient.constructor; DetectionClient.request;
  * DetectionClient.connect; DetectionClient.sendFrame; DetectionClient.stop。
  * Variable Index: None；实例持有 url/fetchFn/timeoutMs/backend/controller/stopped。
@@ -110,7 +110,7 @@ export class DetectionClient {
     } catch (error) {
       if (this.stopped) throw new Error("已停止");
       if (controller.signal.aborted)
-        throw new Error("检测请求超过 10 秒，请检查服务端后手动开始");
+        throw new Error(`检测请求超过 ${this.timeoutMs / 1000} 秒，请检查服务端后手动开始`);
       if (error instanceof TypeError)
         throw new Error("检测网络请求失败，请检查连接");
       throw error;
@@ -121,7 +121,7 @@ export class DetectionClient {
   }
 
   /* Functionality: 确认服务端模型已就绪。Inputs: 实例 url；Outputs: config Promise 或错误。
-   * Logic: 检查模型/80 类；指定 backend 时还检查 TensorRT/FP32，禁止串用 CPU 响应。
+   * Logic: 检查模型/80 类；指定 backend 时还检查所选后端/FP32，禁止串用响应。
    * Constraints: 配置成功不证明当前画面一定有目标。
    */
   async connect() {
@@ -154,7 +154,7 @@ export class DetectionClient {
   }
 
   /* Functionality: 取消会话。Inputs: 当前 controller；Outputs: abort 和 stopped 状态。
-   * Logic: 浏览器丢弃响应，后端已开始的 CPU 工作可能继续完成；Constraints: 不再发送新帧。
+   * Logic: 浏览器丢弃响应，后端已提交的推理工作可能继续完成；Constraints: 不再发送新帧。
    */
   stop() {
     this.stopped = true;

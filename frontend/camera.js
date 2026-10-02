@@ -1,14 +1,14 @@
 /**
- * Responsibilities: 摄像头授权、串行采集、原样/CPU/laptop YOLO 回显和生命周期。
+ * Responsibilities: 摄像头授权、串行采集、原样/CPU/laptop/ZeroGPU 回显和生命周期。
  * Implementation: 最大边 640 像素、JPEG 0.8、每次回显后等待 200 ms；任何错误停止。
- * Related Modules: index.html, echo-client.js, detection-client.js；core.echo/vision/laptop_vision。
- * Declaration Index: detectionUrl; delay; delay.wait; encodeJpeg; encodeJpeg.encode;
+ * Related Modules: index.html, echo-client.js, detection-client.js；core.echo/vision/laptop_vision/hf_vision。
+ * Declaration Index: detectionSettings; detectionUrl; delay; delay.wait; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.setStatus; CameraApp.handleDisconnect;
- * CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
+ * CameraApp.handleProcessingChange; CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
  * CameraApp.testDetection; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide。
- * Variable Index: FRAME_INTERVAL_MS/MAX_EDGE/JPEG_QUALITY 为明确采集参数；app 为页面控制器。
+ * Variable Index: FRAME_INTERVAL_MS/MAX_EDGE/JPEG_QUALITY 为明确采集参数；DETECTION_MODES 为显式路径/后端/超时/标签；app 为页面控制器。
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
 import { DetectionClient } from "./detection-client.js";
@@ -16,14 +16,26 @@ import { DetectionClient } from "./detection-client.js";
 const FRAME_INTERVAL_MS = 200;
 const MAX_EDGE = 640;
 const JPEG_QUALITY = 0.8;
+const DETECTION_MODES = {
+  detect: {path: "./vision/", backend: null, timeoutMs: 10000, label: "服务器 CPU"},
+  laptop: {path: "./vision/laptop/", backend: "TensorRT", timeoutMs: 10000, label: "Laptop TensorRT"},
+  hf: {path: "./vision/hf/", backend: "PyTorch ZeroGPU", timeoutMs: 60000, label: "Hugging Face ZeroGPU"},
+};
+
+/** Functionality: 获取选定模式的独立请求预算。Inputs: processing。Outputs: 配置副本。
+ * Logic: echo 的公开检测样例沿用 CPU；显式 hf 使用获准的 60 秒，其余保持 10 秒。
+ * Constraints: 未知模式失败，无自动后端切换，调用者不能修改配置表。 */
+export function detectionSettings(processing) {
+  const key = processing === "echo" ? "detect" : processing;
+  if (!Object.hasOwn(DETECTION_MODES, key)) throw new Error("未知图像处理模式");
+  return {...DETECTION_MODES[key]};
+}
 
 /** Functionality: 映射显式检测模式。Inputs: processing、href。Outputs: 同源 API URL。
- * Logic: laptop 只指向 laptop 转发，其余检测指向 CPU。
+ * Logic: 使用显式配置表映射 CPU、laptop 和 ZeroGPU。
  * Constraints: 不接受任意推理主机，不自动探测或切换后端。 */
 export function detectionUrl(processing, href) {
-  if (!["echo", "detect", "laptop"].includes(processing))
-    throw new Error("未知图像处理模式");
-  return new URL(processing === "laptop" ? "./vision/laptop/" : "./vision/", href);
+  return new URL(detectionSettings(processing).path, href);
 }
 
 /** Functionality: 控制串行发送间隔。Inputs: milliseconds。Outputs: Promise。
@@ -88,12 +100,20 @@ export class CameraApp {
     this.handleCameraEnded = this.handleCameraEnded.bind(this);
     this.handleVisibility = this.handleVisibility.bind(this);
     this.handlePageHide = this.handlePageHide.bind(this);
+    this.handleProcessingChange = this.handleProcessingChange.bind(this);
+    this.processing.addEventListener("change", this.handleProcessingChange);
+    this.handleProcessingChange();
     this.startButton.addEventListener("click", this.start);
     this.stopButton.addEventListener("click", this.stop);
     this.pingButton.addEventListener("click", this.testPing);
     this.sampleButton.addEventListener("click", this.testDetection);
     document.addEventListener("visibilitychange", this.handleVisibility);
     window.addEventListener("pagehide", this.handlePageHide);
+  }
+  /** Functionality: 显示第三方图像处理及等待预算。Inputs: processing 当前值。
+   * Outputs: 提示可见性；Logic: 仅 hf 选择显示；Constraints: 不联网或申请权限。 */
+  handleProcessingChange() {
+    document.getElementById("hf-note").hidden = this.processing.value !== "hf";
   }
   /** Functionality: 更新状态与操作边界。Inputs: text、kind。Outputs: DOM 修改。
    * Logic: mode 决定控件可操作性；Constraints: text 仅用 textContent，不插入 HTML。 */
@@ -130,8 +150,7 @@ export class CameraApp {
     this.message.dataset.kind = "idle";
     try {
       const processing = this.processing.value;
-      if (!["echo", "detect", "laptop"].includes(processing))
-        throw new Error("未知图像处理模式");
+      const options = detectionSettings(processing);
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         throw new Error("摄像头需要 HTTPS，请在手机系统浏览器中打开安全链接");
       }
@@ -163,7 +182,7 @@ export class CameraApp {
         url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const client =
         processing !== "echo"
-          ? new DetectionClient(url.href, {backend: processing === "laptop" ? "TensorRT" : null})
+          ? new DetectionClient(url.href, options)
           : new EchoClient(url.href, this.handleDisconnect);
       this.client = client;
       await client.connect();
@@ -177,7 +196,7 @@ export class CameraApp {
         processing !== "echo" ? "YOLO26 标注" : "字节一致 ✓";
       this.message.textContent =
         processing !== "echo"
-          ? `YOLO26n 检测 80 类；${processing === "laptop" ? "Laptop GPU" : "服务器 CPU"} 返回标注图像。`
+          ? `YOLO26n 检测 80 类；${options.label} 返回标注图像。`
           : "每帧均经过服务端原样回传，字节校验通过后显示。";
       let sent = 0;
       let received = 0;
@@ -275,7 +294,7 @@ export class CameraApp {
   }
   /** Functionality: 用公开样例验证当前选择的检测后端。Inputs: processing、同源 JPEG、API。
    * Outputs: 输入/标注图、目标数和往返时间；Logic: 只发送一帧，generation 隔离取消。
-   * Constraints: 原样模式的样例仍测试 CPU；laptop 模式只测试 GPU，不训练/存帧/重试。 */
+   * Constraints: 原样模式的样例仍测试 CPU；各 GPU 模式只测试指定服务，不训练/存帧/重试。 */
   async testDetection() {
     if (this.mode !== "idle") return;
     const token = ++this.generation;
@@ -308,7 +327,7 @@ export class CameraApp {
       this.image.alt = "服务端 YOLO26 标注的公开测试图";
       const client = new DetectionClient(
         detectionUrl(processing, location.href).href,
-        {backend: processing === "laptop" ? "TensorRT" : null},
+        detectionSettings(processing),
       );
       this.client = client;
       await client.connect();
@@ -330,7 +349,7 @@ export class CameraApp {
       this.client = null;
       this.mode = "idle";
       this.setStatus("示例已标注", "live");
-      this.message.textContent = `公开样例检出 ${result.detections} 个目标 · ${processing === "laptop" ? "Laptop TensorRT" : "服务器 CPU"} 推理 ${result.inferenceMs.toFixed(0)} ms。此图不是实时摄像头画面。`;
+      this.message.textContent = `公开样例检出 ${result.detections} 个目标 · ${detectionSettings(processing).label} 推理 ${result.inferenceMs.toFixed(0)} ms。此图不是实时摄像头画面。`;
     } catch (error) {
       if (token === this.generation) this.handleDisconnect(error);
     } finally {

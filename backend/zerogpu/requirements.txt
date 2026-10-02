@@ -1,0 +1,13 @@
+# Responsibilities: Dedicated ZeroGPU dependencies, isolated from cloud and laptop runtimes.
+# Implementation: Gradio/PyTorch versions supported by ZeroGPU, pinned original Ultralytics build.
+# Related Modules: app.py, runtime.py, README.md; cloud requirements are unchanged.
+# Declaration Index: None.
+# Variable Index: None.
+gradio==6.29.0
+spaces==0.51.3
+torch==2.8.0
+torchvision==0.23.0
+ultralytics==8.4.171
+numpy==1.26.4
+Pillow==12.3.0
+opencv-python==4.11.0.86
