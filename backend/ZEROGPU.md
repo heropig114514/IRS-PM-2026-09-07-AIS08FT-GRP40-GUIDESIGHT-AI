@@ -24,7 +24,7 @@ python -X utf8 backend/tools/deploy_space.py --publish
 
 选择 ZeroGPU 后先点击“测试示例识别”，再授权摄像头。链路为手机 → PRS 云服务器 → Hugging Face ZeroGPU → PRS → 标注 JPEG 屏幕。只有此模式使用用户批准的60秒客户端预算：云端 HTTPS/SSE 共用55秒截止时间，Nginx 仅 `/prs/vision/hf/` 读等待65秒；其余 Nginx 路径仍30秒，CPU/laptop 客户端仍10秒，laptop 转发仍8秒。串行发送、不自动重试、不切换计算后端，配额耗尽明确停止。
 
-浏览器登录不等于服务器 API 身份。服务端可设置 `HF_INFERENCE_TOKEN`，没有设置时配置接口明确返回 `authentication: anonymous`。本机私有 `backend/.env.hf` 可填 `HF_INFERENCE_TOKEN=hf_...`，排除 Git；部署时只进入服务器 root 0600 的 `/etc/prs-camera/app.env`。不要传给前端或 Space 公共 Variables。token 用于推理，无需仓库写权限；若 token 无效，请修正配置，不自动改匿名调用。账号配额、排队和共享 GPU 服务不能保证连续视频帧率。
+浏览器登录不等于服务器 API 身份。服务端可设置 `HF_INFERENCE_TOKEN`，没有设置时配置接口明确返回 `authentication: anonymous`。本地 Django 开发直接在私有 `backend/.env` 填 `HF_INFERENCE_TOKEN=hf_...`；`config.base` 自动读取此文件。`backend/.env.hf` 是单独的私有部署凭据文件，不由 Django 自动加载，两者均排除 Git。部署时 token 只进入服务器 root 0600 的 `/etc/prs-camera/app.env`。不要传给前端或 Space 公共 Variables。token 用于推理，无需仓库写权限；若 token 无效，请修正配置，不自动改匿名调用。账号配额、排队和共享 GPU 服务不能保证连续视频帧率。
 
 2026-10-02 真实 Space bus 验证返回5个框，JPEG SHA256与既有 ONNX 基线一致；首次端到端约33.7秒，GPU阶段约715ms，其余包含网络、排队、分配和处理。报告见 `benchmarks/2026-10-02/zerogpu-remote.json`。匿名调用曾在第3张遇到 runs limit；配置用户 token 后重新完整验证4张，参考目标同类 IoU≥0.5 匹配13/13，平均置信度绝对差约3.90e-7。报告见 `benchmarks/2026-10-02/zerogpu-remote-validation.json`。这是小样例一致性检查，非COCO mAP；远端未返回raw预测哈希，不能证明逐位相等。
 
