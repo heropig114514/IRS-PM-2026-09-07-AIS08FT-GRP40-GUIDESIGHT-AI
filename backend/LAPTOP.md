@@ -4,7 +4,9 @@
 
 ## 路径与边界
 
-手机HTTPS → PRS `/prs/vision/laptop/frame/` → 服务器`127.0.0.1:18767` → SSH反向隧道 → laptop`127.0.0.1:18767` → TensorRT标注JPEG → 原路返回屏幕。
+完整请求/响应链路：**手机 → 云服务器 → SSH隧道 → laptop GPU → SSH隧道 → 云服务器 → 手机屏幕上的标注图**。
+
+手机通过HTTPS调用云端PRS `/prs/vision/laptop/frame/`。云服务器将JPEG请求发往自己的`127.0.0.1:18767`，SSH反向端口转发把它送达laptop的`127.0.0.1:18767`推理服务。Laptop GPU执行TensorRT并生成标注JPEG，响应通过同一条双向SSH隧道返回云服务器；云服务器读取并校验JPEG、尺寸和检测元数据，再通过原手机HTTPS请求返回图像。云服务器始终是手机的统一入口和响应方，laptop作为其调用的推理服务器/计算节点。
 
 Laptop主动连接SSH22，不需要家庭端口映射。两端推理端口只监听loopback，启动时验证实际服务器绑定，不修改GatewayPorts、防火墙或Nginx。私有接口另外使用随机bearer token；SSH口令交互输入，不写文件/参数。校验已有`~/.ssh/known_hosts`，主机密钥不匹配直接拒绝。
 
