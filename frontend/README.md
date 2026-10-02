@@ -4,7 +4,6 @@
 
 ## 使用
 
-新增“Laptop GPU · TensorRT · 80 类”模式，明确使用 laptop 的GPU，经服务器转发图像；先启动worker/SSH隧道，再测试示例或开启摄像头。该模式断连即停止，不自动换CPU。“测试示例识别”使用选中的检测后端，原样模式仍测试服务器CPU。见 [Laptop运行说明](../backend/LAPTOP.md)。
 
 在手机 Safari/Chrome 等系统浏览器中打开服务器链接，先点“测试连接”，再选择前置或后置镜头并点击“开启摄像头并回传”。允许摄像头后，本地预览显示采集内容，另一屏显示真正经过服务端返回的 JPEG。停止、设备中断、页面隐藏或断线会释放摄像头与连接，重新开始须再次点击。
 
@@ -16,7 +15,7 @@
 
 - `camera.js` 管理媒体、页面和串行采集；`generation` 防止停止后的异步结果恢复采集或回显。
 - `echo-client.js` 管理单个在途操作。二进制长度与每个字节必须一致；pong 必须具有相同 id。超时、类型错误、内容不一致或断线均停止，不重试或降级。
-- `detection-client.js` 管理同源 HTTP 配置/标注请求，10 秒超时并校验 JPEG、模型、目标数和时长；停止丢弃迟到结果，不退回原样模式。`tests/detection-client.test.mjs` 使用明确的 fetch 替身，不能代替真实模型验证。
+- `detection-client.js` 管理同源 HTTP 配置/标注请求，CPU 超时 10 秒、ZeroGPU 超时 60 秒，并校验 JPEG、模型、目标数和时长；停止丢弃迟到结果，不退回原样模式。`tests/detection-client.test.mjs` 使用明确的 fetch 替身，不能代替真实模型验证。
 - `index.html` 和 `camera.css` 提供手机单列、桌面双列布局。
 - `tests/echo-client.test.mjs` 用明确的 socket mock 检查协议；不代表真实摄像头或公网已验证。
 
@@ -36,4 +35,4 @@
 
 ## ZeroGPU 模式
 
-在处理模式明确选择 Hugging Face ZeroGPU，先点击“测试示例识别”。手机经 PRS 云服务器把帧交给 Hugging Face，标注 JPEG 经 PRS 返回；该模式单请求最多60秒，排队、配额或异常都会停止。CPU/laptop 仍10秒；原样回传仍默认。无需本地 GPU 配置，免费资源适合低频演示；连续摄像头会持续消耗配额。停止会取消浏览器请求，但服务端已提交的 GPU 任务可能继续完成。
+在处理模式明确选择 Hugging Face ZeroGPU，先点击“测试示例识别”。手机经 PRS 云服务器把帧交给 Hugging Face，标注 JPEG 经 PRS 返回；该模式单请求最多60秒，排队、配额或异常都会停止。CPU 仍10秒；原样回传仍默认。无需本地 GPU 配置，免费资源适合低频演示；连续摄像头会持续消耗配额。停止会取消浏览器请求，但服务端已提交的 GPU 任务可能继续完成。

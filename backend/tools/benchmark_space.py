@@ -1,6 +1,6 @@
 """Responsibilities: Record real fixed-Space validation under the existing four-frame protocol.
 Implementation: JPEG80/max640 fixtures, fixed HTTPS/SSE transport and same-class IoU comparison.
-Related Modules: core.hf_services; tools.compare_acceleration; prior baseline.json.
+Related Modules: core.hf_services; tools.compare_detections; prior baseline.json.
 Declaration Index: fixture_bytes — original fixture preparation; main — real API validation.
 Variable Index: None; CLI paths select reference/input/output; private token is read from env.
 """
@@ -15,13 +15,13 @@ from pathlib import Path
 from PIL import Image
 
 from core.hf_services import TIMEOUT_SECONDS, exchange, validate_result
-from tools.compare_acceleration import compare
+from tools.compare_detections import compare
 
 
 def fixture_bytes(path):
     """Functionality: Reproduce the existing benchmark's camera-format bytes exactly once.
     Inputs: public source JPEG path; Outputs: JPEG80 bytes and resized dimensions.
-    Logic: RGB/max-edge640/bilinear/round as benchmark_laptop.prepared_image before decoding.
+    Logic: preserve the established RGB/max-edge640/bilinear/round/JPEG80 fixture contract.
     Constraints: preserves evaluation inputs; do not re-encode decoded prepared images again.
     """
     with Image.open(path) as original:

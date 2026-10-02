@@ -81,23 +81,6 @@ INT8 用 COCO8 train 的 4 张图进行 MinMax 校准，val 不参与校准；QD
 
 依据：[ORT 图优化](https://onnxruntime.ai/docs/performance/model-optimizations/graph-optimizations.html)、[线程调优](https://onnxruntime.ai/docs/performance/tune-performance/threading.html)、[I/O Binding](https://onnxruntime.ai/docs/performance/tune-performance/iobinding.html)、[allocator](https://onnxruntime.ai/docs/get-started/with-c.html)、[量化](https://onnxruntime.ai/docs/performance/model-optimizations/quantization.html)、[OpenVINO 精度](https://docs.openvino.ai/2026/openvino-workflow/running-inference/optimize-inference/precision-control.html)、[Ultralytics 部署格式](https://docs.ultralytics.com/guides/model-deployment-options)。文档列的是能力和候选，不替代本机实测。
 
-## 复现与检查
+## 历史记录
 
-使用固定公开 [COCO8](https://docs.ultralytics.com/datasets/detect/coco8) 数据集；来源 URL、ZIP SHA256、准备参数和工件哈希保存在 benchmarks 下的 dataset.json / precision.json。图像、数据集和实验模型放 `models/experiments`，不提交 Git，也不从运行接口上传。
-
-构建环境安装 requirements-vision-build.txt，再运行：
-
-```text
-python tools/build_precision.py --model models/yolo26n.onnx --dataset models/experiments/coco8 --output models/experiments
-```
-
-实验独立环境安装 requirements-vision-lab.txt；正式服务继续使用 requirements-vision.txt，不引入 OpenVINO/训练工具。实验 `--preset` 必须显式指定，输出路径必须可写，Linux 下完整命令应放在与上线一致的 systemd 资源边界内：
-
-```text
-python tools/benchmark_acceleration.py --model /absolute/model.onnx --image /absolute/public-bus.jpg --preset production --output /writable/production.json --evaluation /absolute/public-val-jpegs
-python tools/compare_acceleration.py --reference /reports/baseline.json --reports /reports/production.json --output /reports/production-quality.json
-```
-
-`baseline/arena/binding/fused/bounded` 使用所在发布的预/后处理；复现原始对照必须装配基线提交的 core.detector，不能拿优化后的模块当旧实现。production 使用完整 Detector 配置和它的真实缓冲绑定。每个预设在独立进程运行，以免 allocator 状态和 RSS 峰值污染比较。
-
-检查包含 Django check、迁移检查、后端/前端测试、Ruff、依赖检查；注释/索引人工核对，仓库没有 check_docs.py。真实服务器资源测试与 HTTP/浏览器联调独立于 mock 单元测试。低精度上线仍需要代表性标注数据和明确的质量接受条件。
+以上记录来自当时的独立实验，数值、数据划分与评估口径保留。未上线的低精度/OpenVINO实验执行工具已移除，原实现可从 Git 历史查阅；当前运行只保留已验证的 FP32 CPU 流程和 HF ZeroGPU。原始 reports 继续保留于 benchmarks，以便溯源。新的同类框一致性验证使用 `tools.benchmark_space` 和 `tools.compare_detections`，不是重新执行旧后端对照。

@@ -1,9 +1,0 @@
-# Responsibilities: Shared private GPU node HTTP, image and SSH dependencies.
-# Implementation: Pin common runtime independently of hardware-specific CUDA/TensorRT packages.
-# Related Modules: requirements-laptop.txt; requirements-laptop-blackwell.txt.
-# Declaration Index: None.
-# Variable Index: None.
--r requirements.txt
-numpy==1.26.4
-Pillow==12.3.0
-paramiko==3.5.1

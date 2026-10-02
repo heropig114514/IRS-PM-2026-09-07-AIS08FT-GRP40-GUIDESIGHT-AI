@@ -1,7 +1,0 @@
-# Responsibilities: Separate OpenVINO comparison environment, never the production web runtime.
-# Implementation: Fixed OpenVINO runtime plus the same ONNX/Pillow/NumPy/web versions as baseline.
-# Related Modules: tools/benchmark_acceleration.py, ACCELERATION.md.
-# Declaration Index: None.
-# Variable Index: None.
--r requirements-vision.txt
-openvino==2026.4.1

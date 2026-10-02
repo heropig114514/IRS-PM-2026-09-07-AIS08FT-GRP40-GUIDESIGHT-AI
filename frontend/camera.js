@@ -1,7 +1,7 @@
 /**
- * Responsibilities: 摄像头授权、串行采集、原样/CPU/laptop/ZeroGPU 回显和生命周期。
+ * Responsibilities: 摄像头授权、串行采集、原样/CPU/ZeroGPU 回显和生命周期。
  * Implementation: 最大边 640 像素、JPEG 0.8、每次回显后等待 200 ms；任何错误停止。
- * Related Modules: index.html, echo-client.js, detection-client.js；core.echo/vision/laptop_vision/hf_vision。
+ * Related Modules: index.html, echo-client.js, detection-client.js；core.echo/vision/hf_vision。
  * Declaration Index: detectionSettings; detectionUrl; delay; delay.wait; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.setStatus; CameraApp.handleDisconnect;
@@ -18,7 +18,6 @@ const MAX_EDGE = 640;
 const JPEG_QUALITY = 0.8;
 const DETECTION_MODES = {
   detect: {path: "./vision/", backend: null, timeoutMs: 10000, label: "服务器 CPU"},
-  laptop: {path: "./vision/laptop/", backend: "TensorRT", timeoutMs: 10000, label: "Laptop TensorRT"},
   hf: {path: "./vision/hf/", backend: "PyTorch ZeroGPU", timeoutMs: 60000, label: "Hugging Face ZeroGPU"},
 };
 
@@ -32,7 +31,7 @@ export function detectionSettings(processing) {
 }
 
 /** Functionality: 映射显式检测模式。Inputs: processing、href。Outputs: 同源 API URL。
- * Logic: 使用显式配置表映射 CPU、laptop 和 ZeroGPU。
+ * Logic: 使用显式配置表映射 CPU 和 ZeroGPU。
  * Constraints: 不接受任意推理主机，不自动探测或切换后端。 */
 export function detectionUrl(processing, href) {
   return new URL(detectionSettings(processing).path, href);

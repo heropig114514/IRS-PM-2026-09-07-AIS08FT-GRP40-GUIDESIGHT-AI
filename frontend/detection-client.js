@@ -1,6 +1,6 @@
 /* Responsibilities: 同源 YOLO 配置和 JPEG 标注请求的客户端契约。
  * Implementation: 单个在途请求、默认10秒（显式ZeroGPU60秒）、主动取消；不重试。
- * Related Modules: camera.js, echo-client.js；backend/core/vision.py/laptop_vision.py/hf_vision.py。
+ * Related Modules: camera.js, echo-client.js；backend/core/vision.py/hf_vision.py。
  * Declaration Index: DetectionClient; DetectionClient.constructor; DetectionClient.request;
  * DetectionClient.connect; DetectionClient.sendFrame; DetectionClient.stop。
  * Variable Index: None；实例持有 url/fetchFn/timeoutMs/backend/controller/stopped。

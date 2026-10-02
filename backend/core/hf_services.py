@@ -1,6 +1,6 @@
 """Responsibilities: Fixed-target ZeroGPU Gradio transport and annotated-frame validation.
 Implementation: HTTPS POST/SSE under one 55-second deadline; bounded JSON; no retries or fallback.
-Related Modules: core.hf_vision/inference_relay; zerogpu.protocol/app; models/yolo26n.json.
+Related Modules: core.hf_vision; zerogpu.protocol/app; models/yolo26n.json.
 Declaration Index: chunks — bounded reader; exchange — HTTP/SSE transaction;
 validate_result — model/JPEG/box contract; hf_request — readiness or one frame.
 Variable Index: HOST — owned Space; TIMEOUT_SECONDS — 55 of client's approved 60 seconds;

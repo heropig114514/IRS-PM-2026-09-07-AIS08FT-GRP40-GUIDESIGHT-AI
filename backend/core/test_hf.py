@@ -2,7 +2,8 @@
 Implementation: Real codec/routing with synthetic HTTPS streams and mocked provider calls.
 Related Modules: core.hf_services/hf_vision; zerogpu.protocol; external verification is separate.
 Declaration Index: HFTests; HFTests.test_stream; HFTests.test_quota;
-HFTests.test_boundaries; HFTests.test_identity; HFTests.test_relay.
+HFTests.test_boundaries; HFTests.test_identity; HFTests.test_relay;
+HFTests.test_busy; HFTests.test_removed_routes.
 Variable Index: None; fixtures and mocks are local to each test.
 """
 
@@ -102,3 +103,33 @@ class HFTests(SimpleTestCase):
             upstream.assert_called_once()
         self.assertTrue(hf_vision.slot.acquire(blocking=False))
         hf_vision.slot.release()
+
+    @override_settings(CAMERA_ALLOWED_ORIGINS=["http://testserver"])
+    def test_busy(self):
+        """Functionality: Preserve non-queued HF status/frame rejection after adapter consolidation.
+        Inputs: occupied slot and valid synthetic JPEG; Outputs: 429 and no provider calls.
+        Logic: real routing under one held semaphore; Constraints: no threads, network or GPU.
+        """
+        hf_vision.slot.acquire()
+        try:
+            with patch.object(hf_vision, "hf_request") as upstream:
+                self.assertEqual(self.client.get("/vision/hf/config/").status_code, 429)
+                self.assertEqual(self.client.post(
+                    "/vision/hf/frame/", jpeg(), content_type="image/jpeg",
+                    HTTP_ORIGIN="http://testserver",
+                ).status_code, 429)
+                upstream.assert_not_called()
+        finally:
+            hf_vision.slot.release()
+
+    def test_removed_routes(self):
+        """Functionality: Confirm retired local-GPU routes cannot call an alternate provider.
+        Inputs: former status/frame paths; Outputs: 404 and no HF calls.
+        Logic: actual URL resolution; Constraints: no real server or external service involved.
+        """
+        with patch.object(hf_vision, "hf_request") as upstream:
+            self.assertEqual(self.client.get("/vision/laptop/config/").status_code, 404)
+            self.assertEqual(self.client.post(
+                "/vision/laptop/frame/", jpeg(), content_type="image/jpeg",
+            ).status_code, 404)
+            upstream.assert_not_called()

@@ -1,4 +1,4 @@
-# Responsibilities: Dedicated ZeroGPU dependencies, isolated from cloud and laptop runtimes.
+# Responsibilities: Dedicated ZeroGPU dependencies, isolated from the cloud runtime.
 # Implementation: Gradio/PyTorch versions supported by ZeroGPU, pinned original Ultralytics build.
 # Related Modules: app.py, runtime.py, README.md; cloud requirements are unchanged.
 # Declaration Index: None.

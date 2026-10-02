@@ -32,7 +32,7 @@ YOLO_MODEL_PATH=/opt/prs-practice/models/yolo26n-<清单中的 SHA256>.onnx
 
 ZeroGPU 使用 `/prs/vision/hf/`，云服务器仅需标准库 HTTPS/SSE，无 GPU 依赖。其独立 Nginx location 等待65秒，服务端55秒、手机60秒；其它 location 超时保持30秒。更新本应用的 include 前保存备份并运行 `nginx -t`，成功后 graceful reload。可在 root 0600 的本应用 `app.env` 设置 `HF_INFERENCE_TOKEN`，只重启 PRS，不触碰其它应用的凭据或环境。配置/配额和真实测试范围见 [ZEROGPU.md](../ZEROGPU.md)。
 
-Laptop GPU 使用本应用 `/vision/laptop/` 路由和loopback反向SSH隧道，不安装GPU依赖到服务器。在本项目私有环境配置 `LAPTOP_INFERENCE_TOKEN` 与 `LAPTOP_INFERENCE_PORT`（默认18767），必须分别匹配laptop的token和 `LAPTOP_REMOTE_PORT`。端口须空闲；仅发布/重启PRS，原Nginx、systemd限额及其他应用无需调整。本地 `python backend/start_laptop.py` 同时启动worker和隧道，完整约定见 [LAPTOP.md](../LAPTOP.md)。
+HF 推理只使用 HTTPS 转发。部署环境只需 Django/CPU 运行依赖和私有 HF token，不需要 GPU 驱动或私有反向隧道。
 
 检测运行环境安装 `backend/requirements-vision.txt`；构建工具只用于本地独立环境，见 [模型工件](../models/README.md)。发布前核对 ONNX 的 SHA256 与该发布的清单；模型放在本应用 models 目录，root 所有、文件 0644，不允许运行用户修改。新 vision-venv 与旧 runtime 分离，systemd 模板增加 `OPENBLAS_NUM_THREADS=1` 并指向新 venv，其他资源限额保持原值。只更新本应用环境文件、current 链接和 systemd 单元，daemon-reload 后仅重启 prs-camera；无需改动或 reload Nginx。
 

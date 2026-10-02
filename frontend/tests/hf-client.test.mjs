@@ -1,20 +1,20 @@
-/* Responsibilities: Verify explicit laptop backend/precision validation in detection transport.
+/* Responsibilities: Verify explicit HF backend/precision validation in detection transport.
  * Implementation: Fake fetch and JPEG magic bytes; no browser, GPU, camera or network.
- * Related Modules: detection-client.js; core.laptop_vision/laptop_worker.
- * Declaration Index: testLaptop; testLaptop.fetchFn.
+ * Related Modules: detection-client.js; core.hf_vision/hf_services.
+ * Declaration Index: testHF; testHF.fetchFn.
  * Variable Index: None; all fixtures are local to the test.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DetectionClient } from "../detection-client.js";
 
-/* Functionality: Check laptop response cannot silently come from CPU/FP16.
+/* Functionality: Check HF response cannot silently come from CPU/FP16.
  * Inputs: fake response backend/precision fixtures. Outputs: accepted/rejected Promise assertions.
  * Logic: real client handles injected config and frame metadata.
  * Constraints: synthetic JPEG bytes are not a real encoded image or accuracy test. */
-test("laptop 模式严格匹配 TensorRT FP32", async function testLaptop() {
+test("HF 模式严格匹配 PyTorch ZeroGPU FP32", async function testHF() {
   for (const [backend, precision, valid] of [
-    ["TensorRT", "FP32", true], ["CPU", "FP32", false], ["TensorRT", "FP16", false],
+    ["PyTorch ZeroGPU", "FP32", true], ["CPU", "FP32", false], ["PyTorch ZeroGPU", "FP16", false],
   ]) {
     /* Functionality: Return controlled transport response. Inputs: url and ignored options.
      * Outputs: real Response; Logic: route suffix selects config or JPEG.
@@ -29,8 +29,8 @@ test("laptop 模式严格匹配 TensorRT FP32", async function testLaptop() {
         "X-Inference-Backend": backend, "X-Inference-Precision": precision,
       }});
     }
-    const client = new DetectionClient("https://test.invalid/vision/laptop/", {
-      fetchFn, backend: "TensorRT",
+    const client = new DetectionClient("https://test.invalid/vision/hf/", {
+      fetchFn, backend: "PyTorch ZeroGPU",
     });
     if (valid) {
       await client.connect();

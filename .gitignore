@@ -1,6 +1,6 @@
 # Responsibilities: 跟踪开发源码，课程资料、凭据、运行环境和生成工件保留在本地。
 # Implementation: 根目录白名单，排除 Python 环境、模型二进制及 ZeroGPU 上传/测试工件。
-# Related Modules: backend/tools/deploy_space.py, backend/start_laptop.py, README.md。
+# Related Modules: backend/tools/deploy_space.py, README.md。
 # Declaration Index: None。
 # Variable Index: None。
 /*
@@ -15,13 +15,11 @@
 **/__pycache__/
 *.py[cod]
 .venv/
-.venv-laptop/
 .venv-space/
 backend/.space-bundle/
 .env
 .env.*
 !.env.example
-!.env.laptop.example
 *.sqlite3
 *.sqlite3-*
 *.log
@@ -39,6 +37,4 @@ backend/models/*.onnx
 backend/models/*.onnx.data
 backend/models/.build-config/
 backend/models/experiments/
-backend/models/*.engine
-backend/models/tensorrt/
 backend/models/*.tmp
