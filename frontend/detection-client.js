@@ -13,11 +13,12 @@ import { MAX_FRAME_BYTES, TIMEOUT_MS } from "./echo-client.js";
  */
 export class DetectionClient {
   /* Functionality: 初始化依赖。Inputs: url、可注入 fetchFn/timeoutMs；Outputs: 会话实例。
-   * Logic: 保存同源基础地址与取消状态；Constraints: 不立即联网或申请摄像头。
+   * Logic: 原生 fetch 绑定全局接收者，保存基础地址与取消状态；不立即联网或申请摄像头。
+   * Constraints: 注入的 fetchFn 保留其测试语义；不得以类实例调用未绑定的 Window.fetch。
    */
   constructor(
     url,
-    { fetchFn = globalThis.fetch, timeoutMs = TIMEOUT_MS } = {},
+    { fetchFn = globalThis.fetch.bind(globalThis), timeoutMs = TIMEOUT_MS } = {},
   ) {
     this.url = url;
     this.fetchFn = fetchFn;

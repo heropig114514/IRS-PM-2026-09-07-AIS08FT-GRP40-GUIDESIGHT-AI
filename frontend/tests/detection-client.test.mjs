@@ -1,7 +1,8 @@
 /* Responsibilities: Verify detection transport, output boundaries and request cancellation.
  * Implementation: Injected fetch responses, real AbortController; no server, weights or camera.
  * Related Modules: detection-client.js; actual public inference verified separately.
- * Declaration Index: frameResponse; testSuccess; testSuccess.fetchFn; testMetadata;
+ * Declaration Index: frameResponse; testReceiver; testReceiver.nativeFetch;
+ * testSuccess; testSuccess.fetchFn; testMetadata;
  * testMetadata.fetchFn; testErrors; testErrors.fetchFn; testConfig; testConfig.fetchFn;
  * testCancelled; testCancelled.fetchFn; testCancelled.fetchFn.register;
  * testTimeout; testTimeout.fetchFn; testTimeout.fetchFn.register; testTimeout.fetchFn.register.aborted;
@@ -29,6 +30,25 @@ function frameResponse(headers = {}, body = JPEG) {
     },
   });
 }
+
+/* Functionality: Protect native fetch receiver contract. Inputs: receiver-sensitive global mock.
+ * Outputs: successful frame; Logic: construct default client and restore global in finally.
+ * Constraints: models Window binding, not browser transport or real inference. */
+test("default fetch preserves its global receiver", async function testReceiver() {
+  const original = globalThis.fetch;
+  /* Functionality: Verify receiver. Inputs: implicit this, URL/options; Outputs: fake JPEG.
+   * Logic: reject class receiver via assertion; Constraints: no actual fetch or Window. */
+  async function nativeFetch() {
+    assert.equal(this, globalThis);
+    return frameResponse();
+  }
+  globalThis.fetch = nativeFetch;
+  try {
+    await new DetectionClient(URL).sendFrame(JPEG.buffer);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
 
 /* Functionality: Check POST contract. Inputs: controlled response; Outputs: metadata assertions.
  * Logic: capture injected fetch arguments; Constraints: no real network/model accuracy proof. */
