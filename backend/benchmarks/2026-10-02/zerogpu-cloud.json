@@ -1,0 +1,16 @@
+{
+  "release": "4268f91b947168f604aa38e2f2136828e513cae7",
+  "entrypoint": "https://47.239.50.129/prs/",
+  "provider": "Heropig114514/prs-yolo26",
+  "verification": "Real browser public-sample request through PRS HTTPS relay and annotated image display",
+  "authentication": "token",
+  "model": "yolo26n",
+  "precision": "FP32",
+  "count": 5,
+  "displayed_roundtrip_ms": 4558,
+  "displayed_inference_ms": 477,
+  "protected_service_pids_and_states_unchanged": true,
+  "protected_config_hashes_unchanged": true,
+  "existing_health_cpu_laptop_and_login_http_status": 200,
+  "real_phone_camera_verified": false
+}

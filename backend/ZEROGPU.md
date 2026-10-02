@@ -39,3 +39,5 @@ python -m tools.benchmark_space --evaluation models/experiments/coco8/images/val
 ```
 
 验证工具保留已有输入、IoU0.5与类别匹配方式；逐帧记录进展，出错不重试。远端协议不返回raw预测哈希，报告中逐位一致性为null；完整比较仅在4张全部返回后生成。
+
+2026-10-02 云端已发布 `4268f91b947168f604aa38e2f2136828e513cae7`，配置接口确认 token 身份。实际浏览器样例经过 PRS → Space → PRS 返回屏幕：5个框，往返4558ms，GPU阶段477ms。旧应用进程PID/状态和受保护配置哈希在部署前后相同；只重启 PRS，Nginx执行配置检查后平滑重载。此验证使用公开样例，实际手机摄像头权限/连续拍摄仍需真机验证。记录见 `benchmarks/2026-10-02/zerogpu-cloud.json`。

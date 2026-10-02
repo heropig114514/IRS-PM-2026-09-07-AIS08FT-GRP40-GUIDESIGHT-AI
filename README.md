@@ -2,6 +2,8 @@
 
 前后端开发仓库。后端沿用 AiInterviewer 的 Django + DRF + ASGI 技术栈及分层思路，独立维护业务与数据库；前端使用原生浏览器 API。
 
+本机开发目录已独立整理为 `D:\my_files\NUS_teamwork\PRS-PracticeModule\development`，请在编辑器中打开此目录；后端位于其 `backend/`。Git 仓库和隔离运行环境随代码迁移，依赖版本保持不变。课程与个人资料保留于外层 `PRS-PracticeModule`。GitHub 仓库内部仍以 `backend/` 和 `frontend/` 为顶层；克隆到其它机器时按实际仓库路径启动。
+
 ```text
 backend/              后端唯一开发入口
   config/             开发/生产配置与 ASGI/WSGI 入口
