@@ -1,8 +1,8 @@
 """Responsibilities: Bound server-to-laptop inference calls through the SSH loopback tunnel.
-Implementation: Fixed loopback upstream, bearer auth, bounded HTTP, no redirect/retry/fallback.
+Implementation: Configurable loopback port, bearer auth, bounded HTTP, no redirect/retry/fallback.
 Related Modules: core.laptop_vision; core.laptop_worker returns the same JPEG metadata contract.
 Declaration Index: laptop_request — authenticated transport and response validation.
-Variable Index: LAPTOP_PORT/TIMEOUT_SECONDS — fixed tunnel/8-second I/O; logger — safe diagnostics.
+Variable Index: TIMEOUT_SECONDS — established 8-second I/O; logger — safe diagnostics.
 """
 
 import http.client
@@ -14,20 +14,28 @@ import time
 
 from .detector import CONFIDENCE_THRESHOLD, MAX_FRAME_BYTES, DetectionError, decode_frame
 
-LAPTOP_PORT = 18767
 TIMEOUT_SECONDS = 8
 logger = logging.getLogger(__name__)
 
 
 def laptop_request(payload=None):
     """Functionality: Request readiness or annotated JPEG. Inputs: optional bounded JPEG bytes.
-    Outputs: readiness dict or (JPEG,count,time); Logic: fixed loopback HTTP across encrypted SSH.
+    Outputs: readiness dict or (JPEG,count,time); Logic: configured loopback HTTP across SSH.
     Constraints: token only in header; 8-second socket plus total read deadline; no raw body logs.
     """
     token = os.environ.get("LAPTOP_INFERENCE_TOKEN", "")
     if len(token) < 32:
         raise DetectionError("laptop_not_configured", "服务端尚未配置 laptop 推理连接。", 503)
-    connection = http.client.HTTPConnection("127.0.0.1", LAPTOP_PORT, timeout=TIMEOUT_SECONDS)
+    try:
+        port = int(os.environ.get("LAPTOP_INFERENCE_PORT", "18767"))
+        if not 1024 <= port <= 65535:
+            raise ValueError("Invalid port")
+    except ValueError as error:
+        logger.error("Invalid LAPTOP_INFERENCE_PORT; expected 1024..65535")
+        raise DetectionError(
+            "laptop_not_configured", "服务端 laptop 推理端口配置无效。", 503
+        ) from error
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=TIMEOUT_SECONDS)
     started = time.monotonic()
     try:
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "image/jpeg"}

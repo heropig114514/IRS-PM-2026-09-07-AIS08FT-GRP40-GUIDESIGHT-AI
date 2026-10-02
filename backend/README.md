@@ -2,7 +2,7 @@
 
 所有后端开发在本目录进行。采用 Python 3.12、Django、Django REST Framework 和 Uvicorn，运行依赖版本沿用 AiInterviewer 本地环境；独立实现配置及公共接口，不复制面试业务。
 
-Laptop GPU 推理、TensorRT 构建及 SSH 反向隧道见 [LAPTOP.md](LAPTOP.md)。显式选择该模式，断连时停止，不自动切换 CPU。
+Laptop GPU 推理和 SSH 通道统一由根目录指令 `python backend/start_laptop.py` 启动；首次安装使用 `--setup`。显卡适配、私有配置与停止方式见 [LAPTOP.md](LAPTOP.md)。
 
 ## 安装与启动（PowerShell）
 

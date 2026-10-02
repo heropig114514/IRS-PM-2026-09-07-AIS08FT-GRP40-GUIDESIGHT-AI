@@ -11,10 +11,11 @@ import hashlib
 import json
 import logging
 import os
-import sys
 import time
 from pathlib import Path
 from threading import Lock
+
+from tools.laptop_platform import cuda_library, engine_identity, select_gpu
 
 from .detector import DetectionError, annotate, decode_boxes, letterbox
 
@@ -25,18 +26,19 @@ gpu_lock = Lock()
 
 
 class Cuda:
-    """Functionality: Own the minimal Windows CUDA runtime ABI and allocated device memory.
-    Logic: explicit CUDA device 0; checked copy/allocation/synchronization calls.
-    Constraints: Windows worker only; CUDA errors never select a different inference engine.
+    """Functionality: Own the minimal Windows/Linux CUDA runtime ABI and device memory.
+    Logic: CUDA device 0 is the explicitly masked physical GPU; checked allocation/copy calls.
+    Constraints: x64 worker only; CUDA errors never select a different inference engine.
     """
 
     def __init__(self):
         """Functionality: Load CUDA 12 runtime. Inputs: self, isolated Python installation.
-        Outputs: library/function ABI and allocation list; Logic: absolute DLL, checked device.
+        Outputs: library/function ABI and allocation list; Logic: absolute library, checked device.
         Constraints: does not modify system PATH, drivers or existing CUDA 11.8 installation.
         """
-        dll = Path(sys.prefix) / "Lib/site-packages/nvidia/cuda_runtime/bin/cudart64_12.dll"
-        self.library = ctypes.WinDLL(str(dll))
+        library = cuda_library()
+        loader = ctypes.WinDLL if os.name == "nt" else ctypes.CDLL
+        self.library = loader(str(library))
         self.allocations = []
         signatures = {
             "cudaSetDevice": [ctypes.c_int],
@@ -99,10 +101,17 @@ class GpuDetector:
     def __init__(self, engine_path):
         """Functionality: Load verified engine. Inputs: self, absolute engine_path and sidecar JSON.
         Outputs: engine/context/runtime/cuda/names/input/output/buffers.
-        Logic: verify engine/source hash and FP32 version/shape before memory registration.
-        Constraints: building is offline; FP16/TF32/INT8 are not enabled implicitly.
+        Logic: mask selected GPU, verify hardware/source hash and FP32 version/shape before buffers.
+        Constraints: no cross-GPU engine reuse; FP16/TF32/INT8 are not enabled implicitly.
         """
         import numpy as np
+
+        gpu_index = os.environ.get("LAPTOP_GPU_INDEX", "").strip()
+        gpu = select_gpu(int(gpu_index) if gpu_index else None)
+        mask = os.environ.get("CUDA_VISIBLE_DEVICES")
+        if mask is not None and mask != gpu["uuid"]:
+            raise ValueError("CUDA GPU mask differs from selected physical GPU")
+        os.environ["CUDA_VISIBLE_DEVICES"] = gpu["uuid"]
         import tensorrt as trt
 
         path = Path(engine_path)
@@ -111,6 +120,7 @@ class GpuDetector:
             (Path(__file__).parents[1] / "models/yolo26n.json").read_text(encoding="utf-8")
         )
         artifact = path.read_bytes()
+        identity, _ = engine_identity(gpu, trt.__version__, manifest["onnx_sha256"])
         if (
             not path.is_absolute()
             or hashlib.sha256(artifact).hexdigest() != metadata["engine_sha256"]
@@ -118,6 +128,8 @@ class GpuDetector:
             or metadata["tensorrt"] != trt.__version__
             or metadata["precision"] != "FP32"
             or metadata["tf32"] is not False
+            or metadata["workspace_mib"] != 256
+            or metadata.get("hardware") != identity
             or manifest["model"] != "yolo26n"
             or len(manifest["names"]) != 80
         ):

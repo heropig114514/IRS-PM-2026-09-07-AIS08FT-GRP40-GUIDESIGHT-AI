@@ -1,7 +1,8 @@
 # Responsibilities: 本地和 CI 检查依赖。
-# Implementation: 包含视觉/网页运行依赖并增加固定版本 Ruff。
-# Related Modules: requirements-vision.txt, pyproject.toml。
+# Implementation: 包含视觉/网页依赖、固定 Ruff 与模拟 SSH 生命周期测试所需 Paramiko。
+# Related Modules: requirements-vision.txt, pyproject.toml, tools/test_laptop_startup.py。
 # Declaration Index: None。
 # Variable Index: None。
 -r requirements-vision.txt
 ruff==0.16.6
+paramiko==3.5.1

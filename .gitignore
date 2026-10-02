@@ -16,6 +16,7 @@
 .env
 .env.*
 !.env.example
+!.env.laptop.example
 *.sqlite3
 *.sqlite3-*
 *.log
@@ -34,3 +35,5 @@ backend/models/*.onnx.data
 backend/models/.build-config/
 backend/models/experiments/
 backend/models/*.engine
+backend/models/tensorrt/
+backend/models/*.tmp

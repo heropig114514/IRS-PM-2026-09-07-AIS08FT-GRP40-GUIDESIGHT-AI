@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-02",
+  "machine": "Windows x64 RTX4060 Laptop driver566.36",
+  "launch_command": "python backend/start_laptop.py",
+  "first_build_and_combined_start": true,
+  "cached_restart_ready": true,
+  "ctrl_c_closes_local_listener": true,
+  "cloud_status_after_stop": 503,
+  "frame_status": 200,
+  "count": 5,
+  "backend": "TensorRT",
+  "precision": "FP32",
+  "inference_ms": 86.4,
+  "jpeg_sha256": "8da11238a95fc1094a1aa429bb778f54fcf10e50f7a4337ce63ecc1ea4621312",
+  "backend_tests": 64,
+  "frontend_tests": 27,
+  "linux_blackwell_hardware_verified": false,
+  "actual_phone_camera_verified": false
+}
