@@ -15,7 +15,9 @@ frontend/             摄像头回传、Leaflet/OSM 步行路线与客户端测�
 
 当前实现手机摄像头 JPEG 帧经 WebSocket 原样回传，校验字节后显示；另提供应用级 ping/pong。图像只在内存中处理，不录制、不存储。最大 4 个连接、单帧 1 MiB，无自动重连或重试。
 
-服务器入口：[摄像头回传](https://47.239.50.129/prs/)。开发启动与检查见 [后端说明](backend/README.md)，协议与操作见 [前端说明](frontend/README.md)，隔离部署见 [运维说明](backend/deploy/README.md)。当前未实现模型推理、持久化媒体或业务账号接口。
+服务器入口：[摄像头回传](https://47.239.50.129/prs/)。新增可选 YOLO26n COCO 80 类预训练检测：服务端在返回 JPEG 绘制框、类别和置信度，无需额外训练。页面保留默认原样回传，另可点击“测试示例识别”验证公开样例。检测参数、资源测试和范围见 [检测说明](backend/VISION.md)，工件与许可见 [模型说明](backend/models/README.md)。
+
+开发启动与检查见 [后端说明](backend/README.md)，协议与操作见 [前端说明](frontend/README.md)，隔离部署见 [运维说明](backend/deploy/README.md)。当前未实现持久化媒体或业务账号接口。
 
 [步行路线测试页面](https://47.239.50.129/prs/maps/) 使用 Leaflet 1.9.4 + OpenStreetMap 底图和 ORS `foot-walking` 路线。服务端配置 `ORS_API_KEY`，浏览器仅获配置状态。点击获取设备起点，点选地图终点，再提交路线；也可明确选择 NUS 固定示例。规划时起终点发送 PRS 和 ORS，不存数据库；返回路线、距离、预计时间和转向步骤。初始 NUS 区域预览和示例均不是设备位置。
 

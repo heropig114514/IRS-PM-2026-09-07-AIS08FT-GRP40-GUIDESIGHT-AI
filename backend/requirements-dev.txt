@@ -1,7 +1,7 @@
 # Responsibilities: 本地和 CI 检查依赖。
-# Implementation: 包含运行依赖并增加固定版本 Ruff。
-# Related Modules: requirements.txt, pyproject.toml。
+# Implementation: 包含视觉/网页运行依赖并增加固定版本 Ruff。
+# Related Modules: requirements-vision.txt, pyproject.toml。
 # Declaration Index: None。
 # Variable Index: None。
--r requirements.txt
+-r requirements-vision.txt
 ruff==0.16.6

@@ -1,11 +1,12 @@
 # Responsibilities: 独立低权限摄像头回传服务，仅监听 127.0.0.1:8766。
 # Implementation: 单 worker、明确资源预算、无自动重启；运行目录可写，源码只读。
-# Related Modules: config.camera_server, nginx.locations.conf。
+# Related Modules: config.camera_server, core.vision, nginx.locations.conf。
 # Declaration Index: None。
 # Variable Index: User/Group 为 prs-camera；EnvironmentFile 为专用凭据；
 # MemoryMax/CPUQuota/TasksMax 为独立服务预算；ExecStart 为固定 ASGI 运行参数。
+# OPENBLAS_NUM_THREADS 限制数值库线程，配合单线程 ONNX 避免争用其他应用。
 [Unit]
-Description=PRS camera echo service
+Description=PRS camera echo and YOLO26 service
 After=network.target
 
 [Service]
@@ -15,7 +16,8 @@ Group=prs-camera
 WorkingDirectory=/opt/prs-practice/current/backend
 EnvironmentFile=/etc/prs-camera/app.env
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStart=/opt/prs-practice/venv/bin/python -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan off --ws websockets-sansio --ws-max-size 1048576 --ws-per-message-deflate false --no-proxy-headers
+Environment=OPENBLAS_NUM_THREADS=1
+ExecStart=/opt/prs-practice/vision-venv/bin/python -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan off --ws websockets-sansio --ws-max-size 1048576 --ws-per-message-deflate false --no-proxy-headers
 Restart=no
 NoNewPrivileges=true
 PrivateTmp=true

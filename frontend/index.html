@@ -1,7 +1,7 @@
 <!doctype html>
-<!-- Responsibilities: 手机摄像头回传工作台的语义结构。
-Implementation: 本地 video 与服务端回传 img 分开；外部模块加载；链接到独立定位页面。
-Related Modules: camera.css, camera.js, echo-client.js, maps.html。
+<!-- Responsibilities: 手机摄像头原样/YOLO 标注回传工作台的语义结构。
+Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认。
+Related Modules: camera.css, camera.js, echo-client.js, detection-client.js, maps.html。
 Declaration Index: None。
 Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头数据。 -->
 <html lang="zh-CN">
@@ -27,7 +27,7 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
           <p class="eyebrow">连接，从看见开始</p>
           <h1>镜头里的此刻，<br /><span>由服务端传回来。</span></h1>
           <p class="subtitle">
-            打开手机摄像头，验证图像从采集、传输到回显的完整链路。
+            打开手机摄像头，选择原样回传或 YOLO26 检测，在返回画面查看标注。
           </p>
         </section>
         <section class="workspace" aria-label="摄像头回传工作台">
@@ -38,10 +38,16 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
           <div class="screens">
             <article class="screen">
               <div class="screen-label">
-                <span>01 / 本地镜头</span><span class="tag">采集端</span>
+                <span id="capture-source">01 / 本地镜头</span
+                ><span class="tag">采集端</span>
               </div>
               <div class="media">
                 <video id="preview" muted autoplay playsinline></video>
+                <img
+                  id="sample-preview"
+                  alt="公开公交车测试图，并非摄像头画面"
+                  hidden
+                />
                 <div id="local-placeholder" class="placeholder">
                   <span class="camera-symbol">◎</span
                   ><strong>准备好你的镜头</strong
@@ -66,6 +72,12 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
           </div>
           <div class="controls">
             <label class="camera-select"
+              >处理模式<select id="processing">
+                <option value="echo">原样回传</option>
+                <option value="detect">YOLO26 检测 · 80 类</option>
+              </select></label
+            >
+            <label class="camera-select"
               >摄像头<select id="camera">
                 <option value="environment">后置摄像头</option>
                 <option value="user">前置摄像头</option>
@@ -74,6 +86,7 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
               开启摄像头并回传 <span>↗</span></button
             ><button id="stop" class="button secondary" disabled>停止</button
             ><button id="ping" class="button text-button">测试连接</button>
+            <button id="sample" class="button text-button">测试示例识别</button>
           </div>
           <p id="message" class="message" aria-live="polite">
             仅申请摄像头权限。图像只在内存中回传，不录制、不保存。
@@ -99,11 +112,11 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
         </section>
         <section class="flow" aria-label="数据流程">
           <span>手机镜头</span><i>→</i><span>安全传输</span><i>→</i
-          ><span>服务端原样回传</span><i>→</i><span>屏幕回显</span>
+          ><span>服务端回传 / YOLO 标注</span><i>→</i><span>屏幕回显</span>
         </section>
       </main>
       <footer>
-        <span>PRS Practice Module</span><span>第一阶段 · 连接验证</span>
+        <span>PRS Practice Module</span><span>连接验证 · YOLO26 检测原型</span>
       </footer>
     </div>
   </body>

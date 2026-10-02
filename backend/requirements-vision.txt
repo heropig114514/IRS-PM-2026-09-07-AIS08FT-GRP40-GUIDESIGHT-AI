@@ -1,0 +1,9 @@
+# Responsibilities: Optional CPU-only YOLO26 ONNX inference dependencies.
+# Implementation: Include existing web runtime; no Torch/CUDA/Ultralytics in production.
+# Related Modules: core.detector, requirements-dev.txt, deploy/README.md.
+# Declaration Index: None.
+# Variable Index: None.
+-r requirements.txt
+numpy==1.26.4
+Pillow==12.3.0
+onnxruntime==1.30.0

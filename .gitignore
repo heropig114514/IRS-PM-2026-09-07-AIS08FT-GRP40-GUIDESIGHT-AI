@@ -27,3 +27,7 @@ dist/
 media/
 staticfiles/
 test-results/
+backend/models/*.pt
+backend/models/*.onnx
+backend/models/*.onnx.data
+backend/models/.build-config/

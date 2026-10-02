@@ -77,9 +77,10 @@ globalThis.window = {
 const { CameraApp } = await import("../camera.js");
 
 /** Functionality: 创建隔离控制器。Inputs: getUserMedia 替身。Outputs: CameraApp。
- * Logic: 更换 fake document 和 navigator；Constraints: Node 文件进程结束即清除全局替身。 */
+ * Logic: 更换 fake document/navigator，设置原样模式；Constraints: 测试不验证实际模型。 */
 function makeApp(getUserMedia) {
   globalThis.document = new FakeDocument();
+  globalThis.document.getElementById("processing").value = "echo";
   Object.defineProperty(globalThis, "navigator", {
     configurable: true,
     value: { mediaDevices: { getUserMedia } },

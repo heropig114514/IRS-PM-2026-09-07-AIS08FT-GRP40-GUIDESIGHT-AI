@@ -5,7 +5,7 @@
 ## 隔离边界
 
 - 源码：`/opt/prs-practice/releases/<Git SHA>`；`current` 指向当前发布。
-- Python：`/opt/prs-practice/python` 的独立解释器副本和 `/opt/prs-practice/venv`；不修改系统或旧应用环境。
+- Python：`/opt/prs-practice/python` 的独立解释器副本和 `/opt/prs-practice/vision-venv`；原 `/opt/prs-practice/venv` 保留供手动回滚，不修改系统或旧应用环境。
 - 身份：`prs-camera` 非登录系统用户；无 root 运行的应用进程。
 - 环境：`/etc/prs-camera/app.env`，root 0600；不能提交仓库或写入日志。
 - 数据：`/var/lib/prs-practice/db.sqlite3`，本应用专用 SQLite，只保存 Django 系统表，不存摄像头图像。
@@ -21,6 +21,7 @@ DJANGO_SETTINGS_MODULE=config.camera_server
 DJANGO_SECRET_KEY=<独立生成，不沿用旧应用密钥>
 CAMERA_PUBLIC_ORIGIN=https://47.239.50.129
 PRS_DB_PATH=/var/lib/prs-practice/db.sqlite3
+YOLO_MODEL_PATH=/opt/prs-practice/models/yolo26n-<清单中的 SHA256>.onnx
 ```
 
 地图入口为 `https://47.239.50.129/prs/maps/`。在 `/etc/prs-camera/app.env` 设置 `ORS_API_KEY=<服务端 ORS key>`，保持 root 0600，仅重启 `prs-camera`；不修改 Nginx、证书和其他应用环境。`/prs/maps/config/` 只公开 provider/profile/configured/code，key 不进入浏览器或仓库。未配置明确返回 503；认证失败检查 key/账号，429 检查 ORS 配额。服务器须能通过 HTTPS 访问 `api.heigit.org`。本原型的进程内 20 次/分钟、2 次并发限制要求保持单 worker；不能以此视为身份认证或共享配额管理。
@@ -28,6 +29,10 @@ PRS_DB_PATH=/var/lib/prs-practice/db.sqlite3
 真实验证先在浏览器点击“填入 NUS 测试示例”，再点“规划步行路线”，检查底图、真实路线和转向指令。真机另点击获取设备起点并允许定位权限，检查设备精度，再选终点规划。示例验证不能替代手机 GPS 验证。浏览器须能访问固定 SRI 的 unpkg Leaflet 与 OSM 瓦片；网络失败不会改用其他地图。地图采用独立 CSP nonce；明确规划后起终点发往 PRS/ORS，不持久化，日志不记录 key 或位置。
 
 ## 发布与检查
+
+检测运行环境安装 `backend/requirements-vision.txt`；构建工具只用于本地独立环境，见 [模型工件](../models/README.md)。发布前核对 ONNX 的 SHA256 与该发布的清单；模型放在本应用 models 目录，root 所有、文件 0644，不允许运行用户修改。新 vision-venv 与旧 runtime 分离，systemd 模板增加 `OPENBLAS_NUM_THREADS=1` 并指向新 venv，其他资源限额保持原值。只更新本应用环境文件、current 链接和 systemd 单元，daemon-reload 后仅重启 prs-camera；无需改动或 reload Nginx。
+
+打开 `/prs/` 点击“测试示例识别”，验证公开样例真实 POST、返回标注和目标数；它不是摄像头或准确率评估。实际摄像头另选 YOLO 模式并在手机授权。HTTP、取消及错误约定见 [VISION.md](../VISION.md)。回滚须同时恢复旧 current、旧单元及其 `/opt/prs-practice/venv`，仅重启本服务，不自动回滚或重试。
 
 从已经通过本地检查的 Git 提交生成源码归档，仅上传跟踪文件，排除 .env、数据库、虚拟环境及课程材料。解压到新的 SHA 目录，安装本应用依赖，初始化本应用数据库，再安装本目录的 systemd 单元及 Nginx include。不要对旧应用运行 migrate、pip install 或 restart。
 

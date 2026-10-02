@@ -1,6 +1,6 @@
-# Responsibilities: 前后端依赖、Django、WebSocket、地图契约和 Ruff 自动检查。
-# Implementation: Ubuntu/Python 3.12/Node 22；测试无外网；浏览器地图依赖固定 Leaflet/SRI。
-# Related Modules: backend/core/tests.py/test_echo.py/test_maps.py, frontend/tests/*.test.mjs。
+# Responsibilities: 前后端依赖、Django、WebSocket、地图/检测契约和 Ruff 自动检查。
+# Implementation: Ubuntu/Python 3.12/Node 22；测试无外网，不下载或运行真实模型。
+# Related Modules: backend/core/tests.py/test_echo.py/test_maps.py/test_vision.py, frontend/tests/*.test.mjs。
 # Declaration Index: None。
 # Variable Index: DJANGO_SECRET_KEY — GITHUB_ENV 中仅供当次运行的随机配置。
 name: Backend checks
@@ -57,5 +57,6 @@ jobs:
         run: |
           node --check camera.js
           node --check echo-client.js
+          node --check detection-client.js
           node --check maps-client.js
           node --check maps-page.js
