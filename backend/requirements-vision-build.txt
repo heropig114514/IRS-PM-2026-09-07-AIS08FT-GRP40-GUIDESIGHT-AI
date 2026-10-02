@@ -1,6 +1,6 @@
 # Responsibilities: Isolated local YOLO26 export dependencies; never install on the web server.
 # Implementation: Pinned FP32 CPU export toolchain; PyTorch CPU/CUDA build records in the manifest.
-# Related Modules: tools/export_yolo26.py, requirements-vision.txt, models/yolo26n.json.
+# Related Modules: tools/export_yolo26.py/build_precision.py, requirements-vision.txt, model manifests.
 # Declaration Index: None.
 # Variable Index: None.
 ultralytics==8.4.171
@@ -14,3 +14,4 @@ opencv-python==4.11.0.86
 contourpy==1.3.2
 Pillow==12.3.0
 protobuf==5.29.5
+onnxconverter-common==1.16.0

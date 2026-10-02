@@ -2,9 +2,11 @@
 Implementation: Real Pillow/NumPy transforms; mocked model/session/HTTP, no downloaded weights.
 Related Modules: core.detector, core.vision; actual model and public HTTP checked separately.
 Declaration Index: jpeg; TransformTests; TransformTests.test_decode;
-TransformTests.test_coordinates; TransformTests.test_render; TransformTests.test_bad_predictions;
+TransformTests.test_coordinates; TransformTests.test_reuse;
+TransformTests.test_render; TransformTests.test_bad_predictions;
 InitializationTests; InitializationTests.test_hash; InitializationTests.test_cached_failure;
 InitializationTests.test_missing; VisionTests; VisionTests.post; VisionTests.test_success;
+InitializationTests.test_allocator;
 VisionTests.test_boundaries; VisionTests.test_busy; VisionTests.test_failure;
 VisionTests.test_config.
 Variable Index: NAMES — synthetic class order, not a trained-model accuracy fixture.
@@ -89,6 +91,24 @@ class TransformTests(SimpleTestCase):
         self.assertGreater(output.getpixel((10, 50))[1], 100)
         self.assertEqual(detector.decode_frame(detector.annotate(image, [])).size, image.size)
 
+    def test_reuse(self):
+        """Functionality: Verify reusable tensor ownership, RGB values and overwritten padding.
+        Inputs: red portrait, blue landscape and an existing tensor; Outputs: identity/pixel checks.
+        Logic: two aspect ratios reuse one buffer; Constraints: no model or mirrored resize oracle.
+        """
+        output = np.empty((1, 3, 640, 640), dtype=np.float32)
+        first, _, left, top = detector.letterbox(Image.new("RGB", (320, 640), "red"), output)
+        self.assertIs(first, output)
+        np.testing.assert_array_equal(first[0, :, top + 20, left + 20], [1, 0, 0])
+        second, _, left, top = detector.letterbox(Image.new("RGB", (640, 320), "blue"), output)
+        self.assertIs(second, output)
+        np.testing.assert_array_equal(second[0, :, top + 20, left + 20], [0, 0, 1])
+        np.testing.assert_array_equal(
+            second[0, :, 0, 300], np.full(3, np.float32(114) / np.float32(255), dtype=np.float32)
+        )
+        with self.assertRaises(ValueError):
+            detector.letterbox(Image.new("RGB", (10, 10)), np.empty((1, 3, 640, 640), np.float64))
+
     def test_bad_predictions(self):
         """Functionality: Reject invalid model outputs. Inputs: shape/NaN/class/score fixtures.
         Outputs: safe 502; Logic: mutate each independent boundary; Constraints: mock predictions.
@@ -148,6 +168,22 @@ class InitializationTests(SimpleTestCase):
             with self.assertRaises(detector.DetectionError) as caught:
                 detector.get_detector()
             self.assertEqual(caught.exception.code, "model_not_configured")
+
+    def test_allocator(self):
+        """Functionality: Verify bounded allocator registers once. Inputs: fresh flag and ORT mock.
+        Outputs: one registration with 128 MiB/requested-size strategy; Logic: two explicit calls.
+        Constraints: registration mocked, resource/equality validation performed on real server.
+        """
+        with (
+            patch.object(detector, "arena_registered", False),
+            patch("onnxruntime.create_and_register_allocator") as register,
+        ):
+            detector.register_arena()
+            detector.register_arena()
+        self.assertEqual(register.call_count, 1)
+        config = register.call_args.args[1]
+        self.assertEqual(config.max_mem, 128 * 1024 * 1024)
+        self.assertEqual(config.arena_extend_strategy, 1)
 
 
 @override_settings(CAMERA_ALLOWED_ORIGINS=["http://testserver"])

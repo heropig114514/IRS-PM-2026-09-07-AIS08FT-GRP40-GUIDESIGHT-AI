@@ -14,4 +14,6 @@ python tools/export_yolo26.py --output models
 
 运行环境仅安装 `requirements-vision.txt`，设置 `YOLO_MODEL_PATH` 为清单匹配的 ONNX 绝对路径。服务器无需 Torch、CUDA 或 Ultralytics。单 CPU 推理线程、固定置信度阈值 0.25，RGB 居中 letterbox、Pillow bilinear、114 填充、FP32 /255；原尺寸返回框并以 JPEG 80 编码。模型初始化失败缓存至进程重启。
 
+运行流程融合有上限的内存池和输入/输出复用，原 FP32 工件不变。INT8、FP16 只作为独立实验，不自动使用；结果见 [加速比较](../ACCELERATION.md)。
+
 `frontend/detection-sample.jpg` 是 Ultralytics 8.4.171 包自带 `assets/bus.jpg` 的 480×640 JPEG 80 版本，仅供公开示例验证，沿用来源许可。页面明确标注“非摄像头”，不将样例当成实拍或准确率评测。

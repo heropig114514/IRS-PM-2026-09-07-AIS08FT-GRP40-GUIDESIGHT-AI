@@ -1,14 +1,17 @@
 """Responsibilities: Verified YOLO26n ONNX loading, bounded JPEG decoding and box rendering.
-Implementation: One CPU thread, RGB letterbox, e2e xyxy/score/class output; no NMS or downloads.
+Implementation: One CPU thread, reused FP32 tensors, vectorized e2e decoding; no NMS or downloads.
 Related Modules: core.vision; models/yolo26n.json pins the exported model and COCO class order.
 Declaration Index: DetectionError/DetectionError.__init__ — safe errors;
+register_arena — bounded process allocator;
 decode_frame — JPEG boundary;
-letterbox — tensor transform; decode_boxes — original-image boxes; annotate — JPEG rendering;
+letterbox — tensor transform; decode_boxes — original-image boxes;
+label_font — shared read-only font; annotate — JPEG rendering;
 Detector/Detector.__init__/Detector.predict — verified session and single-frame inference;
 get_detector — process-local initialization with persistent failure state until restart.
 Variable Index: INPUT_EDGE/CONFIDENCE_THRESHOLD/JPEG_QUALITY — explicit inference/render settings;
 MAX_FRAME_BYTES — existing 1 MiB boundary; logger — non-media diagnostics;
 detector/initialization_error/initialization_lock — single-instance lifecycle.
+ARENA_MAX_BYTES — 128 MiB model pool; arena_registered/arena_lock — once-only registration.
 """
 
 import hashlib
@@ -17,6 +20,7 @@ import json
 import logging
 import os
 import time
+from functools import lru_cache
 from pathlib import Path
 from threading import Lock
 
@@ -24,10 +28,13 @@ INPUT_EDGE = 640
 CONFIDENCE_THRESHOLD = 0.25
 JPEG_QUALITY = 80
 MAX_FRAME_BYTES = 1048576
+ARENA_MAX_BYTES = 128 * 1024 * 1024
 logger = logging.getLogger(__name__)
 detector = None
 initialization_error = None
 initialization_lock = Lock()
+arena_registered = False
+arena_lock = Lock()
 
 
 class DetectionError(Exception):
@@ -41,6 +48,27 @@ class DetectionError(Exception):
         """
         super().__init__(detail)
         self.code, self.detail, self.status = code, detail, status
+
+
+def register_arena():
+    """Functionality: Register the model's bounded CPU allocator exactly once.
+    Inputs: process registration state and ARENA_MAX_BYTES.
+    Outputs: shared ORT allocator side effect.
+    Logic: locked 128 MiB pool grows by requested size, with 1 MiB initial/dead-chunk limits.
+    Constraints: does not enlarge systemd's 256 MiB budget; exhaustion fails without a fallback.
+    """
+    import onnxruntime as ort
+
+    global arena_registered
+    with arena_lock:
+        if not arena_registered:
+            memory = ort.OrtMemoryInfo(
+                "Cpu", ort.OrtAllocatorType.ORT_ARENA_ALLOCATOR, 0, ort.OrtMemType.DEFAULT
+            )
+            ort.create_and_register_allocator(
+                memory, ort.OrtArenaCfg(ARENA_MAX_BYTES, 1, 1024 * 1024, 1024 * 1024)
+            )
+            arena_registered = True
 
 
 def decode_frame(payload):
@@ -63,22 +91,33 @@ def decode_frame(payload):
         raise DetectionError("invalid_frame", "JPEG 图像损坏或无法解码。", 400) from error
 
 
-def letterbox(image):
+def letterbox(image, output=None):
     """Functionality: Build a fixed FP32 RGB NCHW input and its inverse coordinate transform.
-    Inputs: bounded RGB image; Outputs: tensor, scale, left/top padding.
-    Logic: isotropic resize to 640, centered 114 padding, divide by 255; retain rounded padding.
+    Inputs: bounded RGB image, optional contiguous FP32 output [1,3,640,640].
+    Outputs: tensor, scale, left/top padding; supplied tensor is overwritten completely.
+    Logic: same resize/padding, direct FP32 divide into NCHW storage; avoid intermediate copies.
     Constraints: Pillow bilinear interpolation is explicit; no cropping, stretching or RGB/BGR swap.
     """
     import numpy as np
     from PIL import Image
 
+    if output is None:
+        output = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
+    if (
+        output.shape != (1, 3, INPUT_EDGE, INPUT_EDGE)
+        or output.dtype != np.float32
+        or not output.flags.c_contiguous
+    ):
+        raise ValueError("Input destination must be contiguous FP32 [1,3,640,640]")
     scale = INPUT_EDGE / max(image.size)
     resized = (round(image.width * scale), round(image.height * scale))
     left, top = (INPUT_EDGE - resized[0]) // 2, (INPUT_EDGE - resized[1]) // 2
     canvas = Image.new("RGB", (INPUT_EDGE, INPUT_EDGE), (114, 114, 114))
     canvas.paste(image.resize(resized, Image.Resampling.BILINEAR), (left, top))
-    tensor = np.asarray(canvas, dtype=np.float32).transpose(2, 0, 1)[None] / 255.0
-    return np.ascontiguousarray(tensor), scale, left, top
+    np.divide(
+        np.asarray(canvas).transpose(2, 0, 1)[None], np.float32(255), out=output, dtype=np.float32
+    )
+    return output, scale, left, top
 
 
 def decode_boxes(predictions, image_size, transform, names):
@@ -94,29 +133,43 @@ def decode_boxes(predictions, image_size, transform, names):
         raise DetectionError("invalid_prediction", "模型输出格式无效。", 502)
     width, height = image_size
     scale, left, top = transform
+    rows = predictions[0]
+    scores, classes = rows[:, 4], rows[:, 5]
+    if np.any((scores < 0) | (scores > 1)) or np.any(
+        (classes < 0) | (classes >= len(names)) | (classes != np.trunc(classes))
+    ):
+        raise DetectionError("invalid_prediction", "模型类别或置信度无效。", 502)
+    selected = rows[scores >= CONFIDENCE_THRESHOLD]
+    # Float64 matches the previous Python-float inverse, including clipping/order.
+    restored = selected[:, :4].astype(np.float64)
+    restored -= [left, top, left, top]
+    restored /= scale
+    np.clip(restored, 0, [width, height, width, height], out=restored)
     boxes = []
-    for x1, y1, x2, y2, score, class_id in predictions[0]:
-        if not 0 <= score <= 1 or class_id != int(class_id) or not 0 <= class_id < len(names):
-            raise DetectionError("invalid_prediction", "模型类别或置信度无效。", 502)
-        if score < CONFIDENCE_THRESHOLD:
-            continue
-        coordinates = [
-            max(0, min(width, (float(x1) - left) / scale)),
-            max(0, min(height, (float(y1) - top) / scale)),
-            max(0, min(width, (float(x2) - left) / scale)),
-            max(0, min(height, (float(y2) - top) / scale)),
-        ]
+    for row, coordinate in zip(selected, restored, strict=True):
+        coordinates = coordinate.tolist()
         if coordinates[2] <= coordinates[0] or coordinates[3] <= coordinates[1]:
             continue
         boxes.append(
             {
                 "xyxy": coordinates,
-                "score": float(score),
-                "class_id": int(class_id),
-                "label": names[int(class_id)],
+                "score": float(row[4]),
+                "class_id": int(row[5]),
+                "label": names[int(row[5])],
             }
         )
     return boxes
+
+
+@lru_cache(maxsize=1)
+def label_font():
+    """Functionality: Reuse the bundled label font without mutating it. Inputs: None.
+    Outputs: Pillow font; Logic: load size 14 once.
+    Constraints: no files downloaded or font mutation.
+    """
+    from PIL import ImageFont
+
+    return ImageFont.load_default(size=14)
 
 
 def annotate(image, boxes):
@@ -125,11 +178,11 @@ def annotate(image, boxes):
     Logic: draw two-pixel outlines and readable backed labels, encode at explicit quality 80.
     Constraints: input remains in memory; English font is Pillow bundled, no external font download.
     """
-    from PIL import ImageDraw, ImageFont
+    from PIL import ImageDraw
 
     image = image.copy()
     draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default(size=14)
+    font = label_font()
     for box in boxes:
         x1, y1, x2, y2 = box["xyxy"]
         draw.rectangle((x1, y1, x2, y2), outline=(0, 255, 140), width=2)
@@ -157,10 +210,11 @@ class Detector:
 
     def __init__(self, model_path):
         """Functionality: Verify and load a local model; Inputs: self, absolute model_path.
-        Outputs: session/names/input_name state, one non-sensitive initialization log.
-        Logic: enforce hash, 80 classes and static shapes; restrict both thread pools to one.
+        Outputs: session/names/input_name/binding/input_tensor/predictions and initialization log.
+        Logic: enforce hash/shapes; one thread, bounded allocator and pinned input/output storage.
         Constraints: never download a model, use GPU, quantize or change the export head.
         """
+        import numpy as np
         import onnxruntime as ort
 
         manifest = json.loads(
@@ -178,7 +232,13 @@ class Detector:
         options = ort.SessionOptions()
         options.intra_op_num_threads = options.inter_op_num_threads = 1
         options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-        options.enable_cpu_mem_arena = False
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        options.enable_mem_pattern = True
+        options.add_session_config_entry("session.intra_op.allow_spinning", "0")
+        options.add_session_config_entry("session.inter_op.allow_spinning", "0")
+        register_arena()
+        options.enable_cpu_mem_arena = True
+        options.add_session_config_entry("session.use_env_allocators", "1")
         self.session = ort.InferenceSession(str(path), options, providers=["CPUExecutionProvider"])
         inputs, outputs = self.session.get_inputs(), self.session.get_outputs()
         if (
@@ -187,22 +247,37 @@ class Detector:
             or inputs[0].type != "tensor(float)"
             or len(outputs) != 1
             or outputs[0].shape != [1, 300, 6]
+            or outputs[0].type != "tensor(float)"
             or self.session.get_providers() != ["CPUExecutionProvider"]
         ):
             raise ValueError("Unexpected ONNX session contract")
         self.input_name = inputs[0].name
-        logger.info("YOLO initialized model=yolo26n classes=80 threads=1 provider=CPU")
+        self.input_tensor = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
+        self.predictions = np.empty((1, 300, 6), dtype=np.float32)
+        self.binding = self.session.io_binding()
+        self.binding.bind_cpu_input(self.input_name, self.input_tensor)
+        self.binding.bind_output(
+            outputs[0].name,
+            "cpu",
+            0,
+            np.float32,
+            self.predictions.shape,
+            self.predictions.ctypes.data,
+        )
+        logger.info(
+            "YOLO initialized model=yolo26n classes=80 threads=1 provider=CPU arena_mib=128"
+        )
 
     def predict(self, image):
         """Functionality: Infer and render one RGB frame; Inputs: self session and bounded image.
-        Outputs: JPEG, boxes, inference_ms; Logic: preprocess, time ONNX, invert boxes, render.
-        Constraints: timing includes ONNX only; no image/log persistence, retries or fallback.
+        Outputs: JPEG, boxes, inference_ms; Logic: overwrite bound tensor, infer and render.
+        Constraints: caller serializes reusable buffers; timing covers ONNX only, no persistence.
         """
-        tensor, scale, left, top = letterbox(image)
+        _, scale, left, top = letterbox(image, self.input_tensor)
         started = time.monotonic()
-        predictions = self.session.run(None, {self.input_name: tensor})[0]
+        self.session.run_with_iobinding(self.binding)
         inference_ms = (time.monotonic() - started) * 1000
-        boxes = decode_boxes(predictions, image.size, (scale, left, top), self.names)
+        boxes = decode_boxes(self.predictions, image.size, (scale, left, top), self.names)
         return annotate(image, boxes), boxes, inference_ms
 
 

@@ -63,6 +63,8 @@ API 默认要求登录，仅健康检查显式允许匿名。新业务应用放�
 
 `core/vision.py` 提供同源检测 HTTP 适配，`core/detector.py` 管理验证后的 CPU ONNX 会话、输入边界、坐标和标注。安装 `requirements-vision.txt`，设置 `YOLO_MODEL_PATH` 为匹配模型清单的绝对路径；开发依赖已包含这些运行库。模型通过独立构建环境导出，服务器不安装训练栈。缺失模型仅影响检测模式，检测请求明确失败；不会自动切换原样回传。见 [VISION.md](VISION.md) 和 [模型工件](models/README.md)。
 
+推理加速保留 FP32/640/0.25 等参数，融合有上限的 ORT arena、I/O Binding、输入/输出张量复用、直接归一化、批量框处理和字体缓存；资源限额不变。独立精度/后端实验和 44 项加速方法的适用性见 [ACCELERATION.md](ACCELERATION.md)。
+
 前端优先通过同源代理访问后端，不开放通配 CORS。会话认证下的业务写请求需有效 CSRF token。接口失败不得隐式重试或改用其他算法；实验参数修改须获得用户明确授权。
 
 ## 检查

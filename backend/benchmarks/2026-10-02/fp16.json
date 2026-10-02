@@ -1,0 +1,186 @@
+{
+  "preset": "arena",
+  "model_sha256": "a7d3eaa72fa9bc53c5e61ab0a95758a5dd2b8c57deb6111c344aef64a8bf9aca",
+  "model_bytes": 5023888,
+  "frames": 10,
+  "stages_mean_ms": {
+    "decode": 18.971,
+    "prepare": 24.485,
+    "infer": 496.395,
+    "postprocess": 13.693,
+    "render": 55.094,
+    "total": 608.638,
+    "cpu": 120.783
+  },
+  "total_median_ms": 603.226735489443,
+  "total_p95_ms": 693.6747354047839,
+  "peak_rss_mib": 228.36328125,
+  "prediction_sha256": "c3aa59fac6e4928426ead2d5bddd3e6f1ff789fb49e378717d3f119f6dca27c4",
+  "jpeg_sha256": "0220ddbf925f1a66c6d14a3f70bd2fccb53bfc2e0d5c69e0e239865ad1e6dd65",
+  "detections": 5,
+  "evaluation": {
+    "000000000036.jpg": {
+      "raw_sha256": "2787ce79544186fea07bc58781a2af26891b69f1a675f79dac907d4fcea9cda6",
+      "boxes": [
+        {
+          "xyxy": [
+            172.875,
+            155.125,
+            481,
+            638.0
+          ],
+          "score": 0.91552734375,
+          "class_id": 0,
+          "label": "person"
+        },
+        {
+          "xyxy": [
+            0,
+            54.4375,
+            452.5,
+            471.5
+          ],
+          "score": 0.86181640625,
+          "class_id": 25,
+          "label": "umbrella"
+        }
+      ]
+    },
+    "000000000042.jpg": {
+      "raw_sha256": "fa0a6ef745ae5715d369807207962be8563cc7774e89e9043547cf4e8ccd480c",
+      "boxes": [
+        {
+          "xyxy": [
+            209.125,
+            45.5,
+            595.5,
+            313.0
+          ],
+          "score": 0.6240234375,
+          "class_id": 16,
+          "label": "dog"
+        },
+        {
+          "xyxy": [
+            78.0,
+            304.0,
+            296.75,
+            474.5
+          ],
+          "score": 0.25537109375,
+          "class_id": 24,
+          "label": "backpack"
+        }
+      ]
+    },
+    "000000000049.jpg": {
+      "raw_sha256": "1ea3016b32c8a1d94dfc66a3e00a297234db3f32d9d7f2ff4f08ff39d9b0ff93",
+      "boxes": [
+        {
+          "xyxy": [
+            167.1875,
+            226.5625,
+            291.6015625,
+            411.71875
+          ],
+          "score": 0.82080078125,
+          "class_id": 17,
+          "label": "horse"
+        },
+        {
+          "xyxy": [
+            79.4921875,
+            243.75,
+            192.96875,
+            404.296875
+          ],
+          "score": 0.64501953125,
+          "class_id": 17,
+          "label": "horse"
+        },
+        {
+          "xyxy": [
+            209.375,
+            267.96875,
+            267.96875,
+            342.3828125
+          ],
+          "score": 0.4443359375,
+          "class_id": 0,
+          "label": "person"
+        },
+        {
+          "xyxy": [
+            279.6875,
+            327.9296875,
+            297.265625,
+            359.9609375
+          ],
+          "score": 0.38232421875,
+          "class_id": 0,
+          "label": "person"
+        },
+        {
+          "xyxy": [
+            118.5546875,
+            337.3046875,
+            130.56640625,
+            368.359375
+          ],
+          "score": 0.32421875,
+          "class_id": 0,
+          "label": "person"
+        },
+        {
+          "xyxy": [
+            79.296875,
+            233.7890625,
+            290.625,
+            409.765625
+          ],
+          "score": 0.283935546875,
+          "class_id": 17,
+          "label": "horse"
+        }
+      ]
+    },
+    "000000000061.jpg": {
+      "raw_sha256": "e47d2cff2b4df5fc3877887ad5b9e7e1bc7b1a17c54ecdaaedff65ca68d2e152",
+      "boxes": [
+        {
+          "xyxy": [
+            221.125,
+            244.75,
+            366.75,
+            325.25
+          ],
+          "score": 0.7119140625,
+          "class_id": 20,
+          "label": "elephant"
+        },
+        {
+          "xyxy": [
+            261.75,
+            197.0,
+            310.0,
+            265.5
+          ],
+          "score": 0.63720703125,
+          "class_id": 0,
+          "label": "person"
+        },
+        {
+          "xyxy": [
+            372.25,
+            250.25,
+            415.5,
+            294.25
+          ],
+          "score": 0.402587890625,
+          "class_id": 20,
+          "label": "elephant"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "source_sha256": "7cf9a19a6a36c04df0f2ef20683b17949f9fbdf46876607adce75a4b216e3708",
+  "fp16": {
+    "sha256": "a7d3eaa72fa9bc53c5e61ab0a95758a5dd2b8c57deb6111c344aef64a8bf9aca",
+    "keep_io_types": true,
+    "blocked_cast_nodes": [
+      "/model.23/Cast",
+      "/model.23/Cast_1",
+      "/model.23/Cast_2"
+    ]
+  },
+  "int8": {
+    "sha256": "b68131852608723f4a9ad46d144cc9e6eed2e39324dbf7e3cce7667a3bd66e35",
+    "format": "QDQ",
+    "activation": "QInt8",
+    "weights": "QInt8",
+    "per_channel": true,
+    "calibration": "MinMax",
+    "train_images": 4,
+    "operators": [
+      "Conv",
+      "MatMul"
+    ]
+  },
+  "deployment": "experimental only; no quality acceptance on COCO8"
+}

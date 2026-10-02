@@ -1,0 +1,10 @@
+{
+  "production": {
+    "reference_matches_iou_0_5": 13,
+    "reference_total": 13,
+    "missing": [],
+    "bit_identical_frames": 4,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 0.0
+  }
+}

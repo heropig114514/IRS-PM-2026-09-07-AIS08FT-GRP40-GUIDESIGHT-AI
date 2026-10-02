@@ -1,0 +1,63 @@
+{
+  "arena": {
+    "reference_matches_iou_0_5": 13,
+    "reference_total": 13,
+    "missing": [],
+    "bit_identical_frames": 4,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 0.0
+  },
+  "binding": {
+    "reference_matches_iou_0_5": 13,
+    "reference_total": 13,
+    "missing": [],
+    "bit_identical_frames": 4,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 0.0
+  },
+  "fused": {
+    "reference_matches_iou_0_5": 13,
+    "reference_total": 13,
+    "missing": [],
+    "bit_identical_frames": 4,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 0.0
+  },
+  "bounded": {
+    "reference_matches_iou_0_5": 13,
+    "reference_total": 13,
+    "missing": [],
+    "bit_identical_frames": 4,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 0.0
+  },
+  "fp16": {
+    "reference_matches_iou_0_5": 13,
+    "reference_total": 13,
+    "missing": [],
+    "bit_identical_frames": 0,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 0.0015538518245403583
+  },
+  "int8": {
+    "reference_matches_iou_0_5": 12,
+    "reference_total": 13,
+    "missing": [
+      {
+        "image": "000000000042.jpg",
+        "reference_label": "backpack"
+      }
+    ],
+    "bit_identical_frames": 0,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 0.08017047743002574
+  },
+  "openvino": {
+    "reference_matches_iou_0_5": 13,
+    "reference_total": 13,
+    "missing": [],
+    "bit_identical_frames": 0,
+    "evaluation_frames": 4,
+    "mean_confidence_abs_difference": 4.7225218552809497e-07
+  }
+}
