@@ -1,6 +1,6 @@
 """Responsibilities: Compare output consistency of explicitly supplied detection reports.
 Implementation: Same-class greedy matching at IoU >= 0.5 and raw-output fingerprint comparison.
-Related Modules: tools.benchmark_space; not an accuracy evaluator or COCO mAP implementation.
+Related Modules: tools.fixtures; not an accuracy evaluator or COCO mAP implementation.
 Declaration Index: iou; compare; main.
 Variable Index: None; CLI reference/reports/output paths define the explicit comparison set.
 """

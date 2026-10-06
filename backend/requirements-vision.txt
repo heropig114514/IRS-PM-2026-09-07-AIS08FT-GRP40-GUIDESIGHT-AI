@@ -1,9 +1,8 @@
-# Responsibilities: Optional CPU-only YOLO26 ONNX inference dependencies.
-# Implementation: Include existing web runtime; no Torch/CUDA/Ultralytics in production.
+# Responsibilities: Shared image-validation and native-test dependencies.
+# Implementation: Include web runtime and unchanged NumPy/Pillow versions; inference runs on HF.
 # Related Modules: core.detector, requirements-dev.txt, deploy/README.md.
 # Declaration Index: None.
 # Variable Index: None.
 -r requirements.txt
 numpy==1.26.4
 Pillow==12.3.0
-onnxruntime==1.30.0

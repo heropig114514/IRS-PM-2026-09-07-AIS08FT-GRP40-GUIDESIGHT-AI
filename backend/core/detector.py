@@ -1,45 +1,25 @@
-"""Responsibilities: Verified YOLO26n ONNX loading, bounded JPEG decoding and box rendering.
-Implementation: One CPU thread, reused FP32 tensors, vectorized e2e decoding; no NMS or downloads.
-Related Modules: core.vision; models/yolo26n.json pins the exported model and COCO class order.
-Declaration Index: DetectionError/DetectionError.__init__ — safe errors;
-register_arena — bounded process allocator;
-decode_frame — JPEG boundary;
-letterbox — tensor transform; decode_boxes — original-image boxes;
-label_font — shared read-only font; annotate — JPEG rendering;
-Detector/Detector.__init__/Detector.predict — verified session and single-frame inference;
-get_detector — process-local initialization with persistent failure state until restart.
-Variable Index: INPUT_EDGE/CONFIDENCE_THRESHOLD/JPEG_QUALITY — explicit inference/render settings;
-MAX_FRAME_BYTES — existing 1 MiB boundary; logger — non-media diagnostics;
-detector/initialization_error/initialization_lock — single-instance lifecycle.
-ARENA_MAX_BYTES — 128 MiB model pool; arena_registered/arena_lock — once-only registration.
+"""Responsibilities: Bounded JPEG decoding and unchanged YOLO26 FP32 image transforms/rendering.
+Implementation: In-memory RGB/letterbox/box inverse/JPEG80 helpers shared by the sole GPU pipeline.
+Related Modules: realtime.detector; zerogpu.live_worker; realtime.protocol.
+Declaration Index: DetectionError; DetectionError.__init__; decode_frame; letterbox; decode_boxes;
+label_font; annotate.
+Variable Index: INPUT_EDGE —640; CONFIDENCE_THRESHOLD —0.25; JPEG_QUALITY —80;
+MAX_FRAME_BYTES —1MiB. No CPU model, allocator, singleton or hidden fallback is implemented here.
 """
 
-import hashlib
 import io
-import json
-import logging
-import os
-import time
 from functools import lru_cache
-from pathlib import Path
-from threading import Lock
 
 INPUT_EDGE = 640
 CONFIDENCE_THRESHOLD = 0.25
 JPEG_QUALITY = 80
 MAX_FRAME_BYTES = 1048576
-ARENA_MAX_BYTES = 128 * 1024 * 1024
-logger = logging.getLogger(__name__)
-detector = None
-initialization_error = None
-initialization_lock = Lock()
-arena_registered = False
-arena_lock = Lock()
 
 
 class DetectionError(Exception):
     """Functionality: Carry safe diagnostic errors without media or dependency exception text.
-    Logic: HTTP adapter consumes code/detail/status; Constraints: no implicit fallback detector.
+    Logic: GPU/relay adapters consume code/detail/status; Constraints: no implicit fallback
+    detector.
     """
 
     def __init__(self, code, detail, status):
@@ -48,27 +28,6 @@ class DetectionError(Exception):
         """
         super().__init__(detail)
         self.code, self.detail, self.status = code, detail, status
-
-
-def register_arena():
-    """Functionality: Register the model's bounded CPU allocator exactly once.
-    Inputs: process registration state and ARENA_MAX_BYTES.
-    Outputs: shared ORT allocator side effect.
-    Logic: locked 128 MiB pool grows by requested size, with 1 MiB initial/dead-chunk limits.
-    Constraints: does not enlarge systemd's 256 MiB budget; exhaustion fails without a fallback.
-    """
-    import onnxruntime as ort
-
-    global arena_registered
-    with arena_lock:
-        if not arena_registered:
-            memory = ort.OrtMemoryInfo(
-                "Cpu", ort.OrtAllocatorType.ORT_ARENA_ALLOCATOR, 0, ort.OrtMemType.DEFAULT
-            )
-            ort.create_and_register_allocator(
-                memory, ort.OrtArenaCfg(ARENA_MAX_BYTES, 1, 1024 * 1024, 1024 * 1024)
-            )
-            arena_registered = True
 
 
 def decode_frame(payload):
@@ -201,110 +160,3 @@ def annotate(image, boxes):
     if len(payload) > MAX_FRAME_BYTES:
         raise DetectionError("result_size", "标注图像超过 1 MiB。", 502)
     return payload
-
-
-class Detector:
-    """Functionality: Hold a verified, immutable CPU session for the selected YOLO26n artifact.
-    Logic: verify hash, shape and provider before inference; Constraints: caller serializes calls.
-    """
-
-    def __init__(self, model_path):
-        """Functionality: Verify and load a local model; Inputs: self, absolute model_path.
-        Outputs: session/names/input_name/binding/input_tensor/predictions and initialization log.
-        Logic: enforce hash/shapes; one thread, bounded allocator and pinned input/output storage.
-        Constraints: never download a model, use GPU, quantize or change the export head.
-        """
-        import numpy as np
-        import onnxruntime as ort
-
-        manifest = json.loads(
-            (Path(__file__).parents[1] / "models/yolo26n.json").read_text(encoding="utf-8")
-        )
-        path = Path(model_path)
-        if (
-            not path.is_absolute()
-            or hashlib.sha256(path.read_bytes()).hexdigest() != manifest["onnx_sha256"]
-        ):
-            raise ValueError("Model artifact does not match the pinned manifest")
-        self.names = manifest["names"]
-        if len(self.names) != 80 or manifest["model"] != "yolo26n":
-            raise ValueError("Unexpected class manifest")
-        options = ort.SessionOptions()
-        options.intra_op_num_threads = options.inter_op_num_threads = 1
-        options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        options.enable_mem_pattern = True
-        options.add_session_config_entry("session.intra_op.allow_spinning", "0")
-        options.add_session_config_entry("session.inter_op.allow_spinning", "0")
-        register_arena()
-        options.enable_cpu_mem_arena = True
-        options.add_session_config_entry("session.use_env_allocators", "1")
-        self.session = ort.InferenceSession(str(path), options, providers=["CPUExecutionProvider"])
-        inputs, outputs = self.session.get_inputs(), self.session.get_outputs()
-        if (
-            len(inputs) != 1
-            or inputs[0].shape != [1, 3, 640, 640]
-            or inputs[0].type != "tensor(float)"
-            or len(outputs) != 1
-            or outputs[0].shape != [1, 300, 6]
-            or outputs[0].type != "tensor(float)"
-            or self.session.get_providers() != ["CPUExecutionProvider"]
-        ):
-            raise ValueError("Unexpected ONNX session contract")
-        self.input_name = inputs[0].name
-        self.input_tensor = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
-        self.predictions = np.empty((1, 300, 6), dtype=np.float32)
-        self.binding = self.session.io_binding()
-        self.binding.bind_cpu_input(self.input_name, self.input_tensor)
-        self.binding.bind_output(
-            outputs[0].name,
-            "cpu",
-            0,
-            np.float32,
-            self.predictions.shape,
-            self.predictions.ctypes.data,
-        )
-        logger.info(
-            "YOLO initialized model=yolo26n classes=80 threads=1 provider=CPU arena_mib=128"
-        )
-
-    def predict(self, image):
-        """Functionality: Infer and render one RGB frame; Inputs: self session and bounded image.
-        Outputs: JPEG, boxes, inference_ms; Logic: overwrite bound tensor, infer and render.
-        Constraints: caller serializes reusable buffers; timing covers ONNX only, no persistence.
-        """
-        _, scale, left, top = letterbox(image, self.input_tensor)
-        started = time.monotonic()
-        self.session.run_with_iobinding(self.binding)
-        inference_ms = (time.monotonic() - started) * 1000
-        boxes = decode_boxes(self.predictions, image.size, (scale, left, top), self.names)
-        return annotate(image, boxes), boxes, inference_ms
-
-
-def get_detector():
-    """Functionality: Initialize once from the explicit YOLO_MODEL_PATH environment.
-    Inputs: process state/environment and pinned manifest; Outputs: Detector or safe 503.
-    Logic: lock initialization; cache a failed load until restart and log exception type only.
-    Constraints: absent config is explicit; manual requests never swap models or retry loading.
-    """
-    global detector, initialization_error
-    with initialization_lock:
-        if detector is not None:
-            return detector
-        if initialization_error is not None:
-            raise initialization_error
-        path = os.environ.get("YOLO_MODEL_PATH", "").strip()
-        if not path:
-            raise DetectionError("model_not_configured", "服务端尚未配置 YOLO 模型。", 503)
-        try:
-            detector = Detector(path)
-            return detector
-        except Exception as error:
-            logger.error(
-                "YOLO initialization failed exception_type=%s; check artifact/hash/dependencies",
-                type(error).__name__,
-            )
-            initialization_error = DetectionError(
-                "model_unavailable", "YOLO 模型加载失败，请检查服务端模型和依赖。", 503
-            )
-            raise initialization_error from error

@@ -1,6 +1,6 @@
 /* Responsibilities: Leaflet/OSM 地图、设备位置、显式示例和步行路线界面。
  * Implementation: 初始化一次地图；串行用户操作；错误和底图状态分别呈现；无隐式重试。
- * Related Modules: maps-client.js, maps.html, core.maps/services。
+ * Related Modules: maps-client.js, maps.html, i18n.js, core.maps/services。
  * Declaration Index: setCoordinates — 填坐标；setBusy — 操作锁；clearRoute — 清旧路线；
  * showFailure — 错误展示；initialize — 配置/地图；locate — 设备起点；useExample — 显式示例；plan — 请求路线。
  * Variable Index: button/planButton/exampleButton/status/message — 状态 DOM；map/tiles — Leaflet 实例；
@@ -189,7 +189,7 @@ function useExample() {
 
 /* Functionality: 显示真实 ORS 路线和步骤，供下一阶段 Guidance Manager 接入。
  * Inputs: 用户 submit event、四个输入值；Outputs: 路线图层、汇总、指令列表。
- * Logic: 明确提交后清旧数据；经纬度顺序转换为 Leaflet 纬经度；用 DOM 文本保留英文原指令。
+ * Logic: 明确提交后清旧数据；经纬度顺序转换为 Leaflet 纬经度；用 DOM 文本和 data-language-original 标记保留英文原指令。
  * Constraints: 当前仅路线规划，不是持续导航、语音调度或避障；失败无自动重试。
  */
 async function plan(event) {
@@ -224,6 +224,7 @@ async function plan(event) {
       const label = document.createElement("strong");
       label.textContent = `${turnLabel(step.type)} · ${Math.round(step.distance_m)} 米`;
       const detail = document.createElement("p");
+      detail.setAttribute("data-language-original", "");
       detail.textContent = step.instruction;
       li.append(label, detail);
       document.querySelector("#steps").append(li);

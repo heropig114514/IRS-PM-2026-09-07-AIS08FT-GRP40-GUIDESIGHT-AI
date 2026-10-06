@@ -1,7 +1,8 @@
 """Responsibilities: 地图页面、同源输入边界和 ORS 传输/容量/契约测试。
 Implementation: 页面读取真实文件；上游 HTTP 仅用 mock，密钥是假值；不调用 ORS 或设备位置。
 Related Modules: core.maps/services；真实上游另做联调。
-Declaration Index: route_fixture — 合成上游；MapsTests — HTTP；MapsTests.test_page — 策略；
+Declaration Index: route_fixture — 合成上游；MapsTests — HTTP；
+MapsTests.test_page — 策略与双语接入；
 MapsTests.test_config — 凭据边界；MapsTests.test_route_input — 输入；
 MapsTests.test_route_result — 路线适配；
 ServiceTests — 服务；ServiceTests.setUp — 重置限流；ServiceTests.test_coordinates — 坐标；
@@ -67,8 +68,9 @@ class MapsTests(SimpleTestCase):
     """
 
     def test_page(self):
-        """Functionality: CSP/nonce/资源；Inputs: 真实页面；Outputs: 策略断言。
-        Logic: HTML/CSP nonce 一致，Google 域和凭据已移除；Constraints: 不执行浏览器 CSP。
+        """Functionality: CSP/nonce/双语资源；Inputs: 真实页面；Outputs: 策略与接入断言。
+        Logic: HTML/CSP nonce 一致，语言选择器及本地模块存在，Google 域和凭据已移除。
+        Constraints: 不执行浏览器 CSP 或证明动态翻译；浏览器工具独立覆盖真实 DOM。
         """
         first = self.client.get("/maps/")
         second = self.client.get("/maps/")
@@ -77,9 +79,14 @@ class MapsTests(SimpleTestCase):
         self.assertNotIn(nonce, second.content.decode())
         self.assertNotContains(first, "__CSP_NONCE__")
         self.assertNotIn("google", first["Content-Security-Policy"])
-        self.assertNotIn("unpkg", self.client.get("/")["Content-Security-Policy"])
+        self.assertNotIn("unpkg", self.client.get("/live/")["Content-Security-Policy"])
         self.assertIn("geolocation=(self)", first["Permissions-Policy"])
-        for name in ["maps-page.js", "maps-client.js"]:
+        self.assertContains(first, 'id="language"')
+        self.assertContains(first, 'value="system"')
+        self.assertContains(first, 'value="en"')
+        self.assertContains(first, 'value="zh-CN"')
+        self.assertContains(first, 'src="../assets/i18n.js"')
+        for name in ["maps-page.js", "maps-client.js", "i18n.js", "translations.js"]:
             self.assertEqual(self.client.get(f"/assets/{name}").status_code, 200)
 
     def test_config(self):

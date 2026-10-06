@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "model": "yolo26n",
+  "classes": 80,
+  "edge": 640,
+  "batch": 1,
+  "threshold": 0.25,
+  "jpeg_quality": 80,
+  "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+  "precision": "FP16",
+  "backend": "PyTorch compiled CUDA",
+  "config": {
+    "backend": "torch",
+    "buffers": true,
+    "compile": "default",
+    "dtype": "float16",
+    "fuse": true,
+    "graph": true,
+    "layout": true,
+    "pinned": true,
+    "preprocess_buffer": true
+  },
+  "quality": {
+    "images": 5000,
+    "score": 0.001,
+    "max_dets": 100,
+    "preprocessing": "project640/bilinear/JPEG80/RGB/letterbox",
+    "annotation_sha256": "e8c7f7908f1d7278341fae127d0da654f102f11bd7b21d8aeefa635b8c810b6f",
+    "image_manifest_sha256": "dc125525cc0f9dfc048e81a7da66c2816617cc3d669f598f167c70f33527ca48",
+    "baseline_ap": 0.39170515975575226,
+    "maximum_ap_drop": 0.005,
+    "replicates": [
+      {
+        "name": "reference_fusion_compile_default_float16_graph_layout1",
+        "status": "complete",
+        "ap": 0.39156308482554586,
+        "images": 5000,
+        "prediction_sha256": "91787288943b4038ba04197b30193d0842fc952c96575eca9d56ce3992f72fbf"
+      },
+      {
+        "name": "confirmation_2_0_reference_fusion_compile_default_float16_graph_layout1",
+        "status": "complete",
+        "ap": 0.39156308482554586,
+        "images": 5000,
+        "prediction_sha256": "91787288943b4038ba04197b30193d0842fc952c96575eca9d56ce3992f72fbf"
+      },
+      {
+        "name": "confirmation_2_1_reference_fusion_compile_default_float16_graph_layout1",
+        "status": "complete",
+        "ap": 0.39156308482554586,
+        "images": 5000,
+        "prediction_sha256": "91787288943b4038ba04197b30193d0842fc952c96575eca9d56ce3992f72fbf"
+      }
+    ]
+  },
+  "provenance": {
+    "notebook": "heropig/prs-yolo26-gpu-rebenchmark-20261004",
+    "version": 8,
+    "candidate": "reference_fusion_compile_default_float16_graph_layout1",
+    "summary_sha256": "e24394ac3aa1222417b4db250f937a69477558d3a99a02883fbf3bb07b5592a6",
+    "measurement_gpu": "Tesla T4",
+    "pipeline_median_ms": 12.35767449998093,
+    "scope": "Unchanged T4 best repeated forward configuration/COCO evidence; HF verifies cache restoration and short inference only, not ranking",
+    "forward_median_ms": 1.7422719597816467,
+    "baseline_forward_median_ms": 14.938975811004639,
+    "selection_metric": "forward_event_ms",
+    "cache_confirmation": {
+      "version": 11,
+      "summary_sha256": "df62f1d5c3378edde388c9ddc4a32b0a91b17a0eba0b6525932d828d45c8aae0",
+      "original_quality_summary_sha256": "e24394ac3aa1222417b4db250f937a69477558d3a99a02883fbf3bb07b5592a6",
+      "processes": 2,
+      "frames_per_process": 20,
+      "source_prediction_hashes_identical": true,
+      "scope": "cache/adapter diagnostic only; not a new AP or latency ranking"
+    }
+  },
+  "deployment": {
+    "adapter": "cached_jit_graph",
+    "cache_miss_policy": "error"
+  }
+}

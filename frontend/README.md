@@ -1,38 +1,57 @@
-# Frontend
+# 摄像头前端
 
-手机摄像头回传和 Leaflet/OSM 步行路线页面，采用原生 HTML/CSS/JavaScript，无 npm 运行依赖。摄像头页只加载本地资源；独立地图页加载固定 SRI 的 Leaflet 1.9.4。Django 从文件白名单提供模块，开发地址 `http://127.0.0.1:8766/`；服务器地址 `https://47.239.50.129/prs/`。
+入口 https://47.239.50.129/prs/live/ ，原 `/prs/` 转到同页。Processing mode 只保留：
 
-## 使用
+- **Echo／原样回传**：`/ws/echo/`，用于检查摄像头与网络，返回输入原始字节，不进行检测。
+- **Hugging Face ZeroGPU**：`/ws/detect/hf/`，最新视频检测，返回 YOLO26n 标注 JPEG。
 
+`camera.js` 管理媒体、停止状态和计时；`echo-client.js` 校验原样回传；
+`live-detection-client.js` 校验二进制序号、模型/80类/原权重 SHA、框和 JPEG SHA，
+并要求每帧计算精度、后端与服务端公布的 COCO 合格方案一致；FP32 输出与计算精度分别标记。
+服务端读取显式方案文件，至少三个独立完整5000图 COCO验证的 mAP下降均不得超过0.5个百分点；
+客户端验证其公开证据字段，不能据此声称自己重新测量了mAP。
+`frame-pipeline.js` 管理采集及顺序解码显示。摄像头最大边640、JPEG质量0.8。
+首帧单独完成后默认24FPS输入上限，最多8个采集/传输/等待显示作业，先取得空位再采集。
+该配置由真实HF同分配的12/24FPS、5/8帧窗口对照支持；原12FPS/5帧报告保留，不将不同条件
+包装为模型加速比。窗口包含网络在途帧，HF输入队列并不会因此预先积压八张待推理图。
+调度按预定时间线推进，普通定时器晚醒不逐帧累积；等待信用或错过完整采样间隔后重新计时，
+不重放错过的采样槽。每5秒及停止时汇总定时器晚醒和信用等待，区分采样与网络窗口限制。
+没有额外200ms等待、旧帧积压、自动重连或自动更换模式。
 
-在手机 Safari/Chrome 等系统浏览器中打开服务器链接，先点“测试连接”，再选择前置或后置镜头并点击“开启摄像头并回传”。允许摄像头后，本地预览显示采集内容，另一屏显示真正经过服务端返回的 JPEG。停止、设备中断、页面隐藏或断线会释放摄像头与连接，重新开始须再次点击。
+一次 ZeroGPU 视频最长55秒，结束或出错后手动重新开始。免费额度不足时拒绝申请；
+模型参数和评估目标不变。画布尺寸不变时复用；exact facingMode 失败明确提示，不自动切镜头。
+页面 API 挂载点只允许同源相对路径，HF token 留在服务端。
 
-默认最大边 640 像素、JPEG 质量 0.8，每帧完成回传后等待 200 ms；上限约 5 fps，实际速率还包括网络、编码、解码和可选模型推理耗时。选定镜头使用 exact facingMode，不存在时明确报错，请手动选择另一镜头；不会自动切换。
+`node --test tests/*.test.mjs` 执行客户端协议、状态、调度、语言和地图检查。
+`tools/benchmark_phone_browser.mjs URL FRAMES OUTPUT` 使用实际 Chrome、CameraApp、JPEG编码、
+WS与解码，以开发目录 `tools/fixtures/detection-sample.jpg` 替代物理传感器。
+图片不部署为公开资源，原字节保留；测试不代表真实手机传感器、无线网络或最终屏幕绘制。
+诊断可显式加`--pipeline-file PATH`对照本地调度源码，报告其SHA；默认使用公开部署源码。
+`tools/profile_frame_pipeline.mjs URL OUTPUT PIPELINE_FILE [--cpu-profile]`执行真实浏览器
+12/24FPS、0/250ms合成Echo控制，不调用HF/GPU；合成传输不能代替公网推理结论。
+CPU采样默认关闭，因为profiling本身可能影响定时器精度；开启时保存原始CPU profile。
+`tools/benchmark_phone_windows.mjs URL OUTPUT [--echo-delay MS]`比较12/24FPS和5/8帧窗口。
+默认以一个真实HF连接/一次GPU分配运行四个明确分段并保留每一帧；各段首帧单列并完整排空。
+`--echo-delay 300`为本地源码、实际Chrome编码/解码/HUD和合成传输的零GPU控制，不作推理结论。
+该工具不自动重试，真实HF模式需先检查90秒预留额度。旧五帧/12FPS报告作为原条件对照保留。
+本地 RTX4060 联调由后端 `tools/benchmark_phone_native.py` 启动，需显式传入完整验证的
+eager Graph方案 `--plan`；该native控制不会加载AOT包。公网证据见
+[PHONE-LIVE.md](../backend/PHONE-LIVE.md)。已有地图页面和模块保持原契约。
 
-处理模式默认“原样回传”。选择“YOLO26 检测 · 80 类”再开启摄像头，返回画面显示框、英文类别、置信度，目标数和推理时长显示在页面。固定 COCO 类别无需额外训练，并不包含任意道路风险类别。预计目标服务器约 1 fps，真机仍须验证。“测试示例识别”只发送公开公交车图，明确标注非摄像头，结果不代表实拍或通用准确率。详细契约见 [检测说明](../backend/VISION.md)。
+摄像头与 `/prs/maps/` 地图页共用“跟随系统 / English / 中文”选择器，语言偏好同源保存。
+地图的按钮、定位/底图状态、来源/精度、路线汇总、转向类型、标记提示、错误及无障碍标签
+随语言即时切换。已返回的 ORS 英文原始指令与地名保持原样；切换语言不重新定位或请求路线。
+发布工具同时上传地图页面/模块和共享语言资源，避免地图页遗漏语言支持更新。
 
-## 模块与边界
+真实 Chrome 回归工具使用开发运行时的 Playwright，保留 TLS/SRI/CSP 校验。
+从 `frontend` 执行；`PRS_PLAYWRIGHT_PATH` 需指向已安装的 Playwright 包绝对路径：
 
-- `camera.js` 管理媒体、页面和串行采集；`generation` 防止停止后的异步结果恢复采集或回显。
-- `echo-client.js` 管理单个在途操作。二进制长度与每个字节必须一致；pong 必须具有相同 id。超时、类型错误、内容不一致或断线均停止，不重试或降级。
-- `detection-client.js` 管理同源 HTTP 配置/标注请求，CPU 超时 10 秒、ZeroGPU 超时 60 秒，并校验 JPEG、模型、目标数和时长；停止丢弃迟到结果，不退回原样模式。`tests/detection-client.test.mjs` 使用明确的 fetch 替身，不能代替真实模型验证。
-- `index.html` 和 `camera.css` 提供手机单列、桌面双列布局。
-- `tests/echo-client.test.mjs` 用明确的 socket mock 检查协议；不代表真实摄像头或公网已验证。
+```powershell
+node tools/check_maps_browser.mjs http://127.0.0.1:8766/maps/ ../backend/benchmarks/2026-10-05/maps-i18n-local.json
+node tools/check_maps_browser.mjs https://47.239.50.129/prs/maps/ ../backend/benchmarks/2026-10-05/maps-i18n-public.json --live-route
+```
 
-执行 `node --test tests/*.test.mjs` 检查客户端契约（Node 22+）。浏览器权限与实际手机兼容性需要真机确认。
-
-浏览器摄像头需要 HTTPS，localhost 为本地开发例外。不要通过手机访问 HTTP IP 地址或证书警告页面来申请摄像头。页面只申请 video，不申请 microphone，不写入 IndexedDB/localStorage 或下载文件。
-
-后端 API 前缀为 `/api/`，服务器代理后为 `/prs/api/`。诊断 WebSocket 为 `/ws/echo/`，服务器为 `/prs/ws/echo/`。当前服务匿名开放回传但校验同源，并限制 4 个连接和 1 MiB 单帧；这不是身份认证系统。部署代理清除 Cookie/Authorization，诊断入口与现有应用会话隔离。业务账号与上传功能须后续独立设计。
-
-## 步行路线与设备定位
-
-进入 `/prs/maps/`（开发为 `/maps/`），点击获取设备起点并允许定位，点选地图终点，再点击“规划步行路线”。也可手动填写经纬度。测试接口可点击“填入 NUS 测试示例”再规划；示例标签明确不是设备位置，初始地图只是 NUS 区域预览。浏览器可能返回粗略定位，以显示精度为准。定位与底图状态分别报告，失败不会用 IP 或示例位置替代，不自动重试。
-
-`maps-client.js` 管理定位、坐标和同源路线请求契约；`maps-page.js` 管理 Leaflet 图层与界面。浏览器使用 `[经度,纬度]` 的路线坐标，转换为 Leaflet `[纬度,经度]` 显示。`POST ./route/` 超时 25 秒；key 只在后端，配置接口不返回凭据。获取位置只填本页；明确规划时起终点发送 PRS/ORS，不写数据库、localStorage 或文件。ORS 英文 instruction 保留，类型标签中文显示。当前没有连续 GPS 跟踪、偏航重算、语音或 Guidance Manager 风险调度。
-
-地图页使用独立 nonce CSP、固定版本及 SRI；摄像头页策略不变。Leaflet 来源见[官方发布页](https://leafletjs.com/download.html)，ORS 契约见[官方路线文档](https://giscience.github.io/openrouteservice/api-reference/endpoints/directions/requests-and-return-types)。正常浏览器交互加载 `https://tile.openstreetmap.org/{z}/{x}/{y}.png`，保留 Referrer、缓存和可见 OpenStreetMap 署名；不预下载、不做离线或批量瓦片扫描，遵循 [OSM 瓦片政策](https://operations.osmfoundation.org/policies/tiles/)。托管瓦片与 ORS 的生产额度/许可须按实际用途评估。`tests/maps-client.test.mjs` 使用 fake 验证失败和契约，不能证明真实网络、ORS 配额或手机 GPS。服务端 key 配置见运维说明。
-
-## ZeroGPU 模式
-
-在处理模式明确选择 Hugging Face ZeroGPU，先点击“测试示例识别”。手机经 PRS 云服务器把帧交给 Hugging Face，标注 JPEG 经 PRS 返回；该模式单请求最多60秒，排队、配额或异常都会停止。CPU 仍10秒；原样回传仍默认。无需本地 GPU 配置，免费资源适合低频演示；连续摄像头会持续消耗配额。停止会取消浏览器请求，但服务端已提交的 GPU 任务可能继续完成。
+默认模式以合成 API 响应和合成定位验证真实页面的语言切换、错误、跨页面偏好及390px布局，
+输出 JSON 和英文页面 PNG；不代表真实 GPS、浏览器权限弹窗或 ORS 上游验证。
+`--live-route` 另执行一次明确标记的 NUS 示例真实 ORS 请求，并检查既有路线切换语言时不重复请求。
+失败保存诊断并退出，不自动重试或回滚。

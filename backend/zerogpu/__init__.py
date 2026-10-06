@@ -1,6 +1,6 @@
 """Responsibilities: Identify the isolated ZeroGPU deployment package.
 Implementation: Importing this package does not load models or allocate GPU resources.
-Related Modules: app, runtime, protocol; tools.deploy_space.
+Related Modules: app, runtime, live_transport, live_worker; tools.deploy_space.
 Declaration Index: None.
 Variable Index: None.
 """

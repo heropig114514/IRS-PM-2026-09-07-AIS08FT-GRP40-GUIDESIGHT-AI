@@ -1,14 +1,16 @@
-/** Responsibilities: 验证摄像头拒绝、停止后的延迟授权及延迟解码不会恢复采集。
- * Implementation: 页面、媒体权限、轨道及图像解码使用显式替身；不调用真实摄像头或网络。
+/** Responsibilities: 验证取消、画布复用、原采集参数及首帧/稳态计时边界。
+ * Implementation: 页面、媒体权限、轨道、画布及图像解码使用显式替身；不调用真实摄像头或网络。
  * Related Modules: camera.js；真机权限与浏览器行为仍须另行验证。
  * Declaration Index: FakeElement; FakeElement.constructor; FakeElement.addEventListener;
  * FakeElement.removeAttribute; FakeDocument; FakeDocument.constructor; FakeDocument.getElementById;
  * FakeDocument.createElement; FakeDocument.addEventListener; ignoreWindowEvent; makeApp;
+ * FakeCanvas; FakeCanvas.constructor; FakeCanvas.width; FakeCanvas.height;
+ * FakeCanvas.getContext; FakeCanvas.drawImage; FakeCanvas.toBlob;
  * testDenied; testDenied.denyCamera; testCancelled; testCancelled.waitForPermission;
  * testCancelled.waitForPermission.register; testCancelled.stopTrack;
- * testCancelled.getTracks; testDetectionUrl; testDecodeCancelled;
+ * testCancelled.getTracks; testProcessingPath; testApiMount; testDecodeCancelled;
  * testDecodeCancelled.waitForDecode;
- * testDecodeCancelled.waitForDecode.register。
+ * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testTimingBoundaries。
  * Variable Index: None；所有 mock 限于 Node 的独立测试文件进程。
  */
 import assert from "node:assert/strict";
@@ -37,6 +39,52 @@ class FakeElement {
     if (name === "src") this.src = "";
   }
 }
+/** Functionality: 跟踪尺寸赋值、绘制和编码参数。
+ * Logic: 属性 setter 计数画布重置，toBlob 返回显式合成 marker；Constraints: 不执行真实绘制/编码。 */
+class FakeCanvas extends FakeElement {
+  /** Functionality: 初始化画布替身。Inputs: None。Outputs: 实例。
+   * Logic: _width/_height存尺寸，resets计赋值，drawn/encoded存测试参数；Constraints: 不申请浏览器资源。 */
+  constructor() {
+    super();
+    this._width = 0;
+    this._height = 0;
+    this.resets = 0;
+    this.drawn = [];
+    this.encoded = [];
+  }
+  /** Functionality: 读取宽度。Inputs: _width。Outputs: number。
+   * Logic: 返回保存值；Constraints: 不计算布局。 */
+  get width() { return this._width; }
+  /** Functionality: 记录宽度赋值。Inputs: value。Outputs: 状态和计数更新。
+   * Logic: 即使同值也计为重置，模拟实际画布属性语义；Constraints: 不分配像素缓冲。 */
+  set width(value) { this._width = value; this.resets += 1; }
+  /** Functionality: 读取高度。Inputs: _height。Outputs: number。
+   * Logic: 返回保存值；Constraints: 不计算布局。 */
+  get height() { return this._height; }
+  /** Functionality: 记录高度赋值。Inputs: value。Outputs: 状态和计数更新。
+   * Logic: 同值也计为重置；Constraints: 不分配像素缓冲。 */
+  set height(value) { this._height = value; this.resets += 1; }
+  /** Functionality: 提供绘制记录器。Inputs: kind。Outputs: 最小 context。
+   * Logic: 仅接受2d，绑定真实测试记录方法；Constraints: 不执行图像渲染。 */
+  getContext(kind) {
+    assert.equal(kind, "2d");
+    return {drawImage: this.drawImage.bind(this)};
+  }
+  /** Functionality: 记录目标尺寸。Inputs: video、x、y、width、height。Outputs: drawn 更新。
+   * Logic: 核对来源和原点，保存尺寸；Constraints: 不读取真实视频像素。 */
+  drawImage(video, x, y, width, height) {
+    assert.ok(video);
+    assert.equal(x, 0);
+    assert.equal(y, 0);
+    this.drawn.push([width, height]);
+  }
+  /** Functionality: 返回显式合成JPEG标记。Inputs: callback、mime、quality。Outputs: callback(Blob)。
+   * Logic: 记录格式和质量；Constraints: marker不是可解码图像，测试只证明参数与控制逻辑。 */
+  toBlob(callback, mime, quality) {
+    this.encoded.push({mime, quality});
+    callback(new Blob([Uint8Array.from([255, 216, 1, 255, 217])], {type: mime}));
+  }
+}
 /** Functionality: 提供受控页面节点。Logic: 缺失节点按需创建。
  * Constraints: 不执行 HTML，独立于真实浏览器。 */
 class FakeDocument {
@@ -51,11 +99,10 @@ class FakeDocument {
     if (!this.elements.has(id)) this.elements.set(id, new FakeElement());
     return this.elements.get(id);
   }
-  /** Functionality: 返回画布占位符。Inputs: tag。Outputs: FakeElement。
-   * Logic: 仅用于控制器构造；Constraints: 本测试不执行 drawImage。 */
+  /** Functionality: 返回明确的元素替身。Inputs: tag。Outputs: FakeCanvas或FakeElement。
+   * Logic: canvas跟踪尺寸/绘制/编码参数；Constraints: 无真实浏览器性能验证。 */
   createElement(tag) {
-    void tag;
-    return new FakeElement();
+    return tag === "canvas" ? new FakeCanvas() : new FakeElement();
   }
   /** Functionality: 接受页面事件注册。Inputs: name、handler。Outputs: 无。
    * Logic: 不自动派发；Constraints: 不模拟系统后台状态。 */
@@ -75,21 +122,32 @@ globalThis.window = {
   isSecureContext: true,
   addEventListener: ignoreWindowEvent,
 };
-const { CameraApp, detectionUrl, detectionSettings } = await import("../camera.js");
+const { CameraApp, processingPath } = await import("../camera.js");
 
-/** Functionality: Check explicit detection destinations. Inputs: mode and existing PRS page URL.
- * Outputs: fixed same-origin paths or error. Logic: use actual mapping function.
- * Constraints: no network, model or browser; removed modes are rejected rather than redirected. */
-test("检测模式只映射指定后端", function testDetectionUrl() {
-  assert.throws(() => detectionUrl("laptop", "https://test.invalid/prs/"), /未知/);
-  assert.equal(detectionUrl("detect", "https://test.invalid/prs/").href,
-    "https://test.invalid/prs/vision/");
-  assert.equal(detectionUrl("hf", "https://test.invalid/prs/").href,
-    "https://test.invalid/prs/vision/hf/");
-  assert.equal(detectionSettings("hf").timeoutMs, 60000);
-  assert.equal(detectionSettings("hf").backend, "PyTorch ZeroGPU");
-  for (const mode of ["echo", "detect"]) assert.equal(detectionSettings(mode).timeoutMs, 10000);
-  assert.throws(() => detectionUrl("unknown", "https://test.invalid/prs/"), /未知/);
+/** Functionality: Verify only Echo and the current GPU session can be selected.
+ * Inputs: actual mode mapping and retired/unknown enums. Outputs: fixed paths or explicit errors.
+ * Logic: reject every former mode, rather than silently substituting a new provider.
+ * Constraints: no external camera, socket, CPU detector or GPU request. */
+test("仅保留Echo和最新HF视频模式", function testProcessingPath() {
+  assert.equal(processingPath("echo"), "./ws/echo/");
+  assert.equal(processingPath("hf"), "./ws/detect/hf/");
+  for (const mode of ["detect", "stream", "hf_stream", "hf_boxes", "hf_boxes_fast", "hf_live", "unknown"])
+    assert.throws(() => processingPath(mode), /未知/);
+});
+
+/** Functionality: Resolve the additive live page against the existing same-origin API mount.
+ * Inputs: explicit /prs/live/ location and ../ mount. Outputs: fixed root API URLs/cross-origin error.
+ * Logic: real controller URL resolution; Constraints: no socket/GPU or real page rendering. */
+test("独立视频入口沿用同源API挂载点", function testApiMount() {
+  const previous = window.location;
+  window.location = {href: "https://47.239.50.129/prs/live/"};
+  try {
+    const app = new CameraApp(); app.apiBase = "../";
+    assert.equal(app.apiUrl("./ws/detect/hf/").href, "https://47.239.50.129/prs/ws/detect/hf/");
+    assert.equal(app.apiUrl(processingPath("echo")).href, "https://47.239.50.129/prs/ws/echo/");
+    app.apiBase = "https://foreign.example/";
+    assert.throws(() => app.apiUrl("./ws/detect/hf/"), /同源/);
+  } finally { window.location = previous; }
 });
 
 /** Functionality: 创建隔离控制器。Inputs: getUserMedia 替身。Outputs: CameraApp。
@@ -182,4 +240,55 @@ test("停止后的延迟解码不会重新显示旧帧" /** Functionality: 测�
   assert.equal(app.image.hidden, true);
   assert.equal(app.objectUrl, null);
   assert.equal(document.getElementById("verified").hidden, true);
+});
+
+/** Functionality: 检查稳定分辨率复用画布，旋转后更新尺寸，并保持原采集条件。
+ * Inputs: 1280x960及960x1280视频尺寸、显式画布替身。Outputs: 重置次数/比例/格式/质量断言。
+ * Logic: 调用实际capture三次，仅首次和旋转重置；Constraints: 不代表真实JPEG编码耗时或质量。 */
+test("相同尺寸复用画布且保持640/JPEG0.8", async function testCaptureReuse() {
+  const app = makeApp(ignoreWindowEvent);
+  app.video.videoWidth = 1280;
+  app.video.videoHeight = 960;
+  await app.capture();
+  await app.capture();
+  assert.equal(app.canvas.resets, 2);
+  app.video.videoWidth = 960;
+  app.video.videoHeight = 1280;
+  await app.capture();
+  assert.equal(app.canvas.resets, 4);
+  assert.deepEqual(app.canvas.drawn, [[640, 480], [640, 480], [480, 640]]);
+  assert.deepEqual(app.canvas.encoded, Array(3).fill({mime: "image/jpeg", quality: 0.8}));
+});
+
+/** Functionality: 检查首帧单独记录而慢稳态帧保留在延迟和速率统计中。
+ * Inputs: 首帧无调度字段、零时钟间隔/慢帧及显式定时器/信用等待样本。
+ * Outputs: 有限聚合、null、2.5FPS及仅有观测的调度统计断言。
+ * Logic: 实际计时方法处理三帧；Constraints: 输入是受控时钟，不是外部服务性能测试。 */
+test("慢首帧与稳态分开，停顿不被排除", function testTimingBoundaries() {
+  const app = makeApp(ignoreWindowEvent);
+  assert.equal(app.recordFrameTimings("hf", {
+    captureMs: 10, transportMs: 1055, renderQueueMs: 0, decodeMs: 15,
+    captureToResultMs: 1065, captureToDecodedMs: 1080, completedAt: 1080,
+  }), null);
+  assert.equal(app.frameTimings.pacingFrames, 0);
+  assert.equal(app.recordFrameTimings("hf", {
+    captureMs: 10, transportMs: 55, renderQueueMs: 0, decodeMs: 15,
+    captureToResultMs: 65, captureToDecodedMs: 80, completedAt: 1080,
+    pacingLateMs: 10, creditWaitMs: 0,
+  }), null);
+  assert.equal(app.recordFrameTimings("hf", {
+    captureMs: 10, transportMs: 675, renderQueueMs: 0, decodeMs: 15,
+    captureToResultMs: 685, captureToDecodedMs: 700, completedAt: 1880,
+    pacingLateMs: 20, creditWaitMs: 90,
+  }), 2.5);
+  assert.equal(app.frameTimings.steadyFrames, 2);
+  assert.equal(app.frameTimings.transportTotalMs, 730);
+  assert.equal(app.frameTimings.captureToResultMaxMs, 685);
+  assert.equal(app.frameTimings.captureToDecodedMaxMs, 700);
+  assert.equal(app.frameTimings.first.captureToDecodedMs, 1080);
+  assert.equal(app.frameTimings.pacingFrames, 2);
+  assert.equal(app.frameTimings.pacingLateTotalMs, 30);
+  assert.equal(app.frameTimings.pacingLateMaxMs, 20);
+  assert.equal(app.frameTimings.creditWaitTotalMs, 90);
+  assert.equal(app.frameTimings.creditWaitFrames, 1);
 });

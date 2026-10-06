@@ -1,5 +1,8 @@
 # Backend 开发入口
 
+> 当前手机优化入口为 https://47.239.50.129/prs/live/ 。真实部署达到10FPS以上；55秒长测仍出现1.10秒延迟，尚不能保证每帧≤500ms。最新原图对照、浏览器测试与边界见 [手机视频优化记录](PHONE-LIVE.md)。旧模式实现已删除；原版本快照和基准报告保留。
+
+
 所有后端开发在本目录进行。采用 Python 3.12、Django、Django REST Framework 和 Uvicorn，运行依赖版本沿用 AiInterviewer 本地环境；独立实现配置及公共接口，不复制面试业务。
 
 HF GPU 由云服务器通过 HTTPS 调用，不需要本地 GPU 或 SSH 隧道。配置和验证见 [ZEROGPU.md](ZEROGPU.md)。
@@ -30,7 +33,7 @@ Copy-Item .env.example .env
 
 健康检查：<http://127.0.0.1:8766/api/health/>。正常响应为 `{"status":"ok","database":"sqlite"}`；数据库故障返回 503，不重试、不返回连接凭据。
 
-`/` 为手机摄像头回传页；`/ws/echo/` 为单实例内存回传 WebSocket。`/admin/` 为 Django 管理后台，需先创建管理员：
+`/` 重定向至 `/live/` 手机摄像头页；`/ws/echo/` 为单实例内存回传 WebSocket。`/admin/` 为 Django 管理后台，需先创建管理员：
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py createsuperuser
@@ -63,9 +66,14 @@ API 默认要求登录，仅健康检查显式允许匿名。新业务应用放�
 
 `core/camera.py` 从根目录 frontend 的固定白名单读取页面/资源，不暴露任意文件。匿名诊断入口不保存媒体，也不依赖管理后台账号。协议、默认图像参数及客户端测试见 [前端说明](../frontend/README.md)。当前没有业务表、文件存储、队列或产品账号接口。
 
-`core/vision.py` 提供同源检测 HTTP 适配，`core/detector.py` 管理验证后的 CPU ONNX 会话、输入边界、坐标和标注。安装 `requirements-vision.txt`，设置 `YOLO_MODEL_PATH` 为匹配模型清单的绝对路径；开发依赖已包含这些运行库。模型通过独立构建环境导出，服务器不安装训练栈。缺失模型仅影响检测模式，检测请求明确失败；不会自动切换原样回传。见 [VISION.md](VISION.md) 和 [模型工件](models/README.md)。
+摄像头仅保留 Echo 和最新 HF ZeroGPU 视频检测。`config/asgi.py` 仅分派 `/ws/echo/`
+和 `/ws/detect/hf/`；旧 HTTP 检测和其他视频 WS 均拒绝。`core/detector.py` 只提供共享
+JPEG/预处理/框/标注函数，不含CPU推理会话。原模型、640、0.25、JPEG80保持；计算精度和
+后端从必需的COCO合格 `models/inference-plan.json` 读取，输出数组保持FP32。完整GPU逐项
+实验与失败诊断见 [ACCELERATION.md](ACCELERATION.md)，同一个Notebook用版本管理复测。
+HF 身份私有配置，开始前检查每日免费秒数和调用次数；一次视频最多55秒，不自动重新分配。
 
-推理加速保留 FP32/640/0.25 等参数，融合有上限的 ORT arena、I/O Binding、输入/输出张量复用、直接归一化、批量框处理和字体缓存；资源限额不变。独立精度/后端实验和 44 项加速方法的适用性见 [ACCELERATION.md](ACCELERATION.md)。
+独立 YOLO26 训练模板见 [训练 Notebook](notebooks/yolo26-training/README.md)。默认在 Kaggle T4 上以项目相同的官方 YOLO26n 初始权重对 COCO8 做真实 1 epoch mock 训练，验证训练、权重保存、重载验证及示例预测流程；小样本指标不用于证明生产能力提升。模板提供 custom 数据入口，不自动替换或部署现有模型。
 
 前端优先通过同源代理访问后端，不开放通配 CORS。会话认证下的业务写请求需有效 CSRF token。接口失败不得隐式重试或改用其他算法；实验参数修改须获得用户明确授权。
 

@@ -1,6 +1,6 @@
 """Responsibilities: 验证 WebSocket 原样回传、控制契约、来源及容量边界。
 Implementation: ApplicationCommunicator 执行真实 ASGI 处理器，不访问网络或摄像头。
-Related Modules: core.echo；真实公网 TLS/WSS 另由联调验证。
+Related Modules: core.echo, core.camera, frontend/i18n.js；真实公网 TLS/WSS 另由联调验证。
 Declaration Index:
 - EchoTests — 协议与释放测试。
 - EchoTests.open_socket — 创建带明确来源的 ASGI 测试会话。
@@ -11,12 +11,15 @@ Declaration Index:
 - EchoTests.test_frame_limit — 拒绝大于上限及空消息。
 - EchoTests.test_capacity_and_release — 第五个连接拒绝，已占连接在结束后释放。
 - CameraPageTests — HTTP 页面及文件白名单。
-- CameraPageTests.test_page_and_script — 页面与模块可获取且权限头明确。
+- CameraPageTests.test_page_and_script — 页面、摄像头及语言模块可获取且权限头明确。
+- CameraPageTests.test_retired_routes_and_modes — 两模式和旧HTTP拒绝。
+- CameraPageTests.test_retired_websockets — 旧WS拒绝。
 - CameraPageTests.test_unknown_asset_is_not_exposed — 未列入资源的文件无法读取。
 Variable Index: None。
 """
 
 import json
+import re
 
 from asgiref.testing import ApplicationCommunicator
 from django.test import SimpleTestCase
@@ -155,13 +158,18 @@ class CameraPageTests(SimpleTestCase):
     """
 
     def test_page_and_script(self):
-        """Functionality: 页面及 JavaScript 文件具有正确响应。
+        """Functionality: 页面、摄像头及语言 JavaScript 文件具有正确响应。
         Inputs: self.client 与仓库前端文件。
         Outputs: 状态、摄像头权限头和 MIME 断言；关闭响应。
         Logic: 读取普通响应正文，文件由视图读取时自动关闭。
         Constraints: 不代表真实手机页面布局已验证。
         """
-        for path, mime in [("/", "text/html"), ("/assets/camera.js", "text/javascript")]:
+        for path, mime in [
+            ("/live/", "text/html"),
+            ("/assets/camera.js", "text/javascript"),
+            ("/assets/i18n.js", "text/javascript"),
+            ("/assets/translations.js", "text/javascript"),
+        ]:
             response = self.client.get(path)
             try:
                 self.assertEqual(response.status_code, 200)
@@ -170,6 +178,54 @@ class CameraPageTests(SimpleTestCase):
                 self.assertTrue(response.content)
             finally:
                 response.close()
+
+    def test_retired_routes_and_modes(self):
+        """Functionality: Verify canonical redirect, exactly two modes and retired HTTP/WS
+        rejection.
+        Inputs: actual URL/ASGI dispatch and frontend bytes; Outputs: redirect/options/404/1008.
+        Logic: no GPU dependencies reached for an obsolete path.
+        Constraints: actual reverse proxy routing is checked independently after publication.
+        """
+        self.assertRedirects(self.client.get("/"), "/live/", fetch_redirect_response=False)
+        page = self.client.get("/live/").content.decode()
+        modes = re.search(r'<select id="processing"[^>]*>(.*?)</select>', page, re.S).group(1)
+        self.assertEqual(re.findall(r'value="([^"]+)"', modes), ["echo", "hf"])
+        for path in (
+            "/vision/config/",
+            "/vision/frame/",
+            "/vision/hf/config/",
+            "/vision/hf/frame/",
+            "/assets/detection-client.js",
+            "/assets/detection-sample.jpg",
+        ):
+            self.assertEqual(self.client.get(path).status_code, 404)
+        self.assertEqual(
+            self.client.get("/live/assets/camera.js").content,
+            self.client.get("/assets/camera.js").content,
+        )
+
+    async def test_retired_websockets(self):
+        """Functionality: Reject old processing WS paths before connection acceptance.
+        Inputs: all retired paths and real ASGI application; Outputs: 1008 close per path.
+        Logic: unknown dispatch must avoid GPU/HTTP dependencies.
+        Constraints: in-memory ASGI, independently checked on deployed proxy later.
+        """
+        from config.asgi import application
+
+        for name in ("cpu", "hf", "hf-boxes", "hf-live"):
+            socket = ApplicationCommunicator(
+                application,
+                {
+                    "type": "websocket",
+                    "path": f"/ws/vision/{name}/",
+                    "headers": [],
+                },
+            )
+            await socket.send_input({"type": "websocket.connect"})
+            self.assertEqual(
+                await socket.receive_output(), {"type": "websocket.close", "code": 1008}
+            )
+            await socket.wait()
 
     def test_unknown_asset_is_not_exposed(self):
         """Functionality: 拒绝白名单外的文件。

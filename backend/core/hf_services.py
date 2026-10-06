@@ -1,37 +1,31 @@
-"""Responsibilities: Fixed-target ZeroGPU Gradio transport and annotated-frame validation.
-Implementation: HTTPS POST/SSE under one 55-second deadline; bounded JSON; no retries or fallback.
-Related Modules: core.hf_vision; zerogpu.protocol/app; models/yolo26n.json.
-Declaration Index: chunks — bounded reader; exchange — HTTP/SSE transaction;
-validate_result — model/JPEG/box contract; hf_request — readiness or one frame.
-Variable Index: HOST — owned Space; TIMEOUT_SECONDS — 55 of client's approved 60 seconds;
-MAX_RESPONSE_BYTES — 2 MiB JSON/SSE boundary; logger — safe phase/type diagnostics.
+"""Responsibilities: Allocate the sole fixed-host ZeroGPU live API through private HTTPS.
+Implementation: One bounded POST/SSE transaction per call, sharing the relay's deadline.
+Related Modules: core.hf_video_relay; zerogpu.app.detect_live.
+Declaration Index: chunks — bounded reads; provider_error — safe reason/numeric diagnostics;
+exchange — private JSON/SSE request.
+Variable Index: HOST — owned Space; MAX_RESPONSE_BYTES — 2 MiB completion boundary;
+logger — phase/status/type/reason/seconds diagnostics without provider bodies or credentials.
 """
 
-import base64
 import http.client
 import json
 import logging
-import math
-import os
 import re
 import time
-from pathlib import Path
 
-from zerogpu.protocol import decode_input
-
-from .detector import CONFIDENCE_THRESHOLD, DetectionError, decode_frame
+from .detector import DetectionError
 
 HOST = "heropig114514-prs-yolo26.hf.space"
-TIMEOUT_SECONDS = 55
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 logger = logging.getLogger(__name__)
 
 
 def chunks(response, socket, deadline, limit):
-    """Functionality: Bound response bytes and idle/total read time.
-    Inputs: response, retained socket, absolute deadline and byte limit.
-    Outputs: byte iterator; Logic: refresh timeout before reads, count every byte.
-    Constraints: exceeded limits raise, without retries or response-body logging.
+    """Functionality: Bound response bytes and total read time.
+    Inputs: HTTP response, retained socket, monotonic deadline and byte limit.
+    Outputs: byte iterator; timeout/oversize propagate to the allocation task.
+    Logic: refresh remaining socket timeout before each read; allow one overflow byte.
+    Constraints: no retries, body logging or unbounded accumulation.
     """
     consumed = 0
     while consumed <= limit:
@@ -49,41 +43,89 @@ def chunks(response, socket, deadline, limit):
         yield chunk
 
 
-def exchange(method, path, body, deadline, stream=False):
-    """Functionality: Execute one fixed-host HTTPS request and parse JSON/SSE completion.
-    Inputs: method/path/body, shared deadline, stream flag; private HF_INFERENCE_TOKEN env.
-    Outputs: parsed JSON; Logic: retain socket, parse fragmented complete/error events.
-    Constraints: verified TLS, no redirect/retry; optional token selects explicit anonymous quota.
+def provider_error(payload):
+    """Functionality: Convert known HF allocation failures into explicit safe public errors.
+    Inputs: bounded parsed SSE error JSON; Outputs: DetectionError with no provider body.
+    Logic: recognize the pinned scheduler's complete reason phrases/title; extract only bounded
+    numeric quota fields. Unknown errors remain inference failures even if they mention quota.
+    Constraints: never log/return arbitrary text, token, capability, URL or camera data; no retry.
+    HF rounds its displayed remaining seconds; preflight retains the exact fractional balance.
     """
+    message = payload.get("error", "") if isinstance(payload, dict) else ""
+    title = payload.get("title") if isinstance(payload, dict) else None
+    message = message if isinstance(message, str) else ""
+    seconds = re.search(r"\((\d{1,6})s requested vs\. (\d{1,6})s left\)", message)
+    reason, detail = "inference_failed", "ZeroGPU 推理失败，请检查 Space 日志。"
+    if "You have exceeded your ZeroGPU runs limit." in message:
+        reason, detail = "runs_exceeded", "ZeroGPU 今日免费调用次数已用尽，请等待额度恢复。"
+    elif "too many ZeroGPU credits allocated to running tasks" in message:
+        reason, detail = "pending_credits", "ZeroGPU 额度被运行中的任务占用，请等待任务结束。"
+    elif title == "ZeroGPU illegal duration":
+        reason, detail = "illegal_duration", "ZeroGPU 申请时长超过当前账户允许的上限。"
+    elif "Space app has reached its GPU limit." in message:
+        reason, detail = "space_quota_exceeded", "Space GPU 额度受限，请检查请求身份和 HF 日志。"
+    elif seconds or title == "ZeroGPU quota exceeded":
+        reason, detail = "quota_exceeded", "ZeroGPU 免费额度不足，请等待额度恢复。"
+        if seconds:
+            detail = (f"ZeroGPU 免费额度不足：HF 要求{seconds[1]}秒额度，"
+                      f"返回剩余{seconds[2]}秒（取整值）。请等待额度恢复。")
+    elif "No GPU was available" in message:
+        reason, detail = "busy", "ZeroGPU 暂无可用 GPU，请稍后手动开始。"
+    elif "GPU task aborted" in message:
+        reason, detail = "worker_failed", "ZeroGPU 工作进程已中止，请检查 Space 日志。"
+    logger.warning("ZeroGPU service rejected reason=%s requested_seconds=%s remaining_seconds=%s",
+                   reason, int(seconds[1]) if seconds else None,
+                   int(seconds[2]) if seconds else None)
+    return DetectionError("hf_" + reason, detail, 503)
+
+
+def exchange(method, path, body, deadline, stream=False, *, token):
+    """Functionality: Execute one private fixed-host HTTPS call and parse JSON/SSE completion.
+    Inputs: method/path/body, shared monotonic deadline, SSE flag and explicit private HF token.
+    Outputs: parsed JSON; failure propagates, never an alternative result.
+    Logic: verified TLS, bounded reads, strict event framing, heartbeat/complete/error handling;
+    retain the socket before getresponse may detach it, always close this request's connection.
+    Constraints: no redirect, anonymous request, token cache, callback, connection reuse or retry.
+    Failures log location/status/type and classified reason/numeric quota fields, never raw text.
+    """
+    if (
+        not isinstance(token, str)
+        or not token.startswith("hf_")
+        or len(token) > 4096
+        or any(c.isspace() for c in token)
+    ):
+        raise DetectionError("hf_not_configured", "服务端 HF token 格式无效。", 503)
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise TimeoutError("ZeroGPU request deadline")
-    headers = {"Content-Type": "application/json"}
-    token = os.environ.get("HF_INFERENCE_TOKEN", "")
-    if token:
-        if not token.startswith("hf_") or len(token) > 4096 or any(c.isspace() for c in token):
-            logger.error("Invalid HF_INFERENCE_TOKEN format; check private server configuration")
-            raise DetectionError(
-                "hf_not_configured", "服务端 HF token 格式无效，请检查私有配置。", 503
-            )
-        headers["Authorization"] = f"Bearer {token}"
     connection = http.client.HTTPSConnection(HOST, timeout=remaining)
+    started, phase = time.monotonic(), "request"
     try:
-        connection.request(method, path, body, headers)
-        socket = connection.sock  # Connection: close may detach it in getresponse().
+        connection.request(
+            method,
+            path,
+            body,
+            {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        socket = connection.sock
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError("ZeroGPU headers deadline")
         if socket is not None:
             socket.settimeout(remaining)
+        phase = "headers"
         response = connection.getresponse()
         if response.status != 200:
-            logger.warning("ZeroGPU HTTP rejected phase=%s status=%d", method, response.status)
+            logger.warning("ZeroGPU HTTP rejected method=%s status=%d", method, response.status)
             if response.status == 429:
                 raise DetectionError("hf_busy", "ZeroGPU 请求受限，请稍后手动开始。", 429)
             raise DetectionError(
-                "hf_unavailable", "ZeroGPU 接口未就绪，请检查 Space 状态或服务端 token。", 503
+                "hf_unavailable", "ZeroGPU 接口未就绪，请检查 Space 或私有配置。", 503
             )
+        phase = "body"
         content_type = response.getheader("Content-Type", "").split(";")[0]
         if content_type != ("text/event-stream" if stream else "application/json"):
             raise ValueError("Unexpected ZeroGPU response media type")
@@ -102,120 +144,23 @@ def exchange(method, path, body, deadline, stream=False):
                 if event[0] == "complete":
                     return json.loads(data[0])
                 if event[0] == "error":
-                    quota = "quota" in str(json.loads(data[0])).lower()
-                    code = "hf_quota_exceeded" if quota else "hf_inference_failed"
-                    detail = (
-                        "ZeroGPU 免费配额不足，请等待配额恢复。"
-                        if quota else "ZeroGPU 推理失败，请检查 Space 日志和 GPU 分配状态。"
-                    )
-                    logger.warning("ZeroGPU SSE rejected code=%s", code)
-                    raise DetectionError(code, detail, 503)
+                    raise provider_error(json.loads(data[0]))
                 if event[0] != "heartbeat":
                     raise ValueError("Unexpected ZeroGPU SSE event")
         raise ValueError("ZeroGPU stream ended without completion")
+    except Exception as error:
+        logger.warning(
+            "ZeroGPU allocation transport failed method=%s phase=%s type=%s",
+            method,
+            phase,
+            type(error).__name__,
+        )
+        raise
     finally:
         connection.close()
-
-
-def validate_result(data, image_size):
-    """Functionality: Validate returned model identity, frame and boxes before public success.
-    Inputs: result dict and input (width,height); Outputs: (JPEG,count,GPU-stage milliseconds).
-    Logic: check schema/precision/JPEG/dimensions and finite COCO boxes with pinned label order.
-    Constraints: failures propagate; never log base64, media or raw provider errors.
-    """
-    expected = {
-        "schema_version": 1, "model": "yolo26n", "backend": "PyTorch ZeroGPU",
-        "precision": "FP32", "classes": 80, "confidence_threshold": CONFIDENCE_THRESHOLD,
-        "width": image_size[0], "height": image_size[1],
-    }
-    if not isinstance(data, dict) or any(data.get(k) != v for k, v in expected.items()):
-        raise ValueError("ZeroGPU model contract mismatch")
-    count, elapsed, boxes = data["count"], data["inference_ms"], data["boxes"]
-    if (
-        type(count) is not int or not 0 <= count <= 300
-        or type(elapsed) not in (float, int) or not math.isfinite(elapsed) or elapsed < 0
-        or not isinstance(boxes, list) or len(boxes) != count
-        or type(data["schema_version"]) is not int
-        or any(type(data[key]) is not int for key in ("classes", "width", "height"))
-    ):
-        raise ValueError("ZeroGPU count or timing mismatch")
-    try:
-        image = decode_input({"schema_version": 1, "jpeg_base64": data["jpeg_base64"]})
-    except DetectionError as error:
-        raise ValueError("ZeroGPU returned an invalid JPEG") from error
-    if image.size != image_size:
-        raise ValueError("ZeroGPU image dimensions mismatch")
-    names = json.loads(
-        (Path(__file__).parents[1] / "models/yolo26n.json").read_text(encoding="utf-8")
-    )["names"]
-    for box in boxes:
-        cls, score, coordinates = box["class_id"], box["score"], box["xyxy"]
-        if (
-            type(cls) is not int or not 0 <= cls < 80 or box["label"] != names[cls]
-            or type(score) not in (float, int) or not math.isfinite(score)
-            or not CONFIDENCE_THRESHOLD <= score <= 1
-            or not isinstance(coordinates, list) or len(coordinates) != 4
-            or any(type(v) not in (float, int) or not math.isfinite(v) for v in coordinates)
-        ):
-            raise ValueError("ZeroGPU box metadata mismatch")
-        x1, y1, x2, y2 = coordinates
-        if not (0 <= x1 < x2 <= image.width and 0 <= y1 < y2 <= image.height):
-            raise ValueError("ZeroGPU box coordinates mismatch")
-    return base64.b64decode(data["jpeg_base64"], validate=True), count, float(elapsed)
-
-
-def hf_request(payload=None):
-    """Functionality: Query startup status or process one JPEG using the explicit Space backend.
-    Inputs: optional JPEG bytes; Outputs: readiness dict or validated JPEG/count/timing tuple.
-    Logic: POST one event, GET SSE completion within a shared 55-second network deadline.
-    Constraints: no fallback; status proves initialization only; anonymous/token quota is explicit.
-    """
-    image_size = None if payload is None else decode_frame(payload).size
-    api = "status" if payload is None else "detect"
-    values = [] if payload is None else [{
-        "schema_version": 1, "jpeg_base64": base64.b64encode(payload).decode("ascii"),
-    }]
-    deadline = time.monotonic() + TIMEOUT_SECONDS
-    logger.info(
-        "ZeroGPU request started phase=%s authentication=%s", api,
-        "token" if os.environ.get("HF_INFERENCE_TOKEN") else "anonymous",
-    )
-    try:
-        receipt = exchange(
-            "POST", f"/gradio_api/call/{api}", json.dumps({"data": values}).encode(), deadline
+        logger.info(
+            "ZeroGPU allocation transport ended method=%s phase=%s elapsed_ms=%.1f",
+            method,
+            phase,
+            (time.monotonic() - started) * 1000,
         )
-        event = receipt["event_id"]
-        if not isinstance(event, str) or re.fullmatch(r"[a-f0-9]{32}", event) is None:
-            raise ValueError("Invalid ZeroGPU event ID")
-        result = exchange("GET", f"/gradio_api/call/{api}/{event}", None, deadline, stream=True)
-        if not isinstance(result, list) or len(result) != 1:
-            raise ValueError("Invalid ZeroGPU output envelope")
-        data = result[0]
-        if payload is not None:
-            return validate_result(data, image_size)
-        manifest = json.loads(
-            (Path(__file__).parents[1] / "models/yolo26n.json").read_text(encoding="utf-8")
-        )
-        if not isinstance(data, dict) or data != {
-            "status": "initialized", "schema_version": 1, "model": "yolo26n", "classes": 80,
-            "precision": "FP32", "backend": "PyTorch ZeroGPU",
-            "confidence_threshold": CONFIDENCE_THRESHOLD, "input_shape": [1, 3, 640, 640],
-            "source_sha256": manifest["source_sha256"],
-        } or type(data["schema_version"]) is not int:
-            raise ValueError("ZeroGPU startup contract mismatch")
-        return {
-            "ready": True, "model": "yolo26n", "classes": 80,
-            "confidence_threshold": CONFIDENCE_THRESHOLD, "precision": "FP32",
-            "backend": "PyTorch ZeroGPU",
-            "authentication": "token" if os.environ.get("HF_INFERENCE_TOKEN") else "anonymous",
-        }
-    except DetectionError:
-        raise
-    except (TimeoutError, OSError, http.client.HTTPException) as error:
-        logger.warning("ZeroGPU transport failed phase=%s type=%s", api, type(error).__name__)
-        raise DetectionError(
-            "hf_connection_failed", "ZeroGPU 连接失败或超过 55 秒，请检查网络与排队状态。", 503
-        ) from error
-    except (ValueError, TypeError, KeyError, IndexError, OverflowError) as error:
-        logger.error("ZeroGPU response invalid phase=%s type=%s", api, type(error).__name__)
-        raise DetectionError("hf_invalid_response", "ZeroGPU 返回的数据格式无效。", 502) from error
