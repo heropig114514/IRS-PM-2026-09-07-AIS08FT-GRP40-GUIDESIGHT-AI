@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- Responsibilities: OSM 位置与 ORS 步行路线测试界面。
-Implementation: 固定 Leaflet 1.9.4/SRI；先安装共享语言控制，再初始化地图；明确定位、选点、示例和规划；nonce 由 core.maps 替换。
-Related Modules: i18n.js, translations.js, maps-client.js, maps-page.js, camera.css, core.maps/services。
+Implementation: 固定 Leaflet 1.9.4/SRI；先安装共享语言控制，再初始化地图；加载 AI 控制桥；明确定位、选点、示例和规划；nonce 由 core.maps 替换。
+Related Modules: i18n.js, translations.js, maps-client.js, maps-page.js, ai-control.js, camera.css, core.maps/services。
 Declaration Index: None。
 Variable Index: __CSP_NONCE__ — CSS nonce；language — 同源持久化语言偏好；表单 id 供控制器引用；Leaflet URL/integrity — 固定依赖。 -->
 <html lang="zh-CN">
@@ -95,6 +95,7 @@ Variable Index: __CSP_NONCE__ — CSS nonce；language — 同源持久化语言
     ></script>
     <script type="module" src="../assets/i18n.js"></script>
     <script type="module" src="../assets/maps-page.js"></script>
+    <script type="module" src="../assets/ai-control.js"></script>
   </head>
   <body>
     <div class="shell">

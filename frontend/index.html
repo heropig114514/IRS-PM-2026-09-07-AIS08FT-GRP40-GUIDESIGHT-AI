@@ -1,10 +1,12 @@
 <!doctype html>
 <!-- Responsibilities: 手机摄像头原样/ZeroGPU 标注回传工作台的语义结构。
-Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认；速率从首帧后统计；加载独立手动震动测试。
+Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认；加载 AI DOM 控制桥接及独立震动/语音输出测试。
 Related Modules: i18n.js, translations.js, camera.css, camera.js, echo-client.js,
-live-detection-client.js, frame-pipeline.js, maps.html, vibration.js；HF视频用同源持久连接。
+live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js；HF视频用同源持久连接。
 Declaration Index: None。
-Variable Index: None；摄像头和震动区域的 id 分别由 CameraApp 与 VibrationTester 引用，不嵌入密钥或摄像头数据。 -->
+Variable Index: None；区域 id 分别由 CameraApp、VibrationTester 和 SpeechOutput 引用。
+speech-text maxlength=2000容纳1000个双码元字符，实际1000个Unicode码点上限由SpeechOutput校验；
+speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或摄像头数据。 -->
 <html lang="zh-CN" data-api-base="../">
   <head>
     <meta charset="utf-8" />
@@ -17,7 +19,9 @@ Variable Index: None；摄像头和震动区域的 id 分别由 CameraApp 与 Vi
     <link rel="stylesheet" href="./assets/camera.css" />
     <script type="module" src="./assets/camera.js"></script>
     <script type="module" src="./assets/i18n.js"></script>
+    <script type="module" src="./assets/ai-control.js"></script>
     <script type="module" src="./assets/vibration.js"></script>
+    <script type="module" src="./assets/speech-output.js"></script>
   </head>
   <body>
     <div class="shell">
@@ -108,6 +112,43 @@ Variable Index: None；摄像头和震动区域的 id 分别由 CameraApp 与 Vi
           </div>
           <p id="vibration-message" class="message" role="status" aria-live="polite">正在检查浏览器震动接口。</p>
           <p class="vibration-note vibration-compatibility">安卓 Chrome 等支持；iPhone Safari 不支持。请保持页面前台，并检查系统震动设置。</p>
+        </section>
+        <section id="speech-test" class="workspace speech-test" aria-labelledby="speech-title">
+          <div class="workspace-header speech-header">
+            <h2 id="speech-title">语音输出测试</h2>
+            <span id="speech-status" class="status">正在检查接口</span>
+          </div>
+          <p class="vibration-note">输入文本，让浏览器朗读。无需麦克风或摄像头权限。</p>
+          <label class="speech-toggle">
+            <input id="speech-enabled" type="checkbox" disabled />
+            <span>启用语音输出</span>
+          </label>
+          <label class="speech-field">朗读文本（最多1000个字符）
+            <textarea id="speech-text" rows="3" maxlength="2000" spellcheck="false" disabled>这是 PRS 语音输出测试。</textarea>
+          </label>
+          <div class="speech-settings">
+            <label class="speech-field">朗读语言
+              <select id="speech-language" disabled><option value="zh-CN">中文朗读</option><option value="en-US">English</option></select>
+            </label>
+            <label class="speech-field speech-voice-field">语音选择
+              <select id="speech-voice" disabled><option value="">浏览器默认语音</option></select>
+            </label>
+            <label class="speech-field">语速 <output id="speech-rate-value">1.0×</output>
+              <input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="1" disabled />
+            </label>
+            <label class="speech-field">音量 <output id="speech-volume-value">100%</output>
+              <input id="speech-volume" type="range" min="0" max="1" step="0.1" value="1" disabled />
+            </label>
+          </div>
+          <div class="speech-actions" role="group" aria-label="语音输出操作">
+            <button class="button secondary" data-speech-sample="zh-CN" disabled>中文示例</button>
+            <button class="button secondary" data-speech-sample="en-US" disabled>英文示例</button>
+            <button id="speech-play" class="button primary" disabled>朗读文本</button>
+            <button id="speech-stop" class="button text-button" disabled>停止朗读</button>
+          </div>
+          <p id="speech-message" class="message" role="status" aria-live="polite">正在检查浏览器语音接口。</p>
+          <p id="speech-request" class="message">尚无语音请求。</p>
+          <p class="vibration-note speech-note">语音服务由浏览器提供；标为 remote 的语音可能联网。系统音量和输出设备会影响实际声音。</p>
         </section>
         <section class="metrics" aria-label="实时传输统计">
           <div>

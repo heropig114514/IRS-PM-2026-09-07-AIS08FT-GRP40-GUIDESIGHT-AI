@@ -1,6 +1,6 @@
-# Responsibilities: 独立低权限摄像头回传服务，仅监听 127.0.0.1:8766。
-# Implementation: 单worker、5条传输层输入队列、明确资源预算、无自动重启；运行目录可写，源码只读。
-# Related Modules: config.camera_server, core.hf_video_relay, nginx.locations.conf。
+# Responsibilities: 独立摄像头/HF/MCP服务，仅监听 127.0.0.1:8766。
+# Implementation: 单worker、启用MCP lifespan、5条传输层输入队列、明确资源预算、无自动重启；运行目录可写，源码只读。
+# Related Modules: config.camera_server, core.hf_video_relay/ai_mcp/ai_bridge, nginx.locations.conf。
 # Declaration Index: None。
 # Variable Index: User/Group 为 prs-camera；EnvironmentFile 为专用凭据；
 # MemoryMax/CPUQuota/TasksMax 为独立服务预算；ExecStart 为固定 ASGI 运行参数。
@@ -18,7 +18,7 @@ WorkingDirectory=/opt/prs-practice/current/backend
 EnvironmentFile=/etc/prs-camera/app.env
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=OPENBLAS_NUM_THREADS=1
-ExecStart=/opt/prs-practice/runtime-venv/bin/python -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan off --ws websockets-sansio --ws-max-size 1114120 --ws-max-queue 5 --ws-per-message-deflate false --no-proxy-headers
+ExecStart=/opt/prs-practice/runtime-venv/bin/python -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1114120 --ws-max-queue 5 --ws-per-message-deflate false --no-proxy-headers
 Restart=no
 NoNewPrivileges=true
 PrivateTmp=true

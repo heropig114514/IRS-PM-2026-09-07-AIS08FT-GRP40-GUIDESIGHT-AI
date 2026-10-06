@@ -1,5 +1,30 @@
 # 摄像头前端
 
+页面新增独立“语音输出测试”：默认关闭，可输入文本、填入中英文示例、选择设备声音、
+语速0.5至2及音量0至1，再朗读/停止。只调用浏览器SpeechSynthesis，不申请录音或摄像头，
+不生成音频文件、不自动绑定检测结果或替换失效声音。语音服务是否联网以设备声音的
+`localService`属性为准，UI以`[local]/[remote]`标明原生身份。
+`speech-output.js`的共享`SpeechOutput`接口负责`describe/voiceList/speak/stop`，
+MCP提供`speech_status/speech_voices/speech_speak/speech_stop`，须明确指定tab。
+用户开关、前台和真实激活要求保持，MCP不自动启用。文本最多1000个Unicode码点，
+状态区分提交、引擎开始、结束、取消和错误；实际扬声器声音始终待设备确认。
+取消或旧对象的迟到回调不能更新新请求；取消异常保留未确认状态并明确提示，不重试。
+正文只用于当前utterance，不保存或记录进应用日志；英文UI不翻译用户输入/原生声音名称。
+接口参数、机器可读错误和调用示例见[语音MCP契约](../backend/MCP.md)。
+
+真实Chrome/UI/MCP回归从frontend执行（需先在8768启动单worker ASGI/lifespan）：
+`node tools/check_speech_browser.mjs http://127.0.0.1:8768/live/ ../backend/benchmarks/2026-10-06/speech/browser-local.json`。
+设置`PRS_PLAYWRIGHT_PATH`及后端解释器`PYTHON`。测试使用明确原生引擎替身验证UI/参数/事件/错误，
+保留真实用户激活及HTTP/WS链路，检查中英切换和320/390/1280px布局；没有数据库写入或GPU调用。
+另以真实本地英文语音提交一次短样例，独立记录引擎结果；无此声音/超时会明确报告。
+可在同一命令末尾显式加`--native-chinese-only`并使用另一个输出路径，独立验证本地中文，
+保留原英文结果。各测试按明确语言选择本地声音，不互相替代，
+不选择默认或远程声音来制造通过。所有结果均不证明物理声音已被听到。
+
+摄像头和地图均加载 `ai-control.js`，通过 `/ws/control/` 向 MCP 注册当前 tab。
+AI 可读取控件和状态、点击/填表/选择/提交、地图选点及跨页面跳转，既有控制器处理实际业务。
+断线后手动刷新，浏览器权限要求保持；操作与验证方法见 [MCP 说明](../backend/MCP.md)。
+
 摄像头页新增独立“手机震动测试”：默认关闭，勾选启用后可手动测试短震200ms、长震800ms、
 双震150ms/暂停100ms/震动150ms；“停止震动”在接口可用时始终可操作。
 `vibration.js` 不开启摄像头、不联网、不自动绑定检测结果，也不保存开关偏好。
@@ -8,6 +33,14 @@
 “请求已接受”只说明浏览器返回true，不能证明马达实际震动；安卓Chrome等可测试，
 iPhone Safari不支持。请在真实手机前台页面检查短震、长震、双震、停止及系统震动设置。
 Node与桌面Chrome替身测试只验证调用和UI状态，不代表真机硬件、锁屏或后台提醒能力。
+MCP提供 `vibration_status`、`vibration_test`、`vibration_stop`，通过当前tab的控制连接
+复用同一个 `VibrationTester`。调用必须明确指定session，测试保留用户开关、前台和真实交互要求，
+不自动启用或重试；结果使用稳定的 `accepted/reason` 字段，详情与例子见[震动MCP契约](../backend/MCP.md)。
+真实HTTP/WS/Chrome联调从frontend执行
+`node tools/check_vibration_mcp_browser.mjs http://127.0.0.1:8768/live/ ../backend/benchmarks/2026-10-06/vibration/mcp-browser-local.json`，
+需在8768启动现有单worker ASGI，并设置 `PRS_PLAYWRIGHT_PATH` 与后端解释器 `PYTHON`。
+验证默认关闭、合成事件不能授予激活、真实点击后的三个节奏及停止、原生拒绝/异常和接口缺失。
+原生震动/媒体API是显式替身；用户激活与MCP HTTP/WS为真实路径，不写数据库、不调用GPU。
 设好 `PRS_PLAYWRIGHT_PATH` 后，从frontend执行
 `node tools/check_vibration_browser.mjs http://127.0.0.1:8766/live/ ../backend/benchmarks/2026-10-06/vibration/browser-local.json`，
 在真实Chrome验证支持/缺失/拒绝/异常、默认关闭及停止、零媒体授权调用、中英切换和320/390/1280px布局。
@@ -24,9 +57,11 @@ Node与桌面Chrome替身测试只验证调用和UI状态，不代表真机硬�
 服务端读取显式方案文件，至少三个独立完整5000图 COCO验证的 mAP下降均不得超过0.5个百分点；
 客户端验证其公开证据字段，不能据此声称自己重新测量了mAP。
 `frame-pipeline.js` 管理采集及顺序解码显示。摄像头最大边640、JPEG质量0.8。
-首帧单独完成后默认24FPS输入上限，最多8个采集/传输/等待显示作业，先取得空位再采集。
-该配置由真实HF同分配的12/24FPS、5/8帧窗口对照支持；原12FPS/5帧报告保留，不将不同条件
-包装为模型加速比。窗口包含网络在途帧，HF输入队列并不会因此预先积压八张待推理图。
+本地30FPS候选源码在首帧独立完成后使用30FPS输入上限，最多12个采集/传输/等待显示作业，
+先取得空位再采集。公开生产页面仍为已验证的24FPS/8帧；30/12尚未部署或通过真实HF验证。
+新客户端、PRS relay和HF parent严格要求同一12帧协议，须协调发布，不能只替换前端。
+原24/8配置由真实HF同分配的12/24FPS、5/8帧窗口对照支持；旧报告和变更前源码快照保留，
+不将不同条件包装为模型加速比。窗口包含网络在途帧，并不要求预先积压12张待推理图。
 调度按预定时间线推进，普通定时器晚醒不逐帧累积；等待信用或错过完整采样间隔后重新计时，
 不重放错过的采样槽。每5秒及停止时汇总定时器晚醒和信用等待，区分采样与网络窗口限制。
 没有额外200ms等待、旧帧积压、自动重连或自动更换模式。
@@ -43,9 +78,16 @@ WS与解码，以开发目录 `tools/fixtures/detection-sample.jpg` 替代物理
 `tools/profile_frame_pipeline.mjs URL OUTPUT PIPELINE_FILE [--cpu-profile]`执行真实浏览器
 12/24FPS、0/250ms合成Echo控制，不调用HF/GPU；合成传输不能代替公网推理结论。
 CPU采样默认关闭，因为profiling本身可能影响定时器精度；开启时保存原始CPU profile。
-`tools/benchmark_phone_windows.mjs URL OUTPUT [--echo-delay MS]`比较12/24FPS和5/8帧窗口。
+`tools/benchmark_phone_windows.mjs URL OUTPUT [--echo-delay MS] [--30fps]`默认保留12/24FPS和5/8帧对照。
 默认以一个真实HF连接/一次GPU分配运行四个明确分段并保留每一帧；各段首帧单列并完整排空。
 `--echo-delay 300`为本地源码、实际Chrome编码/解码/HUD和合成传输的零GPU控制，不作推理结论。
+`--30fps`显式选择24/8、30/8、30/12、30/12、30/8、24/8六段平衡顺序，共606帧；
+对应61/91/151/151/91/61帧，30/12两个约五秒测试段保留，缩短对照段减少HF调用时长。
+结合`--echo-delay`可验证当前本地候选，真实模式使用公开部署，须先协调升级到12帧协议。
+原短测FPS口径保留，另报相同非首帧集合的完成间隔FPS、实际采集FPS和信用等待总时长；
+完成间隔可能受端点延迟变化影响，不能替代原全程延迟验收。
+入口在任何媒体或provider启动前校验所加载客户端的窗口，八帧部署运行十二帧测试会明确
+拒绝，不会部分运行后才失败或自动改成较小窗口；源码指纹和实际上限都进入报告。
 该工具不自动重试，真实HF模式需先检查90秒预留额度。旧五帧/12FPS报告作为原条件对照保留。
 本地 RTX4060 联调由后端 `tools/benchmark_phone_native.py` 启动，需显式传入完整验证的
 eager Graph方案 `--plan`；该native控制不会加载AOT包。公网证据见

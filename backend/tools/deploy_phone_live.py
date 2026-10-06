@@ -1,15 +1,31 @@
-"""Responsibilities: Stage/publish the deployed phone live frontend and manual vibration UI.
-Implementation: Pinned SSH and explicit source allowlists; copy the current release, validate
-inference identity and upload hashes before activation. The explicit vibration profile preserves
-runtime code, service/proxy configuration and credentials, then restarts only prs-camera.
-Related Modules: core.inference_plan; core.camera; frontend/vibration.js; deployment templates.
-Declaration Index: PinnedHost; PinnedHost.missing_host_key; connect_server; execute; stage;
-wait_ready; activate_vibration; activate; main.
-Variable Index: ROOT — private credential/bundle location; PREFIX — dedicated remote workspace;
-FINGERPRINT — previously inspected public host identity; logger — non-secret transition logs;
-FRONTEND/BACKEND/RETIRED — full-profile source and cleanup sets;
-VIBRATION_FRONTEND/VIBRATION_BACKEND — reviewed UI overlay only. source_root identifies a
-reviewed project snapshot; git_commit records its Git identity. No retries or automatic rollback.
+"""Responsibilities: Stage/publish Echo, the latest phone live path, bilingual maps, MCP
+and manual vibration/speech UI.
+Implementation: Pinned SSH, private local credentials, explicit source allowlist over the
+current release; validate the full-COCO qualified plan before staging;
+prune retired modes and replace owned page/asset/WS routes, including maps and shared language
+modules, AI control and manual vibration assets as one release; verify preinstalled MCP
+dependencies, record hashes, back up and switch
+one service, then check readiness.
+An explicit vibration profile overlays only reviewed UI assets and their serving whitelist,
+requiring the same inference plan and preserving active service/proxy/credential configuration.
+Related Modules: hf_video_relay/inference_plan/ai_mcp/ai_bridge; frontend live pipeline;
+deploy templates;
+private server_info.txt.
+Declaration Index: PinnedHost — SSH policy; PinnedHost.missing_host_key — fingerprint check;
+connect_server — private authentication; execute — checked remote command;
+wait_ready — listener/health observation; stage — hash-verified inactive release;
+activate_vibration — configuration-preserving UI release;
+activate_outputs — isolated-runtime device-output deployment;
+activate — publish reviewed release; main — explicit stage/activate CLI.
+Variable Index: ROOT — local backend; PREFIX — dedicated remote workspace; FINGERPRINT — inspected
+SSH host key; logger — deployment transition diagnostics without secrets;
+FRONTEND — explicit asset set; BACKEND — owned runtime set; RETIRED — explicit
+obsolete paths. No credential output.
+VIBRATION_FRONTEND/VIBRATION_BACKEND — narrow UI-profile overlay; source_root is a reviewed
+snapshot directory, and git_commit records its Git identity without reading private files there.
+OUTPUT_FRONTEND/OUTPUT_BACKEND — output UI/MCP overlay preserving active inference code;
+runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest.
+Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
 """
 
 import argparse
@@ -39,6 +55,21 @@ VIBRATION_BACKEND = (
     "core/camera.py", "core/test_echo.py", "core/test_deploy_phone_live.py",
     "tools/deploy_phone_live.py", "deploy/README.md",
 )
+OUTPUT_FRONTEND = (
+    "index.html", "camera.css", "translations.js", "vibration.js", "speech-output.js",
+    "ai-control.js", "README.md", "tests/vibration.test.mjs", "tests/speech-output.test.mjs",
+    "maps.html",
+    "tools/check_vibration_browser.mjs", "tools/check_vibration_mcp_browser.mjs",
+    "tools/check_speech_browser.mjs",
+)
+OUTPUT_BACKEND = (
+    "config/asgi.py", "core/camera.py", "core/ai_bridge.py", "core/ai_database.py",
+    "core/ai_mcp.py",
+    "core/test_ai_control.py", "core/test_mcp_profile.py", "core/test_echo.py",
+    "core/test_deploy_phone_live.py", "requirements.txt", "MCP.md", "deploy/README.md",
+    "tools/deploy_phone_live.py", "tools/check_mcp.py", "tools/check_vibration_mcp.py",
+    "tools/check_speech_mcp.py",
+)
 FRONTEND = (
     "index.html",
     "camera.js",
@@ -51,7 +82,9 @@ FRONTEND = (
     "maps.html",
     "maps-page.js",
     "maps-client.js",
+    "ai-control.js",
     "vibration.js",
+    "speech-output.js",
     "README.md",
     "tests/camera.test.mjs",
     "tests/i18n.test.mjs",
@@ -59,11 +92,16 @@ FRONTEND = (
     "tests/live-detection-client.test.mjs",
     "tests/frame-pipeline.test.mjs",
     "tests/vibration.test.mjs",
+    "tests/speech-output.test.mjs",
 )
 BACKEND = (
     "config/asgi.py",
     "config/urls.py",
     "core/camera.py",
+    "core/ai_bridge.py",
+    "core/ai_database.py",
+    "core/ai_mcp.py",
+    "core/test_ai_control.py",
     "core/detector.py",
     "core/hf_video_relay.py",
     "core/inference_plan.py",
@@ -90,6 +128,8 @@ BACKEND = (
     "core/test_zerogpu_live.py",
     "core/test_zerogpu_quota.py",
     "requirements-vision.txt",
+    "requirements.txt",
+    "MCP.md",
     "README.md",
     "ZEROGPU.md",
     "PHONE-LIVE.md",
@@ -210,47 +250,74 @@ def execute(client, script):
     return output + error
 
 
-def stage(client, sftp, profile="full", source_root=None, git_commit=None):
-    """Functionality: Build a checked live/maps release while preserving unrelated services.
-    Inputs: client/sftp, profile(full/vibration), optional project source_root and git_commit;
+def stage(client, sftp, profile="full", source_root=None, git_commit=None, runtime_path=None):
+    """Functionality: Build a checked live/maps/MCP release while preserving unrelated services.
+    Inputs: client/sftp, profile(full/vibration/outputs), source_root/git_commit and runtime_path;
     current release, measured inference plan and owned source/template allowlists.
     Outputs: safe hash manifest including the measured plan identity.
     Logic: validate the plan, copy current release, prune explicit retired paths in the new release,
-    replace canonical routes/source, verify uploaded bytes, Django and systemd before activation.
+    replace canonical routes/source, verify uploaded bytes, preinstalled dependencies,
+    Django/ASGI imports and systemd before activation.
     Constraints: active/archived releases and map API/business code remain untouched;
     no credentials, database, weights, browser fixtures or environment upload.
     No implicit promotion or rollback; logs release identity and verification transitions.
     Full profile dependencies must be installed explicitly; no implicit pip install.
     Vibration profile verifies the active plan is byte-identical and does not replace runtime,
     service/proxy templates or credentials; no retirement pruning outside the full profile.
+    Outputs requires an explicit isolated runtime and preserves inference sources; staged
+    service rendering substitutes only the reviewed interpreter path and records its source hash.
     """
-    if profile not in {"full", "vibration"}:
+    if profile not in {"full", "vibration", "outputs"}:
         raise ValueError("Unknown deployment profile")
+    if profile == "outputs" and runtime_path is None:
+        raise ValueError("Outputs profile requires an explicit isolated runtime")
+    runtime = runtime_path or PREFIX + "/runtime-venv"
+    if runtime != PREFIX + "/runtime-venv" and not re.fullmatch(
+        re.escape(PREFIX) + r"/runtimes/[A-Za-z0-9_-]+", runtime
+    ):
+        raise ValueError("Unexpected runtime path")
+    if profile == "outputs" and runtime == PREFIX + "/runtime-venv":
+        raise ValueError("Outputs profile requires an isolated runtime under owned runtimes")
     source = ROOT if source_root is None else Path(source_root).resolve() / "backend"
     plan = read_plan(source / "models/inference-plan.json",
                      json.loads((source / "models/yolo26n.json").read_bytes()))
     old = execute(client, f"readlink -f {PREFIX}/current").strip()
     if not re.fullmatch(re.escape(PREFIX) + r"/releases/[A-Za-z0-9_-]+", old):
         raise ValueError("Unexpected current release path")
-    if profile == "vibration":
+    if profile in {"vibration", "outputs"}:
         for name in ("models/inference-plan.json", "models/yolo26n.json"):
             with sftp.open(old + "/backend/" + name, "rb") as active:
                 if active.read() != (source / name).read_bytes():
-                    raise ValueError("Vibration deployment changes the active inference identity")
-    frontend = VIBRATION_FRONTEND if profile == "vibration" else FRONTEND
-    backend = VIBRATION_BACKEND if profile == "vibration" else BACKEND
-    retired = () if profile == "vibration" else RETIRED
+                    raise ValueError(
+                        "Scoped deployment changes the active inference identity: " + name
+                    )
+    frontend = {"full": FRONTEND, "vibration": VIBRATION_FRONTEND,
+                "outputs": OUTPUT_FRONTEND}[profile]
+    backend = {"full": BACKEND, "vibration": VIBRATION_BACKEND,
+               "outputs": OUTPUT_BACKEND}[profile]
+    retired = RETIRED if profile == "full" else ()
     files = {"backend/" + name: (source / name).read_bytes() for name in backend}
     files.update(
         {"frontend/" + name: (source.parent / "frontend" / name).read_bytes() for name in frontend}
     )
-    if profile == "full":
+    generated = {}
+    if profile in {"full", "outputs"}:
         for name in ("prs-camera.service", "nginx.locations.conf"):
             files["backend/deploy/" + name] = (source / "deploy" / name).read_bytes()
+        service_name = "backend/deploy/prs-camera.service"
+        original = files[service_name]
+        marker = (PREFIX + "/runtime-venv/bin/python").encode()
+        if original.count(marker) != 1:
+            raise ValueError("Service template must declare exactly one reviewed interpreter")
+        rendered = original.replace(marker, (runtime + "/bin/python").encode())
+        files[service_name] = rendered
+        if rendered != original:
+            generated[service_name] = {"template_sha256": hashlib.sha256(original).hexdigest(),
+                                       "runtime": runtime}
     hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()}
     identity = {"files": hashes, "removed": retired}
     release = (
-        ("vibration-" if profile == "vibration" else "phone-live-")
+        {"full": "phone-live-", "vibration": "vibration-", "outputs": "outputs-"}[profile]
         + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:16]
     )
     target = PREFIX + "/releases/" + release
@@ -261,10 +328,14 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None):
         "previous": old,
         "files": hashes,
         "removed": list(retired),
-        "scope": ("Manual vibration UI; preserve inference, service/proxy config and credentials"
+        "scope": ("Device output UI/MCP; preserve inference; explicit isolated runtime"
+                  if profile == "outputs" else
+                  "Manual vibration UI; preserve inference, service/proxy config and credentials"
                   if profile == "vibration" else
-                  "Echo, latest HF live and bilingual maps; root redirects"),
+                  "Echo, latest HF live, bilingual maps and MCP control; root redirects"),
         "profile": profile,
+        "runtime": runtime,
+        "generated": generated,
         "git_commit": git_commit,
         "inference": {"backend": plan["backend"], "precision": plan["precision"],
                       "provenance": plan["provenance"]},
@@ -312,16 +383,29 @@ print('Retired source removed from inactive release')
         if hashlib.sha256(sftp.open(remote).read()).hexdigest() != hashes[name]:
             raise ValueError("Uploaded file hash mismatch: " + name)
     logger.info("Upload hashes verified release=%s; running remote checks", release)
+    registry_profile = "outputs" if profile == "outputs" else "full"
+    profile_export = (f"export PRS_MCP_PROFILE={registry_profile}\n"
+                      if profile in {"full", "outputs"} else "")
+    registry_check = (
+        f"{runtime}/bin/python -c \"import asyncio; from core.ai_mcp import mcp, MCP_PROFILE, "
+        "OUTPUT_TOOL_NAMES; assert MCP_PROFILE == 'outputs'; "
+        "assert {tool.name for tool in asyncio.run(mcp.list_tools())} == OUTPUT_TOOL_NAMES; "
+        "print('Output-only MCP registry verified')\"\n"
+    ) if profile == "outputs" else ""
     manifest["remote_checks"] = execute(
         client,
         f"""
 set -a
 source /etc/prs-camera/app.env
 set +a
+{profile_export}
 export PYTHONDONTWRITEBYTECODE=1
 cd {shlex.quote(target + "/backend")}
-{PREFIX}/runtime-venv/bin/python manage.py check
-{PREFIX}/runtime-venv/bin/python manage.py makemigrations --check --dry-run
+{runtime}/bin/python manage.py check
+{runtime}/bin/python manage.py makemigrations --check --dry-run
+{runtime}/bin/python -m pip check
+{runtime}/bin/python -c "import config.asgi"
+{registry_check}
 systemd-analyze verify deploy/prs-camera.service
 """,
     )
@@ -402,6 +486,9 @@ def activate(client, sftp, manifest):
     if manifest.get("profile", "full") == "vibration":
         activate_vibration(client, manifest)
         return
+    if manifest.get("profile", "full") == "outputs":
+        activate_outputs(client, sftp, manifest)
+        return
     backup = "/etc/prs-camera/backups/" + release
     backup_unit = shlex.quote(backup + "/prs-camera.service")
     backup_include = shlex.quote(backup + "/nginx.locations.conf")
@@ -419,10 +506,11 @@ def activate(client, sftp, manifest):
     lines = [
         line
         for line in env.splitlines()
-        if not line.startswith(("HF_INFERENCE_TOKEN=", "YOLO_MODEL_PATH="))
+        if not line.startswith(("HF_INFERENCE_TOKEN=", "YOLO_MODEL_PATH=", "PRS_MCP_PROFILE="))
     ]
     with sftp.open("/etc/prs-camera/app.env.phone-next", "wb") as output:
-        output.write(("\n".join(lines) + "\nHF_INFERENCE_TOKEN=" + token + "\n").encode())
+        output.write(("\n".join(lines) + "\nHF_INFERENCE_TOKEN=" + token +
+                      "\nPRS_MCP_PROFILE=full\n").encode())
     sftp.chmod("/etc/prs-camera/app.env.phone-next", 0o600)
     logger.info("Activating release=%s; restarting only prs-camera", release)
     manifest["activation_checks"] = execute(
@@ -449,9 +537,58 @@ systemctl is-active prs-camera
     logger.info("Release activated=%s; previous release/config backups retained", release)
 
 
+def activate_outputs(client, sftp, manifest):
+    """Functionality: Activate reviewed device outputs with an isolated interpreter and registry.
+    Inputs: client/sftp and precondition-verified manifest; existing private service environment.
+    Outputs: Activation/health evidence and recoverable previous release/config backups.
+    Logic: Back up owned configuration, change only PRS_MCP_PROFILE in the environment, install
+    reviewed service/proxy templates, atomically switch current, restart only prs-camera, check
+    listener/health then reload nginx. HF/ORS credentials are preserved byte-for-byte.
+    Constraints: No migration, inference change, other service restart, retry or automatic rollback;
+    private configuration never enters public manifests or logs.
+    """
+    target, release = manifest["path"], manifest["release"]
+    backup = "/etc/prs-camera/backups/" + release
+    backup_unit = shlex.quote(backup + "/prs-camera.service")
+    backup_proxy = shlex.quote(backup + "/nginx.locations.conf")
+    execute(client, f"mkdir -m 700 -p {shlex.quote(backup)}\n"
+            f"cp -a /etc/prs-camera/app.env {shlex.quote(backup + '/app.env')}\n"
+            f"cp -a /etc/systemd/system/prs-camera.service {backup_unit}\n"
+            f"cp -a /etc/nginx/prs-camera.locations.conf {backup_proxy}")
+    with sftp.open("/etc/prs-camera/app.env", "rb") as source:
+        original = source.read()
+    preserved = b"".join(line for line in original.splitlines(keepends=True)
+                         if not line.startswith(b"PRS_MCP_PROFILE="))
+    updated = preserved + (b"" if preserved.endswith(b"\n") else b"\n")
+    updated += b"PRS_MCP_PROFILE=outputs\n"
+    with sftp.open("/etc/prs-camera/app.env.outputs-next", "wb") as output:
+        output.write(updated)
+    sftp.chmod("/etc/prs-camera/app.env.outputs-next", 0o600)
+    logger.info("Activating device outputs release=%s; isolated runtime=%s", release,
+                manifest["runtime"])
+    manifest["activation_checks"] = execute(client, f"""
+install -m 644 {shlex.quote(target + '/backend/deploy/prs-camera.service')} \\
+  /etc/systemd/system/prs-camera.service
+install -m 644 {shlex.quote(target + '/backend/deploy/nginx.locations.conf')} \\
+  /etc/nginx/prs-camera.locations.conf
+nginx -t
+mv /etc/prs-camera/app.env.outputs-next /etc/prs-camera/app.env
+systemctl daemon-reload
+ln -s {shlex.quote(target)} {shlex.quote(PREFIX + '/current-' + release)}
+mv -Tf {shlex.quote(PREFIX + '/current-' + release)} {PREFIX}/current
+systemctl restart prs-camera
+systemctl is-active prs-camera
+""")
+    manifest["activation_checks"] += wait_ready(client)
+    manifest["activation_checks"] += execute(client, "systemctl reload nginx")
+    manifest["activated"] = True
+    manifest["backup"] = backup
+    logger.info("Device outputs activated release=%s; previous configs/release retained", release)
+
+
 def main():
     """Functionality: Stage first or activate the explicit reviewed manifest.
-    Inputs: --stage/--activate, --manifest, --profile, optional --source-root and --git-commit.
+    Inputs: stage/activate, manifest/profile, optional source-root/git-commit/runtime.
     Outputs: non-secret manifest/exit failure.
     Logic: configure transition logging; operations remain separate, never implicit promotion.
     Constraints: credentials stay private; exceptions preserve a failing exit status.
@@ -461,15 +598,17 @@ def main():
     action.add_argument("--stage", action="store_true")
     action.add_argument("--activate", action="store_true")
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--profile", choices=("full", "vibration"), default="full")
+    parser.add_argument("--profile", choices=("full", "vibration", "outputs"), default="full")
     parser.add_argument("--source-root", type=Path)
     parser.add_argument("--git-commit")
+    parser.add_argument("--runtime")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     client = connect_server()
     try:
         with client.open_sftp() as sftp:
-            manifest = (stage(client, sftp, args.profile, args.source_root, args.git_commit)
+            manifest = (stage(client, sftp, args.profile, args.source_root,
+                              args.git_commit, args.runtime)
                         if args.stage else json.loads(args.manifest.read_text()))
             if args.activate:
                 activate(client, sftp, manifest)

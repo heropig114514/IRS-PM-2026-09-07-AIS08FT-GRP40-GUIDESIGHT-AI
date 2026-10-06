@@ -1,5 +1,20 @@
 # PRS 摄像头部署
 
+系统新增 [MCP AI 控制接口](../MCP.md)，生产模板地址 `/prs/mcp`。
+发布前明确安装更新后的 `requirements.txt` 依赖；staging 会校验依赖与 ASGI 导入，
+不会自动安装。服务模板必须使用 `--lifespan on` 和单 worker。
+新 AI 后端、资源和依赖文件进入同一发布 allowlist；本次未执行远程发布。
+设备输出发布显式使用 `--profile outputs --source-root <已审查快照> --runtime <独立解释器目录>`，
+配合 `--git-commit <SHA>` 记录来源。该配置只覆盖震动/语音 UI、MCP/控制连接及其依赖，
+保留服务器现有摄像头/推理流水线源码、模型清单和方案；两份模型元数据须与当前原字节一致。
+解释器位于 `/opt/prs-practice/runtimes/`，从旧环境复制后只在新环境安装精确的直接依赖，
+记录实际解析版本和 pip check；原 `/opt/prs-practice/runtime-venv` 保留不变。
+服务模板的解释器路径由暂存工具显式渲染，清单同时记录 Git 模板 SHA 和最终文件 SHA。
+激活前校验 current 和全部文件哈希，备份专用 service/nginx/env 后设置
+`PRS_MCP_PROFILE=outputs`，其余环境字段和凭据保持；只重启 prs-camera 并检查健康、reload nginx。
+该公网目录只暴露会话发现及七项输出工具，本地完整接口默认配置保持原行为。
+不迁移数据库，不自动重试或回滚；旧 release/解释器/配置用于人工恢复。
+
 当前入口 https://47.239.50.129/prs/live/ 。`/prs/` 转到同一页面，仅 Echo 和最新 HF 视频路径。
 手动震动 UI 可显式使用 `--profile vibration --source-root <已审查的Git快照目录> --git-commit <SHA>`
 暂存。此配置只覆盖震动页面、样式、共享词典和Python资源白名单及对应文档/测试，
@@ -31,7 +46,7 @@
 
 本地 `server_info.txt` 与 `.env.hf` 是被 Git 排除的私有凭据。服务器 token 只写入 root0600
 `/etc/prs-camera/app.env`。systemd 使用独立 runtime-venv、单 worker、MemoryMax256MiB、CPUQuota20%、
-TasksMax32；WebSocket 队列5、帧1MiB、无压缩。Nginx 仅当前视频 WS 读超时65秒，其他 PRS 路径30秒，
+TasksMax32；WebSocket 队列5、帧1MiB、无压缩。Nginx 视频 WS 读超时65秒、MCP70秒，其他 PRS 路径30秒，
 关闭上游重试及缓冲，清除 Cookie/Authorization/Forwarded；公网 admin 返回404。
 
 HF 源码发布和旧接口删除见 [ZEROGPU.md](../ZEROGPU.md)，当前测试及历史长尾见

@@ -11,7 +11,7 @@ Declaration Index:
 - EchoTests.test_frame_limit — 拒绝大于上限及空消息。
 - EchoTests.test_capacity_and_release — 第五个连接拒绝，已占连接在结束后释放。
 - CameraPageTests — HTTP 页面及文件白名单。
-- CameraPageTests.test_page_and_script — 页面、摄像头、震动及语言模块可获取且权限头明确。
+- CameraPageTests.test_page_and_script — 页面、摄像头、震动/语音及语言模块可获取且权限头明确。
 - CameraPageTests.test_retired_routes_and_modes — 两模式和旧HTTP拒绝。
 - CameraPageTests.test_retired_websockets — 旧WS拒绝。
 - CameraPageTests.test_unknown_asset_is_not_exposed — 未列入资源的文件无法读取。
@@ -158,7 +158,7 @@ class CameraPageTests(SimpleTestCase):
     """
 
     def test_page_and_script(self):
-        """Functionality: 页面、摄像头、手动震动及语言 JavaScript 文件具有正确响应。
+        """Functionality: 页面、摄像头、震动/语音输出及语言 JavaScript 文件具有正确响应。
         Inputs: self.client 与仓库前端文件。
         Outputs: 状态、摄像头权限头和 MIME 断言；关闭响应。
         Logic: 读取普通响应正文，文件由视图读取时自动关闭。
@@ -168,6 +168,7 @@ class CameraPageTests(SimpleTestCase):
             ("/live/", "text/html"),
             ("/assets/camera.js", "text/javascript"),
             ("/live/assets/vibration.js", "text/javascript"),
+            ("/live/assets/speech-output.js", "text/javascript"),
             ("/assets/i18n.js", "text/javascript"),
             ("/assets/translations.js", "text/javascript"),
         ]:

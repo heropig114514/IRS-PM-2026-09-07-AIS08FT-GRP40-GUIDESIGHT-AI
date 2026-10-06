@@ -1,11 +1,12 @@
 /** Responsibilities: 验证手动震动的用户边界、拒绝反馈、生命周期取消及词典覆盖。
  * Implementation: 用 EventTarget 派发真实注册回调；仅替换 DOM 和原生震动函数，不调用硬件或网络。
- * Related Modules: vibration.js, index.html, translations.js, i18n.js。
+ * Related Modules: vibration.js, ai-control.js, index.html, translations.js, i18n.js。
  * Declaration Index: TestControl; TestControl.constructor; TestDocument; TestDocument.constructor;
  * TestDocument.getElementById; TestDocument.querySelectorAll; TestWindow; TestWindow.constructor;
  * TestWindow.info; TestWindow.error; setup; enable; testManual; testManual.native;
  * testUnavailable; testActivation; testActivation.native; testFailures; testFailures.native;
  * testLifecycle; testLifecycle.native; testCancelRejected; testCancelRejected.native; testTranslations。
+ * testMcpShared; testMcpShared.native; testMcpFailures; testMcpFailures.native。
  * Variable Index: None；每个测试的calls记录固定请求，logs记录非敏感诊断，response控制原生替身结果。
  */
 import test from "node:test";
@@ -13,6 +14,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {VibrationTester} from "../vibration.js";
 import {translate} from "../i18n.js";
+import {performVibration} from "../ai-control.js";
 
 /** Functionality: 提供可派发点击/变更事件的独立控件。
  * Logic: EventTarget维护监听器，字段仅表示测试所需DOM状态。
@@ -255,4 +257,85 @@ test("震动控件及所有动态提示均有英文翻译", async function testT
     ...section.matchAll(/aria-label="([^"]+)"/g)].map(match => match[1].trim());
   assert.ok(strings.length > 20);
   for (const text of strings) assert.doesNotMatch(translate(text, "en"), /\p{Script=Han}/u, text);
+});
+
+/** Functionality: 验证MCP分派复用真实控制器，保持人工启用和激活要求。
+ * Inputs: 控制器的DOM/原生替身，显式激活状态和固定协议命令。
+ * Outputs: 状态、明确拒绝原因、节奏和取消的唯一调用序列。
+ * Logic: 未启用或未激活不调用原生API；查询无副作用，启用后通过同一testPattern入口。
+ * Constraints: 这里只验证命令分派和状态，不证明真实MCP网络、可信交互或物理马达。
+ */
+test("MCP查询和测试复用控制器且不自动启用或伪造激活", function testMcpShared() {
+  const calls = [];
+  /** Functionality: 捕获单次测试或取消。Inputs: pattern。
+   * Outputs: true并更新calls。Logic: 显式接受替身。Constraints: 无实际硬件。
+   */
+  function native(pattern) { calls.push(pattern); return true; }
+  const {doc, win, tester} = setup(native);
+  const status = performVibration("vibration_status", {}, tester);
+  assert.equal(status.enabled, false);
+  assert.equal(status.hardware_verified, false);
+  const disabled = performVibration("vibration_test", {pattern: "short"}, tester);
+  assert.equal(disabled.accepted, false);
+  assert.equal(disabled.reason, "disabled");
+  assert.equal(tester.enabled.checked, false);
+  enable(doc);
+  win.navigator.userActivation.hasBeenActive = false;
+  assert.equal(performVibration("vibration_test", {pattern: "long"}, tester).reason, "activation_required");
+  assert.deepEqual(calls, []);
+  win.navigator.userActivation.hasBeenActive = true;
+  for (const pattern of ["short", "long", "double"]) {
+    const result = performVibration("vibration_test", {pattern}, tester);
+    assert.equal(result.accepted, true);
+    assert.equal(result.pattern, pattern);
+    assert.equal(result.reason, null);
+    assert.equal(result.hardware_verified, false);
+  }
+  tester.enabled.checked = false;
+  const stopped = performVibration("vibration_stop", {}, tester);
+  assert.equal(stopped.accepted, true);
+  assert.equal(stopped.request_pending, false);
+  assert.equal(stopped.enabled, false);
+  assert.deepEqual(calls, [[200], [800], [150, 100, 150], 0]);
+});
+
+/** Functionality: 验证缺失页面、接口缺失、后台及原生拒绝/异常的结构化区分。
+ * Inputs: 受控接口返回值/异常、文档可见性；实际MCP浏览器分派函数。
+ * Outputs: 明确reason和accepted=false，取消拒绝保留未取消记录；无自动重试。
+ * Logic: 只改变测试边界，不改变生产控制器逻辑。Constraints: 无操作系统权限验证。
+ */
+test("MCP明确返回设备拒绝和异常并保留取消失败状态", function testMcpFailures() {
+  assert.equal(performVibration("vibration_status", {}, null).reason, "page_unavailable");
+  const unavailable = setup();
+  assert.equal(performVibration("vibration_test", {pattern: "short"}, unavailable.tester).reason, "unsupported");
+  assert.equal(performVibration("vibration_stop", {}, unavailable.tester).reason, "unsupported");
+  let outcome = "accepted";
+  const calls = [];
+  /** Functionality: 返回预设接受/拒绝/异常。
+   * Inputs: pattern/outcome。Outputs: bool或异常，记录单次调用。
+   * Logic: 不执行实际震动。Constraints: 原生拒绝不能证明马达状态。
+   */
+  function native(pattern) {
+    calls.push(pattern);
+    if (outcome === "native_error") throw new Error("Explicit test error");
+    return outcome === "accepted";
+  }
+  const {doc, tester} = setup(native);
+  enable(doc);
+  doc.visibilityState = "hidden";
+  assert.equal(performVibration("vibration_test", {pattern: "short"}, tester).reason, "page_hidden");
+  assert.deepEqual(calls, []);
+  doc.visibilityState = "visible";
+  performVibration("vibration_test", {pattern: "short"}, tester);
+  outcome = "native_rejected";
+  const stopped = performVibration("vibration_stop", {}, tester);
+  assert.equal(stopped.accepted, false);
+  assert.equal(stopped.reason, "native_rejected");
+  assert.equal(stopped.request_pending, true);
+  const rejected = performVibration("vibration_test", {pattern: "double"}, tester);
+  assert.equal(rejected.reason, "native_rejected");
+  outcome = "native_error";
+  assert.equal(performVibration("vibration_test", {pattern: "long"}, tester).reason, "native_error");
+  assert.deepEqual(calls, [[200], 0, [150, 100, 150], [800]]);
+  assert.throws(() => performVibration("vibration_loop", {}, tester), /Unknown vibration command/);
 });

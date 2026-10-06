@@ -1,7 +1,8 @@
 """Responsibilities: Prevent deployment from omitting camera/maps pages or their local dependencies.
 Implementation: Traverse real HTML asset references and static relative JS imports,
 then compare the closure with the publisher's literal allowlist parsed without importing it.
-Related Modules: tools.deploy_phone_live; frontend/index.html, maps.html, vibration.js and i18n.js.
+Related Modules: tools.deploy_phone_live; frontend/index.html, maps.html, device outputs;
+i18n.js supplies shared language behavior.
 Declaration Index: DeploymentAssetTests; DeploymentAssetTests.check_dependency_closure;
 DeploymentAssetTests.test_maps_dependency_closure;
 DeploymentAssetTests.test_camera_dependency_closure.
@@ -10,6 +11,8 @@ DeploymentAssetTests.test_vibration_profile_stage.command;
 DeploymentAssetTests.test_vibration_profile_stage.upload;
 DeploymentAssetTests.test_vibration_profile_stage.open_file;
 DeploymentAssetTests.test_vibration_profile_activation.
+DeploymentAssetTests.test_outputs_scope; DeploymentAssetTests.test_outputs_activation;
+DeploymentAssetTests.test_outputs_activation.open_file.
 Variable Index: None; required/pending are test-local file-name sets, with no credentials.
 """
 
@@ -192,3 +195,69 @@ class DeploymentAssetTests(SimpleTestCase):
                                           "daemon-reload", "rollback")
                     for forbidden in forbidden_commands:
                         self.assertNotIn(forbidden, script)
+
+    def test_outputs_scope(self):
+        """Functionality: Require output deployment to exclude inference/weight replacement.
+        Inputs: Actual publisher constants and temporary runtime configuration.
+        Outputs: Source closure, protected-file exclusions and invalid-runtime rejection.
+        Logic: Inspect the explicit overlays; reject missing/escaped runtime before any SSH call.
+        Constraints: No network, device, model execution or transitive dependency verification.
+        """
+        from tools import deploy_phone_live as publisher
+
+        protected = {"core/hf_video_relay.py", "zerogpu/live_transport.py",
+                     "models/inference-plan.json", "models/yolo26n.json"}
+        self.assertFalse(protected & set(publisher.OUTPUT_BACKEND))
+        self.assertFalse({"camera.js", "frame-pipeline.js", "live-detection-client.js"} &
+                         set(publisher.OUTPUT_FRONTEND))
+        self.assertTrue({"vibration.js", "speech-output.js", "ai-control.js", "maps.html"} <=
+                        set(publisher.OUTPUT_FRONTEND))
+        with patch.object(publisher, "execute") as command:
+            with self.assertRaisesRegex(ValueError, "explicit isolated runtime"):
+                publisher.stage(Mock(), Mock(), "outputs")
+            with self.assertRaisesRegex(ValueError, "Unexpected runtime path"):
+                publisher.stage(Mock(), Mock(), "outputs", runtime_path="/tmp/unowned")
+            with self.assertRaisesRegex(ValueError, "isolated runtime"):
+                publisher.stage(Mock(), Mock(), "outputs",
+                                runtime_path=publisher.PREFIX + "/runtime-venv")
+            command.assert_not_called()
+
+    def test_outputs_activation(self):
+        """Functionality: Preserve credentials and isolate deployment to the owned service.
+        Inputs: Explicit output manifest, SSH/SFTP/readiness mocks and synthetic private env bytes.
+        Outputs: Profile-only env change, root0600, one restart, no token substitution or retry.
+        Logic: Run the actual activator and compare written environment bytes without printing them.
+        Constraints: Synthetic values never access real services; not evidence of actual TLS/health.
+        """
+        from tools import deploy_phone_live as publisher
+
+        original = b"HF_INFERENCE_TOKEN=fixture-only\nORS_API_KEY=fixture-only\n"
+        written = []
+
+        def open_file(path, mode="r"):
+            """Functionality: Provide explicit read/write file boundaries for private config.
+            Inputs: path/mode. Outputs: Mock stream; writes captured for byte comparison.
+            Logic: Known old env returned only for read. Constraints: No actual credentials or SSH.
+            """
+            stream = Mock()
+            stream.read.return_value = original
+            stream.write.side_effect = written.append
+            stream.__enter__ = Mock(return_value=stream)
+            stream.__exit__ = Mock(return_value=False)
+            return stream
+
+        manifest = {"path": publisher.PREFIX + "/releases/test-outputs", "release": "test-outputs",
+                    "runtime": publisher.PREFIX + "/runtimes/test-outputs"}
+        sftp = Mock()
+        sftp.open.side_effect = open_file
+        with patch.object(publisher, "execute", return_value="checked") as command, \
+                patch.object(publisher, "wait_ready", return_value="healthy"):
+            publisher.activate_outputs(Mock(), sftp, manifest)
+        self.assertEqual(written, [original + b"PRS_MCP_PROFILE=outputs\n"])
+        sftp.chmod.assert_called_once_with("/etc/prs-camera/app.env.outputs-next", 0o600)
+        script = "\n".join(call.args[1] for call in command.call_args_list)
+        self.assertEqual(script.count("systemctl restart prs-camera"), 1)
+        self.assertNotIn("HF_INFERENCE_TOKEN=", script)
+        self.assertNotIn("ORS_API_KEY=", script)
+        self.assertNotIn("rollback", script)
+        self.assertTrue(manifest["activated"])

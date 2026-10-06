@@ -1,6 +1,6 @@
-/* Responsibilities: 摄像头工作台的手机与桌面布局、控制状态、语言选择、回显和手动震动测试样式。
+/* Responsibilities: 摄像头工作台的手机与桌面布局、控制状态、语言选择、回显、震动/语音测试样式。
  * Implementation: 双屏桌面网格在窄屏变为单列；不依赖外部字体或图片。
- * Related Modules: index.html, maps.html, camera.js, i18n.js, vibration.js。
+ * Related Modules: index.html, maps.html, camera.js, i18n.js, vibration.js, speech-output.js。
  * Declaration Index: None。
  * Variable Index: --ink/--muted/--accent/--line 为文字、辅助色、主题色和边框色。 */
 :root {
@@ -273,10 +273,12 @@ select:disabled {
 .message[data-kind="error"] {
   color: #a84531;
 }
-.vibration-test {
+.vibration-test,
+.speech-test {
   margin-top: 20px;
 }
-.vibration-header h2 {
+.vibration-header h2,
+.speech-header h2 {
   font-size: 16px;
   font-weight: 600;
   margin: 0;
@@ -287,7 +289,8 @@ select:disabled {
   line-height: 1.7;
   margin: 0;
 }
-.vibration-toggle {
+.vibration-toggle,
+.speech-toggle {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -297,13 +300,15 @@ select:disabled {
   width: fit-content;
   cursor: pointer;
 }
-.vibration-toggle input {
+.vibration-toggle input,
+.speech-toggle input {
   width: 18px;
   height: 18px;
   margin: 0;
   accent-color: var(--accent);
 }
-.vibration-toggle input:disabled {
+.vibration-toggle input:disabled,
+.speech-toggle input:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -316,6 +321,62 @@ select:disabled {
   min-height: 44px;
 }
 .vibration-compatibility {
+  margin-top: 10px;
+  font-size: 11px;
+}
+.speech-header {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.speech-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.speech-field textarea,
+.speech-field select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--ink);
+  background: white;
+}
+.speech-field textarea {
+  min-height: 90px;
+  resize: vertical;
+  line-height: 1.7;
+}
+.speech-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 16px 0;
+}
+.speech-voice-field {
+  grid-column: 1 / -1;
+}
+.speech-field input[type="range"] {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+  min-height: 28px;
+}
+.speech-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.speech-actions .button {
+  min-height: 44px;
+}
+.speech-note {
   margin-top: 10px;
   font-size: 11px;
 }
@@ -472,6 +533,9 @@ footer {
   }
   .vibration-actions .button {
     padding: 12px 8px;
+  }
+  .speech-actions {
+    grid-template-columns: 1fr 1fr;
   }
   .placeholder {
     gap: 8px;

@@ -1,17 +1,20 @@
-/** Responsibilities: 独立的手机震动手动测试与浏览器能力/拒绝状态反馈。
- * Implementation: 用户明确启用后发送固定短震、长震或双震；关闭、隐藏或离页时请求取消。
- * Related Modules: index.html, camera.css, translations.js；core.camera 提供白名单资源。
+/** Responsibilities: 手动UI与显式MCP调用共享的手机震动测试和浏览器能力/拒绝反馈。
+ * Implementation: 统一入口保留用户启用、前台和激活要求，发送固定节奏并返回结构化结果；
+ * 关闭、隐藏或离页时请求取消，不自动恢复。
+ * Related Modules: index.html, camera.css, translations.js, ai-control.js；core.camera 提供白名单资源。
  * Declaration Index: VibrationTester; VibrationTester.constructor; VibrationTester.render;
  * VibrationTester.feedback; VibrationTester.callNative; VibrationTester.handleEnable;
+ * VibrationTester.describe; VibrationTester.testResult; VibrationTester.testPattern;
  * VibrationTester.handleTest; VibrationTester.stop; VibrationTester.handleStop;
  * VibrationTester.handleVisibility; VibrationTester.handlePageHide。
  * Variable Index: PATTERNS — 固定毫秒节奏；tester — 当前页面测试控制器。
  * 实例 doc/win 为浏览器依赖；enabled/buttons/stopButton/status/message 为独立控件；
- * supported 仅说明接口存在，requested 记录尚未成功取消的已接受请求，不证明马达仍在震动。
+ * supported 仅说明接口存在，requested 记录尚未成功取消的已接受请求，不证明马达仍在震动；
+ * nativeOutcome 记录最近一次原生接受/拒绝/异常，供 MCP 返回机器可读结果。
  */
 const PATTERNS = {short: [200], long: [800], double: [150, 100, 150]};
 
-/** Functionality: 管理用户主动触发的震动测试。
+/** Functionality: 管理手动按钮和显式MCP请求触发的震动测试。
  * Logic: 与摄像头和检测流水线解耦，分别报告接口缺失、调用拒绝、异常及请求被接受。
  * Constraints: 不联网、不申请媒体权限、不保存偏好，不自动重试或改用其他提醒方式。
  */
@@ -32,6 +35,7 @@ export class VibrationTester {
     this.message = doc.getElementById("vibration-message");
     this.supported = typeof win.navigator.vibrate === "function";
     this.requested = false;
+    this.nativeOutcome = null;
     this.enabled.checked = false;
     this.handleEnable = this.handleEnable.bind(this);
     this.handleTest = this.handleTest.bind(this);
@@ -82,11 +86,13 @@ export class VibrationTester {
   callNative(pattern, action) {
     try {
       const accepted = this.win.navigator.vibrate(pattern) === true;
+      this.nativeOutcome = accepted ? "accepted" : "native_rejected";
       this.win.console.info("[PRS vibration] Native request", {action, pattern, accepted});
       if (!accepted) this.feedback(
         "浏览器拒绝了震动请求。请检查页面交互和系统设置后手动再试。", "error");
       return accepted;
     } catch (error) {
+      this.nativeOutcome = "native_error";
       this.win.console.error("[PRS vibration] Native request failed", {
         action, pattern, errorName: error?.name, errorMessage: error?.message,
       });
@@ -107,45 +113,83 @@ export class VibrationTester {
     this.win.console.info("[PRS vibration] Setting changed", {enabled: this.enabled.checked});
   }
 
-  /** Functionality: 发送一次用户所选节奏。
-   * Inputs: event.currentTarget.dataset.vibrationPattern、开关、文档可见性及可用的用户激活状态。
-   * Outputs: 一次原生请求或明确拒绝提示；接受后设置 requested。
+  /** Functionality: 读取震动调用前提与请求记录。
+   * Inputs: supported、开关、doc.visibilityState、navigator.userActivation和requested。
+   * Outputs: JSON兼容状态；user_activated在浏览器不提供该信息时为null。
+   * Logic: 读取同一个控制器，供手动UI和MCP共享，不调用原生震动或申请权限。
+   * Constraints: request_pending仅指已接受且未成功取消的记录；hardware_verified始终为false。
+   */
+  describe() {
+    return {available: true, supported: this.supported, enabled: this.enabled.checked,
+      visible: this.doc.visibilityState === "visible",
+      user_activated: this.win.navigator.userActivation?.hasBeenActive ?? null,
+      request_pending: this.requested, hardware_verified: false};
+  }
+
+  /** Functionality: 构造一次测试的机器可读结果并记录拒绝边界。
+   * Inputs: name、accepted、reason；当前控制器状态。
+   * Outputs: 带operation/pattern/accepted/reason的状态，不依赖被翻译的DOM文字。
+   * Logic: 原生调用前的拒绝单独记录原因；原生调用本身由callNative记录。
+   * Constraints: 不重试、不保存无限历史、不把浏览器接受解释为物理震动完成。
+   */
+  testResult(name, accepted, reason) {
+    if (!accepted && !reason.startsWith("native_"))
+      this.win.console.info("[PRS vibration] Test blocked", {pattern: name, reason});
+    return {...this.describe(), operation: "test", pattern: name, accepted, reason};
+  }
+
+  /** Functionality: 为手动按钮或显式MCP调用发送一次固定节奏。
+   * Inputs: name(short/long/double)、开关、文档可见性及可用的用户激活状态。
+   * Outputs: 结构化接受/拒绝结果和UI提示；接受后设置 requested。
    * Logic: 先校验固定节奏、接口和开关，再检查前台与浏览器已发生的用户交互。
    * Constraints: 不依赖摄像头、不排队或循环；新请求替换旧节奏由原生API处理。
    */
-  handleTest(event) {
-    const name = event.currentTarget.dataset.vibrationPattern;
+  testPattern(name) {
     if (!Object.hasOwn(PATTERNS, name)) {
       this.win.console.error("[PRS vibration] Unknown pattern", {name});
       this.feedback("未知震动测试类型，请刷新页面检查控件。", "error");
-      return;
+      return this.testResult(name, false, "unknown_pattern");
     }
     if (!this.supported || !this.enabled.checked) {
       this.feedback("当前无法测试震动，请确认浏览器支持并启用测试。", "error");
-      return;
+      return this.testResult(name, false, this.supported ? "disabled" : "unsupported");
     }
     if (this.doc.visibilityState !== "visible") {
       this.feedback("请保持页面在前台，再手动测试震动。", "error");
-      return;
+      return this.testResult(name, false, "page_hidden");
     }
     if (this.win.navigator.userActivation && !this.win.navigator.userActivation.hasBeenActive) {
       this.feedback("请先点击页面启用测试，再点击震动按钮。", "error");
-      return;
+      return this.testResult(name, false, "activation_required");
     }
     if (this.callNative([...PATTERNS[name]], name)) {
       this.requested = true;
       this.feedback("震动请求已接受，请在手机上确认实际震动；接口返回值不能验证硬件。", "live");
+      return this.testResult(name, true, null);
     }
+    return this.testResult(name, false, this.nativeOutcome);
+  }
+
+  /** Functionality: 将手动按钮委派到共同测试入口。
+   * Inputs: event.currentTarget.dataset.vibrationPattern。
+   * Outputs: testPattern的结构化结果及相同UI副作用。
+   * Logic: 只读取固定按钮类型，不制造用户激活。Constraints: 不重复原生调用。
+   */
+  handleTest(event) {
+    return this.testPattern(event.currentTarget.dataset.vibrationPattern);
   }
 
   /** Functionality: 请求取消震动并保留拒绝诊断。
-   * Inputs: reason 默认manual，或disabled/hidden/pagehide；supported/requested。
+   * Inputs: reason 默认manual，或disabled/hidden/pagehide/mcp；supported/requested。
    * Outputs: 原生取消是否被接受；成功时清除requested并显示相应提示。
    * Logic: 取消不要求开关仍开启或文档仍可见，以便生命周期边界尽力释放已接受请求。
    * Constraints: 浏览器可在后台拒绝；失败不清除记录、不自动重试；不是物理马达状态检测。
    */
   stop(reason = "manual") {
-    if (!this.supported) return false;
+    if (!this.supported) {
+      this.nativeOutcome = "unsupported";
+      return false;
+    }
     if (!this.callNative(0, reason)) return false;
     this.requested = false;
     const text = reason === "disabled" ? "震动测试已关闭，已发送停止请求。" :
@@ -178,5 +222,5 @@ export class VibrationTester {
   handlePageHide() { if (this.requested) this.stop("pagehide"); }
 }
 
-const tester = typeof document !== "undefined" && document.getElementById("vibration-test")
+export const tester = typeof document !== "undefined" && document.getElementById("vibration-test")
   ? new VibrationTester() : null;
