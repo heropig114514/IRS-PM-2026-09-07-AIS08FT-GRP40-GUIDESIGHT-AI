@@ -1,10 +1,37 @@
 /** Responsibilities: 中英文界面词典，包括动态状态、错误和无障碍文字。
  * Implementation: 中文原文作为键；{n} 表示运行时字段，字段内容不翻译。
- * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js。
+ * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, vibration.js。
  * Declaration Index: None。
  * Variable Index: translations — 中文到英文的固定界面词典；不包含坐标或图像数据。
  */
 export const translations = {
+  "手机震动测试": "Phone vibration test",
+  "正在检查接口": "Checking API",
+  "接口可用": "API available",
+  "接口不可用": "API unavailable",
+  "仅手动触发，无需开启摄像头。": "Manual testing only. No camera access needed.",
+  "启用震动测试": "Enable vibration testing",
+  "震动测试操作": "Vibration test controls",
+  "短震 · 200 ms": "Short · 200 ms",
+  "长震 · 800 ms": "Long · 800 ms",
+  "双震 · 150 / 100 / 150 ms": "Double · 150 / 100 / 150 ms",
+  "停止震动": "Stop vibration",
+  "正在检查浏览器震动接口。": "Checking the browser vibration API.",
+  "安卓 Chrome 等支持；iPhone Safari 不支持。请保持页面前台，并检查系统震动设置。": "Supported in Android Chrome and some other browsers; unavailable in iPhone Safari. Keep this page visible and check system vibration settings.",
+  "勾选启用后，点击下方按钮测试。": "Enable testing, then use the buttons below.",
+  "当前浏览器未提供震动接口。可在安卓 Chrome 中测试；iPhone Safari 不支持。": "This browser does not provide the vibration API. Try Android Chrome; iPhone Safari does not support it.",
+  "浏览器拒绝了震动请求。请检查页面交互和系统设置后手动再试。": "The browser rejected the vibration request. Check page interaction and system settings, then try again manually.",
+  "震动调用异常，请查看浏览器控制台后手动再试。": "The vibration call failed. Check the browser console, then try again manually.",
+  "已启用。点击短震、长震或双震测试。": "Enabled. Choose a short, long or double vibration test.",
+  "震动测试已关闭。": "Vibration testing is disabled.",
+  "未知震动测试类型，请刷新页面检查控件。": "Unknown vibration test pattern. Refresh the page and check the controls.",
+  "当前无法测试震动，请确认浏览器支持并启用测试。": "Vibration testing is unavailable. Check browser support and enable testing.",
+  "请保持页面在前台，再手动测试震动。": "Keep this page visible, then test vibration manually.",
+  "请先点击页面启用测试，再点击震动按钮。": "Click to enable testing first, then select a vibration button.",
+  "震动请求已接受，请在手机上确认实际震动；接口返回值不能验证硬件。": "Vibration request accepted. Confirm the actual vibration on your phone; the API response does not verify hardware.",
+  "震动测试已关闭，已发送停止请求。": "Vibration testing disabled. A stop request was sent.",
+  "页面已隐藏或离开，已发送停止请求。返回后需手动测试。": "Page hidden or left. A stop request was sent. Test manually after returning.",
+  "已发送停止震动请求。": "A stop vibration request was sent.",
   "返回图像实际尺寸与视频元数据不一致。": "Decoded image dimensions do not match video metadata.",
   "服务端需要配置有效的 HF token 才能开启视频会话。": "A valid HF token must be configured on the server to open a video session.",
   "视频结果顺序与采集不一致。": "Video results are out of capture order.",

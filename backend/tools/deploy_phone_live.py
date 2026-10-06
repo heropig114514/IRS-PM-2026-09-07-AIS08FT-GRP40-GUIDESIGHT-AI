@@ -1,18 +1,15 @@
-"""Responsibilities: Stage/publish Echo, the latest phone live path and bilingual maps.
-Implementation: Pinned SSH, private local credentials, explicit source allowlist over the
-current release; validate the full-COCO qualified plan before staging;
-prune retired modes and replace owned page/asset/WS routes, including maps and shared language
-modules as one release; record hashes, back up and switch
-one service, then check readiness.
-Related Modules: hf_video_relay/inference_plan; frontend live pipeline; deploy templates;
-private server_info.txt.
-Declaration Index: PinnedHost; PinnedHost.missing_host_key; connect_server; execute;
-wait_ready; stage; activate; main.
-Variable Index: ROOT — local backend; PREFIX — dedicated remote workspace; FINGERPRINT — inspected
-SSH host key; logger — deployment transition diagnostics without secrets;
-FRONTEND — explicit asset set; BACKEND — owned runtime set; RETIRED — explicit
-obsolete paths. No credential output.
-Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
+"""Responsibilities: Stage/publish the deployed phone live frontend and manual vibration UI.
+Implementation: Pinned SSH and explicit source allowlists; copy the current release, validate
+inference identity and upload hashes before activation. The explicit vibration profile preserves
+runtime code, service/proxy configuration and credentials, then restarts only prs-camera.
+Related Modules: core.inference_plan; core.camera; frontend/vibration.js; deployment templates.
+Declaration Index: PinnedHost; PinnedHost.missing_host_key; connect_server; execute; stage;
+wait_ready; activate_vibration; activate; main.
+Variable Index: ROOT — private credential/bundle location; PREFIX — dedicated remote workspace;
+FINGERPRINT — previously inspected public host identity; logger — non-secret transition logs;
+FRONTEND/BACKEND/RETIRED — full-profile source and cleanup sets;
+VIBRATION_FRONTEND/VIBRATION_BACKEND — reviewed UI overlay only. source_root identifies a
+reviewed project snapshot; git_commit records its Git identity. No retries or automatic rollback.
 """
 
 import argparse
@@ -34,6 +31,14 @@ ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "/opt/prs-practice"
 FINGERPRINT = "hIrYH0S2vhyiU53ScT9Ei03o1ClcuHAb2pL/VrMMg90="
 logger = logging.getLogger(__name__)
+VIBRATION_FRONTEND = (
+    "index.html", "camera.css", "translations.js", "vibration.js", "README.md",
+    "tests/vibration.test.mjs", "tools/check_vibration_browser.mjs",
+)
+VIBRATION_BACKEND = (
+    "core/camera.py", "core/test_echo.py", "core/test_deploy_phone_live.py",
+    "tools/deploy_phone_live.py", "deploy/README.md",
+)
 FRONTEND = (
     "index.html",
     "camera.js",
@@ -46,12 +51,14 @@ FRONTEND = (
     "maps.html",
     "maps-page.js",
     "maps-client.js",
+    "vibration.js",
     "README.md",
     "tests/camera.test.mjs",
     "tests/i18n.test.mjs",
     "tests/maps-client.test.mjs",
     "tests/live-detection-client.test.mjs",
     "tests/frame-pipeline.test.mjs",
+    "tests/vibration.test.mjs",
 )
 BACKEND = (
     "config/asgi.py",
@@ -203,31 +210,47 @@ def execute(client, script):
     return output + error
 
 
-def stage(client, sftp):
+def stage(client, sftp, profile="full", source_root=None, git_commit=None):
     """Functionality: Build a checked live/maps release while preserving unrelated services.
-    Inputs: current release, measured inference plan and owned source/template allowlists.
+    Inputs: client/sftp, profile(full/vibration), optional project source_root and git_commit;
+    current release, measured inference plan and owned source/template allowlists.
     Outputs: safe hash manifest including the measured plan identity.
     Logic: validate the plan, copy current release, prune explicit retired paths in the new release,
     replace canonical routes/source, verify uploaded bytes, Django and systemd before activation.
     Constraints: active/archived releases and map API/business code remain untouched;
     no credentials, database, weights, browser fixtures or environment upload.
     No implicit promotion or rollback; logs release identity and verification transitions.
+    Full profile dependencies must be installed explicitly; no implicit pip install.
+    Vibration profile verifies the active plan is byte-identical and does not replace runtime,
+    service/proxy templates or credentials; no retirement pruning outside the full profile.
     """
-    plan = read_plan(ROOT / "models/inference-plan.json",
-                     json.loads((ROOT / "models/yolo26n.json").read_bytes()))
+    if profile not in {"full", "vibration"}:
+        raise ValueError("Unknown deployment profile")
+    source = ROOT if source_root is None else Path(source_root).resolve() / "backend"
+    plan = read_plan(source / "models/inference-plan.json",
+                     json.loads((source / "models/yolo26n.json").read_bytes()))
     old = execute(client, f"readlink -f {PREFIX}/current").strip()
     if not re.fullmatch(re.escape(PREFIX) + r"/releases/[A-Za-z0-9_-]+", old):
         raise ValueError("Unexpected current release path")
-    files = {"backend/" + name: (ROOT / name).read_bytes() for name in BACKEND}
+    if profile == "vibration":
+        for name in ("models/inference-plan.json", "models/yolo26n.json"):
+            with sftp.open(old + "/backend/" + name, "rb") as active:
+                if active.read() != (source / name).read_bytes():
+                    raise ValueError("Vibration deployment changes the active inference identity")
+    frontend = VIBRATION_FRONTEND if profile == "vibration" else FRONTEND
+    backend = VIBRATION_BACKEND if profile == "vibration" else BACKEND
+    retired = () if profile == "vibration" else RETIRED
+    files = {"backend/" + name: (source / name).read_bytes() for name in backend}
     files.update(
-        {"frontend/" + name: (ROOT.parent / "frontend" / name).read_bytes() for name in FRONTEND}
+        {"frontend/" + name: (source.parent / "frontend" / name).read_bytes() for name in frontend}
     )
-    for name in ("prs-camera.service", "nginx.locations.conf"):
-        files["backend/deploy/" + name] = (ROOT / "deploy" / name).read_bytes()
+    if profile == "full":
+        for name in ("prs-camera.service", "nginx.locations.conf"):
+            files["backend/deploy/" + name] = (source / "deploy" / name).read_bytes()
     hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()}
-    identity = {"files": hashes, "removed": RETIRED}
+    identity = {"files": hashes, "removed": retired}
     release = (
-        "phone-live-"
+        ("vibration-" if profile == "vibration" else "phone-live-")
         + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:16]
     )
     target = PREFIX + "/releases/" + release
@@ -237,9 +260,12 @@ def stage(client, sftp):
         "path": target,
         "previous": old,
         "files": hashes,
-        "removed": list(RETIRED),
-        "scope": "Echo, latest HF live and bilingual maps; root redirects",
-        "git_commit": None,
+        "removed": list(retired),
+        "scope": ("Manual vibration UI; preserve inference, service/proxy config and credentials"
+                  if profile == "vibration" else
+                  "Echo, latest HF live and bilingual maps; root redirects"),
+        "profile": profile,
+        "git_commit": git_commit,
         "inference": {"backend": plan["backend"], "precision": plan["precision"],
                       "provenance": plan["provenance"]},
     }
@@ -256,7 +282,7 @@ def stage(client, sftp):
     # Constraints: symlinks escaping the target abort; old releases never enter this operation.
     prune = (
         "from pathlib import Path\nimport json\n"
-        + (f"root=Path({target!r}).resolve()\nnames=json.loads({json.dumps(RETIRED)!r})\n")
+        + (f"root=Path({target!r}).resolve()\nnames=json.loads({json.dumps(retired)!r})\n")
         + """
 for name in names:
     candidate = root / name
@@ -276,7 +302,8 @@ for name in names:
 print('Retired source removed from inactive release')
 """
     )
-    execute(client, "python3 - <<'PY'\n" + prune + "\nPY")
+    if retired:
+        execute(client, "python3 - <<'PY'\n" + prune + "\nPY")
     for name, raw in files.items():
         remote = target + "/" + name
         execute(client, "mkdir -p " + shlex.quote(str(Path(remote).parent).replace("\\", "/")))
@@ -333,10 +360,33 @@ curl --fail --silent --show-error --max-time 10 \\
     )
 
 
+def activate_vibration(client, manifest):
+    """Functionality: Activate the checked UI overlay without changing configuration or tokens.
+    Inputs: client and precondition-verified vibration manifest with path/release/previous.
+    Outputs: activated flag and readiness evidence; old release remains available.
+    Logic: atomically switch current, restart only prs-camera for its Python asset whitelist,
+    then perform the existing bounded listener/health check once.
+    Constraints: No nginx reload, migrations, GPU calls, credential writes or automatic rollback;
+    failures propagate and the manifest is never marked activated before readiness succeeds.
+    """
+    target, release = manifest["path"], manifest["release"]
+    logger.info("Activating vibration UI release=%s; preserving runtime configuration", release)
+    manifest["activation_checks"] = execute(
+        client,
+        f"ln -s {shlex.quote(target)} {shlex.quote(PREFIX + '/current-' + release)}\n"
+        f"mv -Tf {shlex.quote(PREFIX + '/current-' + release)} {PREFIX}/current\n"
+        "systemctl restart prs-camera\nsystemctl is-active prs-camera",
+    )
+    manifest["activation_checks"] += wait_ready(client)
+    manifest["activated"] = True
+    logger.info("Vibration UI activated release=%s; previous release retained", release)
+
+
 def activate(client, sftp, manifest):
     """Functionality: Publish one staged, checked minimal-mode release and preserve recovery
     material.
-    Inputs: manifest, PRS configs and local private HF token; Outputs: activation info.
+    Inputs: client/sftp/manifest; full profile also reads PRS configs and private HF token.
+    Outputs: activation info.
     Logic: check old-current match, backup unit/include/env, update token through SFTP mode0600,
     validate nginx, atomic current link, restart only PRS, check readiness, graceful nginx reload.
     Constraints: no migration, other application restart, auto rollback or GPU call;
@@ -349,6 +399,9 @@ def activate(client, sftp, manifest):
         if hashlib.sha256(sftp.open(target + "/" + name).read()).hexdigest() != expected:
             raise ValueError("Staged release changed")
     logger.info("Activation preconditions verified release=%s", release)
+    if manifest.get("profile", "full") == "vibration":
+        activate_vibration(client, manifest)
+        return
     backup = "/etc/prs-camera/backups/" + release
     backup_unit = shlex.quote(backup + "/prs-camera.service")
     backup_include = shlex.quote(backup + "/nginx.locations.conf")
@@ -398,7 +451,8 @@ systemctl is-active prs-camera
 
 def main():
     """Functionality: Stage first or activate the explicit reviewed manifest.
-    Inputs: --stage/--activate and --manifest; Outputs: non-secret manifest/exit failure.
+    Inputs: --stage/--activate, --manifest, --profile, optional --source-root and --git-commit.
+    Outputs: non-secret manifest/exit failure.
     Logic: configure transition logging; operations remain separate, never implicit promotion.
     Constraints: credentials stay private; exceptions preserve a failing exit status.
     """
@@ -407,12 +461,16 @@ def main():
     action.add_argument("--stage", action="store_true")
     action.add_argument("--activate", action="store_true")
     parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--profile", choices=("full", "vibration"), default="full")
+    parser.add_argument("--source-root", type=Path)
+    parser.add_argument("--git-commit")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     client = connect_server()
     try:
         with client.open_sftp() as sftp:
-            manifest = stage(client, sftp) if args.stage else json.loads(args.manifest.read_text())
+            manifest = (stage(client, sftp, args.profile, args.source_root, args.git_commit)
+                        if args.stage else json.loads(args.manifest.read_text()))
             if args.activate:
                 activate(client, sftp, manifest)
             args.manifest.parent.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,14 @@
 # PRS 摄像头部署
 
 当前入口 https://47.239.50.129/prs/live/ 。`/prs/` 转到同一页面，仅 Echo 和最新 HF 视频路径。
+手动震动 UI 可显式使用 `--profile vibration --source-root <已审查的Git快照目录> --git-commit <SHA>`
+暂存。此配置只覆盖震动页面、样式、共享词典和Python资源白名单及对应文档/测试，
+要求快照的模型清单和推理计划与当前服务器逐字节一致。先从current复制新release，
+保留摄像头/推理、地图、ASGI及运行依赖，不删除旧路径、不覆盖systemd/nginx模板或token。
+激活时校验暂存哈希和current仍指向原release，再切换链接并仅重启prs-camera、检查健康；
+不reload nginx、不自动重试或回滚。发布清单记录Git SHA，原release保留供人工恢复。
+公开UI回归使用前端 `tools/check_vibration_browser.mjs`，其原生震动API是明确替身，
+不代表真实手机马达验证；实际震动仍需安卓手机前台手动测试。
 部署脚本 `tools/deploy_phone_live.py` 验证固定 SSH 主机指纹，从当前 release 创建新 release，
 删除明确列出的旧模式源码，覆盖本项目拥有的路由/页面/流式模块及地图前端，不改地图 API 及其他应用。
 `maps.html`、`maps-page.js`、`maps-client.js` 与共享 `i18n.js`、`translations.js` 统一发布，

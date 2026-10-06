@@ -1,5 +1,18 @@
 # 摄像头前端
 
+摄像头页新增独立“手机震动测试”：默认关闭，勾选启用后可手动测试短震200ms、长震800ms、
+双震150ms/暂停100ms/震动150ms；“停止震动”在接口可用时始终可操作。
+`vibration.js` 不开启摄像头、不联网、不自动绑定检测结果，也不保存开关偏好。
+关闭测试、页面隐藏或离开时，对曾被接受且尚未取消的请求发送 `navigator.vibrate(0)`。
+接口缺失、拒绝和异常分别显示诊断并记录日志，不自动重试或替代为其他提醒。
+“请求已接受”只说明浏览器返回true，不能证明马达实际震动；安卓Chrome等可测试，
+iPhone Safari不支持。请在真实手机前台页面检查短震、长震、双震、停止及系统震动设置。
+Node与桌面Chrome替身测试只验证调用和UI状态，不代表真机硬件、锁屏或后台提醒能力。
+设好 `PRS_PLAYWRIGHT_PATH` 后，从frontend执行
+`node tools/check_vibration_browser.mjs http://127.0.0.1:8766/live/ ../backend/benchmarks/2026-10-06/vibration/browser-local.json`，
+在真实Chrome验证支持/缺失/拒绝/异常、默认关闭及停止、零媒体授权调用、中英切换和320/390/1280px布局。
+输出JSON和手机宽度区域PNG；原生震动和媒体API在测试中明确替换，不能据此声称真机马达已验证。
+
 入口 https://47.239.50.129/prs/live/ ，原 `/prs/` 转到同页。Processing mode 只保留：
 
 - **Echo／原样回传**：`/ws/echo/`，用于检查摄像头与网络，返回输入原始字节，不进行检测。

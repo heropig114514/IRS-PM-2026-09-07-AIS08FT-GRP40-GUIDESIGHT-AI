@@ -1,10 +1,10 @@
 <!doctype html>
 <!-- Responsibilities: 手机摄像头原样/ZeroGPU 标注回传工作台的语义结构。
-Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认；速率从首帧后统计。
+Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认；速率从首帧后统计；加载独立手动震动测试。
 Related Modules: i18n.js, translations.js, camera.css, camera.js, echo-client.js,
-live-detection-client.js, frame-pipeline.js, maps.html；HF视频用同源持久连接。
+live-detection-client.js, frame-pipeline.js, maps.html, vibration.js；HF视频用同源持久连接。
 Declaration Index: None。
-Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头数据。 -->
+Variable Index: None；摄像头和震动区域的 id 分别由 CameraApp 与 VibrationTester 引用，不嵌入密钥或摄像头数据。 -->
 <html lang="zh-CN" data-api-base="../">
   <head>
     <meta charset="utf-8" />
@@ -17,6 +17,7 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
     <link rel="stylesheet" href="./assets/camera.css" />
     <script type="module" src="./assets/camera.js"></script>
     <script type="module" src="./assets/i18n.js"></script>
+    <script type="module" src="./assets/vibration.js"></script>
   </head>
   <body>
     <div class="shell">
@@ -88,6 +89,25 @@ Variable Index: None；各 id 由 CameraApp 引用，不嵌入密钥或摄像头
           <p id="message" class="message" aria-live="polite">
             仅申请摄像头权限。图像只在内存中回传，不录制、不保存。
           </p>
+        </section>
+        <section id="vibration-test" class="workspace vibration-test" aria-labelledby="vibration-title">
+          <div class="workspace-header vibration-header">
+            <h2 id="vibration-title">手机震动测试</h2>
+            <span id="vibration-status" class="status">正在检查接口</span>
+          </div>
+          <p class="vibration-note">仅手动触发，无需开启摄像头。</p>
+          <label class="vibration-toggle">
+            <input id="vibration-enabled" type="checkbox" disabled />
+            <span>启用震动测试</span>
+          </label>
+          <div class="vibration-actions" role="group" aria-label="震动测试操作">
+            <button class="button secondary" data-vibration-pattern="short" disabled>短震 · 200 ms</button>
+            <button class="button secondary" data-vibration-pattern="long" disabled>长震 · 800 ms</button>
+            <button class="button secondary" data-vibration-pattern="double" disabled>双震 · 150 / 100 / 150 ms</button>
+            <button id="vibration-stop" class="button text-button" disabled>停止震动</button>
+          </div>
+          <p id="vibration-message" class="message" role="status" aria-live="polite">正在检查浏览器震动接口。</p>
+          <p class="vibration-note vibration-compatibility">安卓 Chrome 等支持；iPhone Safari 不支持。请保持页面前台，并检查系统震动设置。</p>
         </section>
         <section class="metrics" aria-label="实时传输统计">
           <div>
