@@ -8,13 +8,15 @@ dependencies, record hashes, back up and switch
 one service, then check readiness.
 An explicit vibration profile overlays only reviewed UI assets and their serving whitelist,
 requiring the same inference plan and preserving active service/proxy/credential configuration.
+The live-tuning profile overlays only capture/transport scheduling and its tests, requires an
+explicit runtime, and preserves the current model, device outputs and service configuration.
 Related Modules: hf_video_relay/inference_plan/ai_mcp/ai_bridge; frontend live pipeline;
 deploy templates;
 private server_info.txt.
 Declaration Index: PinnedHost — SSH policy; PinnedHost.missing_host_key — fingerprint check;
 connect_server — private authentication; execute — checked remote command;
 wait_ready — listener/health observation; stage — hash-verified inactive release;
-activate_vibration — configuration-preserving UI release;
+activate_overlay — configuration-preserving vibration or live-tuning release;
 activate_outputs — isolated-runtime device-output deployment;
 activate — publish reviewed release; main — explicit stage/activate CLI.
 Variable Index: ROOT — local backend; PREFIX — dedicated remote workspace; FINGERPRINT — inspected
@@ -24,6 +26,7 @@ obsolete paths. No credential output.
 VIBRATION_FRONTEND/VIBRATION_BACKEND — narrow UI-profile overlay; source_root is a reviewed
 snapshot directory, and git_commit records its Git identity without reading private files there.
 OUTPUT_FRONTEND/OUTPUT_BACKEND — output UI/MCP overlay preserving active inference code;
+LIVE_FRONTEND/LIVE_BACKEND — coordinated browser/PRS live transport overlay, excluding GPU compute;
 runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest.
 Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
 """
@@ -47,6 +50,15 @@ ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "/opt/prs-practice"
 FINGERPRINT = "hIrYH0S2vhyiU53ScT9Ei03o1ClcuHAb2pL/VrMMg90="
 logger = logging.getLogger(__name__)
+LIVE_FRONTEND = (
+    "camera.js", "frame-pipeline.js", "live-detection-client.js",
+    "tests/frame-pipeline.test.mjs", "tests/live-detection-client.test.mjs",
+)
+LIVE_BACKEND = (
+    "core/hf_video_relay.py", "zerogpu/live_transport.py",
+    "core/test_hf_live.py", "core/test_zerogpu_live.py",
+    "tools/deploy_phone_live.py", "core/test_deploy_phone_live.py",
+)
 VIBRATION_FRONTEND = (
     "index.html", "camera.css", "translations.js", "vibration.js", "README.md",
     "tests/vibration.test.mjs", "tools/check_vibration_browser.mjs",
@@ -252,7 +264,8 @@ def execute(client, script):
 
 def stage(client, sftp, profile="full", source_root=None, git_commit=None, runtime_path=None):
     """Functionality: Build a checked live/maps/MCP release while preserving unrelated services.
-    Inputs: client/sftp, profile(full/vibration/outputs), source_root/git_commit and runtime_path;
+    Inputs: client/sftp, profile(full/vibration/outputs/live-tuning), source_root/git_commit
+    and runtime_path;
     current release, measured inference plan and owned source/template allowlists.
     Outputs: safe hash manifest including the measured plan identity.
     Logic: validate the plan, copy current release, prune explicit retired paths in the new release,
@@ -266,9 +279,13 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     service/proxy templates or credentials; no retirement pruning outside the full profile.
     Outputs requires an explicit isolated runtime and preserves inference sources; staged
     service rendering substitutes only the reviewed interpreter path and records its source hash.
+    Live-tuning requires an explicit existing runtime; it replaces only scheduling/transport
+    and tests, with no service template, registry setting, model or GPU implementation changes.
     """
-    if profile not in {"full", "vibration", "outputs"}:
+    if profile not in {"full", "vibration", "outputs", "live-tuning"}:
         raise ValueError("Unknown deployment profile")
+    if profile == "live-tuning" and runtime_path is None:
+        raise ValueError("Live-tuning profile requires an explicit existing runtime")
     if profile == "outputs" and runtime_path is None:
         raise ValueError("Outputs profile requires an explicit isolated runtime")
     runtime = runtime_path or PREFIX + "/runtime-venv"
@@ -284,7 +301,7 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     old = execute(client, f"readlink -f {PREFIX}/current").strip()
     if not re.fullmatch(re.escape(PREFIX) + r"/releases/[A-Za-z0-9_-]+", old):
         raise ValueError("Unexpected current release path")
-    if profile in {"vibration", "outputs"}:
+    if profile in {"vibration", "outputs", "live-tuning"}:
         for name in ("models/inference-plan.json", "models/yolo26n.json"):
             with sftp.open(old + "/backend/" + name, "rb") as active:
                 if active.read() != (source / name).read_bytes():
@@ -292,9 +309,9 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
                         "Scoped deployment changes the active inference identity: " + name
                     )
     frontend = {"full": FRONTEND, "vibration": VIBRATION_FRONTEND,
-                "outputs": OUTPUT_FRONTEND}[profile]
+                "outputs": OUTPUT_FRONTEND, "live-tuning": LIVE_FRONTEND}[profile]
     backend = {"full": BACKEND, "vibration": VIBRATION_BACKEND,
-               "outputs": OUTPUT_BACKEND}[profile]
+               "outputs": OUTPUT_BACKEND, "live-tuning": LIVE_BACKEND}[profile]
     retired = RETIRED if profile == "full" else ()
     files = {"backend/" + name: (source / name).read_bytes() for name in backend}
     files.update(
@@ -317,7 +334,8 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()}
     identity = {"files": hashes, "removed": retired}
     release = (
-        {"full": "phone-live-", "vibration": "vibration-", "outputs": "outputs-"}[profile]
+        {"full": "phone-live-", "vibration": "vibration-", "outputs": "outputs-",
+         "live-tuning": "live-tuning-"}[profile]
         + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:16]
     )
     target = PREFIX + "/releases/" + release
@@ -328,7 +346,9 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
         "previous": old,
         "files": hashes,
         "removed": list(retired),
-        "scope": ("Device output UI/MCP; preserve inference; explicit isolated runtime"
+        "scope": ("Live scheduling/transport; preserve compute, device outputs and configuration"
+                  if profile == "live-tuning" else
+                  "Device output UI/MCP; preserve inference; explicit isolated runtime"
                   if profile == "outputs" else
                   "Manual vibration UI; preserve inference, service/proxy config and credentials"
                   if profile == "vibration" else
@@ -444,17 +464,17 @@ curl --fail --silent --show-error --max-time 10 \\
     )
 
 
-def activate_vibration(client, manifest):
-    """Functionality: Activate the checked UI overlay without changing configuration or tokens.
-    Inputs: client and precondition-verified vibration manifest with path/release/previous.
+def activate_overlay(client, manifest):
+    """Functionality: Activate a checked source overlay without changing configuration or tokens.
+    Inputs: client and verified vibration/live-tuning manifest with path/release/previous.
     Outputs: activated flag and readiness evidence; old release remains available.
-    Logic: atomically switch current, restart only prs-camera for its Python asset whitelist,
+    Logic: atomically switch current, restart only prs-camera to load the changed sources,
     then perform the existing bounded listener/health check once.
     Constraints: No nginx reload, migrations, GPU calls, credential writes or automatic rollback;
     failures propagate and the manifest is never marked activated before readiness succeeds.
     """
     target, release = manifest["path"], manifest["release"]
-    logger.info("Activating vibration UI release=%s; preserving runtime configuration", release)
+    logger.info("Activating source overlay release=%s; preserving runtime configuration", release)
     manifest["activation_checks"] = execute(
         client,
         f"ln -s {shlex.quote(target)} {shlex.quote(PREFIX + '/current-' + release)}\n"
@@ -463,7 +483,7 @@ def activate_vibration(client, manifest):
     )
     manifest["activation_checks"] += wait_ready(client)
     manifest["activated"] = True
-    logger.info("Vibration UI activated release=%s; previous release retained", release)
+    logger.info("Source overlay activated release=%s; previous release retained", release)
 
 
 def activate(client, sftp, manifest):
@@ -471,7 +491,8 @@ def activate(client, sftp, manifest):
     material.
     Inputs: client/sftp/manifest; full profile also reads PRS configs and private HF token.
     Outputs: activation info.
-    Logic: check old-current match, backup unit/include/env, update token through SFTP mode0600,
+    Logic: check old-current match and staged hashes; vibration/live-tuning only switch sources.
+    Full profile: backup unit/include/env, update token through SFTP mode0600,
     validate nginx, atomic current link, restart only PRS, check readiness, graceful nginx reload.
     Constraints: no migration, other application restart, auto rollback or GPU call;
     logs activation/readiness transitions without credential values.
@@ -483,8 +504,8 @@ def activate(client, sftp, manifest):
         if hashlib.sha256(sftp.open(target + "/" + name).read()).hexdigest() != expected:
             raise ValueError("Staged release changed")
     logger.info("Activation preconditions verified release=%s", release)
-    if manifest.get("profile", "full") == "vibration":
-        activate_vibration(client, manifest)
+    if manifest.get("profile", "full") in {"vibration", "live-tuning"}:
+        activate_overlay(client, manifest)
         return
     if manifest.get("profile", "full") == "outputs":
         activate_outputs(client, sftp, manifest)
@@ -598,7 +619,8 @@ def main():
     action.add_argument("--stage", action="store_true")
     action.add_argument("--activate", action="store_true")
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--profile", choices=("full", "vibration", "outputs"), default="full")
+    parser.add_argument("--profile", choices=("full", "vibration", "outputs", "live-tuning"),
+                        default="full")
     parser.add_argument("--source-root", type=Path)
     parser.add_argument("--git-commit")
     parser.add_argument("--runtime")

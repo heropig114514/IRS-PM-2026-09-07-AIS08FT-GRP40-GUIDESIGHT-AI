@@ -8,7 +8,7 @@
  * pacingFixture.sent; pacingFixture.active; pacingFixture.failed; pacingFixture.now;
  * pacingFixture.pause; pacingFixture.client.sendFrame; pacingFixture.client.stop;
  * testBound; testLatency; testFailure; testEnd; testCaptureStop; testPacing; testPacingStall;
- * testCreditPacing; testEightBound.
+ * testCreditPacing; testTwelveBound; testThirtyPacing.
  * Variable Index: None. Fixture state is local to each test; no camera/network/GPU is used.
  */
 import assert from "node:assert/strict";
@@ -70,13 +70,15 @@ function fixture(frameLimit = null, maxPending = 5) {
 }
 
 /** Functionality: Simulate ordinary timer oversleep or a blocked credit using an explicit clock.
- * Inputs: frameLimit, oversleep list (last value repeats), holdSteady transport flag.
+ * Inputs: frameLimit, oversleep list (last value repeats), holdSteady transport flag,
+ * rate (explicit12FPS default retains the historical scheduling controls).
  * Outputs: pipeline/state with capture starts, all timings and deferred requests.
- * Logic: explicit12FPS preserves original drift-test conditions; capture takes8ms;
+ * Logic: default12FPS preserves original drift-test conditions; an explicit rate permits30FPS;
+ * capture takes8ms;
  * pause advances requested time plus injected lateness; the first frame
  * returns immediately and later results can be held for a controlled five-credit boundary.
  * Constraints: tests scheduling invariants, not real timer/network/GPU performance; no real sleeps. */
-function pacingFixture(frameLimit, oversleep = [10], holdSteady = false) {
+function pacingFixture(frameLimit, oversleep = [10], holdSteady = false, rate = 12) {
   const state = {time: 0, starts: [], frames: [], requests: [], waits: 0};
   /** Functionality: Record a capture start. Inputs: clock state. Outputs: marker bytes.
    * Logic: add8ms encode cost. Constraints: no real codec. */
@@ -112,7 +114,7 @@ function pacingFixture(frameLimit, oversleep = [10], holdSteady = false) {
     stop() {},
   };
   const pipeline = new FramePipeline({client, capture, display, onFrame: frame, onSent: sent,
-    isActive: active, onFailure: failed, now, frameLimit, maxPending: 5, rate: 12});
+    isActive: active, onFailure: failed, now, frameLimit, maxPending: 5, rate});
   /** Functionality: Inject deterministic timer oversleep. Inputs: milliseconds.
    * Outputs: advanced clock. Logic: a positive wait advances time and yields an event-loop turn,
    * allowing already-resolved transport/display microtasks to release their credits as a timer does.
@@ -128,23 +130,36 @@ function pacingFixture(frameLimit, oversleep = [10], holdSteady = false) {
 }
 
 /** Functionality: Verify the new default ceiling still includes queued display and blocks capture.
- * Inputs: nine controlled results and an explicit eight-job fixture; Outputs: bound/order counts.
- * Logic: cold first frame alone, then eight accepted jobs; no ninth outstanding capture.
+ * Inputs: thirteen controlled results and an explicit twelve-job fixture; Outputs: bound/order counts.
+ * Logic: cold first frame alone, then twelve accepted jobs; no thirteenth outstanding capture.
  * Constraints: synthetic clock/transport, no throughput/GPU claim; old five-window tests retained. */
-test("eight-credit ceiling includes all queued display work", async function testEightBound() {
-  const {pipeline, state} = fixture(9, 8), running = pipeline.run();
+test("twelve-credit ceiling includes all queued display work", async function testTwelveBound() {
+  const {pipeline, state} = fixture(13, 12), running = pipeline.run();
   await flush(); assert.equal(state.captures, 1);
   state.requests[0].resolve({bytes: new ArrayBuffer(5)}); await flush();
-  assert.equal(state.captures, 9); assert.equal(pipeline.pending.size, 8);
+  assert.equal(state.captures, 13); assert.equal(pipeline.pending.size, 12);
   state.gate = deferred();
   for (const request of state.requests.slice(1)) request.resolve({bytes: new ArrayBuffer(5)});
-  await flush(); assert.equal(pipeline.pending.size, 8); assert.equal(pipeline.received, 1);
+  await flush(); assert.equal(pipeline.pending.size, 12); assert.equal(pipeline.received, 1);
   state.gate.resolve();
-  assert.deepEqual(await running, {sent: 9, received: 9, maxInFlight: 8});
-  assert.deepEqual(state.frames.map(row => row.ordinal), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  assert.throws(() => new FramePipeline({maxPending: 9}), /采样配置/);
-  assert.equal(new FramePipeline({}).rate, 24);
-  assert.equal(new FramePipeline({}).maxPending, 8);
+  assert.deepEqual(await running, {sent: 13, received: 13, maxInFlight: 12});
+  assert.deepEqual(state.frames.map(row => row.ordinal), Array.from({length: 13}, (_, index) => index + 1));
+  assert.throws(() => new FramePipeline({maxPending: 13}), /采样配置/);
+  assert.equal(new FramePipeline({}).rate, 30);
+  assert.equal(new FramePipeline({}).maxPending, 12);
+});
+
+/** Functionality: Verify30FPS cadence preserves phase despite ordinary timer oversleep.
+ * Inputs:31 captures,8ms encode cost and1ms timer oversleep in a controlled clock.
+ * Outputs: complete ordered results and approximately33.33ms capture intervals.
+ * Logic: measure after the independent first frame; fixed12FPS historical controls remain intact.
+ * Constraints: verifies scheduling arithmetic, not camera throughput or real HF performance. */
+test("30FPS cadence absorbs ordinary timer oversleep", async function testThirtyPacing() {
+  const {pipeline, state} = pacingFixture(31, [1], false, 30);
+  assert.deepEqual(await pipeline.run(), {sent: 31, received: 31, maxInFlight: 1});
+  const starts = state.starts.slice(1), interval = (starts.at(-1) - starts[0]) / (starts.length - 1);
+  assert.ok(Math.abs(interval - 1000 / 30) < 0.1);
+  assert.equal(state.frames.length, 31);
 });
 
 /** Functionality: Prevent ordinary timer oversleep from accumulating over many frames.
@@ -177,7 +192,7 @@ test("a full-interval timer stall resets cadence without a catch-up burst", asyn
 /** Functionality: Preserve cadence reset even for a credit wait shorter than one interval.
  * Inputs: five held steady results and a20ms admission stall. Outputs: bound/order/full next wait.
  * Logic: release one display credit explicitly, verify the next deadline starts at actual capture.
- * Constraints: explicit five-window control under the eight-credit ceiling; ordered display unchanged. */
+ * Constraints: explicit five-window control under the twelve-credit ceiling; ordered display unchanged. */
 test("credit stalls reset cadence even below one interval", async function testCreditPacing() {
   const {pipeline, state} = pacingFixture(8, [0], true), running = pipeline.run();
   while (state.starts.length < 6 || pipeline.pending.size < 5) await flush();

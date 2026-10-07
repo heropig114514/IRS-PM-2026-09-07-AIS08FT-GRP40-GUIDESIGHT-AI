@@ -1,4 +1,4 @@
-/** Responsibilities: Verify binary model/hash/order boundaries, eight pending frames and cancellation.
+/** Responsibilities: Verify binary model/hash/order boundaries, twelve pending frames and cancellation.
  * Implementation: Explicit socket fixtures, production plan admission, real WebCrypto and synthetic
  * JPEG markers; no GPU/network.
  * Related Modules: live-detection-client.js; actual image decoding/public-service tests are separate.
@@ -22,7 +22,7 @@ const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes:
   validation: {images: 5000, replicates: 3, baseline_ap: 0.4, worst_ap: 0.395,
     maximum_ap_drop: 0.005, summary_sha256: "e".repeat(64), notebook_version: 9},
   source_sha256: manifest.source_sha256, names: manifest.names, confidence_threshold: 0.25,
-  max_edge: 640, jpeg_quality: 0.8, max_inflight: 8, session_seconds: 55, cold_seconds: 55, steady_seconds: 10};
+  max_edge: 640, jpeg_quality: 0.8, max_inflight: 12, session_seconds: 55, cold_seconds: 55, steady_seconds: 10};
 const JPEG = Uint8Array.from([255, 216, 1, 255, 217]);
 
 /** Functionality: Capture socket operations and deliver explicit events.
@@ -89,15 +89,15 @@ async function admitted(value = fixture(), selected = contract) {
   return value;
 }
 
-/** Functionality: Bound eight requests and verify untouched input/full ordered output.
- * Inputs: actual client and eight marker responses. Outputs: header/hash/count assertions.
- * Logic: ninth submission rejected, all asynchronous digests processed in order.
+/** Functionality: Bound twelve requests and verify untouched input/full ordered output.
+ * Inputs: actual client and twelve marker responses. Outputs: header/hash/count assertions.
+ * Logic: thirteenth submission rejected, all asynchronous digests processed in order.
  * Constraints: protocol test only, no real image/accuracy/latency claim. */
-test("binary packets preserve JPEG and bound eight pending requests", async function testBinary() {
+test("binary packets preserve JPEG and bound twelve pending requests", async function testBinary() {
   const {client, socket, state} = await admitted();
   try {
     const promises = [];
-    for (let index = 0; index < 8; index++) {
+    for (let index = 0; index < 12; index++) {
       promises.push(client.sendFrame(JPEG.slice().buffer));
       const sent = socket.sent[index], view = new DataView(sent);
       assert.equal(view.getUint32(0), 0x50524631);
@@ -105,9 +105,9 @@ test("binary packets preserve JPEG and bound eight pending requests", async func
       assert.deepEqual(new Uint8Array(sent, 8), JPEG);
     }
     assert.throws(() => client.sendFrame(JPEG.slice().buffer), /在途/);
-    for (let index = 0; index < 8; index++) socket.message(packet(index));
+    for (let index = 0; index < 12; index++) socket.message(packet(index));
     const results = await Promise.all(promises);
-    assert.equal(client.expected, 8); assert.equal(client.pending.size, 0);
+    assert.equal(client.expected, 12); assert.equal(client.pending.size, 0);
     for (const result of results) assert.deepEqual(new Uint8Array(result.bytes), JPEG);
     assert.deepEqual(state.errors, []);
   } finally { client.stop(); }
@@ -188,7 +188,7 @@ test("final binary is verified before end and close", async function testFinal()
  * Inputs: explicit invalid public hellos. Outputs: connect rejection and no frame send.
  * Logic: client independently checks relay contract. Constraints: no real server secret is used. */
 test("invalid hello or private capability rejects before input", async function testHello() {
-  for (const change of [{max_inflight: 6}, {precision: "INT8"}, {backend: "unknown"},
+  for (const change of [{max_inflight: 6}, {max_inflight: 8}, {precision: "INT8"}, {backend: "unknown"},
     {validation: {...contract.validation, worst_ap: 0.3949}},
     {validation: {...contract.validation, replicates: 2}},
     {capability: "synthetic"}, {token: "synthetic"}]) {

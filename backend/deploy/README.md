@@ -16,6 +16,15 @@
 不迁移数据库，不自动重试或回滚；旧 release/解释器/配置用于人工恢复。
 
 当前入口 https://47.239.50.129/prs/live/ 。`/prs/` 转到同一页面，仅 Echo 和最新 HF 视频路径。
+视频链路调优使用 `--profile live-tuning --runtime <当前服务实际解释器目录>` 暂存，
+再用对应清单 `--activate`。它只覆盖 camera/pipeline/client、PRS/HF transport 及对应测试，
+要求模型清单和推理计划与当前服务器逐字节相同；复制 current 后保留语音/振动、地图、
+MCP registry、systemd/nginx/env、GPU计算实现和运行依赖。激活只切换源码并重启 PRS。
+HF 与 PRS 的窗口和启动控制契约必须协调发布；先用 CPU health 确认 HF 新 SHA 已就绪，
+再激活 PRS，最后核对公网资产哈希。健康请求不替代真实 GPU 性能测量。
+`warmup_bytes=524288` 表示首次结果前一次同连接双向预热，额外流量为1MiB，
+额外耗时计入首帧；3秒控制截止、5秒worker空闲和55秒会话/冷等待预算分别保留。
+直接连接 HF 的工具通过 `receive_live_result` 确认控制；浏览器仅收到原检测结果。
 手动震动 UI 可显式使用 `--profile vibration --source-root <已审查的Git快照目录> --git-commit <SHA>`
 暂存。此配置只覆盖震动页面、样式、共享词典和Python资源白名单及对应文档/测试，
 要求快照的模型清单和推理计划与当前服务器逐字节一致。先从current复制新release，

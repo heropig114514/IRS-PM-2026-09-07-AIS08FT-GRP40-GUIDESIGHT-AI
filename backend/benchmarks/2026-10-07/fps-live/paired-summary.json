@@ -1,0 +1,182 @@
+[
+  {
+    "conditions": {
+      "rate": 24,
+      "window": 8,
+      "frames": 61
+    },
+    "steady_fps": 19.15525332824349,
+    "completion_fps": 22.84165698799845,
+    "capture_fps": 20.806150156905876,
+    "credit_wait_frames": 5,
+    "credit_wait_ms": 377.29999999701977,
+    "decoded_ms": {
+      "samples": 60,
+      "mean_ms": 347.25333333263796,
+      "median_ms": 302.1499999985099,
+      "max_ms": 704.8999999910593
+    },
+    "prs_ms": {
+      "samples": 60,
+      "mean_ms": 277.3868470219895,
+      "median_ms": 238.26421302510425,
+      "max_ms": 642.5429249648005
+    },
+    "hf_cycle_ms": {
+      "samples": 60,
+      "mean_ms": 10.044909365630398,
+      "median_ms": 9.745508548803627,
+      "max_ms": 14.007112942636013
+    }
+  },
+  {
+    "conditions": {
+      "rate": 30,
+      "window": 8,
+      "frames": 91
+    },
+    "steady_fps": 24.48446596661216,
+    "completion_fps": 26.40009492178296,
+    "capture_fps": 26.360997571210664,
+    "credit_wait_frames": 29,
+    "credit_wait_ms": 408.10000002384186,
+    "decoded_ms": {
+      "samples": 90,
+      "mean_ms": 298.28222222179176,
+      "median_ms": 299.09999999403954,
+      "max_ms": 315.5
+    },
+    "prs_ms": {
+      "samples": 90,
+      "mean_ms": 237.0300069503072,
+      "median_ms": 238.1033084820956,
+      "max_ms": 254.93287295103073
+    },
+    "hf_cycle_ms": {
+      "samples": 90,
+      "mean_ms": 10.629308609188431,
+      "median_ms": 9.641066077165306,
+      "max_ms": 24.261565878987312
+    }
+  },
+  {
+    "conditions": {
+      "rate": 30,
+      "window": 12,
+      "frames": 151
+    },
+    "steady_fps": 28.460837887115677,
+    "completion_fps": 30.028819605447204,
+    "capture_fps": 30.004631587390232,
+    "credit_wait_frames": 0,
+    "credit_wait_ms": 0,
+    "decoded_ms": {
+      "samples": 150,
+      "mean_ms": 299.65800000001985,
+      "median_ms": 298.59999999403954,
+      "max_ms": 341.09999999403954
+    },
+    "prs_ms": {
+      "samples": 150,
+      "mean_ms": 236.89754797688997,
+      "median_ms": 237.76343697682023,
+      "max_ms": 271.05681400280446
+    },
+    "hf_cycle_ms": {
+      "samples": 150,
+      "mean_ms": 9.964658327711126,
+      "median_ms": 9.402579511515796,
+      "max_ms": 21.85331587679684
+    }
+  },
+  {
+    "conditions": {
+      "rate": 30,
+      "window": 12,
+      "frames": 151
+    },
+    "steady_fps": 28.527414845699024,
+    "completion_fps": 30.11317704122878,
+    "capture_fps": 30.00040268991499,
+    "credit_wait_frames": 0,
+    "credit_wait_ms": 0,
+    "decoded_ms": {
+      "samples": 150,
+      "mean_ms": 299.25999999960266,
+      "median_ms": 298.54999999701977,
+      "max_ms": 319.40000000596046
+    },
+    "prs_ms": {
+      "samples": 150,
+      "mean_ms": 236.40919749780247,
+      "median_ms": 237.76092752814293,
+      "max_ms": 248.50311200134456
+    },
+    "hf_cycle_ms": {
+      "samples": 150,
+      "mean_ms": 9.740415504202247,
+      "median_ms": 9.347651153802872,
+      "max_ms": 19.498211098834872
+    }
+  },
+  {
+    "conditions": {
+      "rate": 30,
+      "window": 8,
+      "frames": 91
+    },
+    "steady_fps": 24.63189008705277,
+    "completion_fps": 26.56478524313619,
+    "capture_fps": 26.54893655104827,
+    "credit_wait_frames": 46,
+    "credit_wait_ms": 380.1999999433756,
+    "decoded_ms": {
+      "samples": 90,
+      "mean_ms": 298.5133333336976,
+      "median_ms": 298.90000000596046,
+      "max_ms": 317.29999999701977
+    },
+    "prs_ms": {
+      "samples": 90,
+      "mean_ms": 236.96456415863292,
+      "median_ms": 237.9068240406923,
+      "max_ms": 246.61342601757497
+    },
+    "hf_cycle_ms": {
+      "samples": 90,
+      "mean_ms": 9.644055037966204,
+      "median_ms": 9.381096460856497,
+      "max_ms": 17.547294963151217
+    }
+  },
+  {
+    "conditions": {
+      "rate": 24,
+      "window": 8,
+      "frames": 61
+    },
+    "steady_fps": 21.663778162958234,
+    "completion_fps": 23.93120791752144,
+    "capture_fps": 23.966203590897482,
+    "credit_wait_frames": 1,
+    "credit_wait_ms": 3.4000000059604645,
+    "decoded_ms": {
+      "samples": 60,
+      "mean_ms": 302.35999999990065,
+      "median_ms": 300.6499999985099,
+      "max_ms": 335.6000000089407
+    },
+    "prs_ms": {
+      "samples": 60,
+      "mean_ms": 239.2759795882739,
+      "median_ms": 238.15008701058105,
+      "max_ms": 276.1669410392642
+    },
+    "hf_cycle_ms": {
+      "samples": 60,
+      "mean_ms": 10.286131671940288,
+      "median_ms": 9.523560991510749,
+      "max_ms": 25.20464896224439
+    }
+  }
+]

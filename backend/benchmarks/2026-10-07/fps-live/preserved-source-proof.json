@@ -1,0 +1,34 @@
+{
+  "frontend/index.html": {
+    "identical": true,
+    "sha256": "1d97fed61c5a73c40d77c1c3288aaf67b18792db09439725d868e77bc6e2d36d"
+  },
+  "frontend/vibration.js": {
+    "identical": true,
+    "sha256": "c7b19ad8943aac1a89eced25169ef3c1e4918301e23c58ce2a1bf1e416af93e4"
+  },
+  "frontend/speech-output.js": {
+    "identical": true,
+    "sha256": "0ce790798c5999d196d5c5e1968246bbbe904678d8979ad8c52c135eacbdfae5"
+  },
+  "frontend/ai-control.js": {
+    "identical": true,
+    "sha256": "87be652855040164c478c60413fac2f0b92b41924224c1d60807bf71725c9959"
+  },
+  "backend/core/ai_mcp.py": {
+    "identical": true,
+    "sha256": "f742111bdca2216c5331ff57f714036f9166a0cac416a4c332ccb1fd92a53308"
+  },
+  "backend/models/inference-plan.json": {
+    "identical": true,
+    "sha256": "c54089a2aa7cc5dcb73df21cd1874587d782f6236db3d89088e3a50c10baff30"
+  },
+  "backend/zerogpu/live_worker.py": {
+    "identical": true,
+    "sha256": "530782892be7086bad0ae8dff5b9d6027615f19f28c899e4615d346c0537e403"
+  },
+  "backend/realtime/detector.py": {
+    "identical": true,
+    "sha256": "a0eb9c795b5b8ea67cf72c0e074760dde55d7b6fd44e3365d5b5528b0d803a76"
+  }
+}

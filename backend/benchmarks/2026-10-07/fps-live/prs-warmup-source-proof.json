@@ -1,0 +1,13 @@
+{
+  "backend/core/hf_video_relay.py": true,
+  "backend/zerogpu/live_transport.py": true,
+  "backend/core/test_hf_live.py": true,
+  "backend/core/test_zerogpu_live.py": true,
+  "backend/tools/deploy_phone_live.py": true,
+  "backend/core/test_deploy_phone_live.py": true,
+  "frontend/camera.js": true,
+  "frontend/frame-pipeline.js": true,
+  "frontend/live-detection-client.js": true,
+  "frontend/tests/frame-pipeline.test.mjs": true,
+  "frontend/tests/live-detection-client.test.mjs": true
+}

@@ -38,6 +38,24 @@ One connected session then requests one GPU allocation with the default ZeroGPU 
 The worker reuses an allocation-local CUDA Graph for at most55 seconds; stop/disconnect/idle
 ends the task. A new test requires an explicit new start; no paid hardware or automatic allocation.
 Private HF identity and distinct worker capability stay server-side. Frames are not saved to disk.
+The30FPS configuration admits twelve frames across PRS/HF/browser including ordered display.
+All three strict transport contracts are published together; the input ceiling does not prove
+achieved HF output FPS. Real allocation measurements are recorded separately. The prior
+five/eight-credit source snapshots and measurements are retained. Model/codec/quality conditions
+are unchanged. CPU browser controls do not prove real HF30FPS. Per-frame
+hf_parent_queue_ms/local_cycle_ms/result_ingest_ms/output_queue_ms use
+the CPU parent's clock; worker_pull_ms includes intentional paced-input waits, while
+worker_predict_ms includes the entire predictor call. Durations are nested and not additive.
+No clocks are subtracted across machines/processes, and diagnostic fields add no network calls.
+
+The first prepared result now waits for exactly one512KiB random binary control to travel
+HF→PRS→HF on the existing WebSocket. Admission declares `warmup_bytes`; missing/malformed
+controls, corrupt/duplicate echoes and a3s timeout fail explicitly. This1MiB/session transport
+warmup is included in first-frame latency and does not consume image credits, change sequence
+numbers, trigger another GPU allocation, or alter inference/JPEG bytes. The worker's5s idle,
+55s session and relay's55s cold budgets remain unchanged. First-result metadata records
+`hf_transport_warmup_ms` and duplex `hf_transport_warmup_bytes`; its output-queue span includes
+this intentional control wait. Later frames are neither filtered nor labelled as warmup.
 
 `ssr_mode=False` makes Python ASGI serve the public port so custom WebSocket upgrades reach
 LiveMiddleware. Gradio queues one allocation; only `detect_live` is registered. CPU health

@@ -1,0 +1,247 @@
+{
+  "date": "2026-10-07 Asia/Shanghai",
+  "scope": "Real Chrome HTTPS -> owned PRS -> real HF ZeroGPU -> Chrome JPEG decode. Static public-image canvas MediaStream; no physical camera, moving-scene diversity, mobile radio or actual display-paint measurement. No 55-second or multi-session reliability claim.",
+  "conditions": "Same YOLO26n/FP16 compiled CUDA/640/confidence0.25/JPEG80; same Chrome154.0.8037.98, fixture and unchanged >=10FPS/max500ms gate. Only first frame excluded from steady metrics; all other slow frames retained.",
+  "comparisons": [
+    {
+      "label": "before_startup_warmup",
+      "input_fps": 30,
+      "window": 12,
+      "sent": 601,
+      "received": 601,
+      "steady_fps": 29.1610369664872,
+      "steady_duration_seconds": 20.57539999999106,
+      "p95_decoded_ms": 312.33999999687074,
+      "max_decoded_ms": 712.2000000029802,
+      "over_500ms": 12,
+      "first_frame_ms": 9711.40000000596,
+      "meets_target": false
+    },
+    {
+      "label": "after_startup_warmup",
+      "input_fps": 30,
+      "window": 12,
+      "sent": 601,
+      "received": 601,
+      "steady_fps": 29.535698814625288,
+      "steady_duration_seconds": 20.31440000000596,
+      "p95_decoded_ms": 317.3349999971687,
+      "max_decoded_ms": 442.59999999403954,
+      "over_500ms": 0,
+      "first_frame_ms": 11047.79999999702,
+      "meets_target": true
+    }
+  ],
+  "paired_window_evidence": [
+    {
+      "condition": {
+        "rate": 24,
+        "window": 8,
+        "frames": 61
+      },
+      "sent": 61,
+      "received": 61,
+      "steady_fps_including_refill": 19.15525332824349,
+      "completion_interval_fps": 22.84165698799845,
+      "capture_fps": 20.806150156905876,
+      "credit_wait_frames": 5
+    },
+    {
+      "condition": {
+        "rate": 30,
+        "window": 8,
+        "frames": 91
+      },
+      "sent": 91,
+      "received": 91,
+      "steady_fps_including_refill": 24.48446596661216,
+      "completion_interval_fps": 26.40009492178296,
+      "capture_fps": 26.360997571210664,
+      "credit_wait_frames": 29
+    },
+    {
+      "condition": {
+        "rate": 30,
+        "window": 12,
+        "frames": 151
+      },
+      "sent": 151,
+      "received": 151,
+      "steady_fps_including_refill": 28.460837887115677,
+      "completion_interval_fps": 30.028819605447204,
+      "capture_fps": 30.004631587390232,
+      "credit_wait_frames": 0
+    },
+    {
+      "condition": {
+        "rate": 30,
+        "window": 12,
+        "frames": 151
+      },
+      "sent": 151,
+      "received": 151,
+      "steady_fps_including_refill": 28.527414845699024,
+      "completion_interval_fps": 30.11317704122878,
+      "capture_fps": 30.00040268991499,
+      "credit_wait_frames": 0
+    },
+    {
+      "condition": {
+        "rate": 30,
+        "window": 8,
+        "frames": 91
+      },
+      "sent": 91,
+      "received": 91,
+      "steady_fps_including_refill": 24.63189008705277,
+      "completion_interval_fps": 26.56478524313619,
+      "capture_fps": 26.54893655104827,
+      "credit_wait_frames": 46
+    },
+    {
+      "condition": {
+        "rate": 24,
+        "window": 8,
+        "frames": 61
+      },
+      "sent": 61,
+      "received": 61,
+      "steady_fps_including_refill": 21.663778162958234,
+      "completion_interval_fps": 23.93120791752144,
+      "capture_fps": 23.966203590897482,
+      "credit_wait_frames": 1
+    }
+  ],
+  "diagnosis": [
+    "At30FPS input the eight-frame browser window limited continuous output to26.40/26.56FPS; twelve-frame phases reached30.03/30.11FPS and zero credit waits. Short-phase original averages include refill/drain and are retained separately.",
+    "Independent30/12 before warmup had12 over500ms frames, exactly indices1..12; HF local processing was around10ms and the largest wait lay in the PRS-HF span. Prior same-gateway TCP/CPU control evidence supported startup transport warming.",
+    "One negotiated512KiB echo each way before result0 removed all over500ms frames in this601-frame retest; this is finite evidence, not a guarantee against arbitrary future WAN tails."
+  ],
+  "warmup": {
+    "bytes_each_way": 524288,
+    "duplex_bytes": 1048576,
+    "duration_ms": 1661.7656400194392,
+    "timeout_seconds": 3,
+    "total_cold_deadline_seconds": 55,
+    "worker_idle_seconds": 5,
+    "session_seconds": 55,
+    "cost_accounting": "Included in first-frame latency and GPU allocation time; no image count, recapture, drop or second GPU request."
+  },
+  "stages_after": {
+    "captureMs": {
+      "mean_ms": 7.3876666670292614,
+      "median_ms": 6.799999997019768,
+      "max_ms": 28.5
+    },
+    "transportMs": {
+      "mean_ms": 292.28383333308,
+      "median_ms": 291.8999999985099,
+      "max_ms": 432.5
+    },
+    "decodeMs": {
+      "mean_ms": 3.0454999999205272,
+      "median_ms": 2.6000000089406967,
+      "max_ms": 11.099999994039536
+    },
+    "captureToDecodedMs": {
+      "mean_ms": 302.7661666666468,
+      "median_ms": 301.79999999701977,
+      "max_ms": 442.59999999403954
+    },
+    "creditWaitMs": {
+      "mean_ms": 0.07299999999503294,
+      "median_ms": 0.0,
+      "max_ms": 43.79999999701977
+    },
+    "prs_admission_queue_ms": {
+      "mean_ms": 0.059896238963119686,
+      "median_ms": 0.0498270383104682,
+      "max_ms": 0.3831990761682391
+    },
+    "prs_upstream_ms": {
+      "mean_ms": 238.73668707654966,
+      "median_ms": 239.63924002600834,
+      "max_ms": 382.1987599367276
+    },
+    "hf_parent_queue_ms": {
+      "mean_ms": 0.10102317474472026,
+      "median_ms": 0.07621548138558865,
+      "max_ms": 9.594570030458272
+    },
+    "hf_local_cycle_ms": {
+      "mean_ms": 9.668374380368428,
+      "median_ms": 9.189990523736924,
+      "max_ms": 39.10308692138642
+    },
+    "hf_result_ingest_ms": {
+      "mean_ms": 0.1618502145477881,
+      "median_ms": 0.1506679691374302,
+      "max_ms": 1.07978202868253
+    },
+    "hf_output_queue_ms": {
+      "mean_ms": 0.1959267481773471,
+      "median_ms": 0.17901003593578935,
+      "max_ms": 4.254095023497939
+    },
+    "worker_predict_ms": {
+      "mean_ms": 8.533089801009433,
+      "median_ms": 8.128159039188176,
+      "max_ms": 37.26297803223133
+    },
+    "server_ms": {
+      "mean_ms": 8.435212696203962,
+      "median_ms": 8.03522253409028,
+      "max_ms": 37.14181494433433
+    },
+    "forward_event_ms": {
+      "mean_ms": 0.6896702908476193,
+      "median_ms": 0.6891520023345947,
+      "max_ms": 0.7389439940452576
+    }
+  },
+  "timing_note": "HF cycle, server and forward durations are nested within PRS upstream; do not sum nested measurements. Worker pull includes deliberate paced-input wait. Cold cost includes allocation/cache restoration/Graph setup/warmup, not just compute.",
+  "prediction_identity": {
+    "raw_sha256": true,
+    "jpeg_sha256": true
+  },
+  "repeated_graph_setups": 0,
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition MIG 2g.48gb",
+  "quota": {
+    "live_inference_calls": 3,
+    "free_seconds_consumed": 94.63174800000002,
+    "free_seconds_remaining": 205.36825199999998,
+    "free_runs_remaining": 5,
+    "note": "Two code deployments also trigger startup cache preparation; quota stayed300s/8 before first video test. Counts here are observed account quota changes and three logged detect_live calls."
+  },
+  "deployment": {
+    "hf_commit": "3d2182c41aaf3f9cde5d20c380c5214c7ba1be8b",
+    "prs_release": "live-tuning-dd6bfeb8deedfbe9",
+    "health": {
+      "ready": true,
+      "gpu_allocated_by_this_route": false,
+      "active_session": false,
+      "session_seconds": 55,
+      "max_inflight": 12,
+      "warmup_bytes": 524288
+    },
+    "old_sources_preserved": "HF commit history, both PRS predecessor releases, prior source snapshots and all unmodified raw benchmark files."
+  },
+  "checks": {
+    "backend_tests": 117,
+    "frontend_tests": 61,
+    "django_check": "passed",
+    "migration_dry_run": "passed",
+    "changed_python_ruff": "passed",
+    "full_ruff": "Existing Kaggle-v11 Notebook I001/E501 remain; not passed",
+    "changed_diff_check": "passed",
+    "full_diff_check": "Existing frontend/i18n.js and maps-page.js EOF blank-line warnings remain",
+    "remote_checks": "Django, migration dry-run, pip check, ASGI import, source hashes, listener/health and unchanged service/proxy hashes verified. systemd verify retains unrelated pre-existing snapd RestartMode warning.",
+    "documentation": "Manual behavior/comment/index review; tools/check_docs.py absent, no automated documentation-check claim.",
+    "local_git_commit": null
+  },
+  "artifacts": {
+    "paired-browser.json": "0902fcef801f3cfcd84a6e7aa19657eb730c5e494c019d7b33f361f84664f257",
+    "independent-browser.json": "5382c609bbbd9f5949ec506093b756c5858956a80bbbe48015088af7d5c532db",
+    "warmup-browser.json": "12eac7a69bbb5fe7d5a16571610994043821ce0d49b66eadbcc6a6867e7b996f"
+  }
+}

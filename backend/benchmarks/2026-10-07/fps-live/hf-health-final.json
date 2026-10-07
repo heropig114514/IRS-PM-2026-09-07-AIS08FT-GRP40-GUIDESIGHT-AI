@@ -1,0 +1,8 @@
+{
+  "ready": true,
+  "gpu_allocated_by_this_route": false,
+  "active_session": false,
+  "session_seconds": 55,
+  "max_inflight": 12,
+  "warmup_bytes": 524288
+}

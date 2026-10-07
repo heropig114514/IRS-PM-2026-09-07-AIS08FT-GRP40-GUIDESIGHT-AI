@@ -1,0 +1,32 @@
+{
+  "sha": "3d2182c41aaf3f9cde5d20c380c5214c7ba1be8b",
+  "runtime": {
+    "stage": "RUNNING",
+    "hardware": {
+      "current": "zero-a10g",
+      "requested": "zero-a10g"
+    },
+    "gcTimeout": 172800,
+    "replicas": {
+      "current": 1,
+      "requested": 1
+    },
+    "devMode": false,
+    "domains": [
+      {
+        "domain": "heropig114514-prs-yolo26.hf.space",
+        "stage": "READY"
+      }
+    ],
+    "sha": "3d2182c41aaf3f9cde5d20c380c5214c7ba1be8b",
+    "pySpacesVersion": "0.51.3"
+  },
+  "health": {
+    "ready": true,
+    "gpu_allocated_by_this_route": false,
+    "active_session": false,
+    "session_seconds": 55,
+    "max_inflight": 12,
+    "warmup_bytes": 524288
+  }
+}

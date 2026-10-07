@@ -1,0 +1,80 @@
+{
+  "scope": "Supplemental inventory; manual comment/behavior review completed separately; no project check_docs.py exists. Not a replacement checker or commit atomicity proof.",
+  "files": {
+    "zerogpu/live_transport.py": {
+      "sha256": "df3f388818224feace49c6593cd10906ba78d687e56bb60a8d01811cf804fa4b",
+      "module_sections_present": true,
+      "top_level_implemented": [
+        "receive_live_result",
+        "LiveSession",
+        "LiveTransport",
+        "LiveMiddleware"
+      ]
+    },
+    "core/hf_video_relay.py": {
+      "sha256": "dea291d698fb79bf7dbb7868c24294d1b43e1df9f4826ea1cf1e988ce5ed23c0",
+      "module_sections_present": true,
+      "top_level_implemented": [
+        "read_token",
+        "read_free_quota",
+        "model_contract",
+        "allocate_live",
+        "RelaySession",
+        "HFLiveRelay"
+      ]
+    },
+    "core/test_hf_live.py": {
+      "sha256": "8cd6391e47154b89ccdd38656b0ac0d2eaaef30d221b4180c290d2f9ed07b97b",
+      "module_sections_present": true,
+      "top_level_implemented": [
+        "serve_relay",
+        "dependencies",
+        "HFLiveTests"
+      ]
+    },
+    "core/test_zerogpu_live.py": {
+      "sha256": "448ef9fedcbe5e49bb98d661e692b56a6b497913f435d0edb3d60c2a73fb9b69",
+      "module_sections_present": true,
+      "top_level_implemented": [
+        "empty_app",
+        "serve_transport",
+        "request",
+        "LiveTransportTests"
+      ]
+    },
+    "tools/benchmark_zerogpu_live.py": {
+      "sha256": "14021d667827ea9875931c588198ff3dd035b70911d3b11802b398afa366b93b",
+      "module_sections_present": true,
+      "top_level_implemented": [
+        "empty_app",
+        "native_factory",
+        "local_server",
+        "start_remote",
+        "run",
+        "main"
+      ]
+    },
+    "tools/deploy_phone_live.py": {
+      "sha256": "4f65b1247e94e11c54d296d2de90c80966c190cce48420dab24ea5feec725c3a",
+      "module_sections_present": true,
+      "top_level_implemented": [
+        "PinnedHost",
+        "connect_server",
+        "execute",
+        "stage",
+        "wait_ready",
+        "activate_overlay",
+        "activate",
+        "activate_outputs",
+        "main"
+      ]
+    },
+    "core/test_deploy_phone_live.py": {
+      "sha256": "f3eeb4de5ec144cbf42e76e6dc128d796ec5068ec285820410de625441cf3cf6",
+      "module_sections_present": true,
+      "top_level_implemented": [
+        "DeploymentAssetTests"
+      ]
+    }
+  }
+}

@@ -1,0 +1,97 @@
+Camera processing failed: {
+  message: 'permission denied',
+  mode: 'camera',
+  cameraPhase: 'permission',
+  completedFrames: 0
+}
+Camera frame timings {
+  reason: 'first_frame',
+  processing: 'hf',
+  completedFrames: 1,
+  firstFrameMs: {
+    capture: 10,
+    transport: 1055,
+    renderQueue: 0,
+    decode: 15,
+    captureToResult: 1065,
+    captureToDecoded: 1080
+  },
+  steadyFrames: 0,
+  steadyFps: null,
+  steadyMeanMs: null,
+  steadyMaxMs: null,
+  steadyScheduling: null
+}
+✔ 仅保留Echo和最新HF视频模式 (1.7067ms)
+✔ 独立视频入口沿用同源API挂载点 (0.3752ms)
+✔ 权限拒绝后释放状态并显示错误 (1.3175ms)
+✔ 停止后的延迟授权不会打开连接并立即释放轨道 (0.2349ms)
+✔ 停止后的延迟解码不会重新显示旧帧 (1.4052ms)
+✔ 相同尺寸复用画布且保持640/JPEG0.8 (2.6953ms)
+✔ 慢首帧与稳态分开，停顿不被排除 (0.6011ms)
+✔ 二进制回传逐字节一致 (4.3866ms)
+✔ 不同内容失败且只通知一次 (0.78ms)
+✔ pong 标识不匹配明确失败 (0.3505ms)
+✔ 禁止并发在途请求 (0.4056ms)
+✔ 停止取消请求并关闭连接 (0.3996ms)
+✔ 超时处理器停止而不重试 (0.2552ms)
+✔ twelve-credit ceiling includes all queued display work (6.844ms)
+✔ 30FPS cadence absorbs ordinary timer oversleep (1.7581ms)
+✔ ordinary timer oversleep does not accumulate across steady captures (3.0572ms)
+✔ a full-interval timer stall resets cadence without a catch-up burst (0.8772ms)
+✔ credit stalls reset cadence even below one interval (1.0338ms)
+✔ cold first frame and five credits include queued display (0.7351ms)
+✔ steady stalls and render queue are included in latency (0.5533ms)
+✔ transport failure stops admission and is reported once (0.699ms)
+✔ normal end drains valid frames without counting unresolved input (0.6045ms)
+✔ stop during capture never submits the late frame (0.5525ms)
+[PRS language] Preference changed: zh-CN
+[PRS language] Preference changed: en
+[PRS language] Preference changed: zh-CN
+[PRS language] Preference changed: system
+✔ language resolution uses browser preference and honors explicit choices (0.6962ms)
+✔ catalog translates all entries and preserves diagnostic identifiers (10.2902ms)
+✔ DOM switching retains source strings and follows system and storage events (1.7816ms)
+✔ binary packets preserve JPEG and bound twelve pending requests (9.2868ms)
+✔ corruption and changed model conditions fail without fallback (2.1336ms)
+✔ out-of-order result stops the whole session (0.3661ms)
+✔ stop and provider end never auto-restart (0.289ms)
+✔ first response uses55s and steady response10s (1.5455ms)
+✔ final binary is verified before end and close (0.5459ms)
+✔ invalid hello or private capability rejects before input (0.4916ms)
+✔ selected precision and backend must match every returned frame (2.1683ms)
+✔ location preserves device coordinates and constraints (1.4609ms)
+✔ location errors preserve failure semantics (1.6276ms)
+✔ coordinates preserve longitude first and reject missing values (0.4236ms)
+✔ walking route uses same-origin POST without a browser key (0.7186ms)
+✔ HTTP errors expose safe code and request id without retry (0.4116ms)
+✔ abort and malformed response fail explicitly (10.2537ms)
+✔ route validation rejects invalid geometry and instructions (0.6559ms)
+✔ identical endpoints never call the backend (0.2083ms)
+✔ 默认关闭、后台和未激活请求不会提交语音 (2.2431ms)
+✔ 提交不等于开始/完成且不会自动排队 (0.6763ms)
+✔ 文本和数值边界明确拒绝且Unicode计数一致 (0.3324ms)
+✔ 指定声音失效或歧义不会替换为默认声音 (0.4741ms)
+✔ 语音列表查询失败保持可诊断且不替换声音 (0.2447ms)
+✔ 取消失败保留状态，迟到旧事件不能结束新请求 (0.2675ms)
+✔ 同步及异步语音错误不会静默重试或泄露正文 (0.2016ms)
+✔ 关闭、隐藏或离页停止，返回前台不自动继续 (0.2934ms)
+✔ MCP语音接口不自动启用且与UI共享执行路径 (0.5173ms)
+✔ 语音UI和动态状态完整翻译，朗读正文不属于UI词典 (9.5808ms)
+✔ 默认关闭且每次仅手动发出所选节奏 (1.9093ms)
+✔ 接口缺失时禁用测试和停止并说明原因 (0.1817ms)
+✔ 开关、可见性和用户激活阻止非主动请求 (0.203ms)
+✔ 拒绝与异常不会宣称接受、重试或触发替代提醒 (0.2636ms)
+✔ 关闭、隐藏或离页取消请求，回到前台不自动震动 (0.2829ms)
+✔ 取消被拒绝时保留诊断并允许手动停止 (0.1447ms)
+✔ 震动控件及所有动态提示均有英文翻译 (6.7917ms)
+✔ MCP查询和测试复用控制器且不自动启用或伪造激活 (0.427ms)
+✔ MCP明确返回设备拒绝和异常并保留取消失败状态 (0.5286ms)
+ℹ tests 61
+ℹ suites 0
+ℹ pass 61
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 211.7571

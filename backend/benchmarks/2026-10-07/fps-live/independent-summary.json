@@ -1,0 +1,283 @@
+{
+  "summary": {
+    "complete": true,
+    "scope": "real browser page/canvas JPEG80/WS/SHA256/image.decode; public-image synthetic camera; no phone sensor or paint",
+    "conditions": "original yolo26n/FP16/640/confidence0.25; input30FPS; window12; first frame excluded only",
+    "browser": "154.0.8037.98",
+    "url": "https://47.239.50.129/prs/live/",
+    "requested_frames": 601,
+    "page_status": 200,
+    "failures": [],
+    "summary": {
+      "sent": 601,
+      "received": 601,
+      "maxInFlight": 12
+    },
+    "provider_ended": false,
+    "pipeline_rate": 30,
+    "pipeline_window": 12,
+    "first_frame_ms": 9711.40000000596,
+    "steady_fps": 29.1610369664872,
+    "p95_capture_to_result_ms": 310.1050000078976,
+    "max_capture_to_result_ms": 710.2000000029802,
+    "p95_capture_to_decoded_ms": 312.33999999687074,
+    "max_capture_to_decoded_ms": 712.2000000029802,
+    "max_frame_gap_ms": 542.5,
+    "repeated_graph_setups": 0,
+    "stable_prediction_hashes": true,
+    "incomplete_at_boundary": 0,
+    "natural_end_verified": false,
+    "meets_target": false
+  },
+  "stages": {
+    "captureMs": {
+      "mean_ms": 7.0036666669944925,
+      "max_ms": 34.79999999701977
+    },
+    "transportMs": {
+      "mean_ms": 289.5726666665574,
+      "max_ms": 701.2999999970198
+    },
+    "decodeMs": {
+      "mean_ms": 2.5019999998807907,
+      "max_ms": 11.799999997019768
+    },
+    "captureToDecodedMs": {
+      "mean_ms": 299.09400000000994,
+      "max_ms": 712.2000000029802
+    },
+    "creditWaitMs": {
+      "mean_ms": 0.5176666666567326,
+      "max_ms": 141.5
+    },
+    "prs_admission_queue_ms": {
+      "mean_ms": 1.0356940129228558,
+      "max_ms": 139.45929298643023
+    },
+    "prs_upstream_ms": {
+      "mean_ms": 241.38111931000216,
+      "max_ms": 645.2004889724776
+    },
+    "hf_parent_queue_ms": {
+      "mean_ms": 0.7555196507989118,
+      "max_ms": 68.37660307064652
+    },
+    "hf_local_cycle_ms": {
+      "mean_ms": 9.968616899180537,
+      "max_ms": 20.9481380879879
+    },
+    "hf_result_ingest_ms": {
+      "mean_ms": 0.16622133591833213,
+      "max_ms": 2.6398799382150173
+    },
+    "hf_output_queue_ms": {
+      "mean_ms": 0.20158388768322766,
+      "max_ms": 2.9067881405353546
+    },
+    "worker_pull_ms": {
+      "mean_ms": 25.202002266887575,
+      "max_ms": 809.0617619454861
+    },
+    "worker_predict_ms": {
+      "mean_ms": 8.799071308846274,
+      "max_ms": 19.69075296074152
+    },
+    "server_ms": {
+      "mean_ms": 8.704977524854863,
+      "max_ms": 19.598909886553884
+    },
+    "forward_event_ms": {
+      "mean_ms": 0.6883653836448987,
+      "max_ms": 0.8214719891548157
+    }
+  },
+  "over500_indices": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "gpu": {
+    "compute_dtype": "torch.float16",
+    "forward_dtype": "torch.float32",
+    "input_stride": [
+      1228800,
+      1,
+      1920,
+      3
+    ],
+    "pinned_input": true,
+    "graph_captured": true,
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition MIG 2g.48gb",
+    "capability": [
+      12,
+      0
+    ],
+    "torch": "2.8.0+cu128",
+    "cuda": "12.8",
+    "cpu_threads": 1,
+    "cpu_interop_threads": 1,
+    "tf32_matmul": false,
+    "tf32_cudnn": false,
+    "cudnn_benchmark": false,
+    "jit_cache": {
+      "cache_sha256": "7d89db6722cc42eacb85dfc226351c2f44374038c2eb6de16083b195d80bceb6",
+      "cache_restore_ms": 5830.466781975701,
+      "compiler_state": {
+        "inline_call": {},
+        "stats": {
+          "calls_captured": 329,
+          "unique_graphs": 1
+        },
+        "inductor": {
+          "triton_bundler_load_static_autotuner": 50,
+          "async_compile_cache_miss": 100,
+          "async_compile_cache_hit": 50,
+          "pattern_matcher_count": 2,
+          "pattern_matcher_nodes": 8,
+          "extern_calls": 111,
+          "fxgraph_cache_hit": 1
+        },
+        "aot_autograd": {
+          "total": 1,
+          "autograd_cache_hit": 1,
+          "ok": 1
+        }
+      },
+      "new_backend_codegen_forbidden": true,
+      "triton": "3.4.0",
+      "pid": 1387
+    }
+  },
+  "credit_wait_frames": 5,
+  "first_20": [
+    {
+      "index": 1,
+      "decoded_ms": 541.7000000029802,
+      "upstream_ms": 444.11266897805035,
+      "hf_cycle_ms": 13.368142070248723
+    },
+    {
+      "index": 2,
+      "decoded_ms": 545.0999999940395,
+      "upstream_ms": 437.3849759576842,
+      "hf_cycle_ms": 12.284478871151805
+    },
+    {
+      "index": 3,
+      "decoded_ms": 551.2000000029802,
+      "upstream_ms": 415.2607020223513,
+      "hf_cycle_ms": 10.230216896161437
+    },
+    {
+      "index": 4,
+      "decoded_ms": 641.8999999910593,
+      "upstream_ms": 443.82088095881045,
+      "hf_cycle_ms": 11.83442515321076
+    },
+    {
+      "index": 5,
+      "decoded_ms": 614.5999999940395,
+      "upstream_ms": 444.36417799443007,
+      "hf_cycle_ms": 10.444030864164233
+    },
+    {
+      "index": 6,
+      "decoded_ms": 617.3999999910593,
+      "upstream_ms": 453.3631489612162,
+      "hf_cycle_ms": 9.605606086552143
+    },
+    {
+      "index": 7,
+      "decoded_ms": 587.2000000029802,
+      "upstream_ms": 463.9976689359173,
+      "hf_cycle_ms": 9.7805371042341
+    },
+    {
+      "index": 8,
+      "decoded_ms": 712.2000000029802,
+      "upstream_ms": 645.2004889724776,
+      "hf_cycle_ms": 10.884745046496391
+    },
+    {
+      "index": 9,
+      "decoded_ms": 685,
+      "upstream_ms": 626.2295810738578,
+      "hf_cycle_ms": 9.77563508786261
+    },
+    {
+      "index": 10,
+      "decoded_ms": 655.8999999910593,
+      "upstream_ms": 601.1576749151573,
+      "hf_cycle_ms": 9.64863202534616
+    },
+    {
+      "index": 11,
+      "decoded_ms": 631.7999999970198,
+      "upstream_ms": 462.0206239633262,
+      "hf_cycle_ms": 9.698176058009267
+    },
+    {
+      "index": 12,
+      "decoded_ms": 607.2999999970198,
+      "upstream_ms": 472.2370969830081,
+      "hf_cycle_ms": 9.530464885756373
+    },
+    {
+      "index": 13,
+      "decoded_ms": 445.59999999403954,
+      "upstream_ms": 376.60976592451334,
+      "hf_cycle_ms": 9.705713018774986
+    },
+    {
+      "index": 14,
+      "decoded_ms": 421.1000000089407,
+      "upstream_ms": 366.15252506453544,
+      "hf_cycle_ms": 11.725390097126365
+    },
+    {
+      "index": 15,
+      "decoded_ms": 392.6000000089407,
+      "upstream_ms": 337.4821119941771,
+      "hf_cycle_ms": 10.042020119726658
+    },
+    {
+      "index": 16,
+      "decoded_ms": 391.09999999403954,
+      "upstream_ms": 335.7995110563934,
+      "hf_cycle_ms": 15.627127140760422
+    },
+    {
+      "index": 17,
+      "decoded_ms": 373.90000000596046,
+      "upstream_ms": 315.0910440599546,
+      "hf_cycle_ms": 11.061775032430887
+    },
+    {
+      "index": 18,
+      "decoded_ms": 344.5,
+      "upstream_ms": 284.9653019802645,
+      "hf_cycle_ms": 10.056819068267941
+    },
+    {
+      "index": 19,
+      "decoded_ms": 311.5,
+      "upstream_ms": 253.21067194454372,
+      "hf_cycle_ms": 9.26061999052763
+    },
+    {
+      "index": 20,
+      "decoded_ms": 292.80000001192093,
+      "upstream_ms": 238.00420702900738,
+      "hf_cycle_ms": 10.503187775611877
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "sha": "2f5dd14e730afe7c94d4bb3a98766e5f4bd6cfb4",
+  "runtime": {
+    "stage": "RUNNING",
+    "hardware": {
+      "current": "zero-a10g",
+      "requested": "zero-a10g"
+    },
+    "gcTimeout": 172800,
+    "replicas": {
+      "current": 1,
+      "requested": 1
+    },
+    "devMode": false,
+    "domains": [
+      {
+        "domain": "heropig114514-prs-yolo26.hf.space",
+        "stage": "READY"
+      }
+    ],
+    "sha": "2f5dd14e730afe7c94d4bb3a98766e5f4bd6cfb4",
+    "pySpacesVersion": "0.51.3"
+  },
+  "health": {
+    "ready": true,
+    "gpu_allocated_by_this_route": false,
+    "active_session": false,
+    "session_seconds": 55,
+    "max_inflight": 8
+  },
+  "public-pipeline": {
+    "sha256": "00093cec034ad466ceb8f2661f091bce8a2475cc7702d45efcddd47bd8d4b109",
+    "constants": [
+      "export const INPUT_FPS = 24;"
+    ]
+  },
+  "public-client": {
+    "sha256": "bf89ccbd3ea01b3ec02a928dee92ee435cbe26c9483d5bba26994d58db7dbe19",
+    "constants": [
+      "export const MAX_INFLIGHT = 8;"
+    ]
+  },
+  "hf-transport": {
+    "sha256": "6a25be18abc50a1f23dd6862b832c639f4fd1b463f4b1c843faf3bd241a90426",
+    "constants": [
+      "MAX_INFLIGHT = 8"
+    ]
+  }
+}

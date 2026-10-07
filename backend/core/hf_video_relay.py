@@ -1,6 +1,7 @@
 """Responsibilities: Connect a same-origin phone WebSocket to one free-quota HF video session.
-Implementation: One provider slot; ordered binary relay with eight credits; one private Gradio
+Implementation: One provider slot; ordered binary relay with twelve credits; one private Gradio
 allocation after the first frame. Disconnect closes HF before awaiting the allocation summary.
+The first-result receive echoes one negotiated512KiB transport control inside the cold deadline.
 Related Modules: config.asgi; hf_services/hf_quota/inference_plan; frontend live-detection-client;
 HF zerogpu.live_transport/live_worker. No GPU/runtime is initialized on the PRS server.
 Declaration Index: read_token; read_free_quota; model_contract;
@@ -8,7 +9,7 @@ allocate_live; RelaySession;
 RelaySession.__init__; HFLiveRelay; HFLiveRelay.__init__; HFLiveRelay.__call__;
 HFLiveRelay.read_browser; HFLiveRelay.run_provider; HFLiveRelay.write_provider;
 HFLiveRelay.write_browser.
-Variable Index: MAX_INFLIGHT — shared eight-frame transport bound;
+Variable Index: MAX_INFLIGHT — shared twelve-frame transport bound;
 SESSION_SECONDS —55s allocated bound;
 COLD_SECONDS/STEADY_SECONDS —55s first response/10s later failure budgets;
 UPSTREAM_URL/UPSTREAM_ORIGIN — fixed owned HF entry/canonical PRS origin;
@@ -38,7 +39,7 @@ from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosedOK
 
 from realtime.protocol import MAX_PACKET_BYTES, pack_result, unpack_request, unpack_result
-from zerogpu.live_transport import MAX_INFLIGHT
+from zerogpu.live_transport import MAX_INFLIGHT, WARMUP_BYTES, receive_live_result
 
 from .detector import DetectionError
 from .hf_quota import LIVE_GPU_QUOTA_SECONDS, QUOTA_URL, quota_decision
@@ -173,8 +174,8 @@ class RelaySession:
         Inputs: monotonic clock/UUID; Outputs: in-memory session.
         Logic: allocation remains None until one actual frame is forwarded; disconnected controls
         safe ASGI closing; phase/ID/counters identify errors; summary is retained for verification.
-        upstream_started/input_received_at retain eight same-clock times at most; no clock sync.
-        Constraints: eight queued/working frames in total, no infinite event history.
+        upstream_started/input_received_at retain twelve same-clock times at most; no clock sync.
+        Constraints: twelve queued/working frames in total, no infinite event history.
         """
         self.id = uuid.uuid4().hex[:12]
         self.incoming = asyncio.Queue(MAX_INFLIGHT)
@@ -337,8 +338,8 @@ class HFLiveRelay:
     async def read_browser(self, session, receive):
         """Functionality: Validate ordered input while continuously watching stop/disconnect.
         Inputs: bounded session and ASGI receive; Outputs: queued packets/counters or completion.
-        Logic: reject a ninth outstanding packet without blocking lifecycle reads; exact stop text;
-        store one monotonic ingress time per accepted sequence for queue attribution.
+        Logic: reject a thirteenth outstanding packet without blocking lifecycle reads;
+        require exact stop text and retain one ingress time per accepted sequence for attribution.
         Constraints: no skipping/queue growth; JPEG codec stays on HF; no GPU start here.
         """
         while True:
@@ -412,6 +413,7 @@ class HFLiveRelay:
                 hello.get("kind") != "session"
                 or hello.get("max_inflight") != MAX_INFLIGHT
                 or hello.get("session_seconds") != SESSION_SECONDS
+                or hello.get("warmup_bytes") != WARMUP_BYTES
                 or not re.fullmatch(r"[0-9a-f]{64}", hello.get("capability", ""))
             ):
                 raise ValueError("HF live admission contract mismatch")
@@ -468,14 +470,17 @@ class HFLiveRelay:
         Logic: first receive55s, later10s; order/hash/markers; credit released after awaited send.
         Independently observe PRS pre-forward queue and result validation with this PRS clock;
         preserve all HF parent/worker duration metadata and the original JPEG fingerprints.
+        Mandatory first-result warmup is handled inside the same55s absolute receive budget;
+        its control never reaches the browser, increments image counts or starts another GPU task.
         Constraints: ASGI send is not browser ACK; phone holds its own credit through display;
         no success substitution on failure, no high-frequency media logs or JPEG transformation.
         """
         while True:
             receive_started = time.perf_counter()
             try:
-                packet = await asyncio.wait_for(
-                    peer.recv(), COLD_SECONDS if not session.delivered else STEADY_SECONDS
+                packet = await receive_live_result(
+                    peer, session.delivered,
+                    COLD_SECONDS if not session.delivered else STEADY_SECONDS
                 )
             except ConnectionClosedOK:
                 return

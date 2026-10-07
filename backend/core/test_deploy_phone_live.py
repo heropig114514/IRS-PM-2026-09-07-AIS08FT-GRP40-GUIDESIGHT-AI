@@ -1,16 +1,16 @@
-"""Responsibilities: Prevent deployment from omitting camera/maps pages or their local dependencies.
+"""Responsibilities: Verify page dependency closure and configuration-preserving scoped deployments.
 Implementation: Traverse real HTML asset references and static relative JS imports,
-then compare the closure with the publisher's literal allowlist parsed without importing it.
+then compare the closure with the literal allowlist; mock SSH for scoped staging/activation.
 Related Modules: tools.deploy_phone_live; frontend/index.html, maps.html, device outputs;
 i18n.js supplies shared language behavior.
 Declaration Index: DeploymentAssetTests; DeploymentAssetTests.check_dependency_closure;
 DeploymentAssetTests.test_maps_dependency_closure;
 DeploymentAssetTests.test_camera_dependency_closure.
-DeploymentAssetTests.test_vibration_profile_stage;
-DeploymentAssetTests.test_vibration_profile_stage.command;
-DeploymentAssetTests.test_vibration_profile_stage.upload;
-DeploymentAssetTests.test_vibration_profile_stage.open_file;
-DeploymentAssetTests.test_vibration_profile_activation.
+DeploymentAssetTests.test_overlay_profile_stage;
+DeploymentAssetTests.test_overlay_profile_stage.command;
+DeploymentAssetTests.test_overlay_profile_stage.upload;
+DeploymentAssetTests.test_overlay_profile_stage.open_file;
+DeploymentAssetTests.test_overlay_profile_activation.
 DeploymentAssetTests.test_outputs_scope; DeploymentAssetTests.test_outputs_activation;
 DeploymentAssetTests.test_outputs_activation.open_file.
 Variable Index: None; required/pending are test-local file-name sets, with no credentials.
@@ -87,8 +87,8 @@ class DeploymentAssetTests(SimpleTestCase):
         """
         self.check_dependency_closure("index.html", "./assets/")
 
-    def test_vibration_profile_stage(self):
-        """Functionality: Verify UI-only staging and fail before mutation on plan mismatch.
+    def test_overlay_profile_stage(self):
+        """Functionality: Verify scoped staging and reject model drift before mutation.
         Inputs: Actual qualified plan, temporary overlay files and explicit SSH/SFTP substitutes.
         Outputs: Exact overlay set, no retired/template files, recorded commit and early failure.
         Logic: Run the real profile selector and hash checks; mocks implement remote bytes only.
@@ -97,8 +97,10 @@ class DeploymentAssetTests(SimpleTestCase):
         from tools import deploy_phone_live as publisher
 
         backend = Path(__file__).resolve().parents[1]
-        for mismatch in (False, True):
-            with self.subTest(mismatch=mismatch), tempfile.TemporaryDirectory() as directory:
+        for profile, mismatch in (("vibration", False), ("vibration", True),
+                                  ("live-tuning", False), ("live-tuning", True)):
+            with self.subTest(profile=profile, mismatch=mismatch), \
+                    tempfile.TemporaryDirectory() as directory:
                 source = Path(directory)
                 remote = {}
                 scripts = []
@@ -110,8 +112,12 @@ class DeploymentAssetTests(SimpleTestCase):
                     remote[current + "/backend/" + name] = target.read_bytes()
                 if mismatch:
                     remote[current + "/backend/models/inference-plan.json"] = b"changed"
-                names = ["frontend/" + name for name in publisher.VIBRATION_FRONTEND]
-                names += ["backend/" + name for name in publisher.VIBRATION_BACKEND]
+                frontend = (publisher.LIVE_FRONTEND if profile == "live-tuning"
+                            else publisher.VIBRATION_FRONTEND)
+                backend_names = (publisher.LIVE_BACKEND if profile == "live-tuning"
+                                 else publisher.VIBRATION_BACKEND)
+                names = ["frontend/" + name for name in frontend]
+                names += ["backend/" + name for name in backend_names]
                 for name in names:
                     target = source / name
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -152,23 +158,27 @@ class DeploymentAssetTests(SimpleTestCase):
                         patch.object(publisher, "execute", side_effect=command):
                     if mismatch:
                         with self.assertRaisesRegex(ValueError, "active inference identity"):
-                            publisher.stage(Mock(), sftp, "vibration", source, "a" * 40)
+                            publisher.stage(Mock(), sftp, profile, source, "a" * 40,
+                                            publisher.PREFIX + "/runtimes/test-existing")
                         self.assertEqual(len(scripts), 1)
                         sftp.putfo.assert_not_called()
                     else:
-                        result = publisher.stage(Mock(), sftp, "vibration", source, "a" * 40)
+                        result = publisher.stage(Mock(), sftp, profile, source, "a" * 40,
+                                            publisher.PREFIX + "/runtimes/test-existing")
                         self.assertEqual(set(result["files"]), set(names))
                         self.assertEqual(result["removed"], [])
                         self.assertEqual(result["git_commit"], "a" * 40)
-                        self.assertEqual(result["profile"], "vibration")
+                        self.assertEqual(result["profile"], profile)
+                        self.assertEqual(result["generated"], {})
+                        self.assertFalse(any("export PRS_MCP_PROFILE=" in item for item in scripts))
                         self.assertFalse(any("nginx" in name for name in result["files"]))
                         self.assertFalse(any("names=json.loads" in script for script in scripts))
 
-    def test_vibration_profile_activation(self):
+    def test_overlay_profile_activation(self):
         """Functionality: Verify activation preserves configuration and failure semantics.
         Inputs: Explicit manifest and mocked shell/readiness boundaries, success or failure.
         Outputs: One service restart, no config/token/proxy mutation or retry, truthful state.
-        Logic: Run the actual dedicated activator and inspect all issued commands.
+        Logic: Run the shared source-overlay activator and inspect all issued commands.
         Constraints: Mock success is not real service or health verification; no automatic rollback.
         """
         from tools import deploy_phone_live as publisher
@@ -182,10 +192,10 @@ class DeploymentAssetTests(SimpleTestCase):
                     if fails:
                         ready.side_effect = RuntimeError("Explicit readiness failure")
                         with self.assertRaisesRegex(RuntimeError, "readiness failure"):
-                            publisher.activate_vibration(Mock(), manifest)
+                            publisher.activate_overlay(Mock(), manifest)
                         self.assertNotIn("activated", manifest)
                     else:
-                        publisher.activate_vibration(Mock(), manifest)
+                        publisher.activate_overlay(Mock(), manifest)
                         self.assertTrue(manifest["activated"])
                     self.assertEqual(execute.call_count, 1)
                     self.assertEqual(ready.call_count, 1)

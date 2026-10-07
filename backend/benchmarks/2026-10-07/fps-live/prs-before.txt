@@ -1,0 +1,7 @@
+/opt/prs-practice/releases/outputs-f63b34a7b95e71bf
+ExecStart={ path=/opt/prs-practice/runtimes/outputs-c6eb9264bd29b084/bin/python ; argv[]=/opt/prs-practice/runtimes/outputs-c6eb9264bd29b084/bin/python -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1114120 --ws-max-queue 5 --ws-per-message-deflate false --no-proxy-headers ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+CPUQuotaPerSecUSec=200ms
+MemoryMax=268435456
+TasksMax=32
+4a8b2f480f075cb78a05fdb8627e4ed3a17a7f7f2ca320bbe336614298a95edf  /etc/systemd/system/prs-camera.service
+bab6de6d5ca0e4faf56a47caa5062352672d84d347d676684b630868a00df23a  /etc/nginx/prs-camera.locations.conf

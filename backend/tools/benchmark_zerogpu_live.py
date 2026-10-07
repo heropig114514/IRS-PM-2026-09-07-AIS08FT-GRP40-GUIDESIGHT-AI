@@ -1,5 +1,6 @@
 """Responsibilities: Validate bounded live-session delivery locally or on the owned HF Space.
 Implementation: One WS/one allocation; original four fixtures and unchanged metrics; explicit
+first-result transport echo is included in cold latency under the original deadline;
 qualified low-precision plan switches cross-runtime fixture comparison to diagnostics only;
 remote dispatch is guarded by sufficient free seconds AND a free run, never paid hardware.
 Explicit inference-only mode checks eight ordered fixtures, cache hits and CUDA event timing;
@@ -34,7 +35,14 @@ from tools.compare_detections import compare
 from tools.fixtures import fixture_bytes
 from tools.live_benchmark import stream, validate
 from zerogpu.jit_cache import cache_hits
-from zerogpu.live_transport import MAX_INFLIGHT, PREFIX, SESSION_SECONDS, LiveTransport
+from zerogpu.live_transport import (
+    MAX_INFLIGHT,
+    PREFIX,
+    SESSION_SECONDS,
+    WARMUP_BYTES,
+    LiveTransport,
+    receive_live_result,
+)
 from zerogpu.live_worker import AllocatedDetector, run_worker
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -141,7 +149,8 @@ async def run(args, report, broker=None, port=None):
     Inputs: CLI/rates/seconds/optional plan/inference-only/report; optional local broker/port.
     Outputs: complete report with worker release/quality/true received latency evidence.
     Logic: validate explicit plan before dispatch; WS hello, one allocation, four references then
-    shared continuous benchmark. FP32 retains original detection-count/match acceptance; approved
+    continuous benchmark; acknowledge the negotiated startup echo within the original cold budget.
+    FP32 retains original detection-count/match acceptance; approved
     low precision records fixture differences and uses its three full COCO runs for quality.
     Constraints:55s cold first receive allowed, unchanged10s later receives and10FPS/500ms target;
     cold phase is separate; capture/encode/display excluded; no reconnect or frame dropping.
@@ -190,6 +199,7 @@ async def run(args, report, broker=None, port=None):
             hello.get("kind") != "session"
             or hello.get("max_inflight") != MAX_INFLIGHT
             or hello.get("session_seconds") != SESSION_SECONDS
+            or hello.get("warmup_bytes") != WARMUP_BYTES
         ):
             raise ValueError("Live admission contract mismatch")
         if args.local_native:
@@ -209,7 +219,8 @@ async def run(args, report, broker=None, port=None):
             for index, (name, jpeg) in enumerate(checks):
                 started = time.perf_counter()
                 await peer.send(pack_request(index, jpeg))
-                receiver = asyncio.create_task(peer.recv())
+                receiver = asyncio.create_task(
+                    receive_live_result(peer, index, 55 if index == 0 else 10))
                 try:
                     done, _ = await asyncio.wait(
                         (receiver, worker),

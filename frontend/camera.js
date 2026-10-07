@@ -1,6 +1,6 @@
 /**
  * Responsibilities: 摄像头授权、原样串行与ZeroGPU有界视频流水线、阶段计时和生命周期。
- * Implementation: 最大边640、JPEG0.8；HF首帧单独完成后24FPS采集、8帧上限、顺序显示；任何错误停止。
+ * Implementation: 最大边640、JPEG0.8；HF首帧单独完成后30FPS采集、12帧上限、顺序显示；任何错误停止。
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
  * frame-pipeline.js；core.echo/hf_video_relay；
  * tools/benchmark_phone_browser.mjs 验证真实页面；测试图流不代表手机实拍。
@@ -245,7 +245,7 @@ export class CameraApp {
    * Inputs: client, processing snapshot, generation token. Outputs: pipeline completion/exception.
    * Logic: sender admits before capture; display and HUD callbacks have generation guards;
    * controller stop cancels the instance, and LiveDetectionClient owns provider end/error semantics.
-   * Constraints: eight total jobs, first frame alone,24FPS input ceiling; no retry or automatic next session. */
+   * Constraints: twelve total jobs, first frame alone,30FPS input ceiling; no retry or automatic next session. */
   async runPipeline(client, processing, token) {
     const app = this;
     /** Functionality: Decode the next ordered annotation. Inputs: bytes, metadata.

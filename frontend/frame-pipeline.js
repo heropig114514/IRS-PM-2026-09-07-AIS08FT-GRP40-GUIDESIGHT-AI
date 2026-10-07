@@ -1,5 +1,5 @@
 /** Responsibilities: Overlap capture/transmission and ordered display without a stale-frame backlog.
- * Implementation: Planned cadence with stall resets, first frame alone, max8 working/awaiting-display frames;
+ * Implementation: Planned cadence with stall resets, first frame alone, max12 working/awaiting-display frames;
  * admission precedes capture; errors/stop wake waits; sent frames are never intentionally skipped.
  * Related Modules: camera.js, live-detection-client.js; tests/frame-pipeline.test.mjs.
  * Declaration Index: clockNow; FramePipeline; FramePipeline.constructor;
@@ -9,7 +9,7 @@
  * FramePipeline.dispatch; FramePipeline.dispatch.received; FramePipeline.dispatch.received.render;
  * FramePipeline.dispatch.failed; FramePipeline.dispatch.finished; FramePipeline.drain;
  * FramePipeline.finish; FramePipeline.fail; FramePipeline.stop.
- * Variable Index: INPUT_FPS —24 default input cadence; instance pending/renderTail bound work/display;
+ * Variable Index: INPUT_FPS —30 default input cadence; instance pending/renderTail bound work/display;
  * stopPromise/wakeStop stop admission; cancelPromise/wakeCancel cancel draining;
  * pauseTimer cancels pacing, finishing prevents new captures; failure retains the original visible error;
  * sent/received/maxInFlight track all submitted/completed frames, including slow responses.
@@ -20,7 +20,7 @@
  */
 import {MAX_INFLIGHT} from "./live-detection-client.js";
 
-export const INPUT_FPS = 24;
+export const INPUT_FPS = 30;
 
 /** Functionality: Read monotonic time. Inputs: browser performance. Outputs: milliseconds.
  * Logic: single clock for capture/result/display. Constraints: not sensor exposure or paint time. */
@@ -28,15 +28,15 @@ function clockNow() { return performance.now(); }
 
 /** Functionality: Manage a bounded live capture/transport/display pipeline.
  * Logic: pending includes network and render work; renderTail serializes display independently of capture.
- * Constraints: at most eight total frames including capture; callbacks must use generation guards;
+ * Constraints: at most twelve total frames including capture; callbacks must use generation guards;
  * no model/codec changes, retries, auto-restart, captured-frame drops or hidden latency filtering. */
 export class FramePipeline {
   /** Functionality: Bind frame operations and optional explicit benchmark cadence/count.
    * Inputs: client/capture/display/onFrame/onSent/isActive/onFailure, rate, frameLimit, now, maxPending.
    * Outputs: idle instance. Logic: store dependencies, initialize counters and cancellation signal.
-   * Constraints: default24FPS is an input ceiling, not an achieved-output claim; finite frameLimit is
-   * for controlled tests, null runs until stop/provider completion; maxPending must be1–8;
-   * using five is an explicit old-window comparison, never an automatic downgrade. No I/O here. */
+   * Constraints: default30FPS is an input ceiling, not an achieved-output claim; finite frameLimit is
+   * for controlled tests, null runs until stop/provider completion; maxPending must be1–12;
+   * using five/eight is an explicit historical-window comparison, never an automatic downgrade. No I/O here. */
   constructor({client, capture, display, onFrame, onSent, isActive, onFailure,
     rate = INPUT_FPS, frameLimit = null, now = clockNow, maxPending = MAX_INFLIGHT}) {
     if (!Number.isFinite(rate) || rate < 1 || rate > 60 ||

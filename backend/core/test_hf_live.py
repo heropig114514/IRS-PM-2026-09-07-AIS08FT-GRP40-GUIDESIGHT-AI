@@ -1,5 +1,5 @@
 """Responsibilities: Verify phone relay ownership, free-quota gating and binary delivery.
-Implementation: Two ephemeral real ASGI/socket servers and an explicitly synthetic GPU worker.
+Implementation: Two real ASGI/socket servers, mandatory startup echo and a synthetic GPU worker.
 Related Modules: hf_video_relay; test_zerogpu_live; test_protocol.FakeDetector; realtime.protocol.
 Declaration Index: serve_relay; dependencies; dependencies.opener; dependencies.allocator;
 HFLiveTests; HFLiveTests.test_gate_and_no_start_before_frame;
@@ -35,7 +35,7 @@ from websockets.exceptions import ConnectionClosedOK, InvalidStatus
 from websockets.frames import Close
 
 from realtime.protocol import MAX_PACKET_BYTES, pack_request, pack_result, unpack_result
-from zerogpu.live_transport import MAX_INFLIGHT
+from zerogpu.live_transport import MAX_INFLIGHT, WARMUP_BYTES, WARMUP_PREFIX
 from zerogpu.live_worker import run_worker
 
 from .hf_video_relay import HFLiveRelay, RelaySession
@@ -60,7 +60,7 @@ async def serve_relay(relay):
             relay,
             log_level="error",
             lifespan="off",
-            ws_max_queue=5,
+            ws_max_queue=MAX_INFLIGHT,
             ws_max_size=MAX_PACKET_BYTES,
             ws_per_message_deflate=False,
         )
@@ -137,7 +137,7 @@ class HFLiveTests(SimpleTestCase):
         raw = jpeg()
 
         class Peer:
-            """Functionality: Supply hello, final JPEG then normal close.
+            """Functionality: Supply hello, startup control, final JPEG then normal close.
             Logic: finite explicit events; Constraints: not a network stack or GPU provider.
             """
 
@@ -148,13 +148,16 @@ class HFLiveTests(SimpleTestCase):
                 self.count = 0
 
             async def send(self, packet):
-                """Functionality: Accept the explicit first request.
-                Inputs: packet; Outputs: None; Logic: no transformation; Constraints: no network.
+                """Functionality: Accept the first request and check exact control acknowledgement.
+                Inputs: packet; Outputs: None or assertion; Logic: exact control verification.
+                Constraints: no network, model or timing claim.
                 """
+                if self.count == 2:
+                    assert packet == WARMUP_PREFIX + bytes(WARMUP_BYTES - 4)
 
             async def recv(self):
                 """Functionality: Return ordered explicit provider events.
-                Inputs: count/raw; Outputs: hello/result or normal close.
+                Inputs: count/raw; Outputs: hello/control/result or normal close.
                 Logic: result hashes real JPEG; Constraints: no model/SSE/transport measurement.
                 """
                 self.count += 1
@@ -165,9 +168,12 @@ class HFLiveTests(SimpleTestCase):
                             "capability": "a" * 64,
                             "max_inflight": MAX_INFLIGHT,
                             "session_seconds": 55,
+                            "warmup_bytes": WARMUP_BYTES,
                         }
                     )
                 if self.count == 2:
+                    return WARMUP_PREFIX + bytes(WARMUP_BYTES - 4)
+                if self.count == 3:
                     return pack_result(
                         {"index": 0, "jpeg_sha256": hashlib.sha256(raw).hexdigest()}, raw
                     )
@@ -311,13 +317,13 @@ class HFLiveTests(SimpleTestCase):
                 )
 
             async def receive():
-                """Functionality: Supply nine inputs without allowing any output credit.
+                """Functionality: Supply thirteen inputs without allowing any output credit.
                 Inputs: explicit local queue; Outputs: ASGI input.
                 Logic: deterministic reader boundary; Constraints: no socket/GPU timing assertion.
                 """
                 return await inputs.get()
 
-            with self.assertRaisesRegex(ValueError, "8 outstanding"):
+            with self.assertRaisesRegex(ValueError, f"{MAX_INFLIGHT} outstanding"):
                 await relay.read_browser(session, receive)
             self.assertEqual(session.received, MAX_INFLIGHT)
             self.assertEqual(session.incoming.qsize(), MAX_INFLIGHT)

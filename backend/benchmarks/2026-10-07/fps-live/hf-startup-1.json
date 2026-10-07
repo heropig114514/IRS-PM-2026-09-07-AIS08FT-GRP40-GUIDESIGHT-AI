@@ -1,0 +1,24 @@
+{
+  "sha": "eb62468fb9e3ec9df9f031d63b20ca544596554d",
+  "runtime": {
+    "stage": "RUNNING_BUILDING",
+    "hardware": {
+      "current": "zero-a10g",
+      "requested": "zero-a10g"
+    },
+    "gcTimeout": 172800,
+    "replicas": {
+      "current": 1,
+      "requested": 1
+    },
+    "devMode": false,
+    "domains": [
+      {
+        "domain": "heropig114514-prs-yolo26.hf.space",
+        "stage": "READY"
+      }
+    ],
+    "sha": "2f5dd14e730afe7c94d4bb3a98766e5f4bd6cfb4",
+    "pySpacesVersion": "0.51.3"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "release": "live-tuning-8efe8af535adfe26",
+  "path": "/opt/prs-practice/releases/live-tuning-8efe8af535adfe26",
+  "previous": "/opt/prs-practice/releases/outputs-f63b34a7b95e71bf",
+  "files": {
+    "backend/core/hf_video_relay.py": "f7d104848b77328bcf567235366fddc5edac9306380b82560aa241e5c3efedf5",
+    "backend/zerogpu/live_transport.py": "7c305a67cfd9e2e539377181691b099e1f1a528dd9e4c2fd819b58abcc7dfbff",
+    "backend/core/test_hf_live.py": "2ff6c507e7419ba7bb069b33326961ba249b41670182dbe94dec629ae2584f66",
+    "backend/core/test_zerogpu_live.py": "a1bc28dda455b1e2fea0c68034552a041a33d75d0951a9e7bbe665294c734fdb",
+    "backend/tools/deploy_phone_live.py": "4f65b1247e94e11c54d296d2de90c80966c190cce48420dab24ea5feec725c3a",
+    "backend/core/test_deploy_phone_live.py": "f3eeb4de5ec144cbf42e76e6dc128d796ec5068ec285820410de625441cf3cf6",
+    "frontend/camera.js": "23f9feb84bb1c029fb46c5b12db00b681d5d94af48aff54e7e155780a84175ab",
+    "frontend/frame-pipeline.js": "d73150d438f5ec3e3657b15eac57381f54e0cdef726bc367bb6134c8c6836bf7",
+    "frontend/live-detection-client.js": "6b243a8f2c9cde6a519afc296741ca5ba9a216697b148ee57628d71fa4facecc",
+    "frontend/tests/frame-pipeline.test.mjs": "d7b688e8ff1a7af21fc23a02a5566a461fe502de0ab39f0ecbd60a00957c8e9c",
+    "frontend/tests/live-detection-client.test.mjs": "ac63dd2f8c655b4b566380f8822ffd9e241f5863b89622f6502fb2a37b5c6d8f"
+  },
+  "removed": [],
+  "scope": "Live scheduling/transport; preserve compute, device outputs and configuration",
+  "profile": "live-tuning",
+  "runtime": "/opt/prs-practice/runtimes/outputs-c6eb9264bd29b084",
+  "generated": {},
+  "git_commit": null,
+  "inference": {
+    "backend": "PyTorch compiled CUDA",
+    "precision": "FP16",
+    "provenance": {
+      "notebook": "heropig/prs-yolo26-gpu-rebenchmark-20261004",
+      "version": 8,
+      "candidate": "reference_fusion_compile_default_float16_graph_layout1",
+      "summary_sha256": "e24394ac3aa1222417b4db250f937a69477558d3a99a02883fbf3bb07b5592a6",
+      "measurement_gpu": "Tesla T4",
+      "pipeline_median_ms": 12.35767449998093,
+      "scope": "Unchanged T4 best repeated forward configuration/COCO evidence; HF verifies cache restoration and short inference only, not ranking",
+      "forward_median_ms": 1.7422719597816467,
+      "baseline_forward_median_ms": 14.938975811004639,
+      "selection_metric": "forward_event_ms",
+      "cache_confirmation": {
+        "version": 11,
+        "summary_sha256": "df62f1d5c3378edde388c9ddc4a32b0a91b17a0eba0b6525932d828d45c8aae0",
+        "original_quality_summary_sha256": "e24394ac3aa1222417b4db250f937a69477558d3a99a02883fbf3bb07b5592a6",
+        "processes": 2,
+        "frames_per_process": 20,
+        "source_prediction_hashes_identical": true,
+        "scope": "cache/adapter diagnostic only; not a new AP or latency ranking"
+      }
+    }
+  },
+  "remote_checks": "System check identified no issues (0 silenced).\nNo changes detected\nNo broken requirements found.\n/lib/systemd/system/snapd.service:23: Unknown key name 'RestartMode' in section 'Service', ignoring.\n",
+  "activation_checks": "active\nASGI listener ready\n{\"status\":\"ok\",\"database\":\"sqlite\"}",
+  "activated": true
+}

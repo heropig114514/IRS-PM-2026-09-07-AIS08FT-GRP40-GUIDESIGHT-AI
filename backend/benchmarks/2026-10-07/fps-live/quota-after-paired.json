@@ -1,0 +1,9 @@
+{
+  "allowed": true,
+  "required_gpu_seconds": 90.0,
+  "reason": "covered_by_free_quota",
+  "free_gpu_seconds": 265.304577,
+  "free_runs_remaining": 7,
+  "seconds_reset_utc": "2026-10-08T11:29:33.283Z",
+  "runs_reset_utc": "2026-10-08T11:30:07.281Z"
+}

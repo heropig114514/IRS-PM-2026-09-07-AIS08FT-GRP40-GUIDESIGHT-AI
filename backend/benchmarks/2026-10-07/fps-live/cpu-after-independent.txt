@@ -1,0 +1,8 @@
+MemoryCurrent=71647232
+CPUUsageNSec=4866095000
+usage_usec 4866095
+user_usec 4105215
+system_usec 760880
+nr_periods 1014
+nr_throttled 75
+throttled_usec 5713650

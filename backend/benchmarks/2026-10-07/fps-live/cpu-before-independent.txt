@@ -1,0 +1,9 @@
+ControlGroup=/system.slice/prs-camera.service
+MemoryCurrent=71380992
+CPUUsageNSec=3218390000
+usage_usec 3218390
+user_usec 2766536
+system_usec 451853
+nr_periods 668
+nr_throttled 72
+throttled_usec 5577329

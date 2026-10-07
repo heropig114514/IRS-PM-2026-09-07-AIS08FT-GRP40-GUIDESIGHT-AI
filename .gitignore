@@ -1,6 +1,6 @@
 # Responsibilities: 跟踪开发源码，课程资料、凭据、运行环境和生成工件保留在本地。
-# Implementation: 根目录白名单，排除 Python 环境、模型二进制及 ZeroGPU 上传/测试工件。
-# Related Modules: backend/tools/deploy_space.py, README.md。
+# Implementation: 根目录白名单，排除 Python 环境、模型二进制及 ZeroGPU/Kaggle 上传工件。
+# Related Modules: backend/tools/deploy_space.py, backend/tools/prepare_kaggle.py, README.md。
 # Declaration Index: None。
 # Variable Index: None。
 /*
@@ -17,8 +17,10 @@
 .venv/
 .venv-space/
 backend/.space-bundle/
+backend/.kaggle-bundle/
 .env
 .env.*
+backend/server_info.txt
 !.env.example
 *.sqlite3
 *.sqlite3-*

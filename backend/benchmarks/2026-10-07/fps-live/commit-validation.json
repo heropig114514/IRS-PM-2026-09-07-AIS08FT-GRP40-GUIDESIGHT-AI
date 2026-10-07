@@ -1,0 +1,19 @@
+{
+  "scope": "Clean snapshot materialized from Git index, without unrelated untracked experimental tools/tests or private .env. Existing project venv used; no new HF inference.",
+  "tested_tree": "367b7eafbaf736096139dce3935e7630db18de36",
+  "checks": {
+    "django": 0,
+    "migrations": 0,
+    "backend-tests": 0,
+    "ruff": 0,
+    "frontend-tests": 0,
+    "browser-runner-syntax": 0,
+    "paired-runner-syntax": 0
+  },
+  "backend_tests": 80,
+  "frontend_tests": 61,
+  "prior_full_workspace_backend_tests": 117,
+  "difference": "37 pre-existing untracked experiment tests are outside this FPS commit scope. No tests were removed from tracked source or disabled.",
+  "documentation": "Manual comments/declaration/variable index review retained; no tools/check_docs.py provided.",
+  "not_verified": "Fresh Linux dependency installation and remote GitHub Actions result; local snapshot uses existing Windows venv."
+}

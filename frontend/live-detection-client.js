@@ -1,5 +1,5 @@
 /** Responsibilities: Same-origin bounded binary video-session transport and result validation.
- * Implementation: PRF1/PRS1 packets, eight pending requests, serialized SHA256 validation;
+ * Implementation: PRF1/PRS1 packets, twelve pending requests, serialized SHA256 validation;
  * resident/AOT/compiled Torch admission, one cold response budget, explicit stop/errors/end,
  * no reconnect or HTTP per frame.
  * Related Modules: frame-pipeline.js, camera.js; backend core.hf_video_relay/realtime.protocol.
@@ -11,14 +11,14 @@
  * LiveDetectionClient.handleMessage.ended; LiveDetectionClient.handleClose;
  * LiveDetectionClient.handleClose.closed; LiveDetectionClient.rejectPending; LiveDetectionClient.fail;
  * LiveDetectionClient.end; LiveDetectionClient.stop.
- * Variable Index: MAX_INFLIGHT — eight; MAX_METADATA_BYTES/MAX_PACKET_BYTES — original wire bounds;
+ * Variable Index: MAX_INFLIGHT — twelve; MAX_METADATA_BYTES/MAX_PACKET_BYTES — original wire bounds;
  * COLD_MS/STEADY_MS —55s/10s failure budgets, not latency targets; HASH_PATTERN — SHA256 syntax.
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery.
  */
 import {MAX_FRAME_BYTES} from "./echo-client.js";
 
-export const MAX_INFLIGHT = 8;
+export const MAX_INFLIGHT = 12;
 const MAX_METADATA_BYTES = 64 * 1024;
 const MAX_PACKET_BYTES = 8 + MAX_METADATA_BYTES + MAX_FRAME_BYTES;
 const COLD_MS = 55000;
@@ -116,7 +116,7 @@ export async function decodeResult(packet, expected, contract) {
   return {bytes, metadata, detections: metadata.count, inferenceMs: metadata.inference_ms};
 }
 
-/** Functionality: Manage one eight-request binary video session.
+/** Functionality: Manage one twelve-request binary video session.
  * Logic: Map owns per-frame timers; messageChain preserves async hashing order; errors reject all.
  * Constraints: caller holds additional admission through display, no automatic reconnect/retry. */
 export class LiveDetectionClient {
@@ -162,7 +162,7 @@ export class LiveDetectionClient {
   /** Functionality: Send one original JPEG with an ordered uint32 header.
    * Inputs: ArrayBuffer. Outputs: validated result/RTT Promise.
    * Logic: reserve pending before send; first55s, later10s; enforce both count and socket byte bounds.
-   * Constraints: no encoding, base64, stale-frame queue or retry; max5 requests, caller gates capture. */
+   * Constraints: no encoding, base64, stale-frame queue or retry; max12 requests, caller gates capture. */
   sendFrame(buffer) {
     if (this.stopped || !this.contract || this.socket.readyState !== 1)
       throw new Error("视频连接尚未就绪或已停止。");
@@ -193,7 +193,7 @@ export class LiveDetectionClient {
   }
   /** Functionality: Handle public control or serialized full-result verification.
    * Inputs: MessageEvent. Outputs: connect/result completion or explicit end/error.
-   * Logic: asynchronous digests run in order; queued messages bounded by5; late stopped results ignored.
+   * Logic: asynchronous digests run in order; queued messages bounded by12; late stopped results ignored.
    * Constraints: remote excess, corruption or unexpected text fails the whole session, no fallback. */
   handleMessage(event) {
     if (this.stopped) return;

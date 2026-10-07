@@ -1,5 +1,6 @@
 """Responsibilities: Verify real live WS/HTTP handoffs with bounded state and synthetic GPU work.
 Implementation: Ephemeral Uvicorn, actual sockets and original packet parsers; no HF/CUDA calls.
+Startup-control tests verify exact acknowledgement, bounded timeout and unchanged image counts.
 Related Modules: live_transport/live_worker; test_protocol.FakeDetector; native bridge benchmark.
 Declaration Index: empty_app; serve_transport; request; LiveTransportTests;
 LiveTransportTests.test_real_worker_and_bounded_admission;
@@ -11,6 +12,7 @@ LiveTransportTests.test_allocated_deadline; LiveTransportTests.test_allocated_de
 LiveTransportTests.test_excess_inflight_rejected; LiveTransportTests.test_idle_releases_worker.
 LiveTransportTests.test_explicit_configuration;
 LiveTransportTests.test_explicit_configuration.factory.
+LiveTransportTests.test_warmup_acknowledgement_and_failures.
 Variable Index: ORIGIN — explicit synthetic browser origin. Ephemeral server state is test-local.
 """
 
@@ -28,7 +30,15 @@ from websockets.asyncio.client import connect
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK, InvalidStatus
 
 from realtime.protocol import pack_request, unpack_result
-from zerogpu.live_transport import MAX_INFLIGHT, PREFIX, SESSION_SECONDS, LiveTransport
+from zerogpu.live_transport import (
+    MAX_INFLIGHT,
+    PREFIX,
+    SESSION_SECONDS,
+    WARMUP_BYTES,
+    WARMUP_PREFIX,
+    LiveTransport,
+    receive_live_result,
+)
 from zerogpu.live_worker import run_worker
 
 from .test_frames import jpeg
@@ -127,7 +137,7 @@ class LiveTransportTests(SimpleTestCase):
                     run_worker, broker.session.worker_capability, model, manifest, port,
                     factory, config))
                 await peer.send(pack_request(0, jpeg()))
-                packet = await asyncio.wait_for(peer.recv(), 5)
+                packet = await receive_live_result(peer, 0, 5)
                 self.assertEqual(unpack_result(packet, 0)[1], jpeg())
                 await peer.send('{"kind":"stop"}')
                 result = await asyncio.wait_for(worker, 5)
@@ -137,9 +147,9 @@ class LiveTransportTests(SimpleTestCase):
 
     async def test_real_worker_and_bounded_admission(self):
         """Functionality: Bound unprocessed frames, preserve every sequence and release on stop.
-        Inputs: nine real JPEGs, WS peer, loopback worker with FakeDetector; Outputs: nine hashes.
+        Inputs:13 real JPEGs, WS peer, FakeDetector loopback worker; Outputs:13 hashes.
         Logic: queued first frame retains the deliberate50ms wait; timing fields are nonnegative;
-        no-GPU backlog holds8, second peer1013; after one result, ninth input is admitted.
+        no-GPU backlog holds12, second peer1013; after one result, thirteenth input is admitted.
         Constraints: checksum/order verifies transport only; no skipped frames or model assertion.
         """
         async with serve_transport() as (broker, port):
@@ -164,7 +174,7 @@ class LiveTransportTests(SimpleTestCase):
                     )
                 )
                 for index in range(MAX_INFLIGHT + 1):
-                    result = await asyncio.wait_for(peer.recv(), 5)
+                    result = await receive_live_result(peer, index, 5)
                     metadata, rendered = unpack_result(result, index)
                     self.assertEqual(rendered, jpeg())
                     for field in ("hf_parent_queue_ms", "hf_local_cycle_ms", "hf_result_ingest_ms",
@@ -174,6 +184,8 @@ class LiveTransportTests(SimpleTestCase):
                                             metadata["worker_predict_ms"])
                     if index == 0:
                         self.assertGreaterEqual(metadata["hf_parent_queue_ms"], 40)
+                        self.assertEqual(metadata["hf_transport_warmup_bytes"], 2 * WARMUP_BYTES)
+                        self.assertGreaterEqual(metadata["hf_transport_warmup_ms"], 0)
                     if index == 0:
                         await peer.send(pack_request(MAX_INFLIGHT, jpeg()))
                 await peer.send('{"kind":"stop"}')
@@ -291,8 +303,8 @@ class LiveTransportTests(SimpleTestCase):
 
     async def test_excess_inflight_rejected(self):
         """Functionality: Reject oversending instead of silently dropping or growing input queues.
-        Inputs: nine outstanding WS frames with no worker; Outputs:1008/cleared session.
-        Logic: exceed advertised eight-frame credit limit; Constraints: no GPU/model processing.
+        Inputs: thirteen outstanding WS frames with no worker; Outputs:1008/cleared session.
+        Logic: exceed advertised twelve-frame credit limit; Constraints: no GPU/model processing.
         """
         async with serve_transport() as (broker, port):
             async with connect(
@@ -305,6 +317,54 @@ class LiveTransportTests(SimpleTestCase):
                     await peer.recv()
                 self.assertEqual(caught.exception.rcvd.code, 1008)
                 self.assertIsNone(broker.session)
+
+    async def test_warmup_acknowledgement_and_failures(self):
+        """Functionality: Require one exact echo and fail on corrupt/late/duplicate ACK.
+        Inputs: Real loopback WS/HTTP, FakeDetector and explicit0.2s control deadline substitute.
+        Outputs: One image count, unchanged JPEG, released control bytes and failure closes.
+        Logic: Withhold image0 until ACK; mutate one control byte or repeat the ACK;
+        await worker release. No retry or extra prediction follows a control failure.
+        Constraints: Synthetic timeout is only a test seam, not WAN warmup or GPU FPS evidence.
+        """
+        for mode in ("valid", "changed", "duplicate", "timeout"):
+            with self.subTest(mode=mode), patch("zerogpu.live_transport.WARMUP_SECONDS", 0.2):
+                async with serve_transport() as (broker, port):
+                    async with connect(
+                        f"ws://127.0.0.1:{port}{PREFIX}/ws", origin=ORIGIN,
+                        proxy=None, compression=None,
+                    ) as peer:
+                        hello = json.loads(await peer.recv())
+                        self.assertEqual(hello["warmup_bytes"], WARMUP_BYTES)
+                        worker = asyncio.create_task(asyncio.to_thread(
+                            run_worker, broker.session.worker_capability,
+                            None, None, port, FakeDetector))
+                        await peer.send(pack_request(0, jpeg()))
+                        control = await asyncio.wait_for(peer.recv(), 2)
+                        self.assertEqual(len(control), WARMUP_BYTES)
+                        self.assertTrue(control.startswith(WARMUP_PREFIX))
+                        session = broker.session
+                        self.assertEqual((session.received, session.completed, session.sent),
+                                         (1, 1, 0))
+                        if mode == "changed":
+                            await peer.send(control[:-1] + bytes([control[-1] ^ 1]))
+                        elif mode != "timeout":
+                            await peer.send(control)
+                            result = await asyncio.wait_for(peer.recv(), 2)
+                            self.assertEqual(unpack_result(result, 0)[1], jpeg())
+                            self.assertEqual((session.received, session.sent), (1, 1))
+                            self.assertIsNone(session.warmup_packet)
+                            if mode == "duplicate":
+                                await peer.send(control)
+                            else:
+                                await peer.send('{"kind":"stop"}')
+                        if mode != "valid":
+                            with self.assertRaises(ConnectionClosedError) as caught:
+                                await asyncio.wait_for(peer.recv(), 2)
+                            self.assertEqual(caught.exception.rcvd.code,
+                                             1011 if mode == "timeout" else 1008)
+                        summary = await asyncio.wait_for(worker, 2)
+                        self.assertEqual(summary["frames"], 1)
+                        self.assertIsNone(broker.session)
 
     async def test_idle_releases_worker(self):
         """Functionality: Release an allocated fake worker when live input never arrives.

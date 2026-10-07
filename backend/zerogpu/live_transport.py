@@ -1,14 +1,17 @@
 """Responsibilities: Bridge one bounded live WebSocket to a ZeroGPU worker across process forks.
-Implementation: Parent owns eight-credit queues and same-parent-clock queue/cycle observations;
+Implementation: Parent owns twelve-credit queues and same-parent-clock queue/cycle observations;
 worker uses capability-protected loopback HTTP only; no cross-host timestamp subtraction.
+Before the first result, one bounded binary echo warms the same TCP connection in both directions.
 Related Modules: live_worker uses spaces.GPU; app registers allocation; entrypoint wraps ASGI.
-Declaration Index: LiveSession; LiveSession.__init__; LiveTransport; LiveTransport.__init__;
+Declaration Index: receive_live_result; LiveSession; LiveSession.__init__;
+LiveTransport; LiveTransport.__init__;
 LiveTransport.__call__; LiveTransport.respond; LiveTransport.socket;
 LiveTransport.read_frames; LiveTransport.write_results; LiveTransport.worker_request;
 LiveTransport.take_frame;
 LiveMiddleware; LiveMiddleware.__init__; LiveMiddleware.__call__.
 Variable Index: PREFIX — exact live route namespace; SESSION_SECONDS —55s within default60s task;
-IDLE_SECONDS —5s input inactivity release; MAX_INFLIGHT —8 ordered unacknowledged requests;
+IDLE_SECONDS —5s input inactivity release; MAX_INFLIGHT —12 ordered unacknowledged requests;
+WARMUP_PREFIX/WARMUP_BYTES/WARMUP_SECONDS — one512KiB control per direction, with a3s deadline;
 input_received_at/frame_started_at — bounded parent timestamps for queue/local-cycle attribution;
 outgoing — validated metadata/JPEG/enqueue-time tuples, serialized once by the WS writer;
 logger — lifecycle/count diagnostics; transport — parent-process singleton admission/queues.
@@ -28,8 +31,31 @@ from realtime.protocol import MAX_PACKET_BYTES, pack_result, unpack_request, unp
 PREFIX = "/prs_live"
 SESSION_SECONDS = 55
 IDLE_SECONDS = 5
-MAX_INFLIGHT = 8
+MAX_INFLIGHT = 12
+WARMUP_PREFIX = b"PRW1"
+WARMUP_BYTES = 512 * 1024
+WARMUP_SECONDS = 3
 logger = logging.getLogger(__name__)
+
+
+async def receive_live_result(peer, index, timeout):
+    """Functionality: Receive a result, acknowledging the mandatory first-result transport control.
+    Inputs: connected WS peer, expected image index and unchanged total receive timeout seconds.
+    Outputs: original result packet; sends exactly one512KiB echo before image0.
+    Logic: one absolute timeout covers control receive/echo/result; exact prefix/length validation
+    rejects old or malformed providers. Later results go directly to the caller's image validator.
+    Constraints: no new connection, GPU allocation, retries, camera-data substitution or fallback;
+    first-frame timing includes this cost, and ordinary image sequence/counts exclude the control.
+    """
+    async with asyncio.timeout(timeout):
+        packet = await peer.recv()
+        if index == 0:
+            if (not isinstance(packet, bytes) or len(packet) != WARMUP_BYTES
+                    or not packet.startswith(WARMUP_PREFIX)):
+                raise ValueError("Missing or malformed first-result transport warmup")
+            await peer.send(packet)
+            packet = await peer.recv()
+        return packet
 
 
 class LiveSession:
@@ -41,11 +67,13 @@ class LiveSession:
     def __init__(self):
         """Functionality: Create a fresh session with no GPU allocation.
         Inputs: entropy/system monotonic clock; Outputs: queues, capability and lifecycle state.
-        Logic: separate256-bit client/worker keys,eight-slot queues/credits; keys never enter logs.
+        Logic: separate256-bit client/worker keys,twelve-slot queues/credits; keys never enter logs.
         Worker key stays private to Gradio/GPU worker and is never included in the WS hello.
         started remains None until the decorated worker explicitly claims this session.
         Per-index input_received_at/frame_started_at hold at most MAX_INFLIGHT entries; remove
         them after result validation. All queue/cycle durations use this parent's monotonic clock.
+        warmup_packet/event retain one random transport control until exact acknowledgement;
+        controls never consume image credits. The writer enforces the separate3s deadline.
         """
         self.capability = secrets.token_hex(32)
         self.worker_capability = secrets.token_hex(32)
@@ -59,6 +87,8 @@ class LiveSession:
         self.close_code, self.close_reason = 1000, "Video session ended"
         self.input_received_at = {}
         self.frame_started_at = {}
+        self.warmup_packet = None
+        self.warmup_acknowledged = asyncio.Event()
 
 
 class LiveTransport:
@@ -97,7 +127,8 @@ class LiveTransport:
             body = json.dumps({"ready": True, "gpu_allocated_by_this_route": False,
                                "active_session": self.session is not None,
                                "session_seconds": SESSION_SECONDS,
-                               "max_inflight": MAX_INFLIGHT}).encode()
+                               "max_inflight": MAX_INFLIGHT,
+                               "warmup_bytes": WARMUP_BYTES}).encode()
             return await self.respond(send, 200, body, b"application/json")
         if scope["type"] == "websocket":
             origin = dict(scope.get("headers", [])).get(b"origin", b"").decode("ascii", "ignore")
@@ -137,7 +168,8 @@ class LiveTransport:
         try:
             await send({"type": "websocket.send", "text": json.dumps({
                 "kind": "session", "capability": session.capability,
-                "session_seconds": SESSION_SECONDS, "max_inflight": MAX_INFLIGHT})})
+                "session_seconds": SESSION_SECONDS, "max_inflight": MAX_INFLIGHT,
+                "warmup_bytes": WARMUP_BYTES})})
             tasks = [asyncio.create_task(self.read_frames(session, receive)),
                      asyncio.create_task(self.write_results(session, send))]
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
@@ -164,11 +196,13 @@ class LiveTransport:
                         "reason": session.close_reason})
 
     async def read_frames(self, session, receive):
-        """Functionality: Admit exact sequence-ordered requests under eight-frame backpressure.
+        """Functionality: Admit exact sequence-ordered requests under twelve-frame backpressure.
         Inputs: session state and WS receive; Outputs: incoming queue or completion on peer stop.
         Logic: receive lifecycle messages even when credits exhausted; validate packet/index,
-        reject a peer exceeding its advertised eight-frame limit; allow explicit stop message.
+        reject a peer exceeding its advertised twelve-frame limit; allow explicit stop message.
         Record validated ingress before queueing, without retaining any additional media copy.
+        A warmup-prefixed control must equal the sole outstanding random payload; early, changed
+        or duplicate acknowledgements fail. A valid echo changes no image credits or counters.
         Constraints: no dropped frames; pending capture is bounded by client credits separately;
         malformed frames raise before GPU access. Disconnect does not await a new GPU task.
         """
@@ -180,6 +214,12 @@ class LiveTransport:
             if message.get("text") == '{"kind":"stop"}':
                 return
             packet = message.get("bytes")
+            if isinstance(packet, bytes) and packet.startswith(WARMUP_PREFIX):
+                if (session.warmup_packet is None or session.warmup_acknowledged.is_set()
+                        or packet != session.warmup_packet):
+                    raise ValueError("Invalid or duplicate transport warmup acknowledgement")
+                session.warmup_acknowledged.set()
+                continue
             received_at = time.perf_counter()
             unpack_request(packet, session.received)
             if session.credits.locked():
@@ -194,6 +234,9 @@ class LiveTransport:
         Inputs: validated outgoing tuples/lifecycle/ASGI send; Outputs: WS messages and credits.
         Logic: observe output queue residence, serialize unchanged JPEG once, await sends;
         log120-frame milestones and long awaits. Queue timing excludes the awaited network send.
+        First result waits for one random512KiB duplex echo under3s; the original worker idle5s
+        and allocation55s budgets remain unchanged. Log its duration once, release payload bytes,
+        and attach control cost to first-frame metadata; never repeat or hide it on failure.
         Constraints: ASGI send completion is not client ACK; benchmark retains true capture clocks.
         """
         while not session.stopped.is_set():
@@ -201,6 +244,21 @@ class LiveTransport:
                 metadata, jpeg, queued_at = await asyncio.wait_for(session.outgoing.get(), 0.2)
             except TimeoutError:
                 continue
+            if session.sent == 0:
+                warmup_started = time.perf_counter()
+                session.warmup_packet = WARMUP_PREFIX + secrets.token_bytes(
+                    WARMUP_BYTES - len(WARMUP_PREFIX))
+                try:
+                    async with asyncio.timeout(WARMUP_SECONDS):
+                        await send({"type": "websocket.send", "bytes": session.warmup_packet})
+                        await session.warmup_acknowledged.wait()
+                finally:
+                    session.warmup_packet = None
+                metadata["hf_transport_warmup_ms"] = (
+                    time.perf_counter() - warmup_started) * 1000
+                metadata["hf_transport_warmup_bytes"] = 2 * WARMUP_BYTES
+                logger.info("ZeroGPU live transport warmed duplex_bytes=%d elapsed_ms=%.1f",
+                            2 * WARMUP_BYTES, metadata["hf_transport_warmup_ms"])
             before = time.perf_counter()
             metadata["hf_output_queue_ms"] = (before - queued_at) * 1000
             packet = pack_result(metadata, jpeg)
