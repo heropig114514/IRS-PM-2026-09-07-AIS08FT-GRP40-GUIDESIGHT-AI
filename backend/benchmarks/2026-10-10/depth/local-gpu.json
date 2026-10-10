@@ -1,0 +1,475 @@
+{
+  "date": "2026-10-10 Asia/Shanghai",
+  "scope": "Native RTX3060 three repeats of one official static bus image; real detection, metric-depth weights, GPU ROI fusion and binary envelopes. No ground-truth distance, HF, phone or sustained video verification.",
+  "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+  "torch": "2.8.0+cu126",
+  "ultralytics": "8.4.171",
+  "detection_config": {},
+  "depth_input_edge": 768,
+  "depth_precision": "FP32",
+  "depth_weight_url": "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n-depth.pt",
+  "depth_weight_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+  "source_url": "https://ultralytics.com/images/bus.jpg",
+  "source_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+  "input_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+  "frame_size": [
+    480,
+    640
+  ],
+  "legacy_detection_unchanged": true,
+  "frames": [
+    {
+      "schema_version": 1,
+      "model": "yolo26n",
+      "backend": "PyTorch resident CUDA",
+      "precision": "FP32",
+      "output_precision": "FP32",
+      "classes": 80,
+      "confidence_threshold": 0.25,
+      "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "width": 480,
+      "height": 640,
+      "count": 5,
+      "boxes": [
+        {
+          "xyxy": [
+            27.39661407470703,
+            236.33428955078125,
+            140.17491149902344,
+            534.8912353515625
+          ],
+          "score": 0.9219965934753418,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.9219965934753418,
+          "bbox": [
+            27.39661407470703,
+            236.33428955078125,
+            140.17491149902344,
+            534.8912353515625
+          ],
+          "distance_m": 3.692904472351074
+        },
+        {
+          "xyxy": [
+            5.0020904541015625,
+            135.73362731933594,
+            478.90411376953125,
+            441.444580078125
+          ],
+          "score": 0.9208865761756897,
+          "class_id": 5,
+          "label": "bus",
+          "class_name": "bus",
+          "confidence": 0.9208865761756897,
+          "bbox": [
+            5.0020904541015625,
+            135.73362731933594,
+            478.90411376953125,
+            441.444580078125
+          ],
+          "distance_m": 5.252254486083984
+        },
+        {
+          "xyxy": [
+            131.9596405029297,
+            239.75405883789062,
+            204.85903930664062,
+            511.1187744140625
+          ],
+          "score": 0.8978857398033142,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.8978857398033142,
+          "bbox": [
+            131.9596405029297,
+            239.75405883789062,
+            204.85903930664062,
+            511.1187744140625
+          ],
+          "distance_m": 3.89475679397583
+        },
+        {
+          "xyxy": [
+            396.9395751953125,
+            232.5069580078125,
+            480.0,
+            520.54248046875
+          ],
+          "score": 0.8511683344841003,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.8511683344841003,
+          "bbox": [
+            396.9395751953125,
+            232.5069580078125,
+            480.0,
+            520.54248046875
+          ],
+          "distance_m": 4.9984025955200195
+        },
+        {
+          "xyxy": [
+            0.0,
+            330.20849609375,
+            39.95008087158203,
+            518.1463012695312
+          ],
+          "score": 0.4718460738658905,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.4718460738658905,
+          "bbox": [
+            0.0,
+            330.20849609375,
+            39.95008087158203,
+            518.1463012695312
+          ],
+          "distance_m": 3.7949302196502686
+        }
+      ],
+      "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+      "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+      "inference_ms": 14.99999999987267,
+      "graph_setup_ms": 969.0000000000509,
+      "prepare_ms": 7.042899999760266,
+      "gpu_stage_ms": 986.3020000002507,
+      "render_ms": 3.263799999785988,
+      "server_ms": 11709.01879999974,
+      "forward_event_ms": 3.850111961364746,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      },
+      "depth_model": "yolo26n-depth",
+      "depth_units": "m",
+      "depth_ms": 10712.410099999943
+    },
+    {
+      "schema_version": 1,
+      "model": "yolo26n",
+      "backend": "PyTorch resident CUDA",
+      "precision": "FP32",
+      "output_precision": "FP32",
+      "classes": 80,
+      "confidence_threshold": 0.25,
+      "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "width": 480,
+      "height": 640,
+      "count": 5,
+      "boxes": [
+        {
+          "xyxy": [
+            27.39661407470703,
+            236.33428955078125,
+            140.17491149902344,
+            534.8912353515625
+          ],
+          "score": 0.9219965934753418,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.9219965934753418,
+          "bbox": [
+            27.39661407470703,
+            236.33428955078125,
+            140.17491149902344,
+            534.8912353515625
+          ],
+          "distance_m": 3.692904472351074
+        },
+        {
+          "xyxy": [
+            5.0020904541015625,
+            135.73362731933594,
+            478.90411376953125,
+            441.444580078125
+          ],
+          "score": 0.9208865761756897,
+          "class_id": 5,
+          "label": "bus",
+          "class_name": "bus",
+          "confidence": 0.9208865761756897,
+          "bbox": [
+            5.0020904541015625,
+            135.73362731933594,
+            478.90411376953125,
+            441.444580078125
+          ],
+          "distance_m": 5.252254486083984
+        },
+        {
+          "xyxy": [
+            131.9596405029297,
+            239.75405883789062,
+            204.85903930664062,
+            511.1187744140625
+          ],
+          "score": 0.8978857398033142,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.8978857398033142,
+          "bbox": [
+            131.9596405029297,
+            239.75405883789062,
+            204.85903930664062,
+            511.1187744140625
+          ],
+          "distance_m": 3.89475679397583
+        },
+        {
+          "xyxy": [
+            396.9395751953125,
+            232.5069580078125,
+            480.0,
+            520.54248046875
+          ],
+          "score": 0.8511683344841003,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.8511683344841003,
+          "bbox": [
+            396.9395751953125,
+            232.5069580078125,
+            480.0,
+            520.54248046875
+          ],
+          "distance_m": 4.9984025955200195
+        },
+        {
+          "xyxy": [
+            0.0,
+            330.20849609375,
+            39.95008087158203,
+            518.1463012695312
+          ],
+          "score": 0.4718460738658905,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.4718460738658905,
+          "bbox": [
+            0.0,
+            330.20849609375,
+            39.95008087158203,
+            518.1463012695312
+          ],
+          "distance_m": 3.7949302196502686
+        }
+      ],
+      "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+      "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+      "inference_ms": 30.99999999994907,
+      "graph_setup_ms": 0.0,
+      "prepare_ms": 4.704199999650882,
+      "gpu_stage_ms": 38.35620000018025,
+      "render_ms": 2.4843999999575317,
+      "server_ms": 149.76359999991473,
+      "forward_event_ms": 34.288639068603516,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      },
+      "depth_model": "yolo26n-depth",
+      "depth_units": "m",
+      "depth_ms": 104.21880000012607
+    },
+    {
+      "schema_version": 1,
+      "model": "yolo26n",
+      "backend": "PyTorch resident CUDA",
+      "precision": "FP32",
+      "output_precision": "FP32",
+      "classes": 80,
+      "confidence_threshold": 0.25,
+      "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "width": 480,
+      "height": 640,
+      "count": 5,
+      "boxes": [
+        {
+          "xyxy": [
+            27.39661407470703,
+            236.33428955078125,
+            140.17491149902344,
+            534.8912353515625
+          ],
+          "score": 0.9219965934753418,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.9219965934753418,
+          "bbox": [
+            27.39661407470703,
+            236.33428955078125,
+            140.17491149902344,
+            534.8912353515625
+          ],
+          "distance_m": 3.692904472351074
+        },
+        {
+          "xyxy": [
+            5.0020904541015625,
+            135.73362731933594,
+            478.90411376953125,
+            441.444580078125
+          ],
+          "score": 0.9208865761756897,
+          "class_id": 5,
+          "label": "bus",
+          "class_name": "bus",
+          "confidence": 0.9208865761756897,
+          "bbox": [
+            5.0020904541015625,
+            135.73362731933594,
+            478.90411376953125,
+            441.444580078125
+          ],
+          "distance_m": 5.252254486083984
+        },
+        {
+          "xyxy": [
+            131.9596405029297,
+            239.75405883789062,
+            204.85903930664062,
+            511.1187744140625
+          ],
+          "score": 0.8978857398033142,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.8978857398033142,
+          "bbox": [
+            131.9596405029297,
+            239.75405883789062,
+            204.85903930664062,
+            511.1187744140625
+          ],
+          "distance_m": 3.89475679397583
+        },
+        {
+          "xyxy": [
+            396.9395751953125,
+            232.5069580078125,
+            480.0,
+            520.54248046875
+          ],
+          "score": 0.8511683344841003,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.8511683344841003,
+          "bbox": [
+            396.9395751953125,
+            232.5069580078125,
+            480.0,
+            520.54248046875
+          ],
+          "distance_m": 4.9984025955200195
+        },
+        {
+          "xyxy": [
+            0.0,
+            330.20849609375,
+            39.95008087158203,
+            518.1463012695312
+          ],
+          "score": 0.4718460738658905,
+          "class_id": 0,
+          "label": "person",
+          "class_name": "person",
+          "confidence": 0.4718460738658905,
+          "bbox": [
+            0.0,
+            330.20849609375,
+            39.95008087158203,
+            518.1463012695312
+          ],
+          "distance_m": 3.7949302196502686
+        }
+      ],
+      "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+      "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+      "inference_ms": 14.99999999987267,
+      "graph_setup_ms": 0.0,
+      "prepare_ms": 3.999000000021624,
+      "gpu_stage_ms": 14.320799999950395,
+      "render_ms": 2.4448999997730425,
+      "server_ms": 37.114699999619916,
+      "forward_event_ms": 10.7489595413208,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      },
+      "depth_model": "yolo26n-depth",
+      "depth_units": "m",
+      "depth_ms": 16.349999999874854
+    }
+  ]
+}

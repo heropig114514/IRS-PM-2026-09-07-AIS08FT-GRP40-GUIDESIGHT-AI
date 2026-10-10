@@ -96,6 +96,16 @@ CPU采样默认关闭，因为profiling本身可能影响定时器精度；开�
 eager Graph方案 `--plan`；该native控制不会加载AOT包。公网证据见
 [PHONE-LIVE.md](../backend/PHONE-LIVE.md)。已有地图页面和模块保持原契约。
 
+实时结果支持 BoT-SORT 的 `track_id/motion_state/relative_speed_mps/smoothed_distance_m`；
+客户端校验并保留新增字段，展示服务端包含 ID、距离和运动状态的标注 JPEG，继续接受旧字段。
+已确认运动的标签增加带符号 m/s；短暂缺距离允许保留服务端未过期的历史运动估计。
+JSON 上限256KiB、JPEG1MiB，服务端包上限1310728字节，须与 HF/PRS 协调发布。
+跟踪生命周期、手机运动补偿、运行配置及验证局限见 [TRACKING.md](../backend/TRACKING.md)。
+结果还支持方向、TTC秒数、risk_score/risk_level/alert_priority/alert_required/risk_reasons。
+仅校验和保留字段，不在浏览器重复评分或播报；high/critical服务端标注追加简洁TTC和等级。
+缺当前深度时风险unknown、TTC为空，即使运动历史仍有效。规则配置和默认值见
+[RISK.md](../backend/RISK.md)。旧包仍兼容，元数据上限保持256KiB。
+
 摄像头与 `/prs/maps/` 地图页共用“跟随系统 / English / 中文”选择器，语言偏好同源保存。
 地图的按钮、定位/底图状态、来源/精度、路线汇总、转向类型、标记提示、错误及无障碍标签
 随语言即时切换。已返回的 ORS 英文原始指令与地名保持原样；切换语言不重新定位或请求路线。

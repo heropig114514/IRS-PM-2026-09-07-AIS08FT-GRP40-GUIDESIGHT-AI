@@ -35,6 +35,25 @@ The measured AOT adapter remains an explicit supported plan, with a verified ser
 and native-file cleanup. Neither implementation is an automatic fallback for the other.
 
 One connected session then requests one GPU allocation with the default ZeroGPU hardware/duration.
+Its `AllocatedDetector` owns one persistent Ultralytics BoT-SORT tracker and scalar depth history.
+It uses pinned `botsort.yaml` with `gmc_method: sparseOptFlow` and `with_reid: false`, after the
+unchanged detection Graph/box decoding. Original boxes feed the optional YOLO26 depth/ROI fusion;
+EMA histories then expose ID, smoothed meters, relative m/s and motion state. No extra GPU or
+ReID model is added. `lap==0.5.12` is an explicit GPU runtime dependency.
+`PRS_TRACKING_CONFIG` optionally names a local JSON history/motion profile relative to this app
+root; omitted fields retain the centralized `TrackingConfig` defaults. Mutable tracker/history
+never lives in the CPU parent's shared detection/depth models or across allocations.
+Stateless TTC/rule scoring follows the unchanged history update. `PRS_RISK_CONFIG` optionally
+names a local JSON rule profile, read once at startup; defaults/weights and invalid-input behavior
+are documented in the project's [RISK.md](../RISK.md).
+Source bundling does not upload custom profiles. Risk uses only existing CPU scalars, adds no
+dependency or GPU transfer, and exposes alert flags without delivering TTS. Missing current depth
+keeps motion history but yields null TTC and unknown risk. `risk_ms` times the separate rule stage.
+IDs are session-local; per-frame association errors latch unavailable status and prior labels
+until a new session, without retry/another tracker. Depth failures preserve existing fail semantics.
+CMC improves visual association; radial depth speed is relative to the handheld camera and uses
+worker frame-start time, not sensor capture time. Handheld/long-video accuracy remains unverified.
+Deploy HF/PRS/frontend together: JSON metadata limit256KiB, JPEG1MiB, total1310728 bytes.
 The worker reuses an allocation-local CUDA Graph for at most55 seconds; stop/disconnect/idle
 ends the task. A new test requires an explicit new start; no paid hardware or automatic allocation.
 Private HF identity and distinct worker capability stay server-side. Frames are not saved to disk.

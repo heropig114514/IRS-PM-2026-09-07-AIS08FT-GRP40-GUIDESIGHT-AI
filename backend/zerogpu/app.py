@@ -1,13 +1,18 @@
 """Responsibilities: Expose the single bounded ZeroGPU live detection API.
 Implementation: Require a complete COCO-qualified plan; initialize its eager model or compile
 its AOT package or JIT cache on the actual startup GPU; validate capability before one live task.
-Related Modules: live_transport/live_worker/runtime/aoti/jit_cache; inference_plan; deploy_space.
+Related Modules: live_transport/live_worker/runtime/aoti/jit_cache; realtime.depth/tracking/risk;
+inference_plan; deploy_space.
 Declaration Index: ensure_weights; compile_startup; gpu_live; detect_live.
 Variable Index: ROOT/manifest/weight — pinned startup assets; plan/config/model — qualified
 execution identity and eager model or AOT/JIT descriptor; logger — safe diagnostics;
 demo/live_request/live_result/live_api — the sole Gradio allocation endpoint.
 OMP_NUM_THREADS/MKL_NUM_THREADS/OPENBLAS_NUM_THREADS — one CPU thread as in Kaggle protocol;
 set before Spaces imports Torch and initializes its inter-op thread count.
+depth_path/depth_estimator — explicitly enabled local depth weights and CPU-root-loaded model.
+tracking_path/tracking_config — optional explicit JSON motion profile, defaults for BoT-SORT;
+risk_path/risk_config — optional explicit JSON TTC/rule profile, validated once at startup;
+mutable tracker/history are created only inside each allocated worker.
 """
 
 import hashlib
@@ -33,6 +38,9 @@ from zerogpu.live_transport import transport
 from zerogpu.live_worker import run_worker
 from zerogpu.runtime import load_model
 from core.inference_plan import read_plan
+from realtime.depth import DepthEstimator
+from realtime.tracking import read_tracking_config
+from realtime.risk import read_risk_config
 
 ROOT = Path(__file__).resolve().parent.parent
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +52,13 @@ manifest = json.loads((ROOT / "models/yolo26n.json").read_text(encoding="utf-8")
 weight = ROOT / "models/yolo26n.pt"
 plan = read_plan(ROOT / "models/inference-plan.json", manifest)
 config = plan["config"]
+depth_path = os.environ.get("PRS_DEPTH_WEIGHTS", "").strip()
+depth_estimator = (DepthEstimator(ROOT / depth_path, manifest["build"]["ultralytics"])
+                   if depth_path else None)
+tracking_path = os.environ.get("PRS_TRACKING_CONFIG", "").strip()
+tracking_config = read_tracking_config(ROOT / tracking_path if tracking_path else None)
+risk_path = os.environ.get("PRS_RISK_CONFIG", "").strip()
+risk_config = read_risk_config(ROOT / risk_path if risk_path else None)
 
 
 def ensure_weights(path, specification):
@@ -94,12 +109,13 @@ logger.info("Qualified model initialized backend=%s precision=%s notebook_versio
 @spaces.GPU
 def gpu_live(capability):
     """Functionality: Hold one allocated GPU while the separate live peer supplies frames.
-    Inputs: validated capability, qualified eager model/AOT descriptor and explicit config.
+    Inputs: capability, detection model/config, depth and immutable tracking/risk profiles.
     Outputs: count/timing; Logic:55s maximum loopback handoff/reused CUDA Graph.
     Constraints: original default GPU size/60s decorator ceiling; graph lifetime is one allocation,
     no cross-task callable retention, retries, changed numerical settings or additional live calls.
     """
-    return run_worker(capability, model, manifest, config=config)
+    return run_worker(capability, model, manifest, config=config, depth_estimator=depth_estimator,
+                      tracking_config=tracking_config, risk_config=risk_config)
 
 
 def detect_live(capability):

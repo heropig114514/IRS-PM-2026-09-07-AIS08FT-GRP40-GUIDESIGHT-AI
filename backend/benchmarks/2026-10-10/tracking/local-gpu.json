@@ -1,0 +1,205 @@
+{
+  "date": "2026-10-10",
+  "scope": "Real native CUDA dual-model static-image tracking smoke; no physical accuracy or video FPS claim",
+  "model_identity": {
+    "detection_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "manifest_sha256": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6",
+    "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "depth_weights": "D:\\PRS-PracticeModule\\PRS-PracticeModule\\backend\\models\\yolo26n-depth.pt"
+  },
+  "runtime": {
+    "compute_dtype": "torch.float32",
+    "forward_dtype": "torch.float32",
+    "input_stride": [
+      1228800,
+      409600,
+      640,
+      1
+    ],
+    "pinned_input": true,
+    "graph_captured": true,
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "capability": [
+      8,
+      6
+    ],
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "cpu_threads": 1,
+    "cpu_interop_threads": 1,
+    "tf32_matmul": false,
+    "tf32_cudnn": false,
+    "cudnn_benchmark": false
+  },
+  "tracking_configuration": {
+    "tracker": "botsort.yaml",
+    "history_size": 8,
+    "min_valid_samples": 3,
+    "ema_alpha": 0.5,
+    "stale_timeout_s": 2.0,
+    "min_time_span_s": 0.1,
+    "approaching_threshold_mps": 0.2,
+    "moving_away_threshold_mps": 0.2,
+    "confirmation_updates": 2
+  },
+  "hashes": {
+    "model_tests/outputs/tracking-smoke-20261010/run.json": "3590d12e35a5003aca8ba4b5f6a8f03987b6a62f6b658774e34621a8166ecea7",
+    "model_tests/outputs/tracking-smoke-20261010/results.jsonl": "2b33aa2e7f8fa7cb65ab4826c985d54cb1066aad230dc0a7c2669eda62db5911",
+    "model_tests/outputs/bus-run-2/results.jsonl": "329f615ca038d1d2a73a27fe85da0ac1e12c8958cf9c8dfbfee96ad99e34623e",
+    "realtime/detector.py": "69980582f304262ed00c098ead4d0ffa5405b339eef4cc3f24471e828f0bc717",
+    "realtime/tracking.py": "592f4ede2eec5a2d4ecc72f2562a9530274d1caffcba6dacb208b6402e474b99",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "core/detector.py": "465b1a9bdb4cfe6676bb8e55c0a84cf0a320a224795ae86141016eb43b262ef2",
+    "realtime/protocol.py": "f6a543c2154decb932632b70e68a1bd8dc79cf07e37a9edb0d23d712f9a11fbc"
+  },
+  "checks": {
+    "run_complete": true,
+    "source_and_input_unchanged": true,
+    "raw_prediction_unchanged": true,
+    "original_detection_and_depth_fields_unchanged": true,
+    "ids_persist_all_frames": true,
+    "stationary_after_valid_history": true,
+    "graph_setup_only_first_frame": true,
+    "camera_compensation_enabled": true,
+    "real_annotated_packets_round_trip": true
+  },
+  "frames": [
+    {
+      "frame": 0,
+      "tracking_ms": 30.832799999188865,
+      "depth_ms": 5684.0453000004345,
+      "predict_wall_ms": 7381.256599999688,
+      "graph_setup_ms": 1625.0,
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "motion": [
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown"
+      ]
+    },
+    {
+      "frame": 1,
+      "tracking_ms": 29.223400000773836,
+      "depth_ms": 110.70590000053926,
+      "predict_wall_ms": 201.16710000002058,
+      "graph_setup_ms": 0.0,
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "motion": [
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown"
+      ]
+    },
+    {
+      "frame": 2,
+      "tracking_ms": 10.461100000611623,
+      "depth_ms": 63.952599999538506,
+      "predict_wall_ms": 112.15530000117724,
+      "graph_setup_ms": 0.0,
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "motion": [
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown"
+      ]
+    },
+    {
+      "frame": 3,
+      "tracking_ms": 14.769000001251698,
+      "depth_ms": 59.40569999802392,
+      "predict_wall_ms": 114.1723999990063,
+      "graph_setup_ms": 0.0,
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "motion": [
+        "stationary",
+        "stationary",
+        "stationary",
+        "stationary",
+        "stationary"
+      ]
+    },
+    {
+      "frame": 4,
+      "tracking_ms": 11.22159999795258,
+      "depth_ms": 60.468500001661596,
+      "predict_wall_ms": 107.97939999974915,
+      "graph_setup_ms": 0.0,
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "motion": [
+        "stationary",
+        "stationary",
+        "stationary",
+        "stationary",
+        "stationary"
+      ]
+    },
+    {
+      "frame": 5,
+      "tracking_ms": 20.03359999798704,
+      "depth_ms": 67.94490000174847,
+      "predict_wall_ms": 131.39779999983148,
+      "graph_setup_ms": 0.0,
+      "ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "motion": [
+        "stationary",
+        "stationary",
+        "stationary",
+        "stationary",
+        "stationary"
+      ]
+    }
+  ],
+  "non_first_tracking_ms": {
+    "min": 10.461100000611623,
+    "median": 14.769000001251698,
+    "max": 29.223400000773836
+  },
+  "history_note": "First inference initialization exceeded the two-second history timeout; IDs persisted, depth history restarted, stationary from frame index3. No tracker reset.",
+  "limitations": [
+    "Static public bus image with no ground-truth depth/speed",
+    "Processing-start timestamps, not sensor/source-frame timestamps",
+    "No HF allocation/public deployment/handheld or sustained-video validation"
+  ]
+}

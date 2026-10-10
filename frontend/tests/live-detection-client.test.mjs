@@ -5,7 +5,9 @@
  * Declaration Index: FakeSocket; FakeSocket.constructor; FakeSocket.send; FakeSocket.close;
  * FakeSocket.message; packet; fixture; fixture.socketFactory; fixture.failed; fixture.ended;
  * admitted; testBinary; testInvalid; testOrder; testStop; testBudgets; testFinal; testHello;
- * testSelectedPrecision.
+ * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
+ * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
+ * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity.
  * Variable Index: manifest/contract — original public model identity; plan — current deployment's
  * compute/quality contract for integration regression; JPEG — synthetic markers.
  */
@@ -13,7 +15,7 @@ import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
-import {LiveDetectionClient} from "../live-detection-client.js";
+import {decodeResult, LiveDetectionClient} from "../live-detection-client.js";
 
 const manifest = JSON.parse(await readFile(new URL("../../backend/models/yolo26n.json", import.meta.url)));
 const plan = JSON.parse(await readFile(new URL("../../backend/models/inference-plan.json", import.meta.url)));
@@ -24,6 +26,48 @@ const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes:
   source_sha256: manifest.source_sha256, names: manifest.names, confidence_threshold: 0.25,
   max_edge: 640, jpeg_quality: 0.8, max_inflight: 12, session_seconds: 55, cold_seconds: 55, steady_seconds: 10};
 const JPEG = Uint8Array.from([255, 216, 1, 255, 217]);
+
+/** Functionality: Accept additive depth fields with finite meters or explicitly unavailable null.
+ * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged legacy box.
+ * Logic: actual packet/hash/client validation. Constraints: synthetic data, no depth accuracy claim. */
+test("depth metadata accepts meters and null while preserving the existing box fields", async function testDepthResult() {
+  for (const distance of [2.4, null]) {
+    const box = {class_id: 0, label: manifest.names[0], score: 0.93, xyxy: [0, 0, 5, 9],
+      class_name: manifest.names[0], confidence: 0.93, bbox: [0, 0, 5, 9], distance_m: distance};
+    const result = await decodeResult(packet(0, {depth_model: "yolo26n-depth", depth_units: "m",
+      depth_ms: 2, count: 1, boxes: [box]}), 0, contract);
+    assert.equal(result.metadata.boxes[0].distance_m, distance);
+    assert.deepEqual(result.metadata.boxes[0].bbox, result.metadata.boxes[0].xyxy);
+  }
+});
+
+/** Functionality: Reject invalid metric distances, aliases and incomplete model identity.
+ * Inputs: corrupted depth metadata/boxes. Outputs: errors before display.
+ * Logic: independently change each contract boundary. Constraints: no silent depth omission. */
+test("depth metadata rejects invalid distances and mismatched box aliases", async function testDepthFailures() {
+  const box = {class_id: 0, label: manifest.names[0], score: 0.93, xyxy: [0, 0, 5, 9],
+    class_name: manifest.names[0], confidence: 0.93, bbox: [0, 0, 5, 9], distance_m: 2.4};
+  const metadata = {depth_model: "yolo26n-depth", depth_units: "m", depth_ms: 2, count: 1, boxes: [box]};
+  for (const changes of [{distance_m: 0}, {distance_m: -1}, {distance_m: "2.4"},
+    {distance_m: undefined}, {class_name: "wrong"}, {confidence: 0.7}, {bbox: [1, 0, 5, 9]}])
+    await assert.rejects(decodeResult(packet(0, {...metadata, boxes: [{...box, ...changes}]}), 0, contract));
+  for (const changes of [{depth_units: "cm"}, {depth_model: ""}, {depth_ms: -1}, {depth_ms: undefined}])
+    await assert.rejects(decodeResult(packet(0, {...metadata, ...changes}), 0, contract));
+  await assert.rejects(decodeResult(packet(0, {count: 1, boxes: [box]}), 0, contract));
+});
+
+/** Functionality: Support300 full-precision fused detections within the coordinated256KiB limit.
+ * Inputs: maximal count with legacy/canonical aliases. Outputs: complete result above64KiB.
+ * Logic: use real JSON/header/SHA checks. Constraints: no network or browser rendering assertion. */
+test("depth packets carry 300 objects retaining legacy fields", async function testDepthCapacity() {
+  const xyxy = [0.12345678901234, 0.23456789012345, 8.12345678901234, 9.23456789012345];
+  const box = {class_id: 9, label: manifest.names[9], score: 0.9312345678901234, xyxy,
+    class_name: manifest.names[9], confidence: 0.9312345678901234, bbox: xyxy, distance_m: 2.4};
+  const data = packet(0, {depth_model: "yolo26n-depth", depth_units: "m", depth_ms: 2,
+    count: 300, boxes: Array(300).fill(box)});
+  assert.ok(data.byteLength > 64 * 1024);
+  assert.equal((await decodeResult(data, 0, contract)).detections, 300);
+});
 
 /** Functionality: Capture socket operations and deliver explicit events.
  * Logic: caller drives messages, no automatic response. Constraints: not a browser/network stack. */
@@ -225,4 +269,165 @@ test("selected precision and backend must match every returned frame", async fun
       await rejected;
     } finally { client.stop(); }
   }
+});
+
+/** Functionality: Build independent complete tracked/depth protocol fixtures.
+ * Inputs: None. Outputs: finite metadata. Logic: original box plus additive fields and CMC marker.
+ * Constraints: no tracker simulation or speed/accuracy claim. */
+function trackingMetadata() {
+  return {depth_model: "yolo26n-depth", depth_units: "m", depth_ms: 2,
+    tracking_model: "botsort", tracking_status: "active", tracking_epoch: 0,
+    gmc_method: "sparseOptFlow", with_reid: false, tracking_ms: 3, tracking_timestamp_s: 2,
+    count: 1, boxes: [{class_id: 0, label: manifest.names[0], score: 0.93, xyxy: [0, 0, 5, 9],
+      class_name: manifest.names[0], confidence: 0.93, bbox: [0, 0, 5, 9], distance_m: 3.2,
+      track_id: 7, smoothed_distance_m: 3.8, relative_speed_mps: -0.5, motion_state: "approaching"}]};
+}
+
+/** Functionality: Build complete additive risk metadata using the existing tracking fixture.
+ * Inputs: None. Outputs: finite TTC and explainable alert fields.
+ * Logic: consistent smoothed distance/speed. Constraints: backend owns score weights and thresholds. */
+function riskMetadata() {
+  const data = {...trackingMetadata(), risk_model: "rules-v1", risk_ms: 0.1};
+  Object.assign(data.boxes[0], {direction: "front", ttc_sec: 7.6, risk_score: 50,
+    risk_level: "high", alert_priority: 3, alert_required: true,
+    risk_reasons: ["distance_m_le_5", "approaching", "ttc_s_le_8", "direction_front", "class_person"]});
+  return data;
+}
+
+/** Functionality: Preserve risk fields, unknown missing depth, and legacy packet acceptance.
+ * Inputs: all five levels, finite long-horizon TTC, cached motion with no current depth.
+ * Outputs: complete unmodified metadata. Logic: real decoder validation.
+ * Constraints: no scoring or alert delivery in browser. */
+test("risk fields preserve deterministic scores and unavailable TTC", async function testRiskResults() {
+  for (const changes of [{}, {risk_score: 15, risk_level: "low", alert_priority: 0, alert_required: false},
+    {risk_score: 40, risk_level: "medium", alert_priority: 0, alert_required: false},
+    {risk_score: 48, risk_level: "medium", alert_priority: 2, alert_required: true},
+    {risk_score: 97, risk_level: "critical", alert_priority: 4},
+    {ttc_sec: 15}, {motion_state: "stationary", relative_speed_mps: 0, ttc_sec: null},
+    {distance_m: null, ttc_sec: null, risk_score: null, risk_level: "unknown", alert_priority: 0,
+      alert_required: false, risk_reasons: ["depth_unavailable"]}]) {
+    const data = riskMetadata(); Object.assign(data.boxes[0], changes);
+    assert.deepEqual((await decodeResult(packet(0, data), 0, contract)).metadata.boxes[0], data.boxes[0]);
+  }
+  const unavailable = riskMetadata(); unavailable.tracking_status = "unavailable";
+  Object.assign(unavailable.boxes[0], {track_id: null, motion_state: "unknown", relative_speed_mps: null,
+    smoothed_distance_m: null, ttc_sec: null, risk_score: null, risk_level: "unknown", alert_priority: 0,
+    alert_required: false, risk_reasons: ["track_unavailable"]});
+  await decodeResult(packet(0, unavailable), 0, contract);
+  const noDepth = riskMetadata();
+  delete noDepth.depth_model; delete noDepth.depth_units; delete noDepth.depth_ms;
+  delete noDepth.boxes[0].distance_m;
+  Object.assign(noDepth.boxes[0], {motion_state: "unknown", relative_speed_mps: null,
+    smoothed_distance_m: null, ttc_sec: null, risk_score: null, risk_level: "unknown", alert_priority: 0,
+    alert_required: false, risk_reasons: ["depth_unavailable"]});
+  await decodeResult(packet(0, noDepth), 0, contract);
+  await decodeResult(packet(0, trackingMetadata()), 0, contract);
+});
+
+/** Functionality: Reject malformed TTC, scores, alerts, directions and incomplete field groups.
+ * Inputs: independently corrupted metadata. Outputs: rejection before display.
+ * Logic: type/availability invariants only. Constraints: no duplicated configurable risk cutoffs. */
+test("risk rejects invalid or incomplete rule output", async function testRiskFailures() {
+  for (const changes of [{ttc_sec: 0}, {ttc_sec: -1}, {ttc_sec: "2"}, {ttc_sec: undefined},
+    {motion_state: "stationary", relative_speed_mps: 0}, {relative_speed_mps: 0.5}, {distance_m: null},
+    {risk_score: -1}, {risk_score: 101}, {risk_score: null}, {risk_level: "safe"},
+    {risk_level: "unknown"}, {alert_priority: 1.5}, {alert_priority: 5}, {alert_priority: 0},
+    {alert_required: "true"}, {alert_required: false}, {direction: "outside"},
+    {risk_reasons: []}, {risk_reasons: ["a".repeat(65)]}, {risk_reasons: [1]},
+    {risk_reasons: Array(9).fill("a")}, {risk_reasons: undefined}]) {
+    const data = riskMetadata(); Object.assign(data.boxes[0], changes);
+    await assert.rejects(decodeResult(packet(0, data), 0, contract));
+  }
+  for (const changes of [{risk_model: undefined}, {risk_model: "neural"}, {risk_ms: -1},
+    {risk_ms: undefined}, {tracking_model: undefined}])
+    await assert.rejects(decodeResult(packet(0, {...riskMetadata(), ...changes}), 0, contract));
+  const noMarker = riskMetadata(); delete noMarker.risk_model; delete noMarker.risk_ms;
+  await assert.rejects(decodeResult(packet(0, noMarker), 0, contract));
+});
+
+/** Functionality: Carry300 risk-enriched detections with full numeric precision and reasons.
+ * Inputs: maximum safe IDs and long floats. Outputs: complete bounded wire packet.
+ * Logic: independent JS encoder and production decoder. Constraints: no dropping or rounding. */
+test("risk supports 300 complete objects", async function testRiskCapacity() {
+  const data = riskMetadata(); data.width = 120; data.height = 80; data.count = 300;
+  const box = {...data.boxes[0], xyxy: [12.34567890123456, 2.34567890123456, 99.34567890123456, 75.34567890123456],
+    score: 0.9312345678901234, confidence: 0.9312345678901234, distance_m: 1.234567890123456,
+    smoothed_distance_m: 1.234567890123456, relative_speed_mps: -2.1234567890123456,
+    ttc_sec: 0.5813953511809089, risk_score: 100, risk_level: "critical", alert_priority: 4,
+    risk_reasons: ["distance_m_le_1.5", "approaching", "closing_mps_ge_2", "ttc_s_le_1.5",
+      "direction_front", "class_person"]};
+  box.bbox = [...box.xyxy];
+  data.boxes = Array.from({length: 300}, (_, index) => ({...box, track_id: 2 ** 53 - 1 - index}));
+  const input = packet(0, data);
+  assert.ok(new DataView(input).getUint32(4) > 128 * 1024);
+  assert.deepEqual((await decodeResult(input, 0, contract)).metadata.boxes, data.boxes);
+});
+
+/** Functionality: Preserve new fields and graceful unavailable ID/depth cases before display.
+ * Inputs: all four states and explicit nulls. Outputs: intact tracking metadata and old boxes.
+ * Logic: real decodeResult validation, including temporarily missing depth with a held estimate.
+ * Constraints: frontend does not independently classify speeds or add TTC/risk scores. */
+test("tracking fields accept motion and unavailable depth or IDs", async function testTrackingResults() {
+  for (const changes of [{}, {motion_state: "moving_away", relative_speed_mps: 0.5},
+    {motion_state: "stationary", relative_speed_mps: 0}, {motion_state: "unknown", relative_speed_mps: null},
+    {motion_state: "unknown", relative_speed_mps: null, distance_m: null},
+    {distance_m: null},
+    {motion_state: "unknown", relative_speed_mps: -0.5},
+    {track_id: null, motion_state: "unknown", relative_speed_mps: null, smoothed_distance_m: null}]) {
+    const data = trackingMetadata();
+    data.boxes[0] = {...data.boxes[0], ...changes};
+    const result = await decodeResult(packet(0, data), 0, contract);
+    assert.deepEqual(result.metadata.boxes[0], data.boxes[0]);
+  }
+  const unavailable = trackingMetadata();
+  unavailable.tracking_status = "unavailable";
+  Object.assign(unavailable.boxes[0], {track_id: null, motion_state: "unknown",
+    smoothed_distance_m: null, relative_speed_mps: null});
+  await decodeResult(packet(0, unavailable), 0, contract);
+  const noDepth = trackingMetadata();
+  delete noDepth.depth_model; delete noDepth.depth_units; delete noDepth.depth_ms;
+  delete noDepth.boxes[0].distance_m;
+  Object.assign(noDepth.boxes[0], {motion_state: "unknown", smoothed_distance_m: null,
+    relative_speed_mps: null});
+  await decodeResult(packet(0, noDepth), 0, contract);
+});
+
+/** Functionality: Reject malformed IDs/motion fields, duplicated identities and disabled CMC.
+ * Inputs: independently corrupted box and tracker fields. Outputs: rejection before JPEG display.
+ * Logic: additive contract boundaries checked without changing legacy packet acceptance.
+ * Constraints: does not compare state sign during hysteresis, since switching is intentionally delayed. */
+test("tracking rejects malformed or incomplete motion data", async function testTrackingFailures() {
+  for (const changes of [{track_id: 0}, {track_id: -1}, {track_id: 1.5}, {track_id: 2 ** 53},
+    {track_id: undefined}, {motion_state: "risk"}, {motion_state: undefined},
+    {relative_speed_mps: "-0.5"}, {relative_speed_mps: null}, {smoothed_distance_m: 0},
+    {smoothed_distance_m: -1}, {smoothed_distance_m: null}]) {
+    const data = trackingMetadata(); data.boxes[0] = {...data.boxes[0], ...changes};
+    await assert.rejects(decodeResult(packet(0, data), 0, contract));
+  }
+  for (const changes of [{tracking_model: "bytetrack"}, {tracking_model: undefined},
+    {gmc_method: "none"}, {with_reid: true}, {tracking_epoch: -1}, {tracking_epoch: 1.5},
+    {tracking_ms: -1}, {tracking_timestamp_s: -1}, {tracking_status: "unavailable"}])
+    await assert.rejects(decodeResult(packet(0, {...trackingMetadata(), ...changes}), 0, contract));
+  const data = trackingMetadata(); data.count = 2; data.boxes.push({...data.boxes[0]});
+  await assert.rejects(decodeResult(packet(0, data), 0, contract));
+  const noDepthSource = trackingMetadata();
+  delete noDepthSource.depth_model; delete noDepthSource.depth_units; delete noDepthSource.depth_ms;
+  delete noDepthSource.boxes[0].distance_m;
+  await assert.rejects(decodeResult(packet(0, noDepthSource), 0, contract));
+});
+
+/** Functionality: Carry300 full-precision tracked detections beyond the former128KiB limit.
+ * Inputs: maximum distinct safe IDs and full numeric aliases. Outputs: complete ordered packet.
+ * Logic: real encoder/hash/client decoder. Constraints: no precision truncation or box dropping. */
+test("tracking supports 300 objects with complete motion fields", async function testTrackingCapacity() {
+  const data = trackingMetadata(); data.width = 120; data.height = 80; data.count = 300;
+  const box = {...data.boxes[0], xyxy: [12.34567890123456, 2.34567890123456, 99.34567890123456, 75.34567890123456],
+    score: 0.9312345678901234, confidence: 0.9312345678901234, distance_m: 3.234567890123456,
+    smoothed_distance_m: 3.234567890123456, relative_speed_mps: -0.1234567890123456};
+  box.bbox = [...box.xyxy];
+  data.boxes = Array.from({length: 300}, (_, index) => ({...box, track_id: 2 ** 53 - 1 - index}));
+  const input = packet(0, data);
+  assert.ok(new DataView(input).getUint32(4) > 128 * 1024);
+  const result = await decodeResult(input, 0, contract);
+  assert.deepEqual(result.metadata.boxes, data.boxes);
 });

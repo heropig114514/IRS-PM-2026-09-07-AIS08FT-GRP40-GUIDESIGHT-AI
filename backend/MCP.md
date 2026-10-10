@@ -16,7 +16,7 @@ Streamable HTTP MCP 服务。它与 Django、摄像头和地图共用一个 ASGI
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe manage.py migrate
-.\.venv\Scripts\python.exe -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1114120 --ws-per-message-deflate false
+.\.venv\Scripts\python.exe -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1310728 --ws-per-message-deflate false
 ```
 
 给支持 Streamable HTTP 的 AI/MCP 客户端配置地址：
