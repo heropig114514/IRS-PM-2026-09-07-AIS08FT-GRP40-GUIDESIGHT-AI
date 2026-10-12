@@ -2,9 +2,9 @@
 <!-- Responsibilities: 手机摄像头原样/ZeroGPU 标注回传工作台的语义结构。
 Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认；加载 AI DOM 控制桥接及独立震动/语音输出测试。
 Related Modules: i18n.js, translations.js, camera.css, camera.js, echo-client.js,
-live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js；HF视频用同源持久连接。
+live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js, scene-client.js；HF视频用同源持久连接。
 Declaration Index: None。
-Variable Index: None；区域 id 分别由 CameraApp、VibrationTester 和 SpeechOutput 引用。
+Variable Index: None；区域 id 分别由 CameraApp、VibrationTester、SpeechOutput 和 SceneClient 引用；scene-result 带 data-language-original，模型输出不经界面词典翻译。
 speech-text maxlength=2000容纳1000个双码元字符，实际1000个Unicode码点上限由SpeechOutput校验；
 speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或摄像头数据。 -->
 <html lang="zh-CN" data-api-base="../">
@@ -22,6 +22,7 @@ speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或�
     <script type="module" src="./assets/ai-control.js"></script>
     <script type="module" src="./assets/vibration.js"></script>
     <script type="module" src="./assets/speech-output.js"></script>
+    <script type="module" src="./assets/scene-client.js"></script>
   </head>
   <body>
     <div class="shell">
@@ -93,6 +94,20 @@ speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或�
           <p id="message" class="message" aria-live="polite">
             仅申请摄像头权限。图像只在内存中回传，不录制、不保存。
           </p>
+        </section>
+        <section id="scene-describe-block" class="workspace scene-block" aria-labelledby="scene-title">
+          <div class="workspace-header scene-header">
+            <h2 id="scene-title">场景描述</h2>
+            <span id="scene-status" class="status">待命</span>
+          </div>
+          <p class="vibration-note">需先开启摄像头。当前画面会发送给服务端的视觉语言模型生成描述；不录制、不保存。</p>
+          <label class="scene-field">可选提问（最多200个字符）
+            <input id="scene-question" type="text" maxlength="200" autocomplete="off" spellcheck="false" />
+          </label>
+          <button id="scene-describe" class="button primary">描述场景</button>
+          <p id="scene-result" class="scene-result" role="region" aria-live="polite" aria-label="场景描述结果" data-language-original></p>
+          <p id="scene-message" class="message" role="status" aria-live="polite"></p>
+          <p class="vibration-note">描述由 AI 生成，可能有误，不能替代白手杖、导盲犬或他人协助。</p>
         </section>
         <section id="vibration-test" class="workspace vibration-test" aria-labelledby="vibration-title">
           <div class="workspace-header vibration-header">

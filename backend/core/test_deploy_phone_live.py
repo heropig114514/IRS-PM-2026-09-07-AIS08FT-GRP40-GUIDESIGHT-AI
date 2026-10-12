@@ -5,7 +5,8 @@ Related Modules: tools.deploy_phone_live; frontend/index.html, maps.html, device
 i18n.js supplies shared language behavior.
 Declaration Index: DeploymentAssetTests; DeploymentAssetTests.check_dependency_closure;
 DeploymentAssetTests.test_maps_dependency_closure;
-DeploymentAssetTests.test_camera_dependency_closure.
+DeploymentAssetTests.test_camera_dependency_closure;
+DeploymentAssetTests.test_scene_files_published.
 DeploymentAssetTests.test_overlay_profile_stage;
 DeploymentAssetTests.test_overlay_profile_stage.command;
 DeploymentAssetTests.test_overlay_profile_stage.upload;
@@ -86,6 +87,30 @@ class DeploymentAssetTests(SimpleTestCase):
         Constraints: No SSH or hardware calls.
         """
         self.check_dependency_closure("index.html", "./assets/")
+
+    def test_scene_files_published(self):
+        """Functionality: Require scene-description runtime files in the full release lists.
+        Inputs: Literal BACKEND/FRONTEND declarations read via AST (no Paramiko import).
+        Outputs: Missing-name assertion; Logic: config/urls.py imports core.scene/core.vlm, so a
+        release copying only listed files over an older tree would fail to start without them.
+        Constraints: Static list check only; overlay profiles are intentionally not extended.
+        """
+        backend = Path(__file__).resolve().parents[1]
+        tree = ast.parse((backend / "tools/deploy_phone_live.py").read_text(encoding="utf-8"))
+        lists = {
+            target.id: set(ast.literal_eval(node.value))
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name) and target.id in {"BACKEND", "FRONTEND"}
+        }
+        self.assertLessEqual(
+            {"core/scene.py", "core/vlm.py", "core/test_scene.py", "VLM.md", "config/urls.py"},
+            lists["BACKEND"],
+        )
+        self.assertLessEqual(
+            {"scene-client.js", "tests/scene-client.test.mjs"}, lists["FRONTEND"]
+        )
 
     def test_overlay_profile_stage(self):
         """Functionality: Verify scoped staging and reject model drift before mutation.

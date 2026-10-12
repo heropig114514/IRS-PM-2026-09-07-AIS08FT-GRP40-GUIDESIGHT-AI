@@ -10,7 +10,7 @@
  * testCancelled.waitForPermission.register; testCancelled.stopTrack;
  * testCancelled.getTracks; testProcessingPath; testApiMount; testDecodeCancelled;
  * testDecodeCancelled.waitForDecode;
- * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testTimingBoundaries。
+ * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testSceneHooks; testTimingBoundaries。
  * Variable Index: None；所有 mock 限于 Node 的独立测试文件进程。
  */
 import assert from "node:assert/strict";
@@ -258,6 +258,39 @@ test("相同尺寸复用画布且保持640/JPEG0.8", async function testCaptureR
   assert.equal(app.canvas.resets, 4);
   assert.deepEqual(app.canvas.drawn, [[640, 480], [640, 480], [480, 640]]);
   assert.deepEqual(app.canvas.encoded, Array(3).fill({mime: "image/jpeg", quality: 0.8}));
+});
+
+/** Functionality: 检查场景描述取帧/取检测框钩子。Inputs: 受控 mode/lastFrame/lastDetection。
+ * Outputs: 复用、过期重采、空数组及停止清空断言。Logic: 实际 CameraApp 方法；
+ * Constraints: 不启动摄像头或网络，时间用真实 performance.now 的相对年龄。 */
+test("latestJpeg复用新鲜帧，过期重采，未开启返回null", async function testSceneHooks() {
+  const app = makeApp(ignoreWindowEvent);
+  app.video.videoWidth = 640;
+  app.video.videoHeight = 480;
+  assert.equal(await app.latestJpeg(), null);
+  assert.deepEqual(app.latestBoxes(), []);
+  app.mode = "camera";
+  const fresh = new ArrayBuffer(3);
+  app.lastFrame = {bytes: fresh, at: performance.now()};
+  assert.equal(await app.latestJpeg(), fresh);
+  app.lastFrame = {bytes: fresh, at: performance.now() - 10000};
+  const recaptured = await app.latestJpeg();
+  assert.notEqual(recaptured, fresh);
+  assert.equal(recaptured.byteLength, 5);
+  assert.equal(app.lastFrame.bytes, recaptured);
+  const boxes = [{label: "person"}];
+  app.lastDetection = {metadata: {boxes}, at: performance.now()};
+  assert.equal(app.latestBoxes(), boxes);
+  app.lastDetection = {metadata: {boxes}, at: performance.now() - 10000};
+  assert.deepEqual(app.latestBoxes(), []);
+  app.lastDetection = {metadata: undefined, at: performance.now()};
+  assert.deepEqual(app.latestBoxes(), []);
+  app.lastDetection = {metadata: {boxes: null}, at: performance.now()};
+  assert.deepEqual(app.latestBoxes(), []);
+  app.lastDetection = {metadata: {boxes}, at: performance.now()};
+  app.stop();
+  assert.equal(app.lastFrame, null);
+  assert.equal(app.lastDetection, null);
 });
 
 /** Functionality: 检查首帧单独记录而慢稳态帧保留在延迟和速率统计中。
