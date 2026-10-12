@@ -2,21 +2,25 @@
  * Responsibilities: 摄像头授权、原样串行与ZeroGPU有界视频流水线、阶段计时和生命周期。
  * Implementation: 最大边640、JPEG0.8；HF首帧单独完成后30FPS采集、12帧上限、顺序显示；任何错误停止。
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
- * frame-pipeline.js；core.echo/hf_video_relay；
+ * frame-pipeline.js, scene-client.js(只读 latestJpeg/latestBoxes)；core.echo/hf_video_relay；
  * tools/benchmark_phone_browser.mjs 验证真实页面；测试图流不代表手机实拍。
- * Declaration Index: processingPath; encodeJpeg; encodeJpeg.encode;
+ * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.apiUrl; CameraApp.setStatus; CameraApp.handleDisconnect;
  * CameraApp.handleProcessingChange; CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
  * CameraApp.runPipeline; CameraApp.runPipeline.display;
  * CameraApp.runPipeline.frame; CameraApp.runPipeline.sent; CameraApp.runPipeline.active;
  * CameraApp.publishFrame; CameraApp.handleSessionEnd;
+ * CameraApp.latestJpeg; CameraApp.latestBoxes;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide。
  * Variable Index: MAX_EDGE/JPEG_QUALITY 为采集参数；METRICS_LOG_INTERVAL_MS 为汇总日志间隔；
  * PROCESSING_PATHS 为唯一两个WS模式与固定路径；app 为页面控制器；实例 frameTimings 保存首帧和有限聚合统计，
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs及creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
  * 仅聚合带有流水线调度观测的稳态帧，不把串行Echo缺失的观测计为零；
+ * SCENE_MAX_AGE_MS 为场景描述复用最近帧/检测结果的最大年龄；实例 lastFrame/lastDetection 仅在内存保存最近一次
+ * 已编码JPEG与HF检测元数据供 scene-client.js 读取，停止即清空，不持久化；
+ * cameraApp 为页面控制器的导出引用；
  * cameraPhase 定位操作阶段，pipeline持有有界作业/取消信号；apiBase为同源API挂载点。
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
@@ -26,6 +30,7 @@ import { FramePipeline } from "./frame-pipeline.js";
 const MAX_EDGE = 640;
 const JPEG_QUALITY = 0.8;
 const METRICS_LOG_INTERVAL_MS = 5000;
+export const SCENE_MAX_AGE_MS = 1000;
 const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/"};
 
 /** Functionality: Resolve one of the two supported processing modes.
@@ -79,6 +84,8 @@ export class CameraApp {
     this.frameTimings = null;
     this.cameraPhase = "idle";
     this.pipeline = null;
+    this.lastFrame = null;
+    this.lastDetection = null;
     this.apiBase = document.documentElement?.dataset?.apiBase || "./";
     this.generation = 0;
     this.mode = "idle";
@@ -257,6 +264,7 @@ export class CameraApp {
      * Constraints: queued/late/cancelled frames are not counted as displayed. */
     function frame(result, timing) {
       if (token !== app.generation) return;
+      app.lastDetection = {metadata: result.metadata, at: performance.now()};
       app.setStatus("正在检测", "live");
       app.publishFrame(processing, timing.inputBytes, result, timing, timing.sent, timing.received);
     }
@@ -325,7 +333,29 @@ export class CameraApp {
     const blob = await encodeJpeg(this.canvas);
     if (blob.size > MAX_FRAME_BYTES)
       throw new Error("当前图像超过 1 MiB，请停止并检查采集配置");
-    return blob.arrayBuffer();
+    const bytes = await blob.arrayBuffer();
+    this.lastFrame = {bytes, at: performance.now()};
+    return bytes;
+  }
+  /** Functionality: 为场景描述提供当前JPEG。Inputs: maxAgeMs，lastFrame与mode。
+   * Outputs: ArrayBuffer；摄像头未开启返回 null。
+   * Logic: 推流中最近一次已编码帧不超过 maxAgeMs 则直接复用；否则按同一640/JPEG0.8契约重新 capture()。
+   * Constraints: 只读不改推流；capture 与流水线共用画布但均绘制同一 video 当前帧，无额外协议；
+   * 不在未开启摄像头时申请权限；失败抛出 capture 的原始错误。 */
+  async latestJpeg(maxAgeMs = SCENE_MAX_AGE_MS) {
+    if (this.mode !== "camera") return null;
+    const frame = this.lastFrame;
+    if (frame && performance.now() - frame.at <= maxAgeMs) return frame.bytes;
+    return this.capture();
+  }
+  /** Functionality: 为场景描述提供最近一次HF检测框。Inputs: maxAgeMs，lastDetection。
+   * Outputs: boxes数组（可为空）。Logic: 仅返回不超过 maxAgeMs 的结果，避免过期距离误导。
+   * Constraints: 只读返回，不修改元数据；metadata/boxes 缺失或非数组返回空数组；Echo 模式或无检测时返回空数组，不伪造。 */
+  latestBoxes(maxAgeMs = SCENE_MAX_AGE_MS) {
+    const detection = this.lastDetection;
+    if (this.mode !== "camera" || !detection || performance.now() - detection.at > maxAgeMs) return [];
+    const boxes = detection.metadata?.boxes;
+    return Array.isArray(boxes) ? boxes : [];
   }
   /** Functionality: 显示当前模式校验后的服务端JPEG。Inputs: bytes、token、可选dimensions元数据。
    * Outputs: img解码及URL生命周期。Logic: HF还校验实际naturalWidth/Height；finally释放旧帧。
@@ -461,6 +491,8 @@ export class CameraApp {
     this.cameraPhase = "idle";
     if (this.pipeline) this.pipeline.stop();
     this.pipeline = null;
+    this.lastFrame = null;
+    this.lastDetection = null;
     this.mode = "idle";
     this.video.hidden = false;
     if (this.client) this.client.stop();
@@ -502,3 +534,4 @@ export class CameraApp {
 }
 
 const app = new CameraApp();
+export const cameraApp = app;

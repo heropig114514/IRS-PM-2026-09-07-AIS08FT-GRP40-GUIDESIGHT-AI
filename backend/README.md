@@ -13,6 +13,8 @@ HF GPU 由云服务器通过 HTTPS 调用，不需要本地 GPU 或 SSH 隧道�
 状态归属、配置、测试、性能和局限见 [TRACKING.md](TRACKING.md)。
 运动估计后新增无状态 TTC 与可配置规则风险，返回分数、等级、告警需求和优先级；
 公式、完整默认权重、配置及验证边界见 [RISK.md](RISK.md)，无新增依赖或 TTS。
+
+Qwen2.5-VL 场景描述（`POST /scene/describe/`）的接口、提示词、配置、部署与限制见 [VLM.md](VLM.md)。
 本地模型测试统一放在 [model_tests](model_tests/README.md)，包括运行入口、示例、数据集预留目录和已有测试输出。
 从本目录运行 `.\.venv\Scripts\python.exe -X utf8 -m model_tests.run_depth --output model_tests/outputs/bus-run-3`，
 默认使用随附公交车图片，保存标注图与 JSONL。公开数据集、建议数量和后续模型对比协议见 [DATASETS.md](model_tests/DATASETS.md)。

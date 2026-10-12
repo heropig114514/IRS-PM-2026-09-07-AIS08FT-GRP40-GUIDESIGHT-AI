@@ -1,6 +1,6 @@
 /** Responsibilities: 中英文界面词典，包括动态状态、错误和无障碍文字。
  * Implementation: 中文原文作为键；{n} 表示运行时字段，字段内容不翻译。
- * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, vibration.js, speech-output.js。
+ * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, vibration.js, speech-output.js, scene-client.js。
  * Declaration Index: None。
  * Variable Index: translations — 中文到英文的固定界面词典；不包含坐标或图像数据。
  */
@@ -318,5 +318,37 @@ export const translations = {
   "连接失败，请检查网络和服务端状态": "Connection failed. Check the network and server",
   "连接已关闭（{0}），请重新点击开始": "Connection closed ({0}). Click start again",
   "连接或回传超时，请检查网络后重新开始": "Connection or echo timed out. Check the network and restart",
-  "ZeroGPU 将图像发送给 Hugging Face。视频首帧可能等待，启动后连续检测；每次会话最多55秒，结束后需再次点击开始。免费配额不足或失败会停止。": "ZeroGPU sends images to Hugging Face. The first video result may take time; detection then continues for up to 55 seconds per session. Start again after it ends. Insufficient free quota or errors stop the session."
+  "ZeroGPU 将图像发送给 Hugging Face。视频首帧可能等待，启动后连续检测；每次会话最多55秒，结束后需再次点击开始。免费配额不足或失败会停止。": "ZeroGPU sends images to Hugging Face. The first video result may take time; detection then continues for up to 55 seconds per session. Start again after it ends. Insufficient free quota or errors stop the session.",
+  "场景描述": "Scene description",
+  "待命": "Idle",
+  "失败": "Failed",
+  "已完成": "Done",
+  "需先开启摄像头。当前画面会发送给服务端的视觉语言模型生成描述；不录制、不保存。": "Start the camera first. The current frame is sent to a server-side vision-language model to generate a description; nothing is recorded or saved.",
+  "可选提问（最多200个字符）": "Optional question (up to 200 characters)",
+  "描述场景": "Describe scene",
+  "场景描述结果": "Scene description result",
+  "描述由 AI 生成，可能有误，不能替代白手杖、导盲犬或他人协助。": "The description is AI-generated and may be wrong. It does not replace a white cane, guide dog or help from others.",
+  "正在描述场景": "Describing the scene",
+  "请先开启摄像头再描述场景。": "Start the camera before describing the scene.",
+  "问题最多200个字符。": "The question can be at most 200 characters.",
+  "场景描述请求超时，请重试。": "The scene description request timed out. Please try again.",
+  "场景描述请求失败，请检查网络后重试。": "The scene description request failed. Check the network and try again.",
+  "场景描述响应格式无效。": "The scene description response was invalid.",
+  "场景描述接口必须与页面同源。": "The scene description API must be same-origin with the page.",
+  "场景描述失败。": "Scene description failed.",
+  "无法获取摄像头画面，请稍后重试。": "Cannot get a camera frame. Please try again shortly.",
+  "场景描述失败：{0}": "Scene description failed: {0}",
+  "请求来源被拒绝，请从本站页面访问。": "Request origin rejected. Use this site's page.",
+  "请求格式无效，请刷新页面后重试。": "Invalid request format. Refresh the page and try again.",
+  "图像过大，请重试。": "The image is too large. Please try again.",
+  "图像无效，请重新采集后重试。": "The image is invalid. Capture again and retry.",
+  "提问或检测数据无效，请检查后重试。": "The question or detection data is invalid. Check and retry.",
+  "场景描述服务尚未配置。": "The scene description service is not configured.",
+  "场景描述请求过于频繁，请稍后再试。": "Too many scene description requests. Please wait and retry.",
+  "场景描述服务繁忙，请稍后再试。": "The scene description service is busy. Please retry later.",
+  "场景描述服务认证失败，请联系管理员。": "Scene description service authentication failed. Contact the administrator.",
+  "场景描述额度已用尽，请联系管理员。": "The scene description quota is used up. Contact the administrator.",
+  "场景描述上游服务出错，请稍后再试。": "The upstream scene description service failed. Please retry later.",
+  "场景描述超时，请稍后再试。": "Scene description timed out. Please retry later.",
+  "场景描述响应无效，请稍后再试。": "The scene description response was invalid. Please retry later."
 };
