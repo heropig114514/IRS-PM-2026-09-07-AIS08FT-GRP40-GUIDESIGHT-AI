@@ -2,14 +2,16 @@
  * Implementation: DOM、fetch、取帧源和 SpeechOutput 使用显式替身；不联网、不调用真实 VLM。
  * Related Modules: scene-client.js, translations.js, i18n.js；真实浏览器/手机另行验证。
  * Declaration Index: Control; Control.constructor; Control.addEventListener; makeDoc; makeClient;
- * jsonResponse; box; testMapping; testRequestShape; testNoCameraAndQuestionLimit; testErrors;
- * testNetworkAndBusy; testUnexpected; testSpeech; testSameOrigin; testTranslations。
+ * jsonResponse; box; testMapping; testMapBoxAlignment; testRequestShape; testNoCameraAndQuestionLimit; testErrors;
+ * testNetworkAndBusy; testUnexpected; testSpeech; testSameOrigin; testTranslations; okFetch; testDescribeSceneSuccess; testDescribeSceneErrors;
+ * testDescribeSceneTimeout; testDescribeSceneInvalidImage; testDescribeSceneBlobQuestion; testDescribeSceneDefaults;
+ * testDescribeCurrentScene。
  * Variable Index: JPEG — 合成的5字节 FF D8 ... FF D9；其余为测试局部状态。
  */
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {SceneClient, mapObjects, encodeBase64, sceneLanguage, errorMessage, resolveSceneUrl,
+import {SceneClient, SceneApiError, describeScene, describeCurrentScene, mapObjects, encodeBase64, sceneLanguage, errorMessage, resolveSceneUrl,
   ERROR_MESSAGES, MAX_OBJECTS} from "../scene-client.js";
 import {translate} from "../i18n.js";
 
@@ -79,6 +81,17 @@ test("objects 映射字段、过滤缺失值、排序并截断到50", function t
   assert.equal(out.length, MAX_OBJECTS);
   assert.equal(out[0].label, "l0");
   assert.equal(many.length, 120);
+});
+
+test("mapBox 与后端校验对齐：trim/控制字符/score 类型/毫米距离", function testMapBoxAlignment() {
+  assert.equal(mapObjects([{label: "   ", score: 0.5}, {label: "a\tb", score: 0.5}, {label: "a\u0000", score: 0.5}]).length, 0);
+  assert.equal(mapObjects([{label: "x".repeat(41), score: 0.5}, {label: " " + "x".repeat(41) + " ", score: 0.5}]).length, 0);
+  assert.equal(mapObjects([{label: " " + "x".repeat(40) + " ", score: 0.5}])[0].label, "x".repeat(40));
+  assert.equal(mapObjects([{label: " person ", score: 0.5}])[0].label, "person");
+  assert.deepEqual(mapObjects([{label: "a", score: null}, {label: "a", score: "0.9"}, {label: "a", score: NaN},
+    {label: "a", score: 1.1}, {label: "a"}]), []);
+  assert.deepEqual(mapObjects([{label: "a", score: 0.5, distance_m: 0.0001}]), [{label: "a", confidence: 0.5}]);
+  assert.equal(mapObjects([{label: "a", score: 0.5, distance_m: 0.0006}])[0].distance_m, 0.0006);
 });
 
 test("请求体形状符合契约并显示结果", async function testRequestShape() {
@@ -211,4 +224,128 @@ test("页面、白名单提示与翻译覆盖场景区块", async function testT
   assert.equal(translate("描述场景", "en"), "Describe scene");
   assert.equal(translate("场景描述", "en"), "Scene description");
   assert.equal(translate("待命", "en"), "Idle");
+});
+
+const PAGE = "https://prs.example/maps/";
+const OK = {text: "前方有人。", model: "m", language: "zh-CN", elapsed_ms: 5, usage: {}, request_id: "r1"};
+
+/** Functionality: 记录调用的 fetch 替身。Inputs: response。Outputs: {fetchImpl, calls}。
+ * Logic: 返回固定响应。Constraints: 无网络。 */
+function okFetch(response = jsonResponse(200, OK)) {
+  const calls = [];
+  return {calls, fetchImpl: async (url, init) => { calls.push({url, init}); return response; }};
+}
+
+test("describeScene 成功返回响应对象并构造契约请求体", async function testDescribeSceneSuccess() {
+  const {calls, fetchImpl} = okFetch();
+  const result = await describeScene(JPEG, [box()], "前面能走吗？", {language: "zh-CN", apiBase: "./", fetchImpl, pageHref: PAGE});
+  assert.deepEqual(result, OK);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://prs.example/maps/scene/describe/");
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.question, "前面能走吗？");
+  assert.equal(body.objects.length, 1);
+  assert.deepEqual(Buffer.from(body.image_jpeg_base64, "base64"), Buffer.from(JPEG));
+  await describeScene(new Uint8Array(JPEG), undefined, "  ", {language: "en-US", apiBase: "../", fetchImpl, pageHref: PAGE});
+  const bare = JSON.parse(calls[1].init.body);
+  assert.deepEqual(Object.keys(bare).sort(), ["image_jpeg_base64", "language"]);
+  assert.equal(calls[1].url, "https://prs.example/scene/describe/");
+});
+
+test("describeScene 把错误映射为 SceneApiError 字段，不重试", async function testDescribeSceneErrors() {
+  for (const code of Object.keys(ERROR_MESSAGES)) {
+    const {calls, fetchImpl} = okFetch(jsonResponse(503, {code, detail: "SECRET", request_id: "rid-9"}));
+    await assert.rejects(describeScene(JPEG, [], null, {language: "zh-CN", apiBase: "./", fetchImpl, pageHref: PAGE}), error => {
+      assert.ok(error instanceof SceneApiError && error instanceof Error);
+      assert.equal(error.code, code);
+      assert.equal(error.status, 503);
+      assert.equal(error.requestId, "rid-9");
+      assert.equal(error.message, `${ERROR_MESSAGES[code]}（rid-9）`);
+      return true;
+    });
+    assert.equal(calls.length, 1);
+  }
+  const opts = {language: "zh-CN", apiBase: "./", pageHref: PAGE};
+  await assert.rejects(describeScene(JPEG, [], null, {...opts, fetchImpl: async () => { throw new TypeError("net"); }}),
+    error => error.code === "network_error" && error.status === null && error.requestId === null);
+  await assert.rejects(describeScene(JPEG, [], null, {...opts, fetchImpl: okFetch(jsonResponse(200, {text: " "})).fetchImpl}),
+    error => error.code === "invalid_response" && error.status === 200);
+  await assert.rejects(describeScene(JPEG, [], null, {...opts, fetchImpl: okFetch(jsonResponse(500, null)).fetchImpl}),
+    error => error.code === "http_error" && error.status === 500 && error.message === "场景描述失败。");
+  await assert.rejects(describeScene(JPEG, [], null, {...opts, apiBase: "https://evil.example/", fetchImpl: okFetch().fetchImpl}),
+    error => error.code === "invalid_api_base");
+});
+
+test("describeScene 超时与外部取消分别映射为 timeout/aborted", async function testDescribeSceneTimeout() {
+  const hang = (url, init) => new Promise((_, reject) => init.signal.addEventListener("abort",
+    () => reject(Object.assign(new Error("a"), {name: "AbortError"}))));
+  const opts = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl: hang};
+  await assert.rejects(describeScene(JPEG, [], null, {...opts, timeoutMs: 20}), error => error.code === "timeout");
+  const controller = new AbortController();
+  const pending = describeScene(JPEG, [], null, {...opts, signal: controller.signal});
+  setImmediate(() => controller.abort());
+  await assert.rejects(pending, error => error.code === "aborted");
+});
+
+test("非法 jpeg 抛 invalid_image 且不发请求", async function testDescribeSceneInvalidImage() {
+  const {calls, fetchImpl} = okFetch();
+  const opts = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl};
+  const tooBig = new Uint8Array(1024 * 1024 + 1);
+  tooBig[0] = 0xff; tooBig[1] = 0xd8;
+  for (const bad of [null, undefined, new ArrayBuffer(0), Uint8Array.from([0x89, 0x50, 1]), tooBig, "str", new Blob([])])
+    await assert.rejects(describeScene(bad, [], null, opts), error => error instanceof SceneApiError && error.code === "invalid_image");
+  const edge = new Uint8Array(1024 * 1024);
+  edge[0] = 0xff; edge[1] = 0xd8;
+  await describeScene(edge, [], null, opts);
+  assert.equal(calls.length, 1);
+});
+
+test("Blob 输入与 question 处理（trim、超 200 字抛错不截断）", async function testDescribeSceneBlobQuestion() {
+  const {calls, fetchImpl} = okFetch();
+  const opts = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl};
+  await describeScene(new Blob([new Uint8Array(JPEG)], {type: "image/jpeg"}), [], "  问  ", opts);
+  const body = JSON.parse(calls[0].init.body);
+  assert.deepEqual(Buffer.from(body.image_jpeg_base64, "base64"), Buffer.from(JPEG));
+  assert.equal(body.question, "问");
+  await describeScene(JPEG, [], "问".repeat(200), opts);
+  assert.equal(calls.length, 2);
+  await assert.rejects(describeScene(JPEG, [], "问".repeat(201), opts),
+    error => error.code === "invalid_question" && error.message === "问题最多200个字符。");
+  assert.equal(calls.length, 2);
+});
+
+test("language 与 apiBase 缺省取自 document.documentElement", async function testDescribeSceneDefaults() {
+  const {calls, fetchImpl} = okFetch();
+  const saved = {document: globalThis.document, location: globalThis.location};
+  Object.defineProperty(globalThis, "document", {configurable: true, writable: true,
+    value: {documentElement: {lang: "en", dataset: {apiBase: "../"}}}});
+  Object.defineProperty(globalThis, "location", {configurable: true, writable: true, value: {href: "https://h.example/prs/maps/"}});
+  try {
+    await describeScene(JPEG, [], null, {fetchImpl});
+    assert.equal(calls[0].url, "https://h.example/prs/scene/describe/");
+    assert.equal(JSON.parse(calls[0].init.body).language, "en-US");
+    globalThis.document.documentElement = {lang: "zh-CN", dataset: {}};
+    await describeScene(JPEG, [], null, {fetchImpl});
+    assert.equal(calls[1].url, "https://h.example/prs/maps/scene/describe/");
+    assert.equal(JSON.parse(calls[1].init.body).language, "zh-CN");
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[key]; else globalThis[key] = value;
+    }
+  }
+});
+
+test("describeCurrentScene 使用摄像头帧与框，未开启时 camera_unavailable", async function testDescribeCurrentScene() {
+  const {calls, fetchImpl} = okFetch();
+  const base = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl};
+  const result = await describeCurrentScene("前面能走吗？", {...base,
+    source: {latestJpeg: async () => JPEG, latestBoxes: () => [box()]}});
+  assert.deepEqual(result, OK);
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.question, "前面能走吗？");
+  assert.equal(body.objects.length, 1);
+  for (const latestJpeg of [async () => null, async () => { throw new Error("x"); }])
+    await assert.rejects(describeCurrentScene(null, {...base, source: {latestJpeg, latestBoxes: () => []}}),
+      error => error instanceof SceneApiError && error.code === "camera_unavailable");
+  assert.equal(calls.length, 1);
 });

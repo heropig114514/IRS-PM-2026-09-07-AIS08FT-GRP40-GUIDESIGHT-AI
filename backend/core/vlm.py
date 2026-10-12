@@ -1,22 +1,28 @@
 """Responsibilities: 场景描述的输入校验、提示词构造、DashScope 调用、容量限制与响应解析。
 Implementation: 固定 HTTPS + OpenAI 兼容 chat/completions；20 秒网络 I/O 超时、256 KiB 响应上限；
 不重试、不重定向、不降级；密钥仅出现在 Authorization 头。
-Related Modules: core.scene（HTTP 适配）、core.services（ORS 同构的限流/错误结构）。
+Related Modules: core.scene（HTTP 适配）、core.services（ORS 同构的限流/错误结构）、
+tools.describe_image（CLI）；frontend/scene-client.js（boxes_to_objects 与其 mapObjects 规则一致）。
 Declaration Index: SceneError/SceneError.__init__ — 公开错误；vlm_settings — 读取环境配置；
 _is_number — 有限非布尔数判断；_validate_object — 单个检测对象校验；
 validate_scene_request — 请求体校验与规范化；build_messages — 提示词与消息；
-parse_completion — 上游响应解析；describe_scene — 限流并调用 DashScope。
+parse_completion — 上游响应解析；describe_scene — 限流并调用 DashScope；
+new_request_id — 生成 request_id；_map_box — 单个检测框转对象；
+boxes_to_objects — 检测框列表转 objects；
+_prepare_scene — 高层入口的共用校验；describe — 异步一行接入；describe_sync — 脚本用同步版本。
 Variable Index: DEFAULT_HOST/DEFAULT_MODEL — 环境缺省；CHAT_PATH — 唯一上游路径；
 TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — 传输边界；MAX_TOKENS/TEMPERATURE — 生成参数；
 MAX_IMAGE_BYTES/MAX_BASE64_CHARS — 图像边界；
 MAX_OBJECTS/MAX_QUESTION_CHARS/MAX_LABEL_CHARS — 输入边界；
 MAX_REQUESTS_PER_MINUTE — 单 worker 总额度；vlm_slots — 两个并发；
+MAX_SAFE_INTEGER — 与前端 Number.isSafeInteger 对齐的 track_id 上限；
 request_times/request_lock — 限流状态；LANGUAGES — 支持语言与提示词名称；
 OBJECT_KEYS/DIRECTIONS/RISK_LEVELS/MOTION_STATES — 对象字段白名单；
 HOST_PATTERN/MODEL_PATTERN — host 与模型名格式；
 SYSTEM_PROMPT — 系统提示词模板；logger — 无图像/问题/回答/密钥日志。
 """
 
+import asyncio
 import base64
 import binascii
 import http.client
@@ -27,11 +33,12 @@ import os
 import re
 import time
 import unicodedata
+import uuid
 from collections import deque
 from threading import BoundedSemaphore, Lock
 
 DEFAULT_HOST = "dashscope-intl.aliyuncs.com"
-DEFAULT_MODEL = "qwen2.5-vl-7b-instruct"
+DEFAULT_MODEL = "qwen3.7-flash"
 CHAT_PATH = "/compatible-mode/v1/chat/completions"
 TIMEOUT_SECONDS = 20
 MAX_RESPONSE_BYTES = 262144
@@ -43,6 +50,7 @@ MAX_OBJECTS = 50
 MAX_QUESTION_CHARS = 200
 MAX_LABEL_CHARS = 40
 MAX_REQUESTS_PER_MINUTE = 10
+MAX_SAFE_INTEGER = 2**53 - 1
 LANGUAGES = {"zh-CN": "Simplified Chinese (简体中文)", "en-US": "English"}
 OBJECT_KEYS = {
     "label",
@@ -380,3 +388,122 @@ def describe_scene(scene, request_id):
                 connection.close()
         finally:
             vlm_slots.release()
+
+
+def new_request_id():
+    """Functionality: 生成与 HTTP 视图同格式的非敏感 request_id。
+    Inputs: 无；Outputs: 12 位小写十六进制字符串。
+    Logic: uuid4 前 12 位；Constraints: 仅用于日志关联，不可作为凭据。
+    """
+    return uuid.uuid4().hex[:12]
+
+
+def _map_box(box):
+    """Functionality: 把一个 PRS1 检测框映射为接口 object（规则同前端 mapBox）。
+    Inputs: metadata.boxes 中的一项；Outputs: object 字典或 None（框被丢弃）。
+    Logic: label 与 score(0..1，映射为 confidence)必需；其余字段仅在值合法时携带，缺失即省略；
+    distance_m 只读原始值，不读平滑值。与前端的两处差异均为避免整次请求被 validate 拒绝：
+    label 须 strip 后 1..40 字符且无控制字符，distance_m 舍入到 3 位后须仍为正。
+    Constraints: 不编造距离/方向；非 dict 输入返回 None。
+    """
+    if not isinstance(box, dict):
+        return None
+    label = box.get("label")
+    score = box.get("score")
+    if not isinstance(label, str):
+        return None
+    label = label.strip()
+    if not 1 <= len(label) <= MAX_LABEL_CHARS or any(
+        unicodedata.category(char).startswith("C") for char in label
+    ):
+        return None
+    if not _is_number(score) or not 0 <= score <= 1:
+        return None
+    item = {"label": label, "confidence": score}
+    distance = box.get("distance_m")
+    if _is_number(distance) and distance > 0 and round(distance, 3) > 0:
+        item["distance_m"] = distance
+    for name, allowed in (
+        ("direction", DIRECTIONS),
+        ("risk_level", RISK_LEVELS),
+        ("motion_state", MOTION_STATES),
+    ):
+        value = box.get(name)
+        if isinstance(value, str) and value in allowed:
+            item[name] = value
+    track_id = box.get("track_id")
+    if type(track_id) is int and 0 <= track_id <= MAX_SAFE_INTEGER:
+        item["track_id"] = track_id
+    return item
+
+
+def boxes_to_objects(boxes):
+    """Functionality: 选取并映射最重要的 <=50 个检测对象，供 describe 的 objects 使用。
+    Inputs: PRS1 检测结果 metadata.boxes（list/tuple，每项 dict）；Outputs: objects 列表。
+    Logic: 丢弃非法框后稳定排序：alert_priority 降序 -> 原始 distance_m 升序(非有限数最后) ->
+    score 降序 -> 原顺序；截断 MAX_OBJECTS。与 frontend/scene-client.js mapObjects 同规则。
+    Constraints: 不修改输入；非 list/tuple 视为空；排序不会因缺失距离而编造距离。
+    """
+    if not isinstance(boxes, list | tuple):
+        return []
+    ranked = []
+    for index, box in enumerate(boxes):
+        item = _map_box(box)
+        if item is None:
+            continue
+        priority = box.get("alert_priority")
+        priority = priority if _is_number(priority) else 0
+        distance = box.get("distance_m")
+        distance = distance if _is_number(distance) else math.inf
+        ranked.append(((-priority, distance, -box["score"], index), item))
+    ranked.sort(key=lambda entry: entry[0])
+    return [item for _, item in ranked[:MAX_OBJECTS]]
+
+
+def _prepare_scene(jpeg_bytes, boxes, question, language):
+    """Functionality: 把高层参数组装并校验为 describe_scene 所需的规范场景。
+    Inputs: JPEG 字节、检测框(可 None)、问题(可 None)、语言；Outputs: 规范化场景或 SceneError。
+    Logic: base64 编码后走与 HTTP 相同的 validate_scene_request，因此限制与错误码完全一致；
+    objects 为空时不携带该键。Constraints: 非 bytes 图像按 invalid_image 报错；不记录内容。
+    """
+    if not isinstance(jpeg_bytes, bytes | bytearray | memoryview):
+        raise SceneError("invalid_image", "图像必须为 1 字节至 1 MiB 的标准 base64 JPEG。", 400)
+    body = {"image_jpeg_base64": base64.b64encode(bytes(jpeg_bytes)).decode("ascii"),
+            "language": language}
+    if question is not None:
+        body["question"] = question
+    objects = boxes_to_objects(boxes)
+    if objects:
+        body["objects"] = objects
+    return validate_scene_request(body)
+
+
+async def describe(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, request_id=None):
+    """Functionality: 一行接入的异步场景描述，返回与 HTTP 成功响应相同的字段。
+    Inputs: JPEG 字节、metadata.boxes(可 None)、问题(可 None)、language(zh-CN/en-US)、
+    可选关键字 request_id；Outputs: {text, model, language, elapsed_ms, usage, request_id}。
+    Logic: _prepare_scene 校验，阻塞的 describe_scene 经 asyncio.to_thread 执行（不阻塞事件循环）。
+    Constraints: 失败原样抛 SceneError(code/detail/status)；不重试、不降级；共用本进程每分钟
+    10 次/2 并发限流；不记录图像、问题与回答。
+    """
+    scene = _prepare_scene(jpeg_bytes, boxes, question, language)
+    request_id = request_id or new_request_id()
+    result = await asyncio.to_thread(describe_scene, scene, request_id)
+    return {**result, "request_id": request_id}
+
+
+def describe_sync(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, request_id=None):
+    """Functionality: describe 的同步版本，供脚本/CLI 使用。
+    Inputs/Outputs: 同 describe。Logic: 同样的校验与 describe_scene，直接在当前线程阻塞调用。
+    Constraints: 不得在运行中的事件循环线程里调用（会冻结循环），检测到则抛 RuntimeError；
+    错误语义同 describe，不重试、不降级。
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        raise RuntimeError("describe_sync 不能在事件循环中调用，请改用 await describe(...)。")
+    scene = _prepare_scene(jpeg_bytes, boxes, question, language)
+    request_id = request_id or new_request_id()
+    return {**describe_scene(scene, request_id), "request_id": request_id}

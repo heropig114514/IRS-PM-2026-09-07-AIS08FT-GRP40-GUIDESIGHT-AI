@@ -7,10 +7,15 @@ SceneHttpTests — HTTP 适配；SceneHttpTests.setUp/post/test_config/test_inpu
 test_success_and_errors/test_max_size_request；
 VlmServiceTests — 服务；VlmServiceTests.setUp/test_validation/test_prompt_has_no_invented_distance/
 test_transport_contract/test_status_mapping/test_response_errors/test_transport_errors/
-test_rate_and_capacity/test_missing_or_bad_config/test_key_not_in_logs_or_response。
+test_rate_and_capacity/test_missing_or_bad_config/test_key_not_in_logs_or_response；
+box — 合成 PRS1 检测框；BoxesToObjectsTests — 检测框映射（样例同前端测试）；
+BoxesToObjectsTests.test_mapping_and_omission/test_ranking_and_truncation/test_invalid_input；
+DescribeHelperTests — 高层封装；DescribeHelperTests.setUp/test_describe_success/
+test_describe_errors_propagate/test_describe_sync/test_default_model。
 Variable Index: KEY — 假密钥；ORIGIN/HOST — 同源请求头；SECRET_QUESTION — 日志泄漏探针。
 """
 
+import asyncio
 import base64
 import json
 from unittest.mock import MagicMock, patch
@@ -499,3 +504,164 @@ class VlmServiceTests(SimpleTestCase):
             self.assertNotIn(secret, output)
         self.assertIn("id=rid123", output)
         self.assertIn("input_tokens=321 output_tokens=18 objects=1", output)
+
+
+def box(**extra):
+    """Functionality: 构造合成 PRS1 检测框（与前端测试 box() 同形）。
+    Inputs: 覆盖字段；Outputs: 字典；Constraints: 数值为合成数据。
+    """
+    return {"class_id": 0, "label": "person", "score": 0.9, "xyxy": [0, 0, 10, 10],
+            "distance_m": 3, "track_id": 7, "motion_state": "approaching",
+            "relative_speed_mps": -1, "smoothed_distance_m": 3, "direction": "front",
+            "ttc_sec": 2, "risk_score": 80, "risk_level": "high", "alert_priority": 3,
+            "alert_required": True, "risk_reasons": ["x"], **extra}
+
+
+class BoxesToObjectsTests(SimpleTestCase):
+    """Functionality: boxes_to_objects 与前端 mapObjects 的规则一致性；Logic: 同一批样例。
+    Constraints: 纯函数测试，无网络。
+    """
+
+    def test_mapping_and_omission(self):
+        """Functionality: 字段映射与缺失省略；Inputs: 完整框、仅 label/score 框、非法框。
+        Outputs: 与前端断言相同的对象；Logic: score->confidence，不用 smoothed_distance_m。
+        Constraints: 另验证 None/非 dict/非法枚举/无效距离被省略而非编造。
+        """
+        self.assertEqual(
+            vlm.boxes_to_objects([box()])[0],
+            {"label": "person", "confidence": 0.9, "distance_m": 3, "direction": "front",
+             "risk_level": "high", "motion_state": "approaching", "track_id": 7},
+        )
+        self.assertEqual(
+            vlm.boxes_to_objects([{"label": "car", "score": 0.5}]),
+            [{"label": "car", "confidence": 0.5}],
+        )
+        smoothed_only = {"label": "car", "score": 0.5, "smoothed_distance_m": 2.0}
+        self.assertEqual(
+            vlm.boxes_to_objects([smoothed_only]), [{"label": "car", "confidence": 0.5}]
+        )
+        loose = box(distance_m=0, direction="up", risk_level=None, motion_state="x", track_id=-1)
+        self.assertEqual(vlm.boxes_to_objects([loose]), [{"label": "person", "confidence": 0.9}])
+        self.assertNotIn("distance_m", vlm.boxes_to_objects([box(distance_m=True)])[0])
+        self.assertNotIn("track_id", vlm.boxes_to_objects([box(track_id=True)])[0])
+        bad = [{"label": "", "score": 0.5}, {"label": "x" * 41, "score": 0.5}, None, "x",
+               {"label": "a", "score": 1.5}, {"label": "a"}, {"label": "a", "score": True},
+               {"label": "a\x00b", "score": 0.5}, {"label": "  ", "score": 0.5}]
+        self.assertEqual(vlm.boxes_to_objects(bad), [])
+        for item in vlm.boxes_to_objects([box(), box(label=" bike ", distance_m=0.0001)]):
+            vlm.validate_scene_request(scene(objects=[item]))  # 映射结果必被接口接受
+
+    def test_ranking_and_truncation(self):
+        """Functionality: 排序与截断；Inputs: 优先级/距离/无距离混合，120 个框。
+        Outputs: urgent,near,far,nodist；50 个且首个最近；Logic: 稳定排序，输入不被修改。
+        Constraints: 同优先级无距离者最后，平局按 score 再原序。
+        """
+        ranked = vlm.boxes_to_objects([
+            box(label="far", alert_priority=0, distance_m=9),
+            box(label="nodist", alert_priority=0, distance_m=None),
+            box(label="near", alert_priority=0, distance_m=1),
+            box(label="urgent", alert_priority=4, distance_m=20),
+        ])
+        self.assertEqual([item["label"] for item in ranked], ["urgent", "near", "far", "nodist"])
+        ties = vlm.boxes_to_objects([
+            box(label="a", distance_m=2, score=0.5), box(label="b", distance_m=2, score=0.9),
+            box(label="c", distance_m=2, score=0.9),
+        ])
+        self.assertEqual([item["label"] for item in ties], ["b", "c", "a"])
+        many = [box(label=f"l{i}", distance_m=i + 1, alert_priority=0) for i in range(120)]
+        out = vlm.boxes_to_objects(many)
+        self.assertEqual((len(out), out[0]["label"], len(many)), (vlm.MAX_OBJECTS, "l0", 120))
+
+    def test_invalid_input(self):
+        """Functionality: 非列表输入视为空；Inputs: None/dict/str；Outputs: []。"""
+        for value in (None, {"label": "a"}, "abc", 5):
+            self.assertEqual(vlm.boxes_to_objects(value), [])
+        self.assertEqual(vlm.boxes_to_objects(()), [])
+
+
+@patch.dict("os.environ", {"DASHSCOPE_API_KEY": KEY})
+class DescribeHelperTests(SimpleTestCase):
+    """Functionality: describe/describe_sync 高层封装；Logic: mock http.client。
+    Constraints: 不联网；SceneError 必须原样透传，不重试。
+    """
+
+    def setUp(self):
+        """Functionality: 清空限流状态；Outputs: 空队列。"""
+        vlm.request_times.clear()
+
+    def test_default_model(self):
+        """Functionality: 默认模型为 qwen3.7-flash；Constraints: 环境 VLM_MODEL 优先。"""
+        self.assertEqual(vlm.DEFAULT_MODEL, "qwen3.7-flash")
+
+    def test_describe_success(self):
+        """Functionality: 成功路径字段与上游请求体；Inputs: 字节 JPEG + boxes + 问题。
+        Outputs: 含 request_id 的 HTTP 同形结果；Logic: 图像 base64、objects 经映射进入提示词。
+        Constraints: request_id 12 位十六进制，且与显式传入的一致。
+        """
+        constructor, connection = fake_connection()
+        jpeg = base64.b64decode(jpeg_b64())
+        with patch("core.vlm.http.client.HTTPSConnection", constructor):
+            result = asyncio.run(vlm.describe(jpeg, [box()], "前面有什么？", "en-US"))
+            again = asyncio.run(vlm.describe(jpeg, None, request_id="fixed"))
+        self.assertEqual(
+            set(result), {"text", "model", "language", "elapsed_ms", "usage", "request_id"}
+        )
+        self.assertRegex(result["request_id"], r"^[0-9a-f]{12}$")
+        self.assertEqual(again["request_id"], "fixed")
+        self.assertEqual((result["text"], result["language"]), ("前方有一辆车。", "en-US"))
+        self.assertEqual(result["usage"], {"input_tokens": 321, "output_tokens": 18})
+        body = json.loads(connection.request.call_args_list[0].kwargs["body"])
+        user = body["messages"][1]["content"]
+        self.assertIn(jpeg_b64(), user[0]["image_url"]["url"])
+        self.assertIn("前面有什么？", user[1]["text"])
+        self.assertIn('"label":"person"', user[1]["text"])
+        empty = json.loads(connection.request.call_args_list[1].kwargs["body"])
+        self.assertTrue(empty["messages"][1]["content"][1]["text"].endswith("provided): []"))
+
+    def test_describe_errors_propagate(self):
+        """Functionality: SceneError 原样透传且不重试；Inputs: 坏图像/坏问题/上游 500/无 key。
+        Outputs: 对应 code；Logic: 校验失败不触发网络，上游失败仅一次 request。
+        Constraints: 不吞异常、不降级。
+        """
+        jpeg = base64.b64decode(jpeg_b64())
+        constructor, connection = fake_connection(status=500)
+        with patch("core.vlm.http.client.HTTPSConnection", constructor):
+            for args, code in [
+                ((b"not a jpeg",), "invalid_image"),
+                (("text",), "invalid_image"),
+                ((jpeg, None, "  "), "invalid_scene_input"),
+                ((jpeg, None, None, "fr-FR"), "invalid_scene_input"),
+            ]:
+                with self.assertRaises(vlm.SceneError) as caught:
+                    asyncio.run(vlm.describe(*args))
+                self.assertEqual(caught.exception.code, code)
+            constructor.assert_not_called()
+            with self.assertRaises(vlm.SceneError) as caught:
+                asyncio.run(vlm.describe(jpeg))
+            self.assertEqual(
+                (caught.exception.code, caught.exception.status), ("vlm_upstream_error", 502)
+            )
+            self.assertEqual(connection.request.call_count, 1)
+        with patch.dict("os.environ", {"DASHSCOPE_API_KEY": ""}):
+            with self.assertRaises(vlm.SceneError) as caught:
+                asyncio.run(vlm.describe(jpeg))
+            self.assertEqual(caught.exception.code, "vlm_not_configured")
+
+    def test_describe_sync(self):
+        """Functionality: 同步版本结果一致且禁止在事件循环内调用。
+        Inputs: 普通线程调用与协程内调用；Outputs: 成功结果 / RuntimeError。
+        Constraints: RuntimeError 先于任何网络活动。
+        """
+        constructor, _ = fake_connection()
+        jpeg = base64.b64decode(jpeg_b64())
+        with patch("core.vlm.http.client.HTTPSConnection", constructor):
+            result = vlm.describe_sync(jpeg, [box()], language="zh-CN")
+            self.assertEqual(result["model"], vlm.DEFAULT_MODEL)
+            self.assertIn("request_id", result)
+
+            async def inside_loop():
+                return vlm.describe_sync(jpeg)
+
+            with self.assertRaises(RuntimeError):
+                asyncio.run(inside_loop())
+        self.assertEqual(constructor.call_count, 1)

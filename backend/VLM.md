@@ -1,7 +1,36 @@
-# Qwen2.5-VL 场景描述（后端）
+# 场景描述（后端，Qwen 视觉模型）
+
+## 快速接入
+
+- **用**：打开摄像头页，点击"描述场景"。
+- **后端代码**（`from core.vlm import describe`，`boxes` 即 PRS1 检测结果的 `metadata.boxes`，可为 `None`）：
+
+  ```python
+  result = await describe(jpeg_bytes, boxes, question="前面有什么？", language="zh-CN")
+  result["text"]   # 口语化描述；另有 model / language / elapsed_ms / usage / request_id
+  ```
+
+  失败原样抛 `SceneError`（`.code` / `.detail` / `.status`，code 表见下），不重试、不降级。
+  脚本里用同步版 `describe_sync(jpeg_bytes, boxes, question, language)`（不能在事件循环内调用）。
+  `boxes_to_objects(boxes)` 可单独使用，规则与前端 `mapObjects` 一致。
+- **评估**（在 `backend/` 下，读 `backend/.env`，进程内调用，不需要启动服务器或 Origin）：
+
+  ```bash
+  python -m tools.describe_image path/to/images --question "前面有什么？" --output /tmp/vlm-run1
+  ```
+
+  图片或目录（递归，按路径排序，不抽样）；内存中缩到长边 640、RGB、JPEG 质量 80；默认每张间隔
+  6.5 秒（`--interval`，满足每分钟 10 次）；单张失败只记录 code 并继续；遇到持续性且与图片无关的错误（`vlm_not_configured` / `vlm_authentication_failed` /
+  `vlm_quota_exceeded`）立即停止，剩余图片不发请求、不 sleep，`results.jsonl` 不写其行，`run.json` 记
+  `stopped_reason` 与 `skipped`，终端打印原因（不是重试）。全部成功退出码 0，否则 1。
+  `--output` 必须是不存在的新目录，生成 `run.json`（设置、模型、起止时间、成功/失败数、stopped_reason、skipped）和
+  `results.jsonl`（每图 file / request_id / model / elapsed_ms / usage / text 或 error）。
+  需要 Pillow（`requirements-dev.txt` 已含）；不记录 key，不下载任何东西。
+- **前端**：`const text = await describeScene(jpeg, boxes, question)`（`frontend/scene-client.js`），
+  返回 text 字符串，失败抛出带 `code` 的错误。
 
 用户在摄像头页手动点击"描述场景"，前端把当前 JPEG 帧与检测器输出的结构化对象发到后端，
-后端经阿里云 DashScope（OpenAI 兼容接口）调用 Qwen2.5-VL，返回不超过两句的口语化描述。
+后端经阿里云 DashScope（OpenAI 兼容接口）调用 Qwen 视觉模型（默认 `qwen3.7-flash`），返回不超过两句的口语化描述。
 不新增依赖；业务在 `core/vlm.py`，HTTP 适配在 `core/scene.py`，路由在 `config/urls.py`。
 不自动触发、不重试、不重定向、不降级为其他模型或模板文本。
 
@@ -60,7 +89,7 @@
 |---|---|---|
 | `DASHSCOPE_API_KEY` | 无（必填） | 缺失 → 503；仅后端读取，仅出现在 Authorization 头 |
 | `DASHSCOPE_HOST` | `dashscope-intl.aliyuncs.com` | 仅主机名（不含协议/端口/路径），格式非法 → 503，不回退默认；国际站 key 与大陆站 key 不通用 |
-| `VLM_MODEL` | `qwen2.5-vl-7b-instruct` | 字符集 `[A-Za-z0-9._-]`，≤64 |
+| `VLM_MODEL` | `qwen3.7-flash` | 国际站没有 `qwen2.5-vl-7b-instruct`，默认改为实测可用的 `qwen3.7-flash`；字符集 `[A-Za-z0-9._-]`，≤64 |
 
 ## 提示词
 
@@ -109,8 +138,10 @@ question 与 label 来自用户，存在提示注入可能，规则 6 只是缓�
 
 ## 测试与未验证项
 
-`python manage.py test core.test_scene`：全部 mock `http.client`，不联网；覆盖校验、各错误码映射、
-限流/并发、提示词距离、日志无敏感内容。**真实 DashScope 调用（认证、模型名、国际站可用性、
+`python manage.py test core.test_scene core.test_describe_image`：全部 mock `http.client`，不联网；覆盖校验、各错误码映射、
+限流/并发、提示词距离、日志无敏感内容、`boxes_to_objects` 排序/截断/字段规则、`describe`/`describe_sync`
+、CLI（参数、目录遍历、缩图、失败继续与退出码、输出文件）。`core/test_describe_image.py` 与 `tools/describe_image.py`
+是开发工具，同 `tools/check_*.py` 一样不进 full 发布清单。**真实 DashScope 调用（认证、模型名、国际站可用性、
 延迟、实际回答质量与是否编造距离）尚未验证**，需用真实 key 做人工联调。
 
 ## 已知限制
