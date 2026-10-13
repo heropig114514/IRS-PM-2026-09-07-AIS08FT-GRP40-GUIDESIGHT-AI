@@ -1,3 +1,8 @@
-# 职责：源码及文档统一为 LF，避免 Windows/Linux 换行差异。
-# 声明索引：None。变量索引：None。
+# Responsibilities: Normalize source text while retaining exact deployed model metadata bytes.
+# Implementation: LF for ordinary text; disable conversion for two model identity artifacts.
+# Related Modules: backend/tools/deploy_phone_live.py; backend/models/*.json.
+# Declaration Index: None.
+# Variable Index: text=auto/eol=lf — source normalization; model -text — raw-byte identity.
 * text=auto eol=lf
+backend/models/inference-plan.json -text
+backend/models/yolo26n.json -text

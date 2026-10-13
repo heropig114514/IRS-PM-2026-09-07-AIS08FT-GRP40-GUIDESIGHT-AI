@@ -7,6 +7,9 @@
 推理/模型、HTTP路由、systemd/nginx/env和凭据。`scene-client.js` 随共享资源白名单提供，
 但不会发布场景页面入口或后端场景接口。无新增依赖；staging验证导航工具注册和模型字节一致。
 激活只切换current并重启prs-camera，检查监听与健康；不reload nginx、不迁移数据库。
+`models/inference-plan.json` 与 `models/yolo26n.json` 在 Git 中保留原字节（`.gitattributes`
+显式 `-text`），因为部署要求它们与当前服务器逐字节一致。两份元数据沿用既有 CRLF；
+该设置不改变 JSON 内容、推理参数或线上文件，也不放宽 SHA/原字节检查。
 
 发布前明确安装更新后的 `requirements.txt` 依赖；staging 会校验依赖与 ASGI 导入，
 不会自动安装。服务模板必须使用 `--lifespan on` 和单 worker。
