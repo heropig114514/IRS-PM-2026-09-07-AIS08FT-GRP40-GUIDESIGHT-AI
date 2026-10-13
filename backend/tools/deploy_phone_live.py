@@ -1,5 +1,5 @@
 """Responsibilities: Stage/publish Echo, the latest phone live path, bilingual maps, MCP
-and manual vibration/speech UI.
+and manual vibration/speech UI with shared walking navigation dependencies.
 Implementation: Pinned SSH, private local credentials, explicit source allowlist over the
 current release; validate the full-COCO qualified plan before staging;
 prune retired modes and replace owned page/asset/WS routes, including maps and shared language
@@ -25,7 +25,7 @@ FRONTEND — explicit asset set; BACKEND — owned runtime set; RETIRED — expl
 obsolete paths. No credential output.
 VIBRATION_FRONTEND/VIBRATION_BACKEND — narrow UI-profile overlay; source_root is a reviewed
 snapshot directory, and git_commit records its Git identity without reading private files there.
-OUTPUT_FRONTEND/OUTPUT_BACKEND — output UI/MCP overlay preserving active inference code;
+OUTPUT_FRONTEND/OUTPUT_BACKEND — output/navigation UI/MCP overlay preserving inference code;
 LIVE_FRONTEND/LIVE_BACKEND — coordinated browser/PRS live transport overlay, excluding GPU compute;
 runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest.
 Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
@@ -70,7 +70,8 @@ VIBRATION_BACKEND = (
 OUTPUT_FRONTEND = (
     "index.html", "camera.css", "translations.js", "vibration.js", "speech-output.js",
     "ai-control.js", "README.md", "tests/vibration.test.mjs", "tests/speech-output.test.mjs",
-    "maps.html",
+    "maps.html", "maps-page.js", "maps-client.js", "navigation.js", "navigation-ui.js",
+    "tests/navigation.test.mjs",
     "tools/check_vibration_browser.mjs", "tools/check_vibration_mcp_browser.mjs",
     "tools/check_speech_browser.mjs",
 )
@@ -94,6 +95,8 @@ FRONTEND = (
     "maps.html",
     "maps-page.js",
     "maps-client.js",
+    "navigation.js",
+    "navigation-ui.js",
     "ai-control.js",
     "vibration.js",
     "speech-output.js",
@@ -101,6 +104,7 @@ FRONTEND = (
     "tests/camera.test.mjs",
     "tests/i18n.test.mjs",
     "tests/maps-client.test.mjs",
+    "tests/navigation.test.mjs",
     "tests/live-detection-client.test.mjs",
     "tests/frame-pipeline.test.mjs",
     "tests/vibration.test.mjs",
@@ -271,13 +275,13 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     Logic: validate the plan, copy current release, prune explicit retired paths in the new release,
     replace canonical routes/source, verify uploaded bytes, preinstalled dependencies,
     Django/ASGI imports and systemd before activation.
-    Constraints: active/archived releases and map API/business code remain untouched;
+    Constraints: active/archived releases and server map API contracts remain untouched;
     no credentials, database, weights, browser fixtures or environment upload.
     No implicit promotion or rollback; logs release identity and verification transitions.
     Full profile dependencies must be installed explicitly; no implicit pip install.
     Vibration profile verifies the active plan is byte-identical and does not replace runtime,
     service/proxy templates or credentials; no retirement pruning outside the full profile.
-    Outputs requires an explicit isolated runtime and preserves inference sources; staged
+    Outputs includes shared map/navigation UI and requires an isolated runtime; preserves inference;
     service rendering substitutes only the reviewed interpreter path and records its source hash.
     Live-tuning requires an explicit existing runtime; it replaces only scheduling/transport
     and tests, with no service template, registry setting, model or GPU implementation changes.
@@ -348,7 +352,7 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
         "removed": list(retired),
         "scope": ("Live scheduling/transport; preserve compute, device outputs and configuration"
                   if profile == "live-tuning" else
-                  "Device output UI/MCP; preserve inference; explicit isolated runtime"
+                  "Device output/navigation UI/MCP; preserve inference; explicit isolated runtime"
                   if profile == "outputs" else
                   "Manual vibration UI; preserve inference, service/proxy config and credentials"
                   if profile == "vibration" else
@@ -410,7 +414,7 @@ print('Retired source removed from inactive release')
         f"{runtime}/bin/python -c \"import asyncio; from core.ai_mcp import mcp, MCP_PROFILE, "
         "OUTPUT_TOOL_NAMES; assert MCP_PROFILE == 'outputs'; "
         "assert {tool.name for tool in asyncio.run(mcp.list_tools())} == OUTPUT_TOOL_NAMES; "
-        "print('Output-only MCP registry verified')\"\n"
+        "print('Device output/navigation MCP registry verified')\"\n"
     ) if profile == "outputs" else ""
     manifest["remote_checks"] = execute(
         client,

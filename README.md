@@ -27,6 +27,6 @@ frontend/             摄像头回传、Leaflet/OSM 步行路线与客户端测�
 
 [步行路线测试页面](https://47.239.50.129/prs/maps/) 使用 Leaflet 1.9.4 + OpenStreetMap 底图和 ORS `foot-walking` 路线。服务端配置 `ORS_API_KEY`，浏览器仅获配置状态。点击获取设备起点，点选地图终点，再提交路线；也可明确选择 NUS 固定示例。规划时起终点发送 PRS 和 ORS，不存数据库；返回路线、距离、预计时间和转向步骤。初始 NUS 区域预览和示例均不是设备位置。
 
-按用户选择以 ORS 替代原 proposal 中的 Google 路线实现；原 proposal 文件未改写。当前只完成路线规划原型，持续定位、偏航判断、Guidance Manager 与 TTS/避障调度待开发。后续正式实验需明确记录导航实现与地图数据来源。
+按用户选择以 ORS 替代原 proposal 中的 Google 路线实现；原 proposal 文件未改写。地图页现支持持续定位、转向指令、剩余距离、偏航提示、到达判断和手动停止；agent 可通过 `navigation_start`、`navigation_stop`、`navigation_status` 操作同一控制器。需先规划路线并允许浏览器定位，隐藏页面停止，不自动重规划。TTS/避障调度尚未接入；阈值与验证边界见 [前端说明](frontend/README.md) 和 [MCP 契约](backend/MCP.md)。后续正式实验需记录导航实现与地图数据来源。
 
 本地已有课程文件、报告和压缩包不纳入 Git；`.gitignore` 使用根目录白名单。未来新增需要提交的根目录路径时，须显式加入白名单。

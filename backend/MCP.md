@@ -4,7 +4,9 @@
 Streamable HTTP MCP 服务。它与 Django、摄像头和地图共用一个 ASGI 进程和数据库。
 当前按需求不增加 MCP 鉴权或 SQL 权限限制。
 上述完整接口使用默认 `PRS_MCP_PROFILE=full`。本次公网设备输出发布显式配置
-`PRS_MCP_PROFILE=outputs`，只注册 `ui_sessions` 和震动/语音的七项输出工具。
+`PRS_MCP_PROFILE=outputs`。本次代码在原 `ui_sessions` 和震动/语音七项工具基础上，
+增加三项导航工具，共11项；保留配置名，不增加通用 DOM 或数据库工具。
+导航状态包含设备位置；此处说明源码契约，修改代码不代表已发布到公网。
 其余函数保留供本地完整配置使用，不注册到该公网工具目录；无效配置停止启动，不回退。
 公网入口为 `https://47.239.50.129/prs/mcp`，使用相同的 Streamable HTTP 客户端协议。
 在摄像头页真实点击并启用输出后，调用会话发现选择该 tab；公网输出配置不提供自动启用开关的工具。
@@ -66,6 +68,9 @@ AI 控制的是这个已打开的页面，不需要单独安装浏览器扩展�
 | `speech_voices` | 查询设备语音ID、语言、本地/远程服务与默认标记 |
 | `speech_speak` | 提交一次受控文本朗读，不自动排队或替换指定声音 |
 | `speech_stop` | 调用一次取消当前页面的语音输出 |
+| `navigation_start` | 在指定地图 tab 的已规划路线启动持续定位导航 |
+| `navigation_stop` | 停止导航并释放定位监听，保留路线供明确重启 |
+| `navigation_status` | 读取导航状态、位置/精度/时间戳、进度、当前/下一指令与路线摘要 |
 | `database_schema` | 实际数据库表、字段和 Django 模型结构 |
 | `database_query` | ORM 查询、Django 条件表达式、排序和分页 |
 | `database_write` | ORM 创建、更新、删除，返回受影响数量 |
@@ -79,6 +84,44 @@ AI 控制的是这个已打开的页面，不需要单独安装浏览器扩展�
 ## 操作示例
 
 以下 JSON 是工具参数；`session_id` 替换为 `ui_sessions` 返回值。
+
+导航先在 `/maps/` 规划步行路线，再选择该地图页的 session：
+
+```text
+navigation_status({"session_id":"..."})
+navigation_start({"session_id":"..."})
+navigation_status({"session_id":"..."})
+navigation_stop({"session_id":"..."})
+```
+
+三项工具在 `full` 和 `outputs` 均可用，复用 `WalkingNavigation`，不依赖 DOM 选择器。
+`outputs` 下路线由用户在地图页规划；`full` 还可用现有 `ui_action` 填写并提交路线。
+开始成功返回 `operation=start, accepted=true, state=locating`，不等于已经获得位置。
+浏览器仍可能要求用户批准定位；拒绝、超时或不可用会转为 `error`，不自动重试。
+开始重复返回 `already_active`；未规划返回 `route_required`；非地图页返回
+`available=false, accepted=false, reason=page_unavailable`；隐藏页面拒绝开始。
+停止也可取消等待定位的会话，成功后 `active=false`；`stop_failed` 表示原生取消未确认，
+须检查页面并明确停止/关闭页面。断连和 MCP 超时保留原错误语义，完成情况未知，不自动重复。
+
+`navigation_status` 为只读，无定位/路线请求，返回以下结构：
+
+| 字段 | 含义 |
+|---|---|
+| `state`, `active`, `reason` | idle/ready/locating/navigating/off_route/arrived/stopped/error、是否运行导航及原因码；stop_failed 时原生监听释放未确认 |
+| `supported`, `visible` | 持续定位接口是否存在、页面是否前台 |
+| `position` | 最近坐标 longitude/latitude、accuracy_m、Unix 毫秒 timestamp、age_ms；尚未取得时为 null |
+| `route` | request_id、provider/profile、ORS summary、geometry_distance_m、start/destination、step_count、attribution |
+| `progress` | along_m、cross_track_m、remaining_distance_m、remaining_duration_s、distance_to_next_m、step_index、current_step、next_step |
+| `policy` | max_accuracy_m=30、off_route_m=40、arrival_m=15、max_fix_age_ms=15000 |
+
+低精度或停止/错误时 `progress=null`；偏航时仅返回 `cross_track_m` 和为空的当前/下一指令，
+不提供剩余距离/时间。到达自动释放定位，保留到达状态和最后位置；停止后的最后位置仍可能返回，
+必须同时查看 `active/state` 与 `age_ms`，不能当作持续更新的位置。
+步骤保留 ORS 的 `type/instruction/way_points/distance_m/duration_s`，索引从0开始。
+预计时间按 ORS 原时长与剩余几何比例计算，无实时速度估计；精度、偏航和到达边界详见
+[前端说明](../frontend/README.md)。不自动重规划、播音、震动或推断道路安全。
+导航位置不写数据库/本地存储，不进入应用日志；工具响应会将坐标经控制 WebSocket/MCP 返回调用者。
+浏览器隐藏/离页即停止，返回前台须显式重启。本次不提供后台/锁屏导航保证。
 
 震动调用必须选择已打开的摄像头页。用户先在该页真实点击并启用“震动测试”，
 随后 AI 可以调用以下工具；MCP 不会自动启用开关、制造可信用户激活或重复调用。

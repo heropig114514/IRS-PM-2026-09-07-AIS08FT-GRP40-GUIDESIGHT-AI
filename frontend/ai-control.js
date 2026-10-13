@@ -1,13 +1,14 @@
-/* Responsibilities: Expose live PRS DOM state, actions and shared vibration/speech output to MCP.
+/* Responsibilities: Expose live PRS DOM state, actions, device output and walking navigation to MCP.
  * Implementation: One WebSocket per page; sessionStorage identity survives explicit navigation;
  * correlated commands execute once and return snapshots/device acknowledgements/errors;
  * no automatic reconnect.
  * Related Modules: core.ai_bridge/ai_mcp, index.html, maps.html, camera/maps controllers,
- * vibration.js, speech-output.js.
+ * vibration.js, speech-output.js, navigation-ui.js.
  * Declaration Index: selectorFor — exact CSS paths; visible — rendered state;
  * uniqueElement — unambiguous selection; snapshot — live DOM description;
  * waitForState — bounded observation; performVibration — shared structured vibration calls;
  * performSpeech — shared speech state/voices/speak/stop interface;
+ * performNavigation — shared walking navigation start/stop/status;
  * performAction — native control/event dispatch;
  * connectControl — socket registration; connectControl.send — JSON writer;
  * connectControl.onMessage — correlated command handler;
@@ -17,6 +18,7 @@
  */
 import {tester} from "./vibration.js";
 import {speechOutput} from "./speech-output.js";
+import {navigation} from "./navigation-ui.js";
 
 const SESSION_KEY = "prs.ai.session";
 const CONTROL_SELECTOR = "button,a[href],input,select,textarea,[role=button],[contenteditable=true]";
@@ -111,13 +113,15 @@ export async function waitForState(doc, args) {
 }
 
 /* Functionality: Perform one DOM operation using the same controls as a human user.
- * Inputs: action name, args DOM/vibration/speech parameters, browser document.
+ * Inputs: action name, args DOM/device/navigation parameters, browser document.
  * Outputs: DOM snapshot, structured device result or explicit error.
  * Logic: Vibration/speech commands use the page's shared controllers; DOM commands use native value
  * setters plus input/change events, and clicks/forms call native DOM methods.
  * Constraints: Async work may still be running; synthetic keyboard events do not type characters
  * or grant browser permissions. Disabled/read-only/hidden controls fail instead of being bypassed. */
 export async function performAction(action, args, doc = document) {
+  if (["navigation_status", "navigation_start", "navigation_stop"].includes(action))
+    return performNavigation(action, doc === globalThis.document ? navigation : null);
   if (["speech_status", "speech_voices", "speech_speak", "speech_stop"].includes(action))
     return performSpeech(action, args, speechOutput?.doc === doc ? speechOutput : null);
   if (["vibration_status", "vibration_test", "vibration_stop"].includes(action))
@@ -172,6 +176,22 @@ export async function performAction(action, args, doc = document) {
     form.requestSubmit(element.type === "submit" ? element : undefined);
   } else if (action !== "scroll") throw new Error(`Unknown action: ${action}`);
   return snapshot(doc);
+}
+
+/* Functionality: Read/start/stop the same walking controller as the maps panel.
+ * Inputs: Fixed action name and optional maps controller; null on other pages.
+ * Outputs: Structured state, operation and mutation accepted/reason acknowledgement.
+ * Logic: Status is read-only; start requests one watch; stop releases it once.
+ * Constraints: Requires a planned route and browser location permission; no navigation to a
+ * different page, permission bypass, route request, retry or synthetic location. */
+export function performNavigation(action, controller = navigation) {
+  if (!["navigation_status", "navigation_start", "navigation_stop"].includes(action))
+    throw new Error("Unknown navigation command");
+  const operation = action.slice("navigation_".length);
+  if (!controller) return {available: false, active: false, operation,
+    accepted: false, reason: "page_unavailable"};
+  if (operation === "status") return {...controller.describe(), operation};
+  return operation === "start" ? controller.start() : controller.stop("mcp");
 }
 
 /* Functionality: Call the page's existing vibration controller with structured acknowledgement.

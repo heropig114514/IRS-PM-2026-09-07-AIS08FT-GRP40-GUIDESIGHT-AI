@@ -3,16 +3,19 @@
 系统新增 [MCP AI 控制接口](../MCP.md)，生产模板地址 `/prs/mcp`。
 发布前明确安装更新后的 `requirements.txt` 依赖；staging 会校验依赖与 ASGI 导入，
 不会自动安装。服务模板必须使用 `--lifespan on` 和单 worker。
-新 AI 后端、资源和依赖文件进入同一发布 allowlist；本次未执行远程发布。
+新 AI 后端、资源和依赖文件进入同一发布 allowlist；实际激活状态以发布清单为准。
 设备输出发布显式使用 `--profile outputs --source-root <已审查快照> --runtime <独立解释器目录>`，
-配合 `--git-commit <SHA>` 记录来源。该配置只覆盖震动/语音 UI、MCP/控制连接及其依赖，
+配合 `--git-commit <SHA>` 记录来源。该配置覆盖震动/语音/导航 UI、MCP/控制连接及其依赖，
 保留服务器现有摄像头/推理流水线源码、模型清单和方案；两份模型元数据须与当前原字节一致。
 解释器位于 `/opt/prs-practice/runtimes/`，从旧环境复制后只在新环境安装精确的直接依赖，
 记录实际解析版本和 pip check；原 `/opt/prs-practice/runtime-venv` 保留不变。
 服务模板的解释器路径由暂存工具显式渲染，清单同时记录 Git 模板 SHA 和最终文件 SHA。
 激活前校验 current 和全部文件哈希，备份专用 service/nginx/env 后设置
 `PRS_MCP_PROFILE=outputs`，其余环境字段和凭据保持；只重启 prs-camera 并检查健康、reload nginx。
-该公网目录只暴露会话发现及七项输出工具，本地完整接口默认配置保持原行为。
+当前源码的 `outputs` 目录暴露会话发现、七项输出工具及三项导航工具（共11项）；
+导航工具返回设备位置，部署前应核对这一接口变更。仍不注册通用 DOM 或数据库工具。
+输出发布清单包含地图/导航模块，以满足 `ai-control.js` 的静态依赖；源码更新不代表已部署。
+导航更新没有新增运行依赖，可复用已验证的 outputs 隔离解释器；从 Git 提交导出快照发布。
 不迁移数据库，不自动重试或回滚；旧 release/解释器/配置用于人工恢复。
 
 当前入口 https://47.239.50.129/prs/live/ 。`/prs/` 转到同一页面，仅 Echo 和最新 HF 视频路径。
