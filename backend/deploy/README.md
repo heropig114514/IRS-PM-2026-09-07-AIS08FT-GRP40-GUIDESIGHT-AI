@@ -1,6 +1,13 @@
 # PRS 摄像头部署
 
 系统新增 [MCP AI 控制接口](../MCP.md)，生产模板地址 `/prs/mcp`。
+单独发布导航使用 `--profile navigation --source-root <Git快照> --git-commit <SHA>
+--runtime <当前服务实际解释器目录>`，随后以该清单 `--activate`。
+该范围只更新地图/导航、共享语言、MCP控制和静态依赖，保留当前摄像头页面/流水线、
+推理/模型、HTTP路由、systemd/nginx/env和凭据。`scene-client.js` 随共享资源白名单提供，
+但不会发布场景页面入口或后端场景接口。无新增依赖；staging验证导航工具注册和模型字节一致。
+激活只切换current并重启prs-camera，检查监听与健康；不reload nginx、不迁移数据库。
+
 发布前明确安装更新后的 `requirements.txt` 依赖；staging 会校验依赖与 ASGI 导入，
 不会自动安装。服务模板必须使用 `--lifespan on` 和单 worker。
 新 AI 后端、资源和依赖文件进入同一发布 allowlist；实际激活状态以发布清单为准。
