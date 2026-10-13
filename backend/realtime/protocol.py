@@ -3,7 +3,8 @@ Implementation: Versioned8-byte headers; bounded JSON metadata; unchanged JPEG b
 Related Modules: zerogpu.live_worker; tools.live_benchmark; core.detector JPEG size boundary.
 Declaration Index: pack_request; unpack_request; pack_result; unpack_result.
 Variable Index: HEADER — network-order magic/uint32; REQUEST_MAGIC/RESULT_MAGIC — version tags;
-MAX_METADATA_BYTES —64KiB JSON boundary; MAX_PACKET_BYTES — response wire-size ceiling.
+MAX_METADATA_BYTES —256KiB boundary for300 fused/tracked boxes including legacy fields;
+MAX_PACKET_BYTES — response wire-size ceiling; JPEG limit is unchanged.
 """
 
 import hashlib
@@ -15,7 +16,7 @@ from core.detector import MAX_FRAME_BYTES
 HEADER = struct.Struct("!4sI")
 REQUEST_MAGIC = b"PRF1"
 RESULT_MAGIC = b"PRS1"
-MAX_METADATA_BYTES = 64 * 1024
+MAX_METADATA_BYTES = 256 * 1024
 MAX_PACKET_BYTES = HEADER.size + MAX_METADATA_BYTES + MAX_FRAME_BYTES
 
 

@@ -2,7 +2,7 @@
  * Implementation: PRF1/PRS1 packets, twelve pending requests, serialized SHA256 validation;
  * resident/AOT/compiled Torch admission, one cold response budget, explicit stop/errors/end,
  * no reconnect or HTTP per frame.
- * Related Modules: frame-pipeline.js, camera.js; backend core.hf_video_relay/realtime.protocol.
+ * Related Modules: frame-pipeline.js, camera.js; backend core.hf_video_relay/realtime.protocol/risk.
  * Declaration Index: browserSocket; sha256; validateSession; decodeResult; LiveDetectionClient;
  * LiveDetectionClient.constructor; LiveDetectionClient.connect; LiveDetectionClient.connect.register;
  * LiveDetectionClient.sendFrame; LiveDetectionClient.sendFrame.register; LiveDetectionClient.sendFrame.deadline;
@@ -11,19 +11,26 @@
  * LiveDetectionClient.handleMessage.ended; LiveDetectionClient.handleClose;
  * LiveDetectionClient.handleClose.closed; LiveDetectionClient.rejectPending; LiveDetectionClient.fail;
  * LiveDetectionClient.end; LiveDetectionClient.stop.
- * Variable Index: MAX_INFLIGHT — twelve; MAX_METADATA_BYTES/MAX_PACKET_BYTES — original wire bounds;
+ * Variable Index: MAX_INFLIGHT — twelve; MAX_METADATA_BYTES/MAX_PACKET_BYTES — fused wire bounds;
  * COLD_MS/STEADY_MS —55s/10s failure budgets, not latency targets; HASH_PATTERN — SHA256 syntax.
+ * Metadata limit is256KiB for300 fused/tracked objects retaining the existing box fields.
+ * MOTION_STATES — accepted relative-motion labels; optional tracking fields remain additive.
+ * RISK_LEVELS/DIRECTIONS — additive rule-result vocabularies; rule weights stay on the server.
+ * Valid unexpired motion may persist while the current raw depth is null; server owns timeout.
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery.
  */
 import {MAX_FRAME_BYTES} from "./echo-client.js";
 
 export const MAX_INFLIGHT = 12;
-const MAX_METADATA_BYTES = 64 * 1024;
+const MAX_METADATA_BYTES = 256 * 1024;
 const MAX_PACKET_BYTES = 8 + MAX_METADATA_BYTES + MAX_FRAME_BYTES;
 const COLD_MS = 55000;
 const STEADY_MS = 10000;
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
+const MOTION_STATES = new Set(["unknown", "approaching", "moving_away", "stationary"]);
+const RISK_LEVELS = new Set(["unknown", "low", "medium", "high", "critical"]);
+const DIRECTIONS = new Set(["front", "front_left", "front_right", "left", "right", "behind", "unknown"]);
 
 /** Functionality: Construct a native same-origin socket. Inputs: url. Outputs: WebSocket.
  * Logic: caller validates destination. Constraints: browser only; tests inject a factory. */
@@ -73,7 +80,8 @@ function validateSession(message) {
  * Inputs: packet ArrayBuffer, expected uint32 index, validated session contract.
  * Outputs: bytes/metadata/count/inferenceMs. Logic: bound header/JSON/JPEG; match admitted model,
  * compute precision/backend, FP32 output and hashes;
- * original finite boxes/classes/coordinates checked before display, latency never filters results.
+ * finite boxes and optional depth/tracking/TTC/risk fields checked before display; no filtering.
+ * Temporary missing depth may retain a historical estimate; the server expires motion history.
  * Constraints: browser image decoder checks actual dimensions separately; no accuracy/mAP claim. */
 export async function decodeResult(packet, expected, contract) {
   if (!(packet instanceof ArrayBuffer) || packet.byteLength <= 8 || packet.byteLength > MAX_PACKET_BYTES)
@@ -99,6 +107,24 @@ export async function decodeResult(packet, expected, contract) {
   for (const field of ["inference_ms", "graph_setup_ms", "prepare_ms", "gpu_stage_ms", "render_ms", "server_ms"])
     if (!Number.isFinite(metadata[field]) || metadata[field] < 0)
       throw new Error("视频结果耗时无效。");
+  if (Object.hasOwn(metadata, "depth_model") &&
+      (typeof metadata.depth_model !== "string" || !metadata.depth_model || metadata.depth_units !== "m" ||
+       !Number.isFinite(metadata.depth_ms) || metadata.depth_ms < 0))
+    throw new Error("视频深度模型或耗时无效。");
+  const hasTracking = Object.hasOwn(metadata, "tracking_model");
+  if (hasTracking && (metadata.tracking_model !== "botsort" ||
+      !["active", "unavailable"].includes(metadata.tracking_status) ||
+      !Number.isSafeInteger(metadata.tracking_epoch) || metadata.tracking_epoch < 0 ||
+      !["sparseOptFlow", "orb", "sift", "ecc"].includes(metadata.gmc_method) || metadata.with_reid !== false ||
+      !Number.isFinite(metadata.tracking_ms) || metadata.tracking_ms < 0 ||
+      !Number.isFinite(metadata.tracking_timestamp_s) || metadata.tracking_timestamp_s < 0))
+    throw new Error("视频跟踪配置或耗时无效。");
+  const trackIds = new Set();
+  const hasRisk = Object.hasOwn(metadata, "risk_model");
+  if ((hasRisk && (!hasTracking || metadata.risk_model !== "rules-v1" ||
+       !Number.isFinite(metadata.risk_ms) || metadata.risk_ms < 0)) ||
+      (!hasRisk && Object.hasOwn(metadata, "risk_ms")))
+    throw new Error("视频风险规则或耗时无效。");
   for (const box of metadata.boxes) {
     if (!box || !Number.isInteger(box.class_id) || box.class_id < 0 || box.class_id >= 80 ||
         box.label !== contract.names[box.class_id] || !Number.isFinite(box.score) || box.score < 0.25 || box.score > 1 ||
@@ -108,6 +134,63 @@ export async function decodeResult(packet, expected, contract) {
     if (![x1, y1, x2, y2].every(Number.isFinite) || x1 < 0 || y1 < 0 || x1 >= x2 || y1 >= y2 ||
         x2 > metadata.width || y2 > metadata.height)
       throw new Error("视频检测框坐标无效。");
+    if (Object.hasOwn(metadata, "depth_model")) {
+      if (box.class_name !== box.label || box.confidence !== box.score ||
+          !Array.isArray(box.bbox) || box.bbox.length !== 4 ||
+          !box.bbox.every((value, index) => value === box.xyxy[index]) ||
+          !Object.hasOwn(box, "distance_m") ||
+          (box.distance_m !== null && (!Number.isFinite(box.distance_m) || box.distance_m <= 0)))
+        throw new Error("视频目标深度无效。");
+    } else if (Object.hasOwn(box, "distance_m")) {
+      throw new Error("视频目标深度缺少模型标识。");
+    }
+    const trackingFields = ["track_id", "motion_state", "relative_speed_mps", "smoothed_distance_m"];
+    if (hasTracking) {
+      if (trackingFields.some(field => !Object.hasOwn(box, field)) ||
+          box.class_name !== box.label || box.confidence !== box.score ||
+          !Array.isArray(box.bbox) || box.bbox.length !== 4 ||
+          !box.bbox.every((value, index) => value === box.xyxy[index]) ||
+          (box.track_id !== null && (!Number.isSafeInteger(box.track_id) || box.track_id <= 0 ||
+                                    trackIds.has(box.track_id))) ||
+          !MOTION_STATES.has(box.motion_state) ||
+          (box.smoothed_distance_m !== null && (!Number.isFinite(box.smoothed_distance_m) ||
+                                               box.smoothed_distance_m <= 0)) ||
+          (box.relative_speed_mps !== null && !Number.isFinite(box.relative_speed_mps)) ||
+          (box.relative_speed_mps !== null && box.smoothed_distance_m === null) ||
+          (box.motion_state !== "unknown" && (box.track_id === null || box.relative_speed_mps === null)) ||
+          (box.track_id === null && (box.smoothed_distance_m !== null || box.relative_speed_mps !== null ||
+                                    box.motion_state !== "unknown")) ||
+          (!Object.hasOwn(metadata, "depth_model") && (box.smoothed_distance_m !== null ||
+            box.relative_speed_mps !== null || box.motion_state !== "unknown")) ||
+          (metadata.tracking_status === "unavailable" && box.track_id !== null))
+        throw new Error("视频目标跟踪或运动状态无效。");
+      if (box.track_id !== null) trackIds.add(box.track_id);
+    } else if (trackingFields.some(field => Object.hasOwn(box, field))) {
+      throw new Error("视频目标跟踪缺少模型标识。");
+    }
+    const riskFields = ["direction", "ttc_sec", "risk_score", "risk_level", "alert_priority",
+      "alert_required", "risk_reasons"];
+    if (hasRisk) {
+      if (riskFields.some(field => !Object.hasOwn(box, field)) ||
+          !DIRECTIONS.has(box.direction) || !RISK_LEVELS.has(box.risk_level) ||
+          (box.risk_score !== null && (!Number.isFinite(box.risk_score) || box.risk_score < 0 || box.risk_score > 100)) ||
+          ((box.risk_level === "unknown") !== (box.risk_score === null)) ||
+          !Number.isInteger(box.alert_priority) || box.alert_priority < 0 || box.alert_priority > 4 ||
+          typeof box.alert_required !== "boolean" ||
+          (box.alert_required !== (box.alert_priority > 0)) ||
+          (["low", "unknown"].includes(box.risk_level) && box.alert_required) ||
+          (["high", "critical"].includes(box.risk_level) && !box.alert_required) ||
+          !Array.isArray(box.risk_reasons) || !box.risk_reasons.length || box.risk_reasons.length > 8 ||
+          box.risk_reasons.some(reason => typeof reason !== "string" || !reason.length || reason.length > 64) ||
+          (box.ttc_sec !== null && (!Number.isFinite(box.ttc_sec) || box.ttc_sec <= 0 ||
+            box.motion_state !== "approaching" || box.relative_speed_mps === null || box.relative_speed_mps >= 0 ||
+            box.distance_m === null || box.smoothed_distance_m === null || box.track_id === null)) ||
+          ((box.distance_m == null || box.smoothed_distance_m === null || box.track_id === null) &&
+            (box.risk_level !== "unknown" || box.ttc_sec !== null)))
+        throw new Error("视频目标 TTC 或风险状态无效。");
+    } else if (riskFields.some(field => Object.hasOwn(box, field))) {
+      throw new Error("视频目标风险缺少规则标识。");
+    }
   }
   const bytes = packet.slice(8 + length), jpeg = new Uint8Array(bytes);
   if (!jpeg.length || jpeg.length > MAX_FRAME_BYTES || jpeg[0] !== 255 || jpeg[1] !== 216 ||

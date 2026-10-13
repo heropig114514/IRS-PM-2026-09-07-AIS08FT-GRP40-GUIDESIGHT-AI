@@ -1,6 +1,7 @@
 # Responsibilities: 跟踪开发源码，课程资料、凭据、运行环境和生成工件保留在本地。
-# Implementation: 根目录白名单，排除 Python 环境、模型二进制及 ZeroGPU/Kaggle 上传工件。
-# Related Modules: backend/tools/deploy_space.py, backend/tools/prepare_kaggle.py, README.md。
+# Implementation: 根目录白名单，排除环境、模型二进制、上传工件及本地模型测试数据/结果。
+# Related Modules: backend/tools/deploy_space.py, backend/tools/prepare_kaggle.py,
+# backend/model_tests/README.md, README.md。
 # Declaration Index: None。
 # Variable Index: None。
 /*
@@ -34,6 +35,10 @@ dist/
 media/
 staticfiles/
 test-results/
+backend/model_tests/datasets/*
+!backend/model_tests/datasets/README.md
+backend/model_tests/outputs/*
+!backend/model_tests/outputs/README.md
 backend/models/*.pt
 backend/models/*.onnx
 backend/models/*.onnx.data

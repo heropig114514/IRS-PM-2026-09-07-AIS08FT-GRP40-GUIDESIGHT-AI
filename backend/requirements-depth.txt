@@ -1,0 +1,11 @@
+# Responsibilities: Native CUDA detection, metric depth and BoT-SORT tracking dependencies.
+# Implementation: Same Ultralytics/Torch pins as the HF worker; web-only runtime remains separate.
+# Related Modules: realtime.depth/detector/tracking; zerogpu/requirements.txt; DEPTH.md.
+# Declaration Index: None.
+# Variable Index: None.
+-r requirements-vision.txt
+ultralytics==8.4.171
+torch==2.8.0
+torchvision==0.23.0
+opencv-python==4.11.0.86
+lap==0.5.12

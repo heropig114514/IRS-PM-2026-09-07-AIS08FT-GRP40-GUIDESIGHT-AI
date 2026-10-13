@@ -1,13 +1,15 @@
 """Responsibilities: Bounded JPEG decoding and unchanged YOLO26 FP32 image transforms/rendering.
-Implementation: In-memory RGB/letterbox/box inverse/JPEG80 helpers shared by the sole GPU pipeline.
-Related Modules: realtime.detector; zerogpu.live_worker; realtime.protocol.
+Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels.
+Related Modules: realtime.detector/depth/tracking/risk; zerogpu.live_worker; realtime.protocol.
 Declaration Index: DetectionError; DetectionError.__init__; decode_frame; letterbox; decode_boxes;
 label_font; annotate.
 Variable Index: INPUT_EDGE —640; CONFIDENCE_THRESHOLD —0.25; JPEG_QUALITY —80;
 MAX_FRAME_BYTES —1MiB. No CPU model, allocator, singleton or hidden fallback is implemented here.
+ttc/ttc_label — concise high/critical annotation text; no scoring rules live in rendering.
 """
 
 import io
+import math
 from functools import lru_cache
 
 INPUT_EDGE = 640
@@ -132,9 +134,12 @@ def label_font():
 
 
 def annotate(image, boxes):
-    """Functionality: Burn boxes, English COCO names and confidence into returned JPEG pixels.
+    """Functionality: Draw boxes, optional depth/motion and meaningful risk into JPEG.
     Inputs: RGB image and validated boxes; Outputs: encoded JPEG bytes or 502 size error.
-    Logic: draw two-pixel outlines and readable backed labels, encode at explicit quality 80.
+    Logic: preserve previous labels when ID/depth unavailable; otherwise add ID/motion and
+    finite signed m/s for a known motion state (unknown omits speed);
+    high/critical labels replace confidence/speed with concise TTC/level; other labels stay normal;
+    draw two-pixel outlines and readable backed labels, encode at explicit quality 80.
     Constraints: input remains in memory; English font is Pillow bundled, no external font download.
     """
     from PIL import ImageDraw
@@ -146,6 +151,19 @@ def annotate(image, boxes):
         x1, y1, x2, y2 = box["xyxy"]
         draw.rectangle((x1, y1, x2, y2), outline=(0, 255, 140), width=2)
         label = f"{box['label']} {box['score']:.2f}"
+        if "distance_m" in box:
+            distance = box["distance_m"]
+            label += f" | {distance:.1f} m" if distance is not None else " | N/A"
+            if type(box.get("track_id")) is int and box["track_id"] > 0 and distance is not None:
+                state, speed = box.get("motion_state", "unknown"), box.get("relative_speed_mps")
+                label = f"ID {box['track_id']} | {label} | {state}"
+                if state != "unknown" and isinstance(speed, int | float) and math.isfinite(speed):
+                    label += f" | {speed:+.2f} m/s"
+                if box.get("risk_level") in ("high", "critical"):
+                    ttc = box.get("ttc_sec")
+                    ttc_label = f"{ttc:.1f}s" if ttc is not None else "N/A"
+                    label = (f"ID {box['track_id']} | {box['label']} | {distance:.1f}m | "
+                             f"{state} | TTC {ttc_label} | {box['risk_level'].upper()}")
         bounds = draw.textbbox((0, 0), label, font=font)
         text_width, text_height = bounds[2] - bounds[0] + 6, bounds[3] - bounds[1] + 6
         label_x = max(0, min(x1, image.width - text_width))

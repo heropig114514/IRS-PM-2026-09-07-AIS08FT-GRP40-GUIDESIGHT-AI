@@ -1,3 +1,62 @@
+# 2026-10-10 TTC 与规则风险（本地验证）
+
+原运动估计后新增无状态TTC和可配置五项风险评分；没有第二套TrackState或新增模型。
+距离仍来自原深度，TTC用平滑米数/有效负速度；当前帧缺深度时TTC为空、风险unknown，
+保留原运动历史。返回方向、TTC、分数/等级、告警标志/优先级和解释理由，未加入TTS/导航。
+仅high/critical标注增加简洁TTC及等级，协议保持旧字段和256KiB元数据上限。
+默认权重、JSON配置、运行入口、全部修改文件与边界见 [RISK.md](RISK.md)。
+142项后端/70项前端、Django/迁移/Ruff/diff检查通过，注释及索引已人工复核。
+本地RTX3060双模型6帧/5目标ID稳定，原检测哈希/框/原始深度与bus-run-2一致，
+最终stationary且无告警；5目标risk_ms中位0.233ms。CPU规则微测100/300目标平均
+0.844/4.165ms，不含模型、绘制和传输。证据见
+[local-validation.json](benchmarks/2026-10-10/risk/local-validation.json)。
+未验证真实手持视频、HF/PRS外部服务或真值风险准确率；未提交或部署，无新增依赖。
+
+# 2026-10-10 距离运动趋势改进（本地测试）
+
+复用已有 TrackState/TrackHistory，EMA 后对全部有效样本按实际时间戳做线性回归估速。
+至少3个样本开始估速，初次/切换分类都须连续2次合格候选一致；短暂缺深度保留历史估计，
+距最后有效深度超过独立的 motion_history_timeout_s（默认2秒）才清空运动历史。
+新增实例 API update_motion_state(...)->MotionEstimate，标签增加已确认的带符号 m/s。
+原检测、深度、BoT-SORT/CMC、原始距离和协议字段保持；没有新依赖或 GPU 数据传输。
+当前方法、配置及精度边界见 [TRACKING.md](TRACKING.md)。下方 GPU 耗时记录属于初版实现。
+本轮124项后端/67项前端测试及 Django/迁移/Ruff/diff检查通过，注释和索引已人工复核。
+纯 CPU 运动逻辑平均每100个 ID更新约0.57ms，不包含检测、深度或跟踪关联。
+未重新进行真实手机/HF/模型视频验证，未提交或部署。
+
+# 2026-10-10 BoT-SORT 与距离运动状态（本地验证）
+
+原检测框解码后接入 Ultralytics BoT-SORT，启用 sparseOptFlow 相机运动补偿、关闭 ReID。
+每个视频会话的 detector 持有一个 tracker/history；深度融合后按 ID 保存最多8个有效样本，
+EMA 平滑，再按速度阈值及连续确认输出 approaching/moving_away/stationary/unknown。
+原检测/深度参数和 GPU 融合保持不变，新增依赖 lap0.5.12；没有新增 TTC 或风险评分。
+RTX3060 实际双模型6帧验证：5个 ID 全程稳定，后续 stationary；原检测哈希/框/距离与
+bus-run-2 完全一致。非首帧跟踪阶段10.46至29.22ms，不能据此推断手机视频 FPS。
+JSON 上限256KiB、JPEG1MiB、总包1310728字节，发布须协调 HF/PRS/前端及服务参数。
+配置、代码位置、时钟限制、测试覆盖和剩余边界见 [TRACKING.md](TRACKING.md)。
+119项后端、67项前端测试，Django check、迁移 dry-run、Ruff、pip check、diff检查通过；
+注释及声明/变量索引已人工复核，真实 SDK 的 CMC/遮挡/ID持续性测试实际执行。
+本次尚未提交或部署；真实手机运动、HF 分配、长期帧率和距离/速度准确率未验证。
+
+# 2026-10-10 可选 YOLO26 Depth 集成（本地验证）
+
+现有检测框解码之后、JPEG 标注之前新增独立米制深度推理和 ROI 中位数融合；
+原检测模型/参数/图像契约保持，深度模型按显式权重配置加载并在视频帧间复用。
+本地 RTX3060 三帧真实双模型验证通过，原检测输出哈希及框字段与检测单独运行一致；
+97项后端、64项前端及 Django/迁移/Ruff/依赖检查通过。未部署 HF/PRS，未验证真机、
+长期帧率或测距准确度；下方历史测速只代表检测模式。启用方法和验证记录见
+[DEPTH.md](DEPTH.md)。当前跟踪字段使元数据上限增至256KiB，发布时须协调更新协议两端。
+
+本地测试统一整理到 `model_tests/`，从 backend 执行
+`python -m model_tests.run_depth --output model_tests/outputs/bus-run-3`，
+默认使用 `model_tests/samples/bus.jpg`；支持单图、递归 RGB 目录和显式重复次数，保存标注图、
+逐帧 JSONL、输入/权重哈希与运行状态。本地真实 CLI 两次预测完成，检测到5个目标，
+行人约3.69m、公交车约5.25m；单次完整 predict 耗时7.41秒/119.32ms，包含首次初始化。
+该示例没有测距真值。公共检测/深度/实例数据集与模型对比协议见 [DATASETS.md](model_tests/DATASETS.md)；
+当前脚本只导出预测，尚未计算真值准确率，未下载大型数据集或修改现有评估划分/指标。
+数据集放在 `model_tests/datasets/`，已有 `bus-run-1`、`bus-run-2` 等结果原样迁入
+`model_tests/outputs/`。终端与目录使用说明见 [测试 README](model_tests/README.md)。
+
 # 2026-10-07 HF 实测、30FPS 发布与启动传输修复
 
 当前公开页面已协调部署30FPS输入/12帧在途窗口和首帧传输预热。Chrome→公网PRS→

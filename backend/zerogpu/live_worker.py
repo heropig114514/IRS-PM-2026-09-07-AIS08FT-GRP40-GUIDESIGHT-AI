@@ -1,14 +1,17 @@
 """Responsibilities: Process live frames inside one decorated ZeroGPU allocation.
 Implementation: Reuse original detector prediction code with allocation-local graph/buffers;
 pull/return binary packets over capability-protected loopback HTTP; each handoff closes its socket.
-Related Modules: app.gpu_live supplies emulated model or target-compiled package descriptor;
+Related Modules: app.gpu_live supplies detection/depth models or compiled detection descriptor;
 live_transport owns parent queues; aoti/jit_cache validate and load in this allocation;
-realtime.detector/protocol preserve FP32 API buffers/640/0.25/JPEG80 and binary result contracts;
+realtime.detector/tracking/risk/protocol preserve FP32/640/0.25/JPEG80 and binary contracts;
 explicit compute config must agree with the verified allocated model.
 Declaration Index: AllocatedDetector; AllocatedDetector.__init__; exchange; run_worker.
 Variable Index: logger — safe worker phase/count/error diagnostics; worker_pull_ms measures the
 HTTP pull including intentional input waits; worker_predict_ms includes the full predict call,
 metadata/checksum construction as well as its existing nested model/service timers.
+depth_estimator — optional separately root-loaded model, activated once per allocation.
+object_tracker — allocation-local BoT-SORT/GMC/history, never retained by the root GPU model.
+risk_config — immutable scalar TTC/rule profile, no additional per-object state.
 No retained cross-task graph or subtraction of worker clocks from parent/PRS clocks.
 """
 
@@ -19,6 +22,8 @@ import time
 
 from realtime.detector import ResidentDetector
 from realtime.protocol import MAX_PACKET_BYTES, pack_result, unpack_request
+from realtime.risk import DEFAULT_RISK_CONFIG
+from realtime.tracking import DEFAULT_TRACKING_CONFIG, ObjectTracker
 from zerogpu.live_transport import PREFIX, SESSION_SECONDS
 
 logger = logging.getLogger(__name__)
@@ -30,16 +35,17 @@ class AllocatedDetector(ResidentDetector):
     Constraints: constructed inside spaces.GPU; never persist this instance across allocations.
     """
 
-    def __init__(self, model, manifest, config=None):
+    def __init__(self, model, manifest, config=None, *, depth_estimator=None,
+                 tracking_config=DEFAULT_TRACKING_CONFIG, risk_config=DEFAULT_RISK_CONFIG):
         """Functionality: Initialize allocation-local CPU/Graph state around the root-loaded model.
-        Inputs: verified allocated model or startup package descriptor/manifest and explicit config.
+        Inputs: detection model/descriptor/manifest/config; depth and tracking/risk profiles.
         Outputs: ready original predict state. Logic: FP32 [1,3,640,640] API input storage;
         graph remains None until first real JPEG; metadata declares selected precision.
         AOT or JIT-cache restoration prepares one callable before JPEG processing; load cost and
         cache hit evidence are saved. No live backend code generation is permitted.
         Constraints: config must agree with the verified model/package; no weight download,
         thread reconfiguration, implicit precision change, recompile or CPU/backend fallback;
-        the callable/Graph lifetime remains this allocation.
+        callable/Graph and one BoT-SORT/GMC/history remain this allocation; depth activates once.
         """
         import numpy as np
 
@@ -55,6 +61,7 @@ class AllocatedDetector(ResidentDetector):
                         "PyTorch resident CUDA")
         self.tensor = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
         self.runner, self.load_ms, self.cache_evidence = None, 0.0, None
+        self.depth_estimator = depth_estimator
         if self.execution_config.get("aoti"):
             from zerogpu.aoti import load_package
 
@@ -70,6 +77,11 @@ class AllocatedDetector(ResidentDetector):
                 model, Path(__file__).resolve().parent.parent / "models/yolo26n.pt",
                 manifest, self.execution_config)
             self.load_ms = self.cache_evidence["cache_restore_ms"]
+        if self.depth_estimator is not None:
+            self.depth_estimator.activate()
+        self.object_tracker = (ObjectTracker(tracking_config, self.manifest["build"]["ultralytics"])
+                               if tracking_config is not None else None)
+        self.risk_config = risk_config
         logger.info("Allocated detector initialized backend=%s precision=%s load_ms=%.2f",
                     self.backend, self.precision, self.load_ms)
 
@@ -95,11 +107,13 @@ def exchange(connection, capability, action, body=None):
         connection.close()
 
 
-def run_worker(capability, model, manifest, port=7860, factory=AllocatedDetector, config=None):
+def run_worker(capability, model, manifest, port=7860, factory=AllocatedDetector, config=None,
+               *, depth_estimator=None, tracking_config=None, risk_config=None):
     """Functionality: Hold one model/graph allocation only while this bounded live session runs.
     Inputs:64-hex capability, emulated model or package descriptor/manifest, local port, explicit
-    factory and optional validated compute config. Factory receives two arguments for original
-    control, three when config is explicitly supplied.
+    factory, detection config, optional depth and explicit tracking/risk profiles.
+    Optional keywords are forwarded only when provided; actual allocated detector defaults to
+    one BoT-SORT per session. No tracker/history lives in the root-loaded model.
     Outputs: count/timing; Logic: claim parent, pull ordered JPEG, predict and return binary.
     Add same-worker-clock HTTP-pull and full-predict durations without another HTTP request.
     Pull duration includes waiting for the next paced input and is not inference overhead.
@@ -118,7 +132,15 @@ def run_worker(capability, model, manifest, port=7860, factory=AllocatedDetector
         status, _ = exchange(connection, capability, "start")
         if status != 200:
             raise RuntimeError(f"Live allocation claim rejected status={status}")
-        detector = factory(model, manifest) if config is None else factory(model, manifest, config)
+        arguments = (model, manifest) if config is None else (model, manifest, config)
+        options = {}
+        if depth_estimator is not None:
+            options["depth_estimator"] = depth_estimator
+        if tracking_config is not None:
+            options["tracking_config"] = tracking_config
+        if risk_config is not None:
+            options["risk_config"] = risk_config
+        detector = factory(*arguments, **options)
         while time.monotonic() - started < SESSION_SECONDS:
             pull_started = time.perf_counter()
             status, packet = exchange(connection, capability, "next")

@@ -7,6 +7,18 @@
 
 HF GPU 由云服务器通过 HTTPS 调用，不需要本地 GPU 或 SSH 隧道。配置和验证见 [ZEROGPU.md](ZEROGPU.md)。
 
+可显式启用独立 YOLO26 Depth 模型，将每个检测框对应的有效深度中位数作为米制距离，
+并显示在标注 JPEG 中。插入位置、原接口兼容、GPU/Space 配置和验证边界见 [DEPTH.md](DEPTH.md)。
+实时路径新增带相机运动补偿的 BoT-SORT，按 ID 平滑距离并输出接近/远离/静止状态。
+状态归属、配置、测试、性能和局限见 [TRACKING.md](TRACKING.md)。
+运动估计后新增无状态 TTC 与可配置规则风险，返回分数、等级、告警需求和优先级；
+公式、完整默认权重、配置及验证边界见 [RISK.md](RISK.md)，无新增依赖或 TTS。
+
+Qwen2.5-VL 场景描述（`POST /scene/describe/`）的接口、提示词、配置、部署与限制见 [VLM.md](VLM.md)。
+本地模型测试统一放在 [model_tests](model_tests/README.md)，包括运行入口、示例、数据集预留目录和已有测试输出。
+从本目录运行 `.\.venv\Scripts\python.exe -X utf8 -m model_tests.run_depth --output model_tests/outputs/bus-run-3`，
+默认使用随附公交车图片，保存标注图与 JSONL。公开数据集、建议数量和后续模型对比协议见 [DATASETS.md](model_tests/DATASETS.md)。
+
 ## 安装与启动（PowerShell）
 
 从仓库根目录开始：
@@ -24,7 +36,7 @@ Copy-Item .env.example .env
 ```powershell
 .\.venv\Scripts\python.exe manage.py migrate
 .\.venv\Scripts\python.exe manage.py check
-.\.venv\Scripts\python.exe -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --lifespan off --ws websockets-sansio --ws-max-size 1048576 --ws-per-message-deflate false
+.\.venv\Scripts\python.exe -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1310728 --ws-per-message-deflate false
 ```
 
 仅首次创建 `.env` 时复制模板，避免覆盖自己的配置。已有进程环境变量优先于 `.env`。密钥缺失时启动失败；SQLite 默认文件是 `backend/db.sqlite3`，不会提交。

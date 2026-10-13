@@ -126,6 +126,16 @@ CPU采样默认关闭，因为profiling本身可能影响定时器精度；开�
 eager Graph方案 `--plan`；该native控制不会加载AOT包。公网证据见
 [PHONE-LIVE.md](../backend/PHONE-LIVE.md)。已有地图页面和模块保持原契约。
 
+实时结果支持 BoT-SORT 的 `track_id/motion_state/relative_speed_mps/smoothed_distance_m`；
+客户端校验并保留新增字段，展示服务端包含 ID、距离和运动状态的标注 JPEG，继续接受旧字段。
+已确认运动的标签增加带符号 m/s；短暂缺距离允许保留服务端未过期的历史运动估计。
+JSON 上限256KiB、JPEG1MiB，服务端包上限1310728字节，须与 HF/PRS 协调发布。
+跟踪生命周期、手机运动补偿、运行配置及验证局限见 [TRACKING.md](../backend/TRACKING.md)。
+结果还支持方向、TTC秒数、risk_score/risk_level/alert_priority/alert_required/risk_reasons。
+仅校验和保留字段，不在浏览器重复评分或播报；high/critical服务端标注追加简洁TTC和等级。
+缺当前深度时风险unknown、TTC为空，即使运动历史仍有效。规则配置和默认值见
+[RISK.md](../backend/RISK.md)。旧包仍兼容，元数据上限保持256KiB。
+
 摄像头与 `/prs/maps/` 地图页共用“跟随系统 / English / 中文”选择器，语言偏好同源保存。
 地图的按钮、定位/底图状态、来源/精度、路线汇总、转向类型、标记提示、错误及无障碍标签
 随语言即时切换。已返回的 ORS 英文原始指令与地名保持原样；切换语言不重新定位或请求路线。
@@ -143,3 +153,20 @@ node tools/check_maps_browser.mjs https://47.239.50.129/prs/maps/ ../backend/ben
 输出 JSON 和英文页面 PNG；不代表真实 GPS、浏览器权限弹窗或 ORS 上游验证。
 `--live-route` 另执行一次明确标记的 NUS 示例真实 ORS 请求，并检查既有路线切换语言时不重复请求。
 失败保存诊断并退出，不自动重试或回滚。
+
+## 场景描述（Qwen2.5-VL，feat/vlm-scene）
+
+摄像头页的“场景描述”区块（`scene-client.js`）：开启摄像头后点击“描述场景”（可选填最多200字的提问），
+浏览器向同源 `POST scene/describe/`（沿用 `data-api-base`，`/live/` 页即 `/scene/describe/`）发送
+`{image_jpeg_base64, language, question?, objects?}`，显示返回的 `text`；接口契约见后端 `core/scene.py` / `backend/VLM.md`。
+- 取帧：`CameraApp.latestJpeg()` 复用推流中最近一帧已编码 JPEG（640 最大边/质量0.8，≤1秒）；过期或未推流但摄像头已开启时按同一参数重新抓取一帧；摄像头未开启则提示，不申请权限。
+- objects：`CameraApp.latestBoxes()` 取最近（≤1秒）一次 HF 检测结果的 boxes（Echo 模式无检测则不带 objects），
+  映射 `score→confidence`，携带 `distance_m/direction/risk_level/motion_state/track_id`（缺失即省略，不编造），
+  按 alert_priority 降序、距离升序、置信度降序排序后截断到50。
+- 语音：仅当页面“启用语音输出”已勾选时调用共享 `SpeechOutput.speak`（语言随页面语言）；否则只显示文字。
+- 单次在途（按钮禁用）、30秒浏览器超时、不自动重试；错误按后端 `code` 显示中英文提示并附 `request_id`，不显示 `detail`。
+- 图像仅在内存中经 HTTPS 发给服务端再转发给视觉模型，不保存。结果是 AI 生成，可能有误，不能替代白手杖等。
+- 新鲜度限制：阈值为 `camera.js` 导出的 `SCENE_MAX_AGE_MS`（1000毫秒）。复用的帧与检测框可能各自最多1秒旧，且二者不一定来自同一时刻，检测框可能与图像略有错位。
+- 未预期的异常只显示通用失败文案（控制台仅记录异常类型），不展示原始异常文本。
+- 后端静态白名单 `core/camera.py::ASSETS` 必须包含 `scene-client.js`。
+`tests/scene-client.test.mjs` 用 fetch/语音/取帧替身覆盖映射、请求体、错误与语音；真实浏览器与手机未测。

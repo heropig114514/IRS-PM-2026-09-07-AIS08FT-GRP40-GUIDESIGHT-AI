@@ -1,7 +1,9 @@
 """Responsibilities: Stage/publish only the current ZeroGPU live implementation.
 Implementation: Validate the measured COCO-qualified plan before content-addressed staging;
 one parent-pinned HF commit publishes its exact configuration and removes retired APIs.
-Related Modules: zerogpu.app/live_transport/live_worker/runtime/aoti/jit_cache; core.inference_plan;
+Related Modules: zerogpu.app/live_transport/live_worker/runtime/aoti/jit_cache;
+realtime.depth/tracking/risk;
+core.inference_plan;
 core.detector; realtime.protocol.
 Declaration Index: stage_bundle; publish; main.
 Variable Index: ROOT/SPACE_ID — fixed workspace/owned Space; FILES — source/destination allowlist;
@@ -38,6 +40,9 @@ FILES = {
     "realtime/__init__.py": "realtime/__init__.py",
     "realtime/protocol.py": "realtime/protocol.py",
     "realtime/detector.py": "realtime/detector.py",
+    "realtime/depth.py": "realtime/depth.py",
+    "realtime/tracking.py": "realtime/tracking.py",
+    "realtime/risk.py": "realtime/risk.py",
     "core/__init__.py": "core/__init__.py",
     "core/detector.py": "core/detector.py",
     "core/inference_plan.py": "core/inference_plan.py",

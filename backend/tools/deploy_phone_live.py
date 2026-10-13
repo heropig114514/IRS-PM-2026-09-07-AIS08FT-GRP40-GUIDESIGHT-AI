@@ -10,7 +10,8 @@ An explicit vibration profile overlays only reviewed UI assets and their serving
 requiring the same inference plan and preserving active service/proxy/credential configuration.
 The live-tuning profile overlays only capture/transport scheduling and its tests, requires an
 explicit runtime, and preserves the current model, device outputs and service configuration.
-Related Modules: hf_video_relay/inference_plan/ai_mcp/ai_bridge; frontend live pipeline;
+Related Modules: hf_video_relay/inference_plan/ai_mcp/ai_bridge; realtime.depth/tracking/risk;
+frontend live pipeline;
 deploy templates;
 private server_info.txt.
 Declaration Index: PinnedHost — SSH policy; PinnedHost.missing_host_key — fingerprint check;
@@ -100,6 +101,7 @@ FRONTEND = (
     "ai-control.js",
     "vibration.js",
     "speech-output.js",
+    "scene-client.js",
     "README.md",
     "tests/camera.test.mjs",
     "tests/i18n.test.mjs",
@@ -109,11 +111,15 @@ FRONTEND = (
     "tests/frame-pipeline.test.mjs",
     "tests/vibration.test.mjs",
     "tests/speech-output.test.mjs",
+    "tests/scene-client.test.mjs",
 )
 BACKEND = (
     "config/asgi.py",
     "config/urls.py",
     "core/camera.py",
+    "core/scene.py",
+    "core/vlm.py",
+    "core/test_scene.py",
     "core/ai_bridge.py",
     "core/ai_database.py",
     "core/ai_mcp.py",
@@ -126,6 +132,9 @@ BACKEND = (
     "realtime/__init__.py",
     "realtime/protocol.py",
     "realtime/detector.py",
+    "realtime/depth.py",
+    "realtime/tracking.py",
+    "realtime/risk.py",
     "zerogpu/__init__.py",
     "zerogpu/app.py",
     "zerogpu/entrypoint.py",
@@ -139,17 +148,22 @@ BACKEND = (
     "core/test_hf.py",
     "core/test_zerogpu.py",
     "core/test_frames.py",
+    "core/test_depth.py",
     "core/test_protocol.py",
     "core/test_hf_live.py",
     "core/test_zerogpu_live.py",
     "core/test_zerogpu_quota.py",
     "requirements-vision.txt",
+    "requirements-depth.txt",
     "requirements.txt",
     "MCP.md",
     "README.md",
     "ZEROGPU.md",
     "PHONE-LIVE.md",
+    "DEPTH.md",
+    "TRACKING.md",
     "ACCELERATION.md",
+    "VLM.md",
     "models/README.md",
     "models/yolo26n.json",
     "models/inference-plan.json",
