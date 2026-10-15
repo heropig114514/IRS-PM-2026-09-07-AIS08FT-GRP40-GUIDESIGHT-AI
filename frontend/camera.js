@@ -1,8 +1,8 @@
 /**
- * Responsibilities: 摄像头授权、原样串行与ZeroGPU有界视频流水线、阶段计时和生命周期。
- * Implementation: 最大边640、JPEG0.8；HF首帧单独完成后30FPS采集、12帧上限、顺序显示；任何错误停止。
+ * Responsibilities: 摄像头授权、显式Echo/HF/本地CUDA传输、阶段计时和可订阅生命周期。
+ * Implementation: 最大边640、JPEG0.8；HF/本地首帧单独完成后30FPS采集、12帧上限、顺序显示；任何错误停止。
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
- * frame-pipeline.js, scene-client.js(只读 latestJpeg/latestBoxes)；core.echo/hf_video_relay；
+ * frame-pipeline.js, scene-client.js, integration/local-mvp.js；core.echo/hf_video_relay/integration.asgi；
  * tools/benchmark_phone_browser.mjs 验证真实页面；测试图流不代表手机实拍。
  * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
@@ -11,17 +11,18 @@
  * CameraApp.runPipeline; CameraApp.runPipeline.display;
  * CameraApp.runPipeline.frame; CameraApp.runPipeline.sent; CameraApp.runPipeline.active;
  * CameraApp.publishFrame; CameraApp.handleSessionEnd;
- * CameraApp.latestJpeg; CameraApp.latestBoxes;
+ * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide。
  * Variable Index: MAX_EDGE/JPEG_QUALITY 为采集参数；METRICS_LOG_INTERVAL_MS 为汇总日志间隔；
- * PROCESSING_PATHS 为唯一两个WS模式与固定路径；app 为页面控制器；实例 frameTimings 保存首帧和有限聚合统计，
+ * PROCESSING_PATHS 为三个显式WS模式路径；app 为页面控制器；实例 frameTimings 保存首帧和有限聚合统计，
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs及creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
  * 仅聚合带有流水线调度观测的稳态帧，不把串行Echo缺失的观测计为零；
  * SCENE_MAX_AGE_MS 为场景描述复用最近帧/检测结果的最大年龄；实例 lastFrame/lastDetection 仅在内存保存最近一次
- * 已编码JPEG与HF检测元数据供 scene-client.js 读取，停止即清空，不持久化；
+ * 已编码JPEG与检测元数据供 scene-client.js 读取，停止即清空，不持久化；
  * cameraApp 为页面控制器的导出引用；
- * cameraPhase 定位操作阶段，pipeline持有有界作业/取消信号；apiBase为同源API挂载点。
+ * cameraPhase 定位阶段，pipeline持有有界取消信号；apiBase为同源API挂载点；listeners是观察者集合；
+ * localDeviceId是本地UI明确选择的设备，localOnly阻止本地MVP误启动HF，sessionId标记结果生命周期。
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
 import { LiveDetectionClient } from "./live-detection-client.js";
@@ -31,12 +32,12 @@ const MAX_EDGE = 640;
 const JPEG_QUALITY = 0.8;
 const METRICS_LOG_INTERVAL_MS = 5000;
 export const SCENE_MAX_AGE_MS = 1000;
-const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/"};
+const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/", local: "./ws/detect/local/"};
 
-/** Functionality: Resolve one of the two supported processing modes.
+/** Functionality: Resolve one of the three explicitly supported processing modes.
  * Inputs: processing enum. Outputs: fixed relative WS path; unknown values throw.
  * Logic: explicit allowlist rejects retired modes before camera authorization.
- * Constraints: no HTTP detector, alternate provider or automatic mode substitution. */
+ * Constraints: no HTTP detector or automatic provider substitution. */
 export function processingPath(processing) {
   if (!Object.hasOwn(PROCESSING_PATHS, processing)) throw new Error("未知图像处理模式");
   return PROCESSING_PATHS[processing];
@@ -86,6 +87,10 @@ export class CameraApp {
     this.pipeline = null;
     this.lastFrame = null;
     this.lastDetection = null;
+    this.listeners = new Set();
+    this.localDeviceId = "";
+    this.localOnly = document.documentElement?.dataset?.localMvp === "true";
+    this.sessionId = null;
     this.apiBase = document.documentElement?.dataset?.apiBase || "./";
     this.generation = 0;
     this.mode = "idle";
@@ -105,6 +110,20 @@ export class CameraApp {
     this.pingButton.addEventListener("click", this.testPing);
     document.addEventListener("visibilitychange", this.handleVisibility);
     window.addEventListener("pagehide", this.handlePageHide);
+  }
+  /** Functionality: Subscribe to camera events. Inputs: listener function. Outputs: unsubscribe callback.
+   * Logic: identity-based Set; events include source capture times and generation.
+   * Constraints: no DOM polling, frame copying, automatic network or persistent history. */
+  subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
+  /** Functionality: Publish lifecycle/results. Inputs: event object. Outputs: observer callbacks.
+   * Logic: include controller generation; diagnose observer failures without changing inference behavior.
+   * Constraints: observers own their business rules; exception logs omit frame bodies. */
+  emit(event) {
+    const generation = this.generation;
+    for (const listener of this.listeners) {
+      try { listener({...event, generation}); }
+      catch (error) { console.error("Camera observer failed", {error_type: error.name}); }
+    }
   }
   /** Functionality: Resolve an API path against the page's explicit same-origin mount.
    * Inputs: relative path, apiBase and browser location. Outputs: validated URL.
@@ -136,6 +155,7 @@ export class CameraApp {
    * Logic: 记录mode、摄像头阶段和已完成数量后停止并显示原因。
    * Constraints: 日志无帧数据/凭据，其他操作的cameraPhase可为idle，不推断远端故障原因。 */
   handleDisconnect(error) {
+    this.emit({type: "error", sessionId: this.sessionId, errorType: error.name});
     console.error("Camera processing failed:", {
       message: error.message, mode: this.mode, cameraPhase: this.cameraPhase,
       completedFrames: this.frameTimings ? this.frameTimings.steadyFrames + 1 : 0,
@@ -147,7 +167,7 @@ export class CameraApp {
   }
   /** Functionality: 授权摄像头并使用显式所选模式。Inputs: facingMode、processing、浏览器媒体 API。
    * Outputs: 本地 video、返回 img、往返时间及首帧后的完成速率。
-   * Logic: 原样保持单在途；HF使用同源持久WS与当前默认采样/8作业流水线；首帧单列。
+   * Logic: 原样保持单在途；HF/本地复用30FPS/12作业流水线；本地只用显式deviceId，HF保留exact镜头。
    * Constraints: exact镜头；检测失败停止，不切换模式或自动重新授权；不丢弃已发送帧来制造速率；
    * 没有固定等待不保证达到10FPS；计时从 drawImage 前开始，不等于传感器曝光或屏幕实际绘制时间。 */
   async start() {
@@ -162,12 +182,14 @@ export class CameraApp {
     try {
       const processing = this.processing.value;
       const path = processingPath(processing);
+      if (this.localOnly && processing === "hf") throw new Error("本地 MVP 不允许调用 Hugging Face。");
+      if (processing === "local" && !this.localDeviceId) throw new Error("请先明确选择本地摄像头。");
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         throw new Error("摄像头需要 HTTPS，请在手机系统浏览器中打开安全链接");
       }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { exact: this.camera.value },
+          ...(processing === "local" ? {deviceId: {exact: this.localDeviceId}} : {facingMode: {exact: this.camera.value}}),
           width: { ideal: 640 },
           height: { ideal: 480 },
         },
@@ -188,13 +210,15 @@ export class CameraApp {
       this.setStatus("正在连接服务端");
       const url = this.apiUrl(path);
       url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
-      const client = processing === "hf"
-        ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd)
+      const client = processing !== "echo"
+        ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd, {provider: processing})
         : new EchoClient(url.href, this.handleDisconnect);
       this.client = client;
       this.cameraPhase = "connect";
-      await client.connect();
+      const contract = await client.connect();
       if (token !== this.generation) return;
+      this.sessionId = contract?.session_id || `camera-${token}`;
+      this.emit({type: "session", sessionId: this.sessionId, provider: processing, contract});
       this.setStatus(processing !== "echo" ? "正在检测" : "正在回传", "live");
       this.image.alt =
         processing !== "echo"
@@ -204,14 +228,15 @@ export class CameraApp {
         processing !== "echo" ? "YOLO26 标注" : "字节一致 ✓";
       this.message.textContent =
         processing !== "echo"
-          ? "YOLO26n 检测 80 类；Hugging Face ZeroGPU 返回标注图像。"
+          ? processing === "local" ? "YOLO26n 本地 CUDA 检测 80 类；图像仅发送本机服务。"
+            : "YOLO26n 检测 80 类；Hugging Face ZeroGPU 返回标注图像。"
           : "每帧均经过服务端原样回传，字节校验通过后显示。";
       let sent = 0;
       let received = 0;
       this.frameTimings = null;
       document.getElementById("frames").textContent = "0 / 0";
       document.getElementById("fps").textContent = "—";
-      if (processing === "hf") {
+      if (processing !== "echo") {
         this.setStatus("等待首帧检测");
         await this.runPipeline(client, processing, token);
         return;
@@ -248,9 +273,9 @@ export class CameraApp {
       if (token === this.generation) this.handleDisconnect(error);
     }
   }
-  /** Functionality: Run the selected HF session without serial capture/response/display waits.
+  /** Functionality: Run the selected HF/local session without serial capture/response/display waits.
    * Inputs: client, processing snapshot, generation token. Outputs: pipeline completion/exception.
-   * Logic: sender admits before capture; display and HUD callbacks have generation guards;
+   * Logic: sender admits before capture; result subscribers/HUD retain original capture time and generation guards;
    * controller stop cancels the instance, and LiveDetectionClient owns provider end/error semantics.
    * Constraints: twelve total jobs, first frame alone,30FPS input ceiling; no retry or automatic next session. */
   async runPipeline(client, processing, token) {
@@ -264,9 +289,11 @@ export class CameraApp {
      * Constraints: queued/late/cancelled frames are not counted as displayed. */
     function frame(result, timing) {
       if (token !== app.generation) return;
-      app.lastDetection = {metadata: result.metadata, at: performance.now()};
+      app.lastDetection = {metadata: result.metadata, at: timing.capturedAt};
       app.setStatus("正在检测", "live");
       app.publishFrame(processing, timing.inputBytes, result, timing, timing.sent, timing.received);
+      app.emit({type: "frame", sessionId: app.sessionId, provider: processing,
+        result, capturedAt: timing.capturedAt, timing});
     }
     /** Functionality: Publish submitted/displayed counters. Inputs: sentCount, receivedCount.
      * Outputs: DOM. Logic: sender owns sent and renderer owns received.
@@ -299,7 +326,7 @@ export class CameraApp {
     document.getElementById("size").textContent = (inputBytes / 1024).toFixed(1);
     document.getElementById("fps").textContent = steadyFps === null ? "—" : steadyFps.toFixed(1);
   }
-  /** Functionality: Release camera after an explicit bounded HF session end.
+  /** Functionality: Release camera after an explicit bounded detector session end.
    * Inputs: active controller/client state. Outputs: stopped media and visible completed-session state.
    * Logic: stop admission, drain already-validated display, then release; user starts another session.
    * Constraints: forced stop/error still cancels promptly; no automatic GPU allocation. */
@@ -311,9 +338,12 @@ export class CameraApp {
       await this.pipeline.drain();
     }
     if (token !== this.generation) return;
+    this.emit({type: "ended", sessionId: this.sessionId});
     this.stop();
     this.setStatus("本次视频会话已结束");
-    this.message.textContent = "ZeroGPU 视频会话已结束并释放资源。再次点击开始可开启新会话。";
+    this.message.textContent = this.processing.value === "local"
+      ? "本地视频会话已结束并释放资源。再次点击开始可开启新会话。"
+      : "ZeroGPU 视频会话已结束并释放资源。再次点击开始可开启新会话。";
   }
   /** Functionality: 按原长宽比采集 JPEG。Inputs: video 当前帧。Outputs: ArrayBuffer。
    * Logic: 限制最大边 640；仅尺寸改变时重置画布，随后编码当前帧。
@@ -348,8 +378,8 @@ export class CameraApp {
     if (frame && performance.now() - frame.at <= maxAgeMs) return frame.bytes;
     return this.capture();
   }
-  /** Functionality: 为场景描述提供最近一次HF检测框。Inputs: maxAgeMs，lastDetection。
-   * Outputs: boxes数组（可为空）。Logic: 仅返回不超过 maxAgeMs 的结果，避免过期距离误导。
+  /** Functionality: 为场景描述提供最近一次检测框。Inputs: maxAgeMs，lastDetection。
+   * Outputs: boxes数组（可为空）。Logic: 从原采集时间计算结果年龄，避免慢旧帧被当作新鲜结果。
    * Constraints: 只读返回，不修改元数据；metadata/boxes 缺失或非数组返回空数组；Echo 模式或无检测时返回空数组，不伪造。 */
   latestBoxes(maxAgeMs = SCENE_MAX_AGE_MS) {
     const detection = this.lastDetection;
@@ -485,6 +515,8 @@ export class CameraApp {
    * Outputs: 清空预览和回显，保留页面统计并发布本次汇总；Logic: 递增 generation，取消旧异步操作。
    * Constraints: 可重复调用；不自动恢复，需用户再次点击开始。 */
   stop() {
+    this.emit({type: "stop", sessionId: this.sessionId});
+    this.sessionId = null;
     this.generation += 1;
     this.reportFrameTimings("stop");
     this.frameTimings = null;

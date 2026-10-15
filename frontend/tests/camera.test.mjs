@@ -10,7 +10,7 @@
  * testCancelled.waitForPermission.register; testCancelled.stopTrack;
  * testCancelled.getTracks; testProcessingPath; testApiMount; testDecodeCancelled;
  * testDecodeCancelled.waitForDecode;
- * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testSceneHooks; testTimingBoundaries。
+ * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testSceneHooks; testTimingBoundaries; testCameraEvents; testLocalDeviceGate。
  * Variable Index: None；所有 mock 限于 Node 的独立测试文件进程。
  */
 import assert from "node:assert/strict";
@@ -124,15 +124,39 @@ globalThis.window = {
 };
 const { CameraApp, processingPath } = await import("../camera.js");
 
-/** Functionality: Verify only Echo and the current GPU session can be selected.
+/** Functionality: Verify explicit Echo/HF/local endpoints and retired modes stay rejected.
  * Inputs: actual mode mapping and retired/unknown enums. Outputs: fixed paths or explicit errors.
  * Logic: reject every former mode, rather than silently substituting a new provider.
  * Constraints: no external camera, socket, CPU detector or GPU request. */
-test("仅保留Echo和最新HF视频模式", function testProcessingPath() {
+test("显式支持Echo、HF和独立本地视频模式", function testProcessingPath() {
   assert.equal(processingPath("echo"), "./ws/echo/");
   assert.equal(processingPath("hf"), "./ws/detect/hf/");
+  assert.equal(processingPath("local"), "./ws/detect/local/");
   for (const mode of ["detect", "stream", "hf_stream", "hf_boxes", "hf_boxes_fast", "hf_live", "unknown"])
     assert.throws(() => processingPath(mode), /未知/);
+});
+
+/** Functionality: Verify event subscription and generation ownership. Inputs: actual controller and listener.
+ * Outputs: subscribed result identity and no replay after unsubscribe.
+ * Logic: stop publishes old-session cancellation before advancing generation; Constraints: no camera/network. */
+test("camera publishes explicit session/result/stop events without DOM polling", function testCameraEvents() {
+  const app = makeApp(ignoreWindowEvent), events = [], bytes = new ArrayBuffer(3);
+  const unsubscribe = app.subscribe(event => events.push(event));
+  app.sessionId = "local-session"; app.generation = 5;
+  app.emit({type: "frame", result: {bytes}, capturedAt: 100});
+  assert.equal(events[0].result.bytes, bytes); assert.equal(events[0].generation, 5);
+  app.stop(); assert.equal(events[1].type, "stop"); assert.equal(events[1].sessionId, "local-session");
+  unsubscribe(); app.emit({type: "frame"}); assert.equal(events.length, 2);
+});
+/** Functionality: Verify local-only provider/device gates occur before media authorization.
+ * Inputs: local/HF mode and explicit local-only marker. Outputs: zero media calls until an explicit device.
+ * Logic: no camera/facing fallback; Constraints: actual device selection is validated by the browser. */
+test("local mode requires explicit device and local-only page blocks HF", async function testLocalDeviceGate() {
+  let calls = 0;
+  const app = makeApp(async () => { calls++; throw new Error("unexpected media call"); });
+  app.processing.value = "local"; await app.start(); assert.equal(calls, 0);
+  app.localOnly = true; app.processing.value = "hf"; await app.start(); assert.equal(calls, 0);
+  assert.match(app.message.textContent, /本地 MVP/);
 });
 
 /** Functionality: Resolve the additive live page against the existing same-origin API mount.

@@ -182,8 +182,7 @@ class CameraPageTests(SimpleTestCase):
                 response.close()
 
     def test_retired_routes_and_modes(self):
-        """Functionality: Verify canonical redirect, exactly two modes and retired HTTP/WS
-        rejection.
+        """Functionality: Verify redirect, existing modes, disabled local and retired routes.
         Inputs: actual URL/ASGI dispatch and frontend bytes; Outputs: redirect/options/404/1008.
         Logic: no GPU dependencies reached for an obsolete path.
         Constraints: actual reverse proxy routing is checked independently after publication.
@@ -191,7 +190,8 @@ class CameraPageTests(SimpleTestCase):
         self.assertRedirects(self.client.get("/"), "/live/", fetch_redirect_response=False)
         page = self.client.get("/live/").content.decode()
         modes = re.search(r'<select id="processing"[^>]*>(.*?)</select>', page, re.S).group(1)
-        self.assertEqual(re.findall(r'value="([^"]+)"', modes), ["echo", "hf"])
+        self.assertEqual(re.findall(r'value="([^"]+)"', modes), ["echo", "hf", "local"])
+        self.assertRegex(modes, r'<option value="local" disabled>')
         for path in (
             "/vision/config/",
             "/vision/frame/",
