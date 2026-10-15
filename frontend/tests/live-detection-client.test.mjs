@@ -7,7 +7,8 @@
  * admitted; testBinary; testInvalid; testOrder; testStop; testBudgets; testFinal; testHello;
  * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
  * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
- * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity; testLocalHello; testLocalCapture; testLocalCorrelation.
+ * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity; testLocalHello; testLocalCapture; testLocalCorrelation;
+ * testDistanceModes; testDistanceModeFailures.
  * Variable Index: manifest/contract — original public model identity; plan — current deployment's
  * compute/quality contract; localContract is independent local capability admission; JPEG — synthetic markers.
  */
@@ -30,6 +31,52 @@ const localContract = {...contract, provider: "local", protocol_version: 2, sess
   depth_model: "yolo26n-depth", depth_units: "m", tracking_model: "botsort", risk_model: "rules-v1",
   capabilities: {detection: true, depth: true, tracking: true, risk: true}};
 delete localContract.validation;
+
+/** Functionality: Admit and decode complete local B/C outputs through unchanged distance/risk fields.
+ * Inputs: explicit mode identities and independent existing risk fixtures. Outputs: valid distance and Track ID.
+ * Logic: geometry carries its own estimator identity; C keeps depth identity on skipped frames.
+ * Constraints: synthetic protocol fixtures do not verify model performance or accuracy. */
+test("local geometry and temporal depth preserve distance tracking and risk interfaces", async function testDistanceModes() {
+  for (const mode of ["geometry", "temporal_depth"]) {
+    const hello = {...localContract, distance_mode: mode, distance_units: "m", depth_interval: mode === "geometry" ? 0 : 3};
+    const metadata = {...riskMetadata(), provider: "local", session_id: localContract.session_id,
+      capture_time_s: 2, timestamp_source: "browser_capture", distance_mode: mode, distance_units: "m",
+      depth_interval: hello.depth_interval, depth_frame: false, distance_ms: 0.1};
+    if (mode === "geometry") {
+      delete hello.depth_model; delete hello.depth_units;
+      hello.distance_estimator = metadata.distance_estimator = "pinhole-height-v1";
+      hello.capabilities = {...hello.capabilities, depth: false, distance: true};
+      delete metadata.depth_model; delete metadata.depth_units; delete metadata.depth_ms;
+    } else {
+      metadata.boxes = metadata.boxes.map(box => ({...box, distance_source: "cached"}));
+    }
+    const f = await admitted(fixture("local"), hello);
+    try {
+      const parsed = await decodeResult(packet(0, metadata), 0, f.client.contract, {captureTimeS: 2});
+      assert.equal(parsed.metadata.distance_mode, mode);
+      assert.equal(parsed.metadata.boxes[0].distance_m, metadata.boxes[0].distance_m);
+      assert.equal(parsed.metadata.boxes[0].track_id, metadata.boxes[0].track_id);
+      assert.equal(parsed.metadata.boxes[0].risk_level, metadata.boxes[0].risk_level);
+    } finally { f.client.stop(); }
+  }
+});
+
+/** Functionality: Reject implicit/misidentified geometry and mismatched temporal intervals.
+ * Inputs: corrupt explicit mode metadata. Outputs: rejected before guidance receives values.
+ * Logic: keep A depth identity checks and require selected B/C identity. Constraints: no silent fallback. */
+test("distance strategies require explicit valid identity and selected cadence", async function testDistanceModeFailures() {
+  const base = {...riskMetadata(), distance_mode: "geometry", distance_units: "m",
+    distance_estimator: "pinhole-height-v1", distance_ms: 0.1};
+  delete base.depth_model; delete base.depth_units; delete base.depth_ms;
+  for (const changes of [{distance_mode: undefined}, {distance_mode: "unknown"},
+    {distance_estimator: undefined}, {distance_units: "cm"}, {distance_ms: -1}, {depth_model: "yolo26n-depth"}])
+    await assert.rejects(decodeResult(packet(0, {...base, ...changes}), 0, contract));
+  const hello = {...localContract, distance_mode: "temporal_depth", distance_units: "m", depth_interval: 3};
+  const temporal = {...riskMetadata(), provider: "local", session_id: hello.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture", distance_mode: "temporal_depth",
+    distance_units: "m", depth_interval: 2, depth_frame: false};
+  await assert.rejects(decodeResult(packet(0, temporal), 0, hello, {captureTimeS: 2}));
+});
 
 /** Functionality: Verify independent local admission and preserved HF quality gate.
  * Inputs: native capability hello and separately corrupted identities. Outputs: local success/HF rejection.

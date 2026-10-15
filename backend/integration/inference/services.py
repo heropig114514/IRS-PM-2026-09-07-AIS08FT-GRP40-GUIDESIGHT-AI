@@ -11,6 +11,7 @@ InferenceWorker.cleanup; InferenceWorker.drain; InferenceWorker.finish.
 Variable Index: logger — safe lifecycle diagnostics; runtime — one process-local algorithm owner;
 executor — single native worker thread; load_error — explicit initialization failure latch;
 detector/hashes/active_session/frame_size — worker-owned resident/state/provenance;
+distance_config — startup-selected A/B/C profile; B has no depth dependency or hash;
 incoming/received/delivered/inflight — bounded session accounting and uncancellable GPU work.
 """
 
@@ -21,6 +22,7 @@ import logging
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from threading import BoundedSemaphore
 
 from core.detector import DetectionError, decode_frame
@@ -40,21 +42,25 @@ from integration.protocol import (
     validate_result,
     web_origins,
 )
+from realtime.distance_config import read_distance_config
 from realtime.protocol import pack_result, unpack_result
 
 logger = logging.getLogger(__name__)
 
 
-def load_detector():
+def load_detector(distance_config=None):
     """Functionality: Load the existing native FP32 complete pipeline and record actual assets.
-    Inputs: fixed backend model files. Outputs: detector and observed asset fingerprints.
-    Logic: preflight both local files/CUDA; use the original constructors and default rules.
-    Constraints: lazy imports, no download/CPU fallback/experimental parameter changes;
+    Inputs: fixed model files, optional startup-frozen profile. Outputs: detector and fingerprints.
+    Logic: preflight selected local files/CUDA; A uses original constructors/default rules;
+    B does not open/hash/initialize depth weights; C wraps the same depth fusion with tracking.
+    Constraints: lazy imports, no download/CPU fallback/implicit detection parameter changes;
     depth hash records supplied bytes, not independently verified calibration or provenance.
     """
     weights, depth_weights = ROOT / "models/yolo26n.pt", ROOT / "models/yolo26n-depth.pt"
-    if not weights.is_file() or not depth_weights.is_file():
-        raise IntegrationError("local_model_missing", "请准备本地检测和深度两份模型权重。")
+    distance_config = read_distance_config() if distance_config is None else distance_config
+    needs_depth = distance_config.distance_mode != "geometry"
+    if not weights.is_file() or (needs_depth and not depth_weights.is_file()):
+        raise IntegrationError("local_model_missing", "请准备当前测距模式需要的本地模型权重。")
     import torch
 
     if not torch.cuda.is_available():
@@ -66,12 +72,14 @@ def load_detector():
     manifest = read_manifest(manifest_path)
     hashes = {
         "detection_sha256": hashlib.sha256(weights.read_bytes()).hexdigest(),
-        "depth_sha256": hashlib.sha256(depth_weights.read_bytes()).hexdigest(),
+        "depth_sha256": (hashlib.sha256(depth_weights.read_bytes()).hexdigest()
+                         if needs_depth else None),
     }
     if hashes["detection_sha256"] != manifest["source_sha256"]:
         raise IntegrationError("local_model_invalid", "检测权重与模型清单指纹不匹配。")
-    depth = DepthEstimator(depth_weights, manifest["build"]["ultralytics"])
-    return ResidentDetector(weights, manifest_path, depth_estimator=depth), hashes
+    depth = DepthEstimator(depth_weights, manifest["build"]["ultralytics"]) if needs_depth else None
+    return ResidentDetector(weights, manifest_path, depth_estimator=depth,
+                            distance_config=distance_config), hashes
 
 
 class InferenceRuntime:
@@ -90,6 +98,10 @@ class InferenceRuntime:
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prs-local-gpu")
         self.detector = self.load_error = self.last_inference = self.active_session = None
         self.hashes, self.frame_size, self.busy = {}, None, False
+        self.distance_config = read_distance_config()
+        if factory is load_detector:
+            # Freeze configuration before hello; lazy model loading must use that same identity.
+            self.factory = partial(factory, distance_config=self.distance_config)
 
     def contract(self, session_id):
         """Functionality: Declare identity without initializing GPU state.
@@ -97,7 +109,9 @@ class InferenceRuntime:
         Logic: lightweight validated manifest and actual resident flag.
         Constraints: loaded false does not imply GPU, depth accuracy or runtime readiness.
         """
-        return model_contract(session_id, self.manifest_reader(), self.detector is not None)
+        return model_contract(session_id, self.manifest_reader(), self.detector is not None,
+                              distance_mode=self.distance_config.distance_mode,
+                              depth_interval=self.distance_config.depth_interval)
 
     def status(self):
         """Functionality: Report process admission, resident state and observed inference only.
@@ -131,7 +145,11 @@ class InferenceRuntime:
                     "sha256": self.hashes.get("depth_sha256"),
                 },
             },
-            "capabilities": {"detection": True, "depth": True, "tracking": True, "risk": True},
+            "distance_mode": self.distance_config.distance_mode,
+            "depth_interval": self.distance_config.depth_interval,
+            "capabilities": {"detection": True,
+                             "depth": self.distance_config.distance_mode != "geometry",
+                             "tracking": True, "risk": True},
         }
 
     def predict(self, jpeg, timestamp, session_id, index):
@@ -148,7 +166,9 @@ class InferenceRuntime:
         if self.detector is None:
             try:
                 detector, hashes = self.factory()
-                if detector.depth_estimator is None or detector.object_tracker is None:
+                if (detector.depth_estimator is None and
+                    self.distance_config.distance_mode != "geometry") or (
+                        detector.object_tracker is None):
                     raise IntegrationError(
                         "local_pipeline_invalid", "本地推理必须启用完整算法链路。"
                     )

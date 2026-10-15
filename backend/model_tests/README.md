@@ -1,5 +1,9 @@
 # 本地模型测试
 
+默认保留 A；`--distance-mode geometry` 运行 B，`--distance-mode temporal_depth --track
+--depth-interval 3` 运行 C。完整命令、相机参数、距离缓存及实验统计见
+[DISTANCE-MODES.md](../DISTANCE-MODES.md)。以下双模型描述适用于默认 A。
+
 运行入口、示例、数据集和输出统一放在本目录。脚本调用项目现有 YOLO26 检测/深度实现，
 保持检测640、confidence0.25、JPEG80、FP32和深度768设置；两个模型各加载一次并复用。
 当前导出预测和耗时，没有读取真值或计算准确率，也不会自动下载、训练、抽样、重试。

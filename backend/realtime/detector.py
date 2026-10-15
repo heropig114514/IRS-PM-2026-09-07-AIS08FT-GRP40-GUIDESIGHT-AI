@@ -1,12 +1,14 @@
 """Responsibilities: Keep the pinned native-CUDA model and selected-precision Graph resident.
-Implementation: Original graph; persistent BoT-SORT; optional GPU depth; motion then scalar risk.
-Related Modules: core.detector; realtime.depth/tracking/risk; zerogpu.runtime; zerogpu.live_worker.
+Implementation: Original graph/fusion; configured A/B/C distance; motion then scalar risk.
+Related Modules: core.detector; realtime.distance/distance_config/performance/tracking/risk;
+zerogpu.runtime; zerogpu.live_worker.
 Declaration Index: ResidentDetector; ResidentDetector.__init__; ResidentDetector.predict.
 Variable Index: logger — count/timing diagnostics; model/manifest/tensor/runner/load_ms;
 execution_config/precision/backend — explicit execution identity, original FP32 control by default.
 depth_estimator — optional independent metric model; depth_ms includes inference/fusion.
 object_tracker — instance-owned BoT-SORT/history; tracking_ms covers association/history only.
 risk_config — immutable TTC/rule profile; risk_ms — separate stateless scalar scoring timer.
+distance_strategy/performance/performance_epoch — owned strategy and per-epoch frame statistics.
 Metadata forward_event_ms is detection CUDA replay timing; inference_ms is transfer-inclusive.
 """
 
@@ -23,7 +25,9 @@ from core.detector import (
     decode_frame,
     letterbox,
 )
-from realtime.depth import fuse_object_depth
+from realtime.distance import DistanceStrategy
+from realtime.distance_config import DEFAULT_DISTANCE_CONFIG
+from realtime.performance import PerformanceStats
 from realtime.risk import DEFAULT_RISK_CONFIG, RISK_MODEL, enrich_object_risk
 from realtime.tracking import DEFAULT_TRACKING_CONFIG, ObjectTracker
 from zerogpu.runtime import GraphRunner, load_model
@@ -38,10 +42,11 @@ class ResidentDetector:
     """
 
     def __init__(self, weights_path, manifest_path, config=None, *, depth_estimator=None,
-                 tracking_config=DEFAULT_TRACKING_CONFIG, risk_config=DEFAULT_RISK_CONFIG):
+                 tracking_config=DEFAULT_TRACKING_CONFIG, risk_config=DEFAULT_RISK_CONFIG,
+                 distance_config=DEFAULT_DISTANCE_CONFIG):
         """Functionality: Load verified local weights once on the GPU worker.
         Inputs: pinned weights/manifest, detection config, optional loaded depth estimator,
-        immutable tracking/risk configs (tracking=None disables both for independent still images).
+        immutable tracking/risk/distance configs (tracking=None disables tracking/risk for stills).
         Outputs: persistent model/tensor state. Logic: same source hash/build/head/fusion via
         load_model; declared precision/TF32-off, one CPU thread; default is original FP32 control.
         Constraints: native CUDA must exist; no downloads, random initialization or global service.
@@ -64,7 +69,13 @@ class ResidentDetector:
         self.model = load_model(weights_path, self.manifest, "cuda", self.execution_config)
         self.tensor = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
         self.runner = None
-        self.depth_estimator = depth_estimator
+        if distance_config.distance_mode == "temporal_depth" and (
+                depth_estimator is None or tracking_config is None):
+            raise ValueError("temporal_depth requires depth and tracking")
+        self.distance_strategy = DistanceStrategy(distance_config)
+        self.performance, self.performance_epoch = PerformanceStats(), 0
+        self.depth_estimator = (None if distance_config.distance_mode == "geometry" else
+                                depth_estimator)
         if self.depth_estimator is not None:
             self.depth_estimator.activate()
         self.object_tracker = (ObjectTracker(tracking_config, self.manifest["build"]["ultralytics"])
@@ -80,7 +91,8 @@ class ResidentDetector:
         or timestamped video. Default uses same-worker perf_counter at frame start, not wall time.
         Outputs: metadata and original-contract annotated JPEG; first call initializes the graph.
         Logic: unchanged detection preprocessing/graph/boxes; associate IDs with original boxes;
-        same-frame depth/fusion; history/motion; stateless TTC/risk; render.
+        selected distance strategy (default exact same-frame depth/fusion); history/motion;
+        stateless TTC/risk; render. C cached distances are not new motion measurements.
         Never constructs/resets tracking here; current missing depth produces unknown risk.
         Depth failures still propagate; unavailable tracking is explicitly reported with old labels.
         Constraints: explicit compute identity is returned; no added NMS, threshold/codec change;
@@ -106,9 +118,19 @@ class ResidentDetector:
             boxes = object_tracker.associate(image, boxes)
         tracked_at = time.perf_counter()
         depth_estimator = getattr(self, "depth_estimator", None)
-        if depth_estimator is not None:
-            depth_map = depth_estimator.predict(image)
-            boxes = fuse_object_depth(depth_map, boxes, image.size)
+        # Old explicit test/embedding instances may supply only the original model attributes.
+        if not hasattr(self, "distance_strategy"):
+            self.distance_strategy = DistanceStrategy(DEFAULT_DISTANCE_CONFIG)
+        if self.distance_strategy.geometry is not None:
+            depth_estimator = None
+        if not hasattr(self, "performance"):
+            self.performance = PerformanceStats()
+        epoch = object_tracker.epoch if object_tracker is not None else 0
+        if getattr(self, "performance_epoch", None) != epoch:
+            self.performance, self.performance_epoch = PerformanceStats(), epoch
+        boxes, depth_frame = self.distance_strategy.apply(
+            image, boxes, depth_estimator, timestamp=started if timestamp is None else timestamp,
+            epoch=epoch)
         fused_at = time.perf_counter()
         if object_tracker is not None:
             boxes = object_tracker.enrich(boxes, started if timestamp is None else timestamp)
@@ -130,7 +152,8 @@ class ResidentDetector:
                     "prepare_ms": (prepared_at - started) * 1000,
                     "gpu_stage_ms": (inferred_at - prepared_at) * 1000,
                     "render_ms": (finished - (risk_at if object_tracker is not None else
-                                              fused_at if depth_estimator is not None else
+                                              fused_at if depth_estimator is not None or
+                                              self.distance_strategy.geometry is not None else
                                               inferred_at)) * 1000,
                     "server_ms": (finished - started) * 1000,
                     "forward_event_ms": self.runner.forward_event_ms,
@@ -145,4 +168,19 @@ class ResidentDetector:
                             tracking_ms=((tracked_at - decoded_at) + (motion_at - fused_at)) * 1000,
                             tracking_timestamp_s=started if timestamp is None else timestamp,
                             risk_model=RISK_MODEL, risk_ms=(risk_at - motion_at) * 1000)
+        mode = self.distance_strategy.config.distance_mode
+        detection_ms = (decoded_at - started) * 1000
+        distance_ms = (fused_at - tracked_at) * 1000
+        end_to_end_ms = (finished - started) * 1000
+        metadata.update(
+            distance_mode=mode, distance_units="m", depth_frame=depth_frame,
+            depth_interval=self.distance_strategy.config.depth_interval if mode == "temporal_depth"
+            else 1 if mode == "depth" else 0,
+            detection_ms=detection_ms, distance_ms=distance_ms, end_to_end_ms=end_to_end_ms,
+            fps=1000 / end_to_end_ms if end_to_end_ms > 0 else None,
+            performance=self.performance.record(detection_ms=detection_ms, distance_ms=distance_ms,
+                                                end_to_end_ms=end_to_end_ms,
+                                                depth_frame=depth_frame))
+        if mode == "geometry":
+            metadata["distance_estimator"] = "pinhole-height-v1"
         return metadata, result

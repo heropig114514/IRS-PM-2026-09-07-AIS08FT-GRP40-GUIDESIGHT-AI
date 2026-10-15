@@ -1,5 +1,8 @@
 # Backend 开发入口
 
+测距默认保留 A 双模型，另支持 B 几何测距和 C 低频深度。
+配置、A/B/C 运行命令、焦距/类别高度及性能记录见 [DISTANCE-MODES.md](DISTANCE-MODES.md)。
+
 > 本机双模型MVP入口为 http://127.0.0.1:8766/live/ ，使用独立Web/GPU环境与中台适配入口；准备、启动器及验证边界见 [LOCAL-MVP.md](LOCAL-MVP.md)。
 
 同一中台入口额外提供 `/integration/video/`，使用浏览器选定的本地视频文件与独立控制器，仍走 `/ws/detect/local/` 和原双模型。原始公共视频来源、1倍速/两个时钟的限制和Chrome验收命令见 [连续视频说明](LOCAL-MVP.md#连续本地视频入口)，不需要启动电脑摄像头。

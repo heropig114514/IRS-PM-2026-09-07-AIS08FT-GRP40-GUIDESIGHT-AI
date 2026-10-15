@@ -8,6 +8,7 @@ verify_models; read_or_create_key; child_environment; verify_ports; launch; wait
 read_health; stop_children; handle_signal; run; main.
 Variable Index: ROOT — backend directory; WEB_PACKAGES/INFERENCE_PACKAGES — required direct pins;
 DEPTH_SHA256 — explicitly provisioned official depth checkpoint identity;
+PRS_DISTANCE_* — inherited explicit strategy profile; B preflights only detection weights;
 STOP_REQUESTED — foreground supervisor shutdown event; children — owned process handles only;
 log_handles — optional owned log files; key — private local Django key, never logged.
 """
@@ -149,14 +150,18 @@ print(json.dumps(result))
 
 
 def verify_models():
-    """Functionality: Verify both trusted local checkpoints before starting any service.
+    """Functionality: Verify selected trusted local checkpoints before starting any service.
     Inputs: fixed backend/models paths and detection manifest. Outputs: None or safe failure.
     Logic: Compare SHA256 before Torch deserialization; Constraints: no download/replacement.
     """
+    from realtime.distance_config import read_distance_config
+
     model_dir = ROOT / "models"
     try:
         manifest = json.loads((model_dir / "yolo26n.json").read_text(encoding="utf-8"))
-        expected = {"yolo26n.pt": manifest["source_sha256"], "yolo26n-depth.pt": DEPTH_SHA256}
+        expected = {"yolo26n.pt": manifest["source_sha256"]}
+        if read_distance_config().distance_mode != "geometry":
+            expected["yolo26n-depth.pt"] = DEPTH_SHA256
         for name, digest in expected.items():
             path = model_dir / name
             if not path.is_file():
@@ -377,7 +382,7 @@ def run(args):
     verify_ports(args.web_port, args.inference_port)
     print(
         f"Local prerequisites verified: Python 3.12, {runtime['device']}, "
-        f"CUDA {runtime['cuda_runtime']}, both checkpoint SHA256 identities.",
+        f"CUDA {runtime['cuda_runtime']}, selected checkpoint SHA256 identities.",
         flush=True,
     )
     if args.check:
@@ -477,4 +482,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if __package__ in (None, ""):
+        sys.path.insert(0, str(ROOT))
     sys.exit(main())

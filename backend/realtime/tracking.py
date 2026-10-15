@@ -13,6 +13,7 @@ Variable Index: logger — safe lifecycle/error diagnostics;
 DEFAULT_TRACKING_CONFIG — immutable default profile (no tracker/history singleton);
 TrackState — bounded raw/time/EMA samples and hysteresis state; ObjectTracker — one session's
 tracker/history/epoch, failure latch and frame geometry. No models, downloads, TTC or risk scores.
+distance_source=cached — historical C output, never a new motion sample.
 """
 
 import json
@@ -284,6 +285,7 @@ class TrackHistory:
         validate IDs, restart mismatched classes and update valid depth only.
         Constraints: invalid/nonincreasing frame clocks reject updates; temporary invalid depth
         retains the last estimate until timeout. Raw distances are unchanged, including None.
+        C's distance_source=cached passes a missing measurement to motion without changing output.
         """
         _validate_timestamp(timestamp, self.last_timestamp)
         self.cleanup(timestamp)
@@ -292,7 +294,8 @@ class TrackHistory:
         for box in boxes:
             track_id = box.get("track_id")
             estimate = self.update_motion_state(
-                track_id, box.get("distance_m"), timestamp,
+                track_id, None if box.get("distance_source") == "cached" else box.get("distance_m"),
+                timestamp,
                 class_name=box.get("class_name") or box.get("label"))
             enriched.append({**box, "track_id": track_id if type(track_id) is int and (
                                 track_id > 0) else None,

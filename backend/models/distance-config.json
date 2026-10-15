@@ -1,0 +1,14 @@
+{
+  "distance_mode": "depth",
+  "depth_interval": 3,
+  "focal_length_px": 700.0,
+  "reference_width_px": 640,
+  "object_heights_m": {
+    "person": 1.7,
+    "bicycle": 1.1,
+    "motorcycle": 1.2,
+    "car": 1.5,
+    "bus": 3.2,
+    "truck": 3.0
+  }
+}

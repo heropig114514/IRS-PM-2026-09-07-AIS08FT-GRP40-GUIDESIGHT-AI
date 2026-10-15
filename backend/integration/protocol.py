@@ -6,6 +6,7 @@ validate_contract; validate_result; web_origins; inference_url; is_loopback; is_
 Variable Index: ROOT — backend source root; REQUEST_HEADER/REQUEST_MAGIC — PRF2 framing;
 MAX_INFLIGHT/SESSION_SECONDS/COLD_SECONDS/STEADY_SECONDS/IDLE_SECONDS — transport budgets;
 HASH_PATTERN — model fingerprint syntax; MAX_REQUEST_BYTES — header plus existing JPEG bound.
+distance_mode/depth_interval — additive explicit B/C identity; absent mode retains legacy A.
 """
 
 import json
@@ -18,6 +19,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from core.detector import MAX_FRAME_BYTES
+from realtime.distance_config import DISTANCE_MODES
 
 from .errors import IntegrationError
 
@@ -95,13 +97,13 @@ def read_manifest(path=None):
         raise IntegrationError("local_manifest_invalid", "本地检测模型清单缺失或无效。") from None
 
 
-def model_contract(session_id, manifest, loaded=False):
+def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth", depth_interval=3):
     """Functionality: Declare the complete selected local pipeline without foreign validation.
-    Inputs: session identifier, validated manifest, actual loaded flag. Outputs: public hello.
-    Logic: use existing native FP32 control/settings and mandatory depth/tracking/risk stages.
+    Inputs: session ID, manifest, loaded flag and optional mode/interval. Outputs: public hello.
+    Logic: use existing native FP32 control/settings; explicit geometry replaces only depth.
     Constraints: capability means selected support; loaded separately describes initialization.
     """
-    return {
+    contract = {
         "kind": "session",
         "provider": "local",
         "protocol_version": 2,
@@ -127,18 +129,33 @@ def model_contract(session_id, manifest, loaded=False):
         "loaded": bool(loaded),
         "capabilities": {"detection": True, "depth": True, "tracking": True, "risk": True},
     }
+    if distance_mode not in DISTANCE_MODES or type(depth_interval) is not int or depth_interval < 1:
+        raise IntegrationError("local_contract_invalid", "测距模式或深度间隔无效。")
+    if distance_mode != "depth":
+        contract.update(distance_mode=distance_mode, distance_units="m",
+                        depth_interval=depth_interval if distance_mode == "temporal_depth" else 0)
+    if distance_mode == "geometry":
+        contract.pop("depth_model")
+        contract.pop("depth_units")
+        contract["distance_estimator"] = "pinhole-height-v1"
+        contract["capabilities"].update(depth=False, distance=True)
+    return contract
 
 
 def validate_contract(message):
     """Functionality: Admit only the local native FP32 timestamped pipeline.
     Inputs: provider hello. Outputs: same dictionary or safe error.
     Logic: compare fixed fields and check session/class/hash identity.
-    Constraints: no accepting HF validation, alternative precision, or partial algorithm chain.
+    Constraints: A stays unchanged; B/C require an explicit supported distance identity;
+    no accepting HF validation, alternative precision, or missing tracking/risk.
     """
     if not isinstance(message, dict):
         raise IntegrationError("local_contract_invalid", "本地推理会话配置无效。")
     names = message.get("names")
-    expected = model_contract("fixture", {"names": [], "source_sha256": ""})
+    mode = message.get("distance_mode", "depth")
+    expected = model_contract("fixture", {"names": [], "source_sha256": ""},
+                              distance_mode=mode, depth_interval=message.get("depth_interval", 3)
+                              if mode == "temporal_depth" else 3)
     fixed = set(expected) - {"session_id", "names", "source_sha256", "loaded"}
     if (
         any(message.get(key) != expected[key] for key in fixed)
@@ -149,6 +166,7 @@ def validate_contract(message):
         or not HASH_PATTERN.fullmatch(message.get("source_sha256", ""))
         or type(message.get("loaded")) is not bool
         or "validation" in message
+        or (mode == "geometry" and ("depth_model" in message or "depth_units" in message))
     ):
         raise IntegrationError("local_contract_invalid", "本地推理会话配置无效。")
     return message
@@ -175,6 +193,14 @@ def validate_result(metadata, contract, index, timestamp):
         "tracking_model",
         "risk_model",
     )
+    if contract.get("distance_mode") == "geometry":
+        keys = tuple(key for key in keys if key not in {"depth_model", "depth_units"})
+    if contract.get("distance_mode") in {"geometry", "temporal_depth"}:
+        keys += ("distance_mode", "distance_units", "depth_interval")
+    if contract.get("distance_mode") == "geometry":
+        keys += ("distance_estimator",)
+        if "depth_model" in metadata:
+            raise IntegrationError("local_result_invalid", "几何测距不应声明深度模型。")
     if (
         any(metadata.get(key) != contract[key] for key in keys)
         or metadata.get("index") != index

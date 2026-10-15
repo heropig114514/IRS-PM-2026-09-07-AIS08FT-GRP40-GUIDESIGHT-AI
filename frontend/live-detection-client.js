@@ -20,6 +20,7 @@
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery;
  * provider selects hf/local explicitly; lastCaptureTimeS enforces monotonic local source timestamps.
+ * distance_mode admits explicit geometry/temporal_depth without changing legacy A admission.
  */
 import {MAX_FRAME_BYTES} from "./echo-client.js";
 
@@ -64,12 +65,21 @@ function validateSession(message, provider) {
       Object.hasOwn(message, "capability") || Object.hasOwn(message, "token"))
     throw new Error("视频会话配置无效，请检查服务端。");
   if (provider === "local") {
+    const mode = message.distance_mode ?? "depth";
+    const geometry = mode === "geometry";
     if (message.provider !== "local" || message.protocol_version !== 2 ||
         message.backend !== "PyTorch resident CUDA" || message.precision !== "FP32" ||
         typeof message.session_id !== "string" || !/^[a-f0-9]{32}$/.test(message.session_id) ||
-        message.depth_model !== "yolo26n-depth" || message.depth_units !== "m" ||
+        !["depth", "geometry", "temporal_depth"].includes(mode) ||
+        (geometry ? (Object.hasOwn(message, "depth_model") || Object.hasOwn(message, "depth_units") ||
+          message.distance_estimator !== "pinhole-height-v1" || message.distance_units !== "m" ||
+          message.depth_interval !== 0 || message.capabilities?.distance !== true) :
+          (message.depth_model !== "yolo26n-depth" || message.depth_units !== "m")) ||
+        (mode === "temporal_depth" && (message.distance_units !== "m" ||
+          !Number.isSafeInteger(message.depth_interval) || message.depth_interval < 1)) ||
         message.tracking_model !== "botsort" || message.risk_model !== "rules-v1" ||
-        ["detection", "depth", "tracking", "risk"].some(name => message.capabilities?.[name] !== true) ||
+        ["detection", "tracking", "risk"].some(name => message.capabilities?.[name] !== true) ||
+        message.capabilities?.depth !== !geometry ||
         Object.hasOwn(message, "validation"))
       throw new Error("本地视频会话配置无效，请检查服务端。");
   } else if (!validation || validation.images !== 5000 || !Number.isInteger(validation.replicates) ||
@@ -119,6 +129,11 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
       (metadata.provider !== "local" || metadata.session_id !== contract.session_id ||
        metadata.timestamp_source !== "browser_capture" || !Number.isFinite(captureTimeS) ||
        metadata.capture_time_s !== captureTimeS || metadata.depth_model !== contract.depth_model ||
+       (metadata.distance_mode ?? "depth") !== (contract.distance_mode ?? "depth") ||
+       (contract.distance_mode === "geometry" &&
+         metadata.distance_estimator !== contract.distance_estimator) ||
+       (["geometry", "temporal_depth"].includes(contract.distance_mode) &&
+         (metadata.depth_interval !== contract.depth_interval || metadata.distance_units !== "m")) ||
        metadata.tracking_model !== contract.tracking_model || metadata.risk_model !== contract.risk_model))
     throw new Error("本地视频结果会话或采集时间不匹配。");
   for (const field of ["inference_ms", "graph_setup_ms", "prepare_ms", "gpu_stage_ms", "render_ms", "server_ms"])
@@ -128,6 +143,17 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
       (typeof metadata.depth_model !== "string" || !metadata.depth_model || metadata.depth_units !== "m" ||
        !Number.isFinite(metadata.depth_ms) || metadata.depth_ms < 0))
     throw new Error("视频深度模型或耗时无效。");
+  const mode = metadata.distance_mode ?? "depth";
+  const geometry = mode === "geometry";
+  if (!["depth", "geometry", "temporal_depth"].includes(mode) ||
+      (geometry && (Object.hasOwn(metadata, "depth_model") ||
+        metadata.distance_estimator !== "pinhole-height-v1" || metadata.distance_units !== "m" ||
+        !Number.isFinite(metadata.distance_ms) || metadata.distance_ms < 0)) ||
+      (mode === "temporal_depth" && (!Object.hasOwn(metadata, "depth_model") ||
+        !Number.isSafeInteger(metadata.depth_interval) || metadata.depth_interval < 1 ||
+        typeof metadata.depth_frame !== "boolean")))
+    throw new Error("视频测距模式或耗时无效。");
+  const hasDistance = geometry || Object.hasOwn(metadata, "depth_model");
   const hasTracking = Object.hasOwn(metadata, "tracking_model");
   if (hasTracking && (metadata.tracking_model !== "botsort" ||
       !["active", "unavailable"].includes(metadata.tracking_status) ||
@@ -151,7 +177,7 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
     if (![x1, y1, x2, y2].every(Number.isFinite) || x1 < 0 || y1 < 0 || x1 >= x2 || y1 >= y2 ||
         x2 > metadata.width || y2 > metadata.height)
       throw new Error("视频检测框坐标无效。");
-    if (Object.hasOwn(metadata, "depth_model")) {
+    if (hasDistance) {
       if (box.class_name !== box.label || box.confidence !== box.score ||
           !Array.isArray(box.bbox) || box.bbox.length !== 4 ||
           !box.bbox.every((value, index) => value === box.xyxy[index]) ||
@@ -177,7 +203,7 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
           (box.motion_state !== "unknown" && (box.track_id === null || box.relative_speed_mps === null)) ||
           (box.track_id === null && (box.smoothed_distance_m !== null || box.relative_speed_mps !== null ||
                                     box.motion_state !== "unknown")) ||
-          (!Object.hasOwn(metadata, "depth_model") && (box.smoothed_distance_m !== null ||
+          (!hasDistance && (box.smoothed_distance_m !== null ||
             box.relative_speed_mps !== null || box.motion_state !== "unknown")) ||
           (metadata.tracking_status === "unavailable" && box.track_id !== null))
         throw new Error("视频目标跟踪或运动状态无效。");
