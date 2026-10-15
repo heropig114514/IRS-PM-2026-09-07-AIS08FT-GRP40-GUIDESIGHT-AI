@@ -329,7 +329,8 @@ class VlmServiceTests(SimpleTestCase):
         self.assertTrue(user[0]["image_url"]["url"].startswith("data:image/jpeg;base64,"))
         text = user[1]["text"]
         self.assertIn("Simplified Chinese", system)
-        self.assertIn("do not state any number of meters", system)
+        self.assertIn("never say how far or near it is", system)
+        self.assertIn("Movement comes only from motion_state", system)
         self.assertIn("Never estimate distances", system)
         objects = json.loads(text.split("none provided): ", 1)[1])
         self.assertEqual(objects, [{"label": "car", "distance_m": 4.0}, {"label": "tree"}])
