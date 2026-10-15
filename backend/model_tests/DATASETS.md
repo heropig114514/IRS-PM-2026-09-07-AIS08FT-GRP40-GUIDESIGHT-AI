@@ -1,9 +1,70 @@
 # 本地测试与模型对比数据
 
-来源核查日期：2026-10-10。当前使用现成预训练权重即可推理，不需要先训练。
+当前使用现成预训练权重即可推理，不需要先训练。
 从 `backend` 执行 `python -m model_tests.run_depth` 可运行单图/目录预测、米制距离融合、标注图和 JSONL 导出；
-它没有读取真值标注，也没有计算 mAP、深度误差或正式视频 FPS。公共数据集需要另外下载，
-本目录仅随代码提供一张功能测试图片：`samples/bus.jpg`。
+它没有读取真值标注，也没有计算 mAP、深度误差或正式视频 FPS。静态预测入口的示例图片为
+`samples/bus.jpg`；连续视频使用下方单独列出的回放文件，不由这个图片脚本直接读取。
+
+## 连续街景视频用于本地联调
+
+当前MVP关注行走者附近的障碍和行人，优先选择相机移动、视角接近人眼高度、包含遮挡和
+交错行人的连续街景。MOT17移动相机步行街序列适合回放联调，但不代表完整的步行导航场景。
+
+版本管理范围包括两个官方原始预览、两个H.264回放副本和
+[SOURCES.json](datasets/street-video/SOURCES.json)。完整数据集、标注包、抽帧图片和运行
+报告单独管理，不包含在这4个视频中；使用额外数据时按官方入口准备。
+
+| 数据集与官方入口 | 视角、数据与适用阶段 | 获取方式与仓库范围 |
+| --- | --- | --- |
+| [MOT17](https://motchallenge.net/data/MOT17/) | 多目标行人跟踪；07是白天移动步行街，10是夜间移动街景。训练序列有框、轨迹ID及可见度标注；没有米制深度或风险真值。 | 仓库维护4个视频；原始JPG帧集约5.5GB、标注包约10.1MB，均需单独准备。 |
+| [VeRLab EPIC2016](https://www.verlab.dcc.ufmg.br/semantic-hyperlapse/epic2016-dataset/) | 头戴GoPro第一视角连续行走。Walking_25p为1080p/30FPS、约6分06秒，单文件915,677,261字节。附带语义检测结果，可补充回放场景，不作为米制深度或风险真值。 | 按官方单文件入口下载，不包含在仓库素材中；数据许可为CC BY-NC 4.0。 |
+| [JAAD](https://data.nvision2.eecs.yorku.ca/JAAD_dataset/) | 车辆视角城市道路，346段5–10秒/30FPS视频，带行人框及过街行为标注，适合补充过街场景。 | 官方MP4包约3.1GB，需单独下载；官网声明视频和标注采用MIT许可。 |
+| [JRDB](https://jrdb.erc.monash.edu/dataset/) | 接近人体高度的机器人视角，包含RGB、LiDAR及2D/3D行人标注；适合结合标定检查距离和跟踪。全景图与透视相机的对应关系需另外适配。 | 官方旧版下载入口需要登录；图像、点云、标定和时间对应关系需分别准备，不包含在仓库中。 |
+
+EPIC2016指VeRLab的第一视角视频数据集，不是EPIC-KITCHENS。其Walking比例表示论文定义的
+语义信息占比，不是障碍物占比；[随包说明](https://www.verlab.dcc.ufmg.br/hyperlapse/downloads/epic2016/README.md)
+写明MAT中的框由语义检测器生成，不能把它们说成人工核验的行人跟踪真值。
+可直接下载 [Walking_25p原片](https://www.verlab.dcc.ufmg.br/hyperlapse/downloads/epic2016/Source_Videos/Walking_25p.mp4)，
+无需下载完整10GB包。单片时长超过现有55秒推理会话；当前不会隐式分段、续接或延长会话。
+JRDB的下载形式见 [官方旧版下载页](https://jrdb.erc.monash.edu/old)。
+
+视频来源及许可边界见 [SOURCES.json](datasets/street-video/SOURCES.json)，项目不重新授权
+原始视频。样本范围仅包含下表4个测试视频及其来源信息，不包含完整数据集、标注ZIP、
+抽帧图片和本机逐帧运行报告。
+
+### MOT17回放素材
+
+4个视频位于 `backend/model_tests/datasets/street-video/mot17/`，合计68,146,915字节。
+下表描述MP4文件属性，原始JPG帧集的尺寸另见标注说明。
+
+| 序列与官方原始预览 | 划分/场景 | 实际MP4尺寸/FPS/帧数/时长 | 浏览器可用文件 |
+| --- | --- | --- | --- |
+| [MOT17-07-FRCNN-raw.mp4](datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4) | test；白天、移动相机、人眼高度的步行街 | 960×540 / 30 / 500 / 16.666667秒 | [MOT17-07-FRCNN-browser-h264.mp4](datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4) |
+| [MOT17-10-FRCNN-raw.mp4](datasets/street-video/mot17/MOT17-10-FRCNN-raw.mp4) | train；夜间、移动相机的行人街景 | 960×540 / 30 / 654 / 21.8秒 | [MOT17-10-FRCNN-browser-h264.mp4](datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4) |
+
+两个原始预览为MPEG-4 Part 2编码，不适合直接作为当前Chrome的回放输入。
+浏览器使用显式转换的H.264/MP4副本，转换参数为
+FFmpeg 7.1、libx264、CRF18、yuv420p、High profile、原PTS透传和faststart；不剪辑、不缩放、
+不循环、不叠框、不调整帧率。转码改变像素，不能声称字节或图像完全相同。
+离线转换工具使用 `imageio-ffmpeg==0.6.0`，与后端和推理环境依赖分开管理。
+页面、启动器和算法不执行自动转码或编解码降级。
+
+原片和副本的尺寸、帧数及FPS保持一致。官方来源URL、每个文件的字节数/SHA256和
+可移植转码参数统一放在 [SOURCES.json](datasets/street-video/SOURCES.json)。
+逐帧解码、时延和浏览器事件由运行工具写入本地JSON，不随输入视频维护。
+验收方法见 [本机MVP说明](../LOCAL-MVP.md#验收方法与边界)。
+
+[官方MOT17Labels.zip](https://motchallenge.net/data/MOT17Labels.zip) 需单独准备，不属于
+仓库视频素材。其 `train/MOT17-10-FRCNN/gt/gt.txt` 包含17,450条标注，其中有效行人
+12,839条、57个轨迹ID，帧号1–654；07的公开测试真值不在包中。
+官网和 `seqinfo.ini` 的原始JPG帧集是1920×1080，而下载预览已缩至960×540。
+正式评估须下载原始帧、对齐帧号/时间和坐标，使用既定评价协议；不能把当前回放结果直接
+称作标准MOT得分。DPM/FRCNN/SDP是同一场景的三种公共检测输入，不作为三段独立视频。
+
+当前两个副本用于现有 `/integration/video/` 本地入口，继续保持最长边640、JPEG80、
+confidence=0.25、原生FP32及既有会话/在途预算。跟踪、运动状态和风险提醒可观察其输出
+与生命周期；这些素材不能证明米制距离、速度、TTC和风险判断的准确率。后续需要深度真值时，
+再按下方KITTI/Cityscapes或JRDB的相机标定与真值对应关系设计独立评估适配。
 
 ## 需要多少数据
 
@@ -48,30 +109,31 @@ Cityscapes 的实例类别、500 张 val、视差编码和相机标定见 [官�
 
 ## 下载后如何用当前脚本
 
-大型数据放在 `backend/model_tests/datasets/`，数据内容已加入 Git 忽略。
+大型数据放在 `backend/model_tests/datasets/`。除上述4个测试视频、来源清单和目录说明外，
+完整数据集、标注及生成结果仍被Git忽略；不会自动下载缺少的文件。
 以下命令从 `backend/model_tests` 执行，模型权重继续共用 `backend/models/`：
 
 ```powershell
 # 随附示例，不需要下载数据集
-..\.venv\Scripts\python.exe -X utf8 .\run_depth.py --output outputs/bus-run-3
+..\.venv-inference\Scripts\python.exe -X utf8 .\run_depth.py --output outputs/bus-run-3
 
 # 自己的 RGB 图片目录：全部递归处理，不抽样
-..\.venv\Scripts\python.exe -X utf8 .\run_depth.py --input datasets/my-photos --output outputs/photos-run-1
+..\.venv-inference\Scripts\python.exe -X utf8 .\run_depth.py --input datasets/my-photos --output outputs/photos-run-1
 
 # NYU PNG 包解压后的 RGB 测试目录
-..\.venv\Scripts\python.exe -X utf8 .\run_depth.py --input datasets/nyu-depth-png/images/val --output outputs/nyu-n-run-1
+..\.venv-inference\Scripts\python.exe -X utf8 .\run_depth.py --input datasets/nyu-depth-png/images/val --output outputs/nyu-n-run-1
 
 # 显式指定已准备好的另一份兼容 YOLO26 Depth 权重
-..\.venv\Scripts\python.exe -X utf8 .\run_depth.py --input datasets/nyu-depth-png/images/val --depth-weights ../models/yolo26s-depth.pt --output outputs/nyu-s-run-1 --label yolo26s-depth
+..\.venv-inference\Scripts\python.exe -X utf8 .\run_depth.py --input datasets/nyu-depth-png/images/val --depth-weights ../models/yolo26s-depth.pt --output outputs/nyu-s-run-1 --label yolo26s-depth
 ```
 
 `--input` 必须指向 RGB 图片或 RGB 目录；不要指向同时包含 RGB、深度、掩码的数据集根目录。
 脚本会递归读取 jpg/jpeg/png/bmp/webp，不会自动识别哪些 PNG 是真值。
 输出目录必须是新目录；失败时退出码为 1，已开始的运行保留 `status=failed` 和部分结果，不重试。
-本次没有下载这些大型公开数据集；只核查了官方说明及下载入口。
+完整公开数据集不随仓库提供，使用前按官方入口准备对应文件。
 
 当前检测加载器固定验证原有 YOLO26n 权重与 manifest，`--weights` 不是任意检测模型的通用接口。
-兼容的 YOLO26 Depth 权重可通过 `--depth-weights` 比较；本次仅实跑 n-depth。
+兼容的 YOLO26 Depth 权重可通过 `--depth-weights` 显式选择。
 后续若对比其他检测架构，需要单独的评估适配层，保留现有生产推理契约。
 
 ## 正式对比时固定哪些条件
@@ -95,4 +157,4 @@ Cityscapes 的实例类别、500 张 val、视差编码和相机标定见 [官�
   本地 FP32 与现有生产 compiled-FP16 是不同运行条件，性能报告应分别记录。
 
 安装和运行见 [README.md](README.md)，融合实现与 GPU 验证见 [DEPTH.md](../DEPTH.md)。后续正式评价应增加读取真值及
-指标计算的专门脚本，先确定协议，再实现；本次没有隐式修改项目原有 COCO 检查和评估配置。
+指标计算的专门脚本，并使用预先确定的协议和项目既有评价配置。

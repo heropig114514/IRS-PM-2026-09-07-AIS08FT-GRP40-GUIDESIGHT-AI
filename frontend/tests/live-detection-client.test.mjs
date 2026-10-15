@@ -7,9 +7,9 @@
  * admitted; testBinary; testInvalid; testOrder; testStop; testBudgets; testFinal; testHello;
  * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
  * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
- * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity.
+ * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity; testLocalHello; testLocalCapture; testLocalCorrelation.
  * Variable Index: manifest/contract — original public model identity; plan — current deployment's
- * compute/quality contract for integration regression; JPEG — synthetic markers.
+ * compute/quality contract; localContract is independent local capability admission; JPEG — synthetic markers.
  */
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
@@ -26,6 +26,57 @@ const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes:
   source_sha256: manifest.source_sha256, names: manifest.names, confidence_threshold: 0.25,
   max_edge: 640, jpeg_quality: 0.8, max_inflight: 12, session_seconds: 55, cold_seconds: 55, steady_seconds: 10};
 const JPEG = Uint8Array.from([255, 216, 1, 255, 217]);
+const localContract = {...contract, provider: "local", protocol_version: 2, session_id: "1".repeat(32),
+  depth_model: "yolo26n-depth", depth_units: "m", tracking_model: "botsort", risk_model: "rules-v1",
+  capabilities: {detection: true, depth: true, tracking: true, risk: true}};
+delete localContract.validation;
+
+/** Functionality: Verify independent local admission and preserved HF quality gate.
+ * Inputs: native capability hello and separately corrupted identities. Outputs: local success/HF rejection.
+ * Logic: local never borrows COCO validation; Constraints: admission does not prove real model readiness. */
+test("local native hello is independent from the preserved HF COCO gate", async function testLocalHello() {
+  const good = await admitted(fixture("local"), localContract); good.client.stop();
+  for (const changes of [{provider: "hf"}, {protocol_version: 1}, {precision: "FP16"},
+    {validation: contract.validation}, {capabilities: {detection: true}}, {session_id: "wrong"}, {risk_model: undefined}]) {
+    const f = fixture("local"), waiting = assert.rejects(f.client.connect());
+    f.socket.message(JSON.stringify({...localContract, ...changes})); await waiting;
+    assert.equal(f.socket.sent.length, 0); assert.equal(f.state.errors.length, 1);
+  }
+  const hf = fixture(), waiting = assert.rejects(hf.client.connect());
+  hf.socket.message(JSON.stringify(localContract)); await waiting;
+  assert.equal(hf.state.errors.length, 1);
+});
+
+/** Functionality: Verify PRF2 source timestamp and strictly monotonic capture admission.
+ * Inputs: real client, explicit source milliseconds, independent response packet.
+ * Outputs: exact big-endian bytes and original matching result. Logic: capturedAt originates before encoding.
+ * Constraints: synthetic JPEG/GPU fixture; no frame loss, timestamp invention or automatic retry. */
+test("local PRF2 carries big-endian source capture time and preserves JPEG", async function testLocalCapture() {
+  const f = await admitted(fixture("local"), localContract);
+  assert.throws(() => f.client.sendFrame(JPEG.slice().buffer), /采集时间/);
+  const first = f.client.sendFrame(JPEG.slice().buffer, {capturedAt: 1234.5});
+  const bytes = f.socket.sent[0], view = new DataView(bytes);
+  assert.equal(view.getUint32(0), 0x50524632); assert.equal(view.getUint32(4), 0);
+  assert.equal(view.getFloat64(8), 1.2345); assert.deepEqual(new Uint8Array(bytes, 16), JPEG);
+  for (const capturedAt of [1234.5, 1000, -1, Infinity])
+    assert.throws(() => f.client.sendFrame(JPEG.slice().buffer, {capturedAt}), /采集时间/);
+  f.socket.message(packet(0, {...riskMetadata(), provider: "local", session_id: localContract.session_id,
+    capture_time_s: 1.2345, timestamp_source: "browser_capture"}));
+  assert.equal((await first).metadata.capture_time_s, 1.2345); f.client.stop();
+});
+
+/** Functionality: Reject foreign/stale timestamp association at the protocol boundary.
+ * Inputs: independently corrupted local session/source/algorithm identity. Outputs: errors before UI/guidance.
+ * Logic: match original pending capture timestamp exactly; Constraints: no silent omission of required capabilities. */
+test("local responses bind the same session and exact source timestamp", async function testLocalCorrelation() {
+  const base = {...riskMetadata(), provider: "local", session_id: localContract.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture"};
+  const valid = await decodeResult(packet(0, base), 0, localContract, {captureTimeS: 2});
+  assert.equal(valid.metadata.risk_model, "rules-v1");
+  for (const changes of [{session_id: "2".repeat(32)}, {capture_time_s: 2.1},
+    {timestamp_source: "server_received"}, {provider: "hf"}, {depth_model: undefined}, {risk_model: undefined}])
+    await assert.rejects(decodeResult(packet(0, {...base, ...changes}), 0, localContract, {captureTimeS: 2}));
+});
 
 /** Functionality: Accept additive depth fields with finite meters or explicitly unavailable null.
  * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged legacy box.
@@ -107,9 +158,9 @@ function packet(index, overrides = {}, jpeg = JPEG) {
 }
 
 /** Functionality: Bind actual client to explicit socket/lifecycle fixtures.
- * Inputs: None. Outputs: client/socket/state. Logic: callbacks collect diagnostics.
+ * Inputs: provider(hf default). Outputs: client/socket/state. Logic: callbacks collect diagnostics.
  * Constraints: never fetches HF quota or requests a GPU. */
-function fixture() {
+function fixture(provider = "hf") {
   const socket = new FakeSocket(), state = {errors: [], ends: 0};
   /** Functionality: Return injected socket. Inputs: ignored url. Outputs: fixture.
    * Logic: no new socket. Constraints: explicitly synthetic. */
@@ -120,7 +171,7 @@ function fixture() {
   /** Functionality: Record bounded end. Inputs: None. Outputs: end count.
    * Logic: no auto-start. Constraints: no actual resource-release proof. */
   function ended() { state.ends += 1; }
-  return {client: new LiveDetectionClient("wss://test.invalid/ws/detect/hf/", failed, ended, {socketFactory}), socket, state};
+  return {client: new LiveDetectionClient(`wss://test.invalid/ws/detect/${provider}/`, failed, ended, {socketFactory, provider}), socket, state};
 }
 
 /** Functionality: Resolve explicit public hello. Inputs: fixture and explicit contract.

@@ -1,8 +1,8 @@
 /** Responsibilities: Same-origin bounded binary video-session transport and result validation.
- * Implementation: PRF1/PRS1 packets, twelve pending requests, serialized SHA256 validation;
+ * Implementation: HF PRF1/local PRF2 capture timestamps and shared PRS1 packets, twelve requests, serialized SHA256 validation;
  * resident/AOT/compiled Torch admission, one cold response budget, explicit stop/errors/end,
  * no reconnect or HTTP per frame.
- * Related Modules: frame-pipeline.js, camera.js; backend core.hf_video_relay/realtime.protocol/risk.
+ * Related Modules: frame-pipeline.js, camera.js; backend integration.asgi/services and core.hf_video_relay/realtime.protocol/risk.
  * Declaration Index: browserSocket; sha256; validateSession; decodeResult; LiveDetectionClient;
  * LiveDetectionClient.constructor; LiveDetectionClient.connect; LiveDetectionClient.connect.register;
  * LiveDetectionClient.sendFrame; LiveDetectionClient.sendFrame.register; LiveDetectionClient.sendFrame.deadline;
@@ -18,7 +18,8 @@
  * RISK_LEVELS/DIRECTIONS — additive rule-result vocabularies; rule weights stay on the server.
  * Valid unexpired motion may persist while the current raw depth is null; server owns timeout.
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
- * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery.
+ * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery;
+ * provider selects hf/local explicitly; lastCaptureTimeS enforces monotonic local source timestamps.
  */
 import {MAX_FRAME_BYTES} from "./echo-client.js";
 
@@ -46,12 +47,12 @@ async function sha256(buffer) {
   return result;
 }
 
-/** Functionality: Validate the public PRS session contract. Inputs: parsed hello. Outputs: same object.
+/** Functionality: Validate an explicitly selected HF or local session. Inputs: parsed hello, provider. Outputs: accepted contract copy.
  * Logic: original model/settings/budgets; explicit resident/AOT/compiled Torch backend/precision
  * and three complete COCO quality records admitted by the server; no capability/token accepted.
- * Constraints: public provenance metadata does not independently prove COCO accuracy, GPU quota
- * or steady-state performance; per-frame compute identity must match the admitted session. */
-function validateSession(message) {
+ * Constraints: local resident FP32 admission requires real capability identity, never HF COCO evidence;
+ * HF quality checks remain intact. Admission alone does not prove accuracy, hardware or performance. */
+function validateSession(message, provider) {
   const validation = message?.validation;
   if (!message || message.kind !== "session" || message.model !== "yolo26n" ||
       !["FP32", "FP16", "BF16"].includes(message.precision) || message.output_precision !== "FP32" ||
@@ -60,8 +61,18 @@ function validateSession(message) {
       message.max_edge !== 640 || message.jpeg_quality !== 0.8 || message.max_inflight !== MAX_INFLIGHT ||
       message.session_seconds !== 55 || message.cold_seconds !== 55 || message.steady_seconds !== 10 ||
       !HASH_PATTERN.test(message.source_sha256) || !Array.isArray(message.names) || message.names.length !== 80 ||
-      Object.hasOwn(message, "capability") || Object.hasOwn(message, "token") ||
-      !validation || validation.images !== 5000 || !Number.isInteger(validation.replicates) ||
+      Object.hasOwn(message, "capability") || Object.hasOwn(message, "token"))
+    throw new Error("视频会话配置无效，请检查服务端。");
+  if (provider === "local") {
+    if (message.provider !== "local" || message.protocol_version !== 2 ||
+        message.backend !== "PyTorch resident CUDA" || message.precision !== "FP32" ||
+        typeof message.session_id !== "string" || !/^[a-f0-9]{32}$/.test(message.session_id) ||
+        message.depth_model !== "yolo26n-depth" || message.depth_units !== "m" ||
+        message.tracking_model !== "botsort" || message.risk_model !== "rules-v1" ||
+        ["detection", "depth", "tracking", "risk"].some(name => message.capabilities?.[name] !== true) ||
+        Object.hasOwn(message, "validation"))
+      throw new Error("本地视频会话配置无效，请检查服务端。");
+  } else if (!validation || validation.images !== 5000 || !Number.isInteger(validation.replicates) ||
       validation.replicates < 3 || validation.maximum_ap_drop !== 0.005 ||
       !Number.isInteger(validation.notebook_version) || validation.notebook_version < 1 ||
       !HASH_PATTERN.test(validation.summary_sha256) ||
@@ -73,17 +84,17 @@ function validateSession(message) {
   for (const name of message.names)
     if (typeof name !== "string" || !name.length || name.length > 100)
       throw new Error("视频会话类别配置无效。");
-  return message;
+  return {...message, provider};
 }
 
 /** Functionality: Decode and verify a complete ordered annotated result.
- * Inputs: packet ArrayBuffer, expected uint32 index, validated session contract.
+ * Inputs: packet ArrayBuffer, expected uint32 index, contract and optional original local captureTimeS.
  * Outputs: bytes/metadata/count/inferenceMs. Logic: bound header/JSON/JPEG; match admitted model,
  * compute precision/backend, FP32 output and hashes;
  * finite boxes and optional depth/tracking/TTC/risk fields checked before display; no filtering.
  * Temporary missing depth may retain a historical estimate; the server expires motion history.
  * Constraints: browser image decoder checks actual dimensions separately; no accuracy/mAP claim. */
-export async function decodeResult(packet, expected, contract) {
+export async function decodeResult(packet, expected, contract, {captureTimeS} = {}) {
   if (!(packet instanceof ArrayBuffer) || packet.byteLength <= 8 || packet.byteLength > MAX_PACKET_BYTES)
     throw new Error("视频结果包大小无效。");
   const header = new DataView(packet);
@@ -104,6 +115,12 @@ export async function decodeResult(packet, expected, contract) {
       !Number.isInteger(metadata.width) || !Number.isInteger(metadata.height) ||
       metadata.width < 1 || metadata.height < 1 || Math.max(metadata.width, metadata.height) > 640)
     throw new Error("视频结果模型或统计不匹配。");
+  if (contract.provider === "local" &&
+      (metadata.provider !== "local" || metadata.session_id !== contract.session_id ||
+       metadata.timestamp_source !== "browser_capture" || !Number.isFinite(captureTimeS) ||
+       metadata.capture_time_s !== captureTimeS || metadata.depth_model !== contract.depth_model ||
+       metadata.tracking_model !== contract.tracking_model || metadata.risk_model !== contract.risk_model))
+    throw new Error("本地视频结果会话或采集时间不匹配。");
   for (const field of ["inference_ms", "graph_setup_ms", "prepare_ms", "gpu_stage_ms", "render_ms", "server_ms"])
     if (!Number.isFinite(metadata[field]) || metadata[field] < 0)
       throw new Error("视频结果耗时无效。");
@@ -204,10 +221,13 @@ export async function decodeResult(packet, expected, contract) {
  * Constraints: caller holds additional admission through display, no automatic reconnect/retry. */
 export class LiveDetectionClient {
   /** Functionality: Initialize transport and lifecycle callbacks.
-   * Inputs: fixed same-origin url, onDisconnect, onEnd, optional socketFactory.
+   * Inputs: same-origin url, onDisconnect, onEnd, socketFactory and explicit provider(hf default).
    * Outputs: instance. Logic: bind events and bounded counters; no immediate network or camera.
    * Constraints: callbacks do not receive credentials; no arbitrary destination from query parameters. */
-  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket} = {}) {
+  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, provider = "hf"} = {}) {
+    if (!["hf", "local"].includes(provider)) throw new Error("未知视频服务类型。");
+    this.provider = provider;
+    this.lastCaptureTimeS = -1;
     this.url = url;
     this.onDisconnect = onDisconnect;
     this.onEnd = onEnd;
@@ -242,31 +262,37 @@ export class LiveDetectionClient {
     }
     return new Promise(register);
   }
-  /** Functionality: Send one original JPEG with an ordered uint32 header.
-   * Inputs: ArrayBuffer. Outputs: validated result/RTT Promise.
-   * Logic: reserve pending before send; first55s, later10s; enforce both count and socket byte bounds.
+  /** Functionality: Send one original JPEG with ordered PRF1/PRF2 identity and local source timestamp.
+   * Inputs: ArrayBuffer and optional capturedAt milliseconds (mandatory for local). Outputs: result/RTT Promise.
+   * Logic: reserve pending before send; local PRF2 adds big-endian float64 capture seconds after uint32 index;
+   * first55s, later10s; enforce count/socket byte bounds and monotonic local capture times.
    * Constraints: no encoding, base64, stale-frame queue or retry; max12 requests, caller gates capture. */
-  sendFrame(buffer) {
+  sendFrame(buffer, {capturedAt} = {}) {
     if (this.stopped || !this.contract || this.socket.readyState !== 1)
       throw new Error("视频连接尚未就绪或已停止。");
     if (!(buffer instanceof ArrayBuffer) || !buffer.byteLength || buffer.byteLength > MAX_FRAME_BYTES)
       throw new Error("图像帧为空或超过 1 MiB 限制");
     if (this.pending.size >= MAX_INFLIGHT || this.sequence > 0xFFFFFFFF ||
-        this.socket.bufferedAmount > MAX_INFLIGHT * (MAX_FRAME_BYTES + 8))
+        this.socket.bufferedAmount > MAX_INFLIGHT * (MAX_FRAME_BYTES + (this.provider === "local" ? 16 : 8)))
       throw new Error("视频发送超过在途边界。");
-    const index = this.sequence++, client = this;
-    const packet = new Uint8Array(8 + buffer.byteLength);
+    const captureTimeS = capturedAt / 1000, local = this.provider === "local";
+    if (local && (!Number.isFinite(captureTimeS) || captureTimeS < 0 || captureTimeS <= this.lastCaptureTimeS))
+      throw new Error("本地视频需要严格递增的真实采集时间。");
+    if (local) this.lastCaptureTimeS = captureTimeS;
+    const index = this.sequence++, client = this, headerBytes = local ? 16 : 8;
+    const packet = new Uint8Array(headerBytes + buffer.byteLength);
     const view = new DataView(packet.buffer);
-    view.setUint32(0, 0x50524631);
+    view.setUint32(0, local ? 0x50524632 : 0x50524631);
     view.setUint32(4, index);
-    packet.set(new Uint8Array(buffer), 8);
+    if (local) view.setFloat64(8, captureTimeS);
+    packet.set(new Uint8Array(buffer), headerBytes);
     /** Functionality: Stop a timed-out frame. Inputs: closure index/client. Outputs: session failure.
      * Logic: reject every outstanding request. Constraints: no replacement frame or silent discard. */
     function deadline() { client.fail(new Error(`视频帧 ${index} 返回超时，请检查网络后重新开始。`)); }
     /** Functionality: Register one frame promise. Inputs: resolve/reject. Outputs: pending Map entry.
      * Logic: monotonic send timestamp and bounded timer. Constraints: synchronous registration before send. */
     function register(resolve, reject) {
-      client.pending.set(index, {resolve, reject, started: performance.now(),
+      client.pending.set(index, {resolve, reject, captureTimeS, started: performance.now(),
         timer: setTimeout(deadline, index === 0 ? COLD_MS : STEADY_MS)});
     }
     const result = new Promise(register);
@@ -299,7 +325,7 @@ export class LiveDetectionClient {
           return;
         }
         if (!this.connectWait || this.contract) throw new Error("非预期视频控制消息。");
-        this.contract = validateSession(message);
+        this.contract = validateSession(message, this.provider);
         const waiting = this.connectWait;
         this.connectWait = null;
         clearTimeout(waiting.timer);
@@ -317,7 +343,7 @@ export class LiveDetectionClient {
           if (client.stopped) return;
           const pending = client.pending.get(client.expected);
           if (!pending) throw new Error("收到未请求的视频帧。");
-          const result = await decodeResult(packet, client.expected, client.contract);
+          const result = await decodeResult(packet, client.expected, client.contract, {captureTimeS: pending.captureTimeS});
           if (client.stopped) return;
           client.pending.delete(client.expected++);
           clearTimeout(pending.timer);

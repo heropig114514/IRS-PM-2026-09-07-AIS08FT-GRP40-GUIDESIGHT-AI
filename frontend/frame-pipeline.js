@@ -1,7 +1,7 @@
 /** Responsibilities: Overlap capture/transmission and ordered display without a stale-frame backlog.
  * Implementation: Planned cadence with stall resets, first frame alone, max12 working/awaiting-display frames;
  * admission precedes capture; errors/stop wake waits; sent frames are never intentionally skipped.
- * Related Modules: camera.js, live-detection-client.js; tests/frame-pipeline.test.mjs.
+ * Related Modules: camera.js, live-detection-client.js, integration/guidance.js; tests/frame-pipeline.test.mjs.
  * Declaration Index: clockNow; FramePipeline; FramePipeline.constructor;
  * FramePipeline.constructor.registerStop; FramePipeline.constructor.registerCancel;
  * FramePipeline.active; FramePipeline.pause;
@@ -143,7 +143,7 @@ export class FramePipeline {
   /** Functionality: Submit one frame and append its returned result to the display chain.
    * Inputs: original bytes and ordinal/capture/encode/inputBytes context.
    * Outputs: observed task. Logic: result time is recorded before render queue waiting; completion
-   * credit is released only after display, so decoding/queued results remain within maxPending.
+   * credit is released after display; original capturedAt is forwarded for local PRF2 timestamp association.
    * Constraints: no lost rejection or out-of-order display; stopped frames cannot update UI.
    */
   dispatch(bytes, context) {
@@ -188,7 +188,7 @@ export class FramePipeline {
     /** Functionality: Release one working slot. Inputs: captured observed task. Outputs: Set removal.
      * Logic: only after display/failure. Constraints: no capture is retained in a waiting queue. */
     function finished() { pipeline.pending.delete(observed); }
-    observed = this.client.sendFrame(bytes).then(received).catch(failed).finally(finished);
+    observed = this.client.sendFrame(bytes, {capturedAt: context.capturedAt}).then(received).catch(failed).finally(finished);
     this.pending.add(observed);
     this.maxInFlight = Math.max(this.maxInFlight, this.pending.size);
     return observed;

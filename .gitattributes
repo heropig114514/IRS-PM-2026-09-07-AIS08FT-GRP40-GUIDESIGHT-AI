@@ -1,8 +1,9 @@
-# Responsibilities: Normalize source text while retaining exact deployed model metadata bytes.
-# Implementation: LF for ordinary text; disable conversion for two model identity artifacts.
-# Related Modules: backend/tools/deploy_phone_live.py; backend/models/*.json.
-# Declaration Index: None.
-# Variable Index: text=auto/eol=lf — source normalization; model -text — raw-byte identity.
+# Responsibilities: 声明源码、测试视频与已部署模型元数据的 Git 文件处理方式。
+# Implementation: 普通文本统一 LF；视频按二进制保存；两个模型 JSON 保留原始字节并识别 CRLF。
+# Related Modules: .gitignore, backend/model_tests/DATASETS.md, backend/tools/deploy_phone_live.py。
+# Declaration Index: None。
+# Variable Index: None。
 * text=auto eol=lf
-backend/models/inference-plan.json -text
-backend/models/yolo26n.json -text
+backend/model_tests/datasets/street-video/**/*.mp4 binary
+backend/models/inference-plan.json -text whitespace=cr-at-eol
+backend/models/yolo26n.json -text whitespace=cr-at-eol

@@ -6,7 +6,7 @@
  * SpeechDocument.querySelectorAll; SpeechDocument.createElement; Utterance; Utterance.constructor;
  * Engine; Engine.constructor; Engine.getVoices; Engine.speak; Engine.cancel; Engine.emit;
  * fixture; enable; testPrerequisites; testLifecycle; testLimits; testVoices;
- * testVoiceQuery; testCancellation; testNativeErrors; testVisibility; testMcp; testTranslations。
+ * testVoiceQuery; testCancellation; testNativeErrors; testVisibility; testMcp; testTranslations; testGuidanceEvents; testLocalVoiceOnly。
  * Variable Index: VOICES — 明确本地/远程测试身份；其他变量只保存本测试的控件、请求和诊断。
  * Constraints: 替身不能证明真实MCP网络、TTS引擎或扬声器；真实浏览器回归另行执行。
  */
@@ -21,6 +21,33 @@ const VOICES = [
   {voiceURI: "local-zh", name: "Fixture Chinese", lang: "zh-CN", localService: true, default: true},
   {voiceURI: "remote-en", name: "Fixture English", lang: "en-US", localService: false, default: false},
 ];
+
+/** Functionality: Verify real driver's request lifecycle/ownership seam. Inputs: native event fixture.
+ * Outputs: submitted/start/end and safe refusal to cancel another request ID.
+ * Logic: engine event determines actual start, stale events remain isolated; Constraints: no audible hardware assertion. */
+test("output subscriptions expose native lifecycle and preserve request ownership", function testGuidanceEvents() {
+  const {engine, output} = fixture(), events = []; enable(output);
+  const unsubscribe = output.subscribe(event => events.push(event));
+  const first = output.speak("first", {voice_id: "local-zh"});
+  assert.equal(events[0].phase, "submitted"); assert.equal(events[0].request_id, first.last_request.id);
+  assert.equal(output.stopOwned(999).reason, "not_owned"); assert.equal(engine.cancels, 0);
+  engine.emit(engine.requests[0], "start"); engine.emit(engine.requests[0], "end");
+  assert.deepEqual(events.map(event => event.phase), ["submitted", "start", "end"]);
+  const second = output.speak("second", {voice_id: "local-zh"});
+  assert.equal(output.stopOwned(first.last_request.id).reason, "not_owned");
+  assert.equal(output.stopOwned(second.last_request.id).accepted, true);
+  assert.equal(events.at(-1).phase, "cancel"); unsubscribe();
+});
+/** Functionality: Verify explicit local-MVP gate without weakening original voice selection.
+ * Inputs: local-only controller, default/remote/explicit-local choices. Outputs: no remote/default submission.
+ * Logic: invalid local voices never replace themselves; Constraints: synthetic voice inventory. */
+test("local-MVP marker rejects remote and browser-default speech", function testLocalVoiceOnly() {
+  const {output, engine} = fixture(); output.localOnly = true; enable(output);
+  assert.equal(output.speak("sample").reason, "local_voice_required");
+  assert.equal(output.speak("sample", {language: "en-US", voice_id: "remote-en"}).reason, "local_voice_required");
+  assert.equal(engine.requests.length, 0);
+  assert.equal(output.speak("sample", {voice_id: "local-zh"}).accepted, true); output.stop();
+});
 
 /** Functionality: 提供具有实际事件派发的简单控件。
  * Logic: 保存值、状态和选项，不解析HTML。Constraints: 不模拟布局或disabled事件拦截。
