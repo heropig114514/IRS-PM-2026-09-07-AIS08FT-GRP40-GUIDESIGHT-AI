@@ -240,4 +240,14 @@ node tools/check_maps_browser.mjs https://47.239.50.129/prs/maps/ NEW_PUBLIC_MAP
 - 新鲜度限制：阈值为 `camera.js` 导出的 `SCENE_MAX_AGE_MS`（1000毫秒）。复用的帧与检测框可能各自最多1秒旧，且二者不一定来自同一时刻，检测框可能与图像略有错位。
 - 未预期的异常只显示通用失败文案（控制台仅记录异常类型），不展示原始异常文本。
 - 后端静态白名单 `core/camera.py::ASSETS` 必须包含 `scene-client.js`。
+### 在其他页面调用
+
+```js
+import {describeScene, describeCurrentScene} from "./assets/scene-client.js";
+const {text} = await describeCurrentScene("前面能走吗？");          // 用摄像头页最近帧与检测框（摄像头未开抛 camera_unavailable）
+const r = await describeScene(jpegBytes, metadata.boxes, null, {language: "zh-CN"}); // 自带 JPEG(<=1 MiB)与框
+```
+
+失败抛 `SceneApiError`（`.code/.status/.requestId`，`message` 为中文界面文案），不自动重试；`options` 含 `language/apiBase/fetchImpl/timeoutMs(30000)/signal`。新页面必须与 API 同源，其 JS 文件需加入 `backend/core/camera.py::ASSETS` 及部署清单（由后端负责，此处仅说明）。
+
 `tests/scene-client.test.mjs` 用 fetch/语音/取帧替身覆盖映射、请求体、错误与语音；真实浏览器与手机未测。
