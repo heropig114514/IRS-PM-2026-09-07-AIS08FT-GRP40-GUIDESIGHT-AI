@@ -11,7 +11,8 @@ new_request_id — 生成 request_id；_map_box — 单个检测框转对象；
 boxes_to_objects — 检测框列表转 objects；
 _prepare_scene — 高层入口的共用校验；describe — 异步一行接入；describe_sync — 脚本用同步版本。
 Variable Index: DEFAULT_HOST/DEFAULT_MODEL — 环境缺省；CHAT_PATH — 唯一上游路径；
-TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — 传输边界；MAX_TOKENS/TEMPERATURE — 生成参数；
+TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — 传输边界；MAX_TOKENS/TEMPERATURE/ENABLE_THINKING — 生成参数
+（Qwen3 混合思考模型的思考 token 不受 max_tokens 约束，实测开启时 14–16 秒、常超时，故显式关闭）；
 MAX_IMAGE_BYTES/MAX_BASE64_CHARS — 图像边界；
 MAX_OBJECTS/MAX_QUESTION_CHARS/MAX_LABEL_CHARS — 输入边界；
 MAX_REQUESTS_PER_MINUTE — 单 worker 总额度；vlm_slots — 两个并发；
@@ -44,6 +45,7 @@ TIMEOUT_SECONDS = 20
 MAX_RESPONSE_BYTES = 262144
 MAX_TOKENS = 200
 TEMPERATURE = 0.2
+ENABLE_THINKING = False
 MAX_IMAGE_BYTES = 1048576
 MAX_BASE64_CHARS = 4 * ((MAX_IMAGE_BYTES + 2) // 3)
 MAX_OBJECTS = 50
@@ -310,6 +312,7 @@ def describe_scene(scene, request_id):
                 "messages": build_messages(scene),
                 "max_tokens": MAX_TOKENS,
                 "temperature": TEMPERATURE,
+                "enable_thinking": ENABLE_THINKING,
             }
         )
         connection = http.client.HTTPSConnection(host, timeout=TIMEOUT_SECONDS)

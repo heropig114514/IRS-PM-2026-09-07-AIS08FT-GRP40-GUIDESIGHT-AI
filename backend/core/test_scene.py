@@ -341,7 +341,8 @@ class VlmServiceTests(SimpleTestCase):
 
     def test_transport_contract(self):
         """Functionality: 请求目标、头、体与成功结果；Inputs: mock 连接；Outputs: 参数断言。
-        Logic: 自定义 host/model 生效，Bearer 仅在头，参数 max_tokens=200/temperature=0.2。
+        Logic: 自定义 host/model 生效，Bearer 仅在头；
+        参数 max_tokens=200/temperature=0.2/enable_thinking=false。
         Constraints: 不验证 TLS 或真实认证。
         """
         constructor, connection = fake_connection()
@@ -360,6 +361,7 @@ class VlmServiceTests(SimpleTestCase):
         body = json.loads(kwargs["body"])
         self.assertEqual(body["model"], "qwen-vl-test")
         self.assertEqual((body["max_tokens"], body["temperature"]), (200, 0.2))
+        self.assertIs(body["enable_thinking"], False)
         self.assertEqual([m["role"] for m in body["messages"]], ["system", "user"])
         self.assertEqual(result["model"], "qwen-vl-test")
         connection.close.assert_called_once()

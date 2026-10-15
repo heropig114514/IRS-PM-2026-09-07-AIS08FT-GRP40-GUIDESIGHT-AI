@@ -77,7 +77,9 @@
 
 `POST https://{DASHSCOPE_HOST}/compatible-mode/v1/chat/completions`，`Authorization: Bearer <key>`，
 `messages = [system, user[image_url(data:image/jpeg;base64,...), text]]`，`max_tokens=200`，
-`temperature=0.2`。使用标准库 `http.client`，超时 20 秒、响应上限 256 KiB。
+`temperature=0.2`、`enable_thinking=false`。Qwen3 系列默认开启深度思考，思考 token 不计入
+`max_tokens`；2026-10-15 实测 `qwen3.7-flash` 开启时单次 14–16 秒、半数超过 20 秒超时，关闭后
+2.2–3.3 秒、输出 23–40 token，因此显式关闭。使用标准库 `http.client`，超时 20 秒、响应上限 256 KiB。
 限流为单 worker 内存状态：每分钟 10 次、最多 2 并发，独立于 ORS 计数；重启清零。
 
 视图为 async，阻塞的 `http.client` 调用经 `asyncio.to_thread` 执行。原因：Django 在 ASGI 下把
