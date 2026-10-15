@@ -1,9 +1,9 @@
 <!doctype html>
-<!-- Responsibilities: OSM 位置与 ORS 步行路线测试界面。
+<!-- Responsibilities: OSM 位置、ORS 步行路线和持续导航界面。
 Implementation: 固定 Leaflet 1.9.4/SRI；先安装共享语言控制，再初始化地图；加载 AI 控制桥；明确定位、选点、示例和规划；nonce 由 core.maps 替换。
-Related Modules: i18n.js, translations.js, maps-client.js, maps-page.js, ai-control.js, camera.css, core.maps/services。
+Related Modules: i18n.js, translations.js, maps-client.js, maps-page.js, navigation-ui.js, ai-control.js, camera.css, core.maps/services。
 Declaration Index: None。
-Variable Index: __CSP_NONCE__ — CSS nonce；language — 同源持久化语言偏好；表单 id 供控制器引用；Leaflet URL/integrity — 固定依赖。 -->
+Variable Index: __CSP_NONCE__ — CSS nonce；language — 语言偏好；表单 id 供控制器引用；navigation-* — 导航按钮/状态；Leaflet URL/integrity — 固定依赖。 -->
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -198,6 +198,23 @@ Variable Index: __CSP_NONCE__ — CSS nonce；language — 同源持久化语言
               </button>
             </div>
           </form>
+          <section id="navigation-panel" class="route-details" aria-label="步行导航">
+            <h2>步行导航</h2>
+            <p id="navigation-status" role="status">尚未开始导航</p>
+            <div class="map-controls">
+              <button id="navigation-start" class="button primary" type="button" disabled>开始导航</button>
+              <button id="navigation-stop" class="button secondary" type="button" disabled>停止导航</button>
+            </div>
+            <p id="navigation-message" role="status">规划路线后，可由此处或 agent 开始导航。</p>
+            <p id="navigation-progress">暂无可靠导航进度</p>
+            <h3 id="navigation-turn">等待转向指令</h3>
+            <p id="navigation-instruction" data-language-original></p>
+            <p>下一条指令</p>
+            <p id="navigation-next" data-language-original></p>
+            <p id="navigation-position">尚未取得导航位置</p>
+            <p id="navigation-deviation">—</p>
+            <p>导航需浏览器定位权限；隐藏页面会停止。偏航后请手动重新规划，预计时间基于原路线比例。</p>
+          </section>
           <section class="route-details" aria-label="路线结果">
             <h2 id="route-summary">尚未请求路线</h2>
             <p>转向类型随界面语言显示，下方保留 ORS 返回的英文原始指令。</p>
@@ -209,8 +226,7 @@ Variable Index: __CSP_NONCE__ — CSS nonce；language — 同源持久化语言
         </section>
       </main>
       <footer>
-        点击规划才将起终点发送 PRS 和 ORS；PRS
-        不保存位置。当前为路线规划测试，尚未实现持续导航和风险播报调度。
+        规划时起终点发送 PRS 和 ORS；导航位置在页面内计算，agent 查询时经 MCP 返回，不存数据库。当前导航未接入避障和风险播报。
       </footer>
     </div>
   </body>

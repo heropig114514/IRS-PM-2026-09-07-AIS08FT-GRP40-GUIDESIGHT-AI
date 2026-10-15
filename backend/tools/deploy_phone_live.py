@@ -1,5 +1,5 @@
 """Responsibilities: Stage/publish Echo, the latest phone live path, bilingual maps, MCP
-and manual vibration/speech UI.
+and manual vibration/speech UI with shared walking navigation dependencies.
 Implementation: Pinned SSH, private local credentials, explicit source allowlist over the
 current release; validate the full-COCO qualified plan before staging;
 prune retired modes and replace owned page/asset/WS routes, including maps and shared language
@@ -10,6 +10,8 @@ An explicit vibration profile overlays only reviewed UI assets and their serving
 requiring the same inference plan and preserving active service/proxy/credential configuration.
 The live-tuning profile overlays only capture/transport scheduling and its tests, requires an
 explicit runtime, and preserves the current model, device outputs and service configuration.
+The navigation profile overlays map guidance and its shared MCP/static dependencies, using an
+explicit current runtime; preserves camera/inference sources, routes, templates and credentials.
 Related Modules: hf_video_relay/inference_plan/ai_mcp/ai_bridge; realtime.depth/tracking/risk;
 frontend live pipeline;
 deploy templates;
@@ -17,7 +19,7 @@ private server_info.txt.
 Declaration Index: PinnedHost — SSH policy; PinnedHost.missing_host_key — fingerprint check;
 connect_server — private authentication; execute — checked remote command;
 wait_ready — listener/health observation; stage — hash-verified inactive release;
-activate_overlay — configuration-preserving vibration or live-tuning release;
+activate_overlay — configuration-preserving vibration, live-tuning or navigation release;
 activate_outputs — isolated-runtime device-output deployment;
 activate — publish reviewed release; main — explicit stage/activate CLI.
 Variable Index: ROOT — local backend; PREFIX — dedicated remote workspace; FINGERPRINT — inspected
@@ -26,8 +28,9 @@ FRONTEND — explicit asset set; BACKEND — owned runtime set; RETIRED — expl
 obsolete paths. No credential output.
 VIBRATION_FRONTEND/VIBRATION_BACKEND — narrow UI-profile overlay; source_root is a reviewed
 snapshot directory, and git_commit records its Git identity without reading private files there.
-OUTPUT_FRONTEND/OUTPUT_BACKEND — output UI/MCP overlay preserving active inference code;
+OUTPUT_FRONTEND/OUTPUT_BACKEND — output/navigation UI/MCP overlay preserving inference code;
 LIVE_FRONTEND/LIVE_BACKEND — coordinated browser/PRS live transport overlay, excluding GPU compute;
+NAVIGATION_FRONTEND/NAVIGATION_BACKEND — map/MCP files, preserving camera/inference sources;
 runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest.
 Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
 """
@@ -51,6 +54,18 @@ ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "/opt/prs-practice"
 FINGERPRINT = "hIrYH0S2vhyiU53ScT9Ei03o1ClcuHAb2pL/VrMMg90="
 logger = logging.getLogger(__name__)
+NAVIGATION_FRONTEND = (
+    "maps.html", "maps-page.js", "maps-client.js", "navigation.js", "navigation-ui.js",
+    "ai-control.js", "i18n.js", "translations.js", "vibration.js", "speech-output.js",
+    # Shared asset whitelist also names this inert module; no scene UI or HTTP route is enabled.
+    "scene-client.js", "README.md", "tests/navigation.test.mjs", "tests/maps-client.test.mjs",
+    "tools/check_maps_browser.mjs", "tools/check_navigation_browser.mjs",
+)
+NAVIGATION_BACKEND = (
+    "core/camera.py", "core/ai_mcp.py", "core/test_ai_control.py", "core/test_mcp_profile.py",
+    "core/test_maps.py", "core/test_deploy_phone_live.py", "tools/deploy_phone_live.py",
+    "MCP.md", "deploy/README.md",
+)
 LIVE_FRONTEND = (
     "camera.js", "frame-pipeline.js", "live-detection-client.js",
     "tests/frame-pipeline.test.mjs", "tests/live-detection-client.test.mjs",
@@ -71,7 +86,8 @@ VIBRATION_BACKEND = (
 OUTPUT_FRONTEND = (
     "index.html", "camera.css", "translations.js", "vibration.js", "speech-output.js",
     "ai-control.js", "README.md", "tests/vibration.test.mjs", "tests/speech-output.test.mjs",
-    "maps.html",
+    "maps.html", "maps-page.js", "maps-client.js", "navigation.js", "navigation-ui.js",
+    "tests/navigation.test.mjs",
     "tools/check_vibration_browser.mjs", "tools/check_vibration_mcp_browser.mjs",
     "tools/check_speech_browser.mjs",
 )
@@ -95,6 +111,8 @@ FRONTEND = (
     "maps.html",
     "maps-page.js",
     "maps-client.js",
+    "navigation.js",
+    "navigation-ui.js",
     "ai-control.js",
     "vibration.js",
     "speech-output.js",
@@ -103,6 +121,7 @@ FRONTEND = (
     "tests/camera.test.mjs",
     "tests/i18n.test.mjs",
     "tests/maps-client.test.mjs",
+    "tests/navigation.test.mjs",
     "tests/live-detection-client.test.mjs",
     "tests/frame-pipeline.test.mjs",
     "tests/vibration.test.mjs",
@@ -278,28 +297,32 @@ def execute(client, script):
 
 def stage(client, sftp, profile="full", source_root=None, git_commit=None, runtime_path=None):
     """Functionality: Build a checked live/maps/MCP release while preserving unrelated services.
-    Inputs: client/sftp, profile(full/vibration/outputs/live-tuning), source_root/git_commit
-    and runtime_path;
+    Inputs: client/sftp, profile(full/vibration/outputs/live-tuning/navigation),
+    source_root/git_commit and runtime_path;
     current release, measured inference plan and owned source/template allowlists.
     Outputs: safe hash manifest including the measured plan identity.
     Logic: validate the plan, copy current release, prune explicit retired paths in the new release,
     replace canonical routes/source, verify uploaded bytes, preinstalled dependencies,
     Django/ASGI imports and systemd before activation.
-    Constraints: active/archived releases and map API/business code remain untouched;
+    Constraints: active/archived releases and server map API contracts remain untouched;
     no credentials, database, weights, browser fixtures or environment upload.
     No implicit promotion or rollback; logs release identity and verification transitions.
     Full profile dependencies must be installed explicitly; no implicit pip install.
     Vibration profile verifies the active plan is byte-identical and does not replace runtime,
     service/proxy templates or credentials; no retirement pruning outside the full profile.
-    Outputs requires an explicit isolated runtime and preserves inference sources; staged
+    Outputs includes shared map/navigation UI and requires an isolated runtime; preserves inference;
     service rendering substitutes only the reviewed interpreter path and records its source hash.
     Live-tuning requires an explicit existing runtime; it replaces only scheduling/transport
     and tests, with no service template, registry setting, model or GPU implementation changes.
+    Navigation similarly requires the existing runtime; it ships map/MCP dependencies and checks
+    the selected registry, leaving camera, server routing, inference and service config untouched.
     """
-    if profile not in {"full", "vibration", "outputs", "live-tuning"}:
+    if profile not in {"full", "vibration", "outputs", "live-tuning", "navigation"}:
         raise ValueError("Unknown deployment profile")
     if profile == "live-tuning" and runtime_path is None:
         raise ValueError("Live-tuning profile requires an explicit existing runtime")
+    if profile == "navigation" and runtime_path is None:
+        raise ValueError("Navigation profile requires an explicit existing runtime")
     if profile == "outputs" and runtime_path is None:
         raise ValueError("Outputs profile requires an explicit isolated runtime")
     runtime = runtime_path or PREFIX + "/runtime-venv"
@@ -315,7 +338,7 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     old = execute(client, f"readlink -f {PREFIX}/current").strip()
     if not re.fullmatch(re.escape(PREFIX) + r"/releases/[A-Za-z0-9_-]+", old):
         raise ValueError("Unexpected current release path")
-    if profile in {"vibration", "outputs", "live-tuning"}:
+    if profile in {"vibration", "outputs", "live-tuning", "navigation"}:
         for name in ("models/inference-plan.json", "models/yolo26n.json"):
             with sftp.open(old + "/backend/" + name, "rb") as active:
                 if active.read() != (source / name).read_bytes():
@@ -323,9 +346,11 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
                         "Scoped deployment changes the active inference identity: " + name
                     )
     frontend = {"full": FRONTEND, "vibration": VIBRATION_FRONTEND,
-                "outputs": OUTPUT_FRONTEND, "live-tuning": LIVE_FRONTEND}[profile]
+                "outputs": OUTPUT_FRONTEND, "live-tuning": LIVE_FRONTEND,
+                "navigation": NAVIGATION_FRONTEND}[profile]
     backend = {"full": BACKEND, "vibration": VIBRATION_BACKEND,
-               "outputs": OUTPUT_BACKEND, "live-tuning": LIVE_BACKEND}[profile]
+               "outputs": OUTPUT_BACKEND, "live-tuning": LIVE_BACKEND,
+               "navigation": NAVIGATION_BACKEND}[profile]
     retired = RETIRED if profile == "full" else ()
     files = {"backend/" + name: (source / name).read_bytes() for name in backend}
     files.update(
@@ -349,7 +374,7 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     identity = {"files": hashes, "removed": retired}
     release = (
         {"full": "phone-live-", "vibration": "vibration-", "outputs": "outputs-",
-         "live-tuning": "live-tuning-"}[profile]
+         "live-tuning": "live-tuning-", "navigation": "navigation-"}[profile]
         + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:16]
     )
     target = PREFIX + "/releases/" + release
@@ -362,7 +387,9 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
         "removed": list(retired),
         "scope": ("Live scheduling/transport; preserve compute, device outputs and configuration"
                   if profile == "live-tuning" else
-                  "Device output UI/MCP; preserve inference; explicit isolated runtime"
+                  "Walking navigation/MCP; preserve camera, inference, routes and configuration"
+                  if profile == "navigation" else
+                  "Device output/navigation UI/MCP; preserve inference; explicit isolated runtime"
                   if profile == "outputs" else
                   "Manual vibration UI; preserve inference, service/proxy config and credentials"
                   if profile == "vibration" else
@@ -424,8 +451,15 @@ print('Retired source removed from inactive release')
         f"{runtime}/bin/python -c \"import asyncio; from core.ai_mcp import mcp, MCP_PROFILE, "
         "OUTPUT_TOOL_NAMES; assert MCP_PROFILE == 'outputs'; "
         "assert {tool.name for tool in asyncio.run(mcp.list_tools())} == OUTPUT_TOOL_NAMES; "
-        "print('Output-only MCP registry verified')\"\n"
+        "print('Device output/navigation MCP registry verified')\"\n"
     ) if profile == "outputs" else ""
+    if profile == "navigation":
+        registry_check = (
+            f"{runtime}/bin/python -c \"import asyncio; from core.ai_mcp import mcp; "
+            "assert {'navigation_start','navigation_stop','navigation_status'} <= "
+            "{tool.name for tool in asyncio.run(mcp.list_tools())}; "
+            "print('Navigation MCP registry verified')\"\n"
+        )
     manifest["remote_checks"] = execute(
         client,
         f"""
@@ -480,7 +514,8 @@ curl --fail --silent --show-error --max-time 10 \\
 
 def activate_overlay(client, manifest):
     """Functionality: Activate a checked source overlay without changing configuration or tokens.
-    Inputs: client and verified vibration/live-tuning manifest with path/release/previous.
+    Inputs: client and verified vibration/live-tuning/navigation manifest;
+    manifest supplies path/release/previous.
     Outputs: activated flag and readiness evidence; old release remains available.
     Logic: atomically switch current, restart only prs-camera to load the changed sources,
     then perform the existing bounded listener/health check once.
@@ -505,7 +540,8 @@ def activate(client, sftp, manifest):
     material.
     Inputs: client/sftp/manifest; full profile also reads PRS configs and private HF token.
     Outputs: activation info.
-    Logic: check old-current match and staged hashes; vibration/live-tuning only switch sources.
+    Logic: check old-current match and staged hashes;
+    vibration/live-tuning/navigation only switch sources.
     Full profile: backup unit/include/env, update token through SFTP mode0600,
     validate nginx, atomic current link, restart only PRS, check readiness, graceful nginx reload.
     Constraints: no migration, other application restart, auto rollback or GPU call;
@@ -518,7 +554,7 @@ def activate(client, sftp, manifest):
         if hashlib.sha256(sftp.open(target + "/" + name).read()).hexdigest() != expected:
             raise ValueError("Staged release changed")
     logger.info("Activation preconditions verified release=%s", release)
-    if manifest.get("profile", "full") in {"vibration", "live-tuning"}:
+    if manifest.get("profile", "full") in {"vibration", "live-tuning", "navigation"}:
         activate_overlay(client, manifest)
         return
     if manifest.get("profile", "full") == "outputs":
@@ -633,7 +669,8 @@ def main():
     action.add_argument("--stage", action="store_true")
     action.add_argument("--activate", action="store_true")
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--profile", choices=("full", "vibration", "outputs", "live-tuning"),
+    parser.add_argument("--profile", choices=("full", "vibration", "outputs", "live-tuning",
+                                             "navigation"),
                         default="full")
     parser.add_argument("--source-root", type=Path)
     parser.add_argument("--git-commit")

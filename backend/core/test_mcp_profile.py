@@ -30,9 +30,9 @@ class MCPProfileTests(SimpleTestCase):
     """
 
     def test_outputs_allowlist(self):
-        """Functionality: Require exactly session discovery and seven device output tools.
+        """Functionality: Require session discovery, seven output and three navigation tools.
         Inputs: Explicit outputs profile and fixed child registry script.
-        Outputs: Eight exact names and selected profile; no production database/API calls.
+        Outputs: Eleven exact names and selected profile; no production database/API calls.
         Logic: Use real SDK registration with fixed test configuration and a bounded subprocess.
         Constraints: No profile fallback, credential output or changes to parent environment.
         """
@@ -49,6 +49,7 @@ class MCPProfileTests(SimpleTestCase):
         self.assertEqual(set(payload["tools"]), {
             "ui_sessions", "vibration_status", "vibration_test", "vibration_stop",
             "speech_status", "speech_voices", "speech_speak", "speech_stop",
+            "navigation_status", "navigation_start", "navigation_stop",
         })
 
     def test_invalid_profile(self):
