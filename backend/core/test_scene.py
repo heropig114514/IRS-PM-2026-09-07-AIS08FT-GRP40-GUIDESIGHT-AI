@@ -593,8 +593,8 @@ class DescribeHelperTests(SimpleTestCase):
         vlm.request_times.clear()
 
     def test_default_model(self):
-        """Functionality: 默认模型为 qwen3.7-flash；Constraints: 环境 VLM_MODEL 优先。"""
-        self.assertEqual(vlm.DEFAULT_MODEL, "qwen3.7-flash")
+        """Functionality: 默认模型为 qwen3-vl-plus；Constraints: 环境 VLM_MODEL 优先。"""
+        self.assertEqual(vlm.DEFAULT_MODEL, "qwen3-vl-plus")
 
     def test_describe_success(self):
         """Functionality: 成功路径字段与上游请求体；Inputs: 字节 JPEG + boxes + 问题。

@@ -39,7 +39,7 @@ from collections import deque
 from threading import BoundedSemaphore, Lock
 
 DEFAULT_HOST = "dashscope-intl.aliyuncs.com"
-DEFAULT_MODEL = "qwen3.7-flash"
+DEFAULT_MODEL = "qwen3-vl-plus"
 CHAT_PATH = "/compatible-mode/v1/chat/completions"
 TIMEOUT_SECONDS = 20
 MAX_RESPONSE_BYTES = 262144

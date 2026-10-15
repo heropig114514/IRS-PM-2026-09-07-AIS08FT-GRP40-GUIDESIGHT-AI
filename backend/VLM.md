@@ -30,7 +30,7 @@
   返回 text 字符串，失败抛出带 `code` 的错误。
 
 用户在摄像头页手动点击"描述场景"，前端把当前 JPEG 帧与检测器输出的结构化对象发到后端，
-后端经阿里云 DashScope（OpenAI 兼容接口）调用 Qwen 视觉模型（默认 `qwen3.7-flash`），返回不超过两句的口语化描述。
+后端经阿里云 DashScope（OpenAI 兼容接口）调用 Qwen 视觉模型（默认 `qwen3-vl-plus`），返回不超过两句的口语化描述。
 不新增依赖；业务在 `core/vlm.py`，HTTP 适配在 `core/scene.py`，路由在 `config/urls.py`。
 不自动触发、不重试、不重定向、不降级为其他模型或模板文本。
 
@@ -91,7 +91,7 @@
 |---|---|---|
 | `DASHSCOPE_API_KEY` | 无（必填） | 缺失 → 503；仅后端读取，仅出现在 Authorization 头 |
 | `DASHSCOPE_HOST` | `dashscope-intl.aliyuncs.com` | 仅主机名（不含协议/端口/路径），格式非法 → 503，不回退默认；国际站 key 与大陆站 key 不通用 |
-| `VLM_MODEL` | `qwen3.7-flash` | 国际站没有 `qwen2.5-vl-7b-instruct`，默认改为实测可用的 `qwen3.7-flash`；字符集 `[A-Za-z0-9._-]`，≤64 |
+| `VLM_MODEL` | `qwen3-vl-plus` | 国际站没有 `qwen2.5-vl-7b-instruct`。2026-10-15 同一提示词实测：`qwen3-vl-plus` 遵守“距离/运动只来自检测字段”明显好于 `qwen3.7-flash`，且更快（0.8–1.9 秒 vs 1.7–4.0 秒）；每次约 $0.0003（flash 约 $0.00004）。可设为 `qwen3.7-flash` 以降低成本。字符集 `[A-Za-z0-9._-]`，≤64 |
 
 ## 提示词
 
