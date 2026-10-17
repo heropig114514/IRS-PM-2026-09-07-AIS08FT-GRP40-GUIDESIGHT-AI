@@ -1,7 +1,8 @@
 <!doctype html>
 <!-- Responsibilities: Independent local-video inference and native-output test entry.
-Implementation: Explicit File chooser, control-free muted1x video, shared native output controls, local guidance.
-Related Modules: video-mvp.js/video-replay.js/video.css; integration.asgi; /live/assets native controllers.
+Implementation: Explicit File chooser, muted1x video, shared native output controls with adjustable 2x speech default
+and short direction/category/fast-approach alert speech.
+Related Modules: video-mvp.js/video-replay.js/video-alerts.js/video.css; integration.asgi; /live/assets native controllers.
 Declaration Index: None. Variable Index: None; DOM IDs bind the replay and existing device controllers. -->
 <html lang="zh-CN" data-local-mvp="true">
   <head>
@@ -35,7 +36,8 @@ Declaration Index: None. Variable Index: None; DOM IDs bind the replay and exist
         <label>引导语言 <select id="video-guidance-language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
         <label>引导语音（只允许匹配语言的本地声音）<select id="video-guidance-voice"><option value="">请选择本地声音</option></select></label>
         <div class="video-actions"><button id="video-voices-refresh" class="button secondary">读取本地声音</button><button id="video-resume-speech" class="button secondary" disabled>手动恢复语音通道</button><button id="video-resume-vibration" class="button secondary" disabled>手动恢复震动通道</button></div>
-        <p>还需单独启用下方语音/震动开关。服务端决定风险；采集后超过1秒的结果保留显示，但不新建提醒。通道错误后需手动恢复；语音提交与真实引擎开始分别记录，API接受不证明实际声音或马达。</p>
+        <p>还需单独启用下方语音/震动开关。服务端决定风险；采集后超过1秒的结果保留显示，但不新建提醒。已经起播的视频警报允许说完，不因短暂空告警或结果过期而截断；更高等级、停止或视频结束仍可打断。通道错误后需手动恢复；语音提交、引擎开始和整句完成分别记录，API接受不证明实际声音或马达。</p>
+        <p>语音只播风险提示、目标相对画面的方向和算法识别的类别；较快接近时加“靠近”，慢速或接近状态未确认时不加。距离和TTC保留在检测结果中，不朗读。同等级仍优先提醒预计碰撞时间更短的目标。</p>
         <button id="video-navigation-demo" class="button secondary">回放示例导航事件（demo）</button>
         <p>demo只测试调度，不是GPS或路线导航。最多一条待处理指令，原始有效期10秒。</p>
         <p id="video-guidance-status" role="status" aria-live="polite">本地引导已关闭。</p>
@@ -47,7 +49,7 @@ Declaration Index: None. Variable Index: None; DOM IDs bind the replay and exist
         <div class="speech-settings">
           <label>朗读语言 <select id="speech-language" disabled><option value="zh-CN">中文朗读</option><option value="en-US">English</option></select></label>
           <label>语音选择 <select id="speech-voice" disabled><option value="">须明确选择本地声音</option></select></label>
-          <label>语速 <output id="speech-rate-value">1.0×</output><input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="1" disabled /></label>
+          <label>语速（默认2倍，可调整） <output id="speech-rate-value">2.0×</output><input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="2" disabled /></label>
           <label>音量 <output id="speech-volume-value">100%</output><input id="speech-volume" type="range" min="0" max="1" step="0.1" value="1" disabled /></label>
         </div>
         <div class="video-actions"><button id="speech-play" class="button primary" disabled>朗读文本</button><button id="speech-stop" class="button secondary" disabled>停止朗读</button></div>

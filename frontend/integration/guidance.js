@@ -1,8 +1,9 @@
 /** Responsibilities: Independently schedule risk and demo navigation using existing device controllers.
- * Implementation: latest snapshot, 1s capture TTL, per-session/track start-based 3s cooldown;
- * priority/distance/track ordering, owned preemption, foreign-pending vibration admission guard,
+ * Implementation: injectable risk selection/text, latest snapshot, 1s capture TTL, per-session/track start-based 3s cooldown;
+ * priority/distance/track ordering, owned preemption, opt-in completion of started video risk speech,
+ * foreign-pending vibration admission guard,
  * one pending navigation valid for10s.
- * Related Modules: events.js, catalog.js, local-mvp.js; camera/speech-output/vibration subscription seams.
+ * Related Modules: events.js, catalog.js, local-mvp.js, video-alerts.js; camera/speech-output/vibration subscription seams.
  * Declaration Index: selectRisk; GuidanceManager; GuidanceManager.constructor; GuidanceManager.subscribe;
  * GuidanceManager.report; GuidanceManager.setEnabled; GuidanceManager.setVoice; GuidanceManager.resume;
  * GuidanceManager.begin; GuidanceManager.ingest; GuidanceManager.fresh; GuidanceManager.navigationEvent;
@@ -16,6 +17,8 @@
  * active/pendingSubmission preserve request ownership and frozen source frame context;
  * riskTimer cancels only unstarted own speech at its original source deadline; lastSuppression bounds repeated diagnostic state;
  * paused channels require explicit resume; timers/unsubscribers own bounded lifecycles, events omit text/images.
+ * selectAlert/alertText/finishStartedRiskSpeech are explicit integration strategies;
+ * defaults preserve the original camera/demo behavior.
  */
 import {EventBus} from "./events.js";
 import {languageOf, riskText} from "./catalog.js";
@@ -39,13 +42,16 @@ export function selectRisk(boxes) {
  * Logic: synchronous subscription bridges immutable snapshots and native request events.
  * Constraints: default disabled, local explicit voices, no FIFO/retries/remote fallback, no manual/scene cancellation. */
 export class GuidanceManager {
-  /** Functionality: Bind existing controllers. Inputs: speech/vibration, injectable clock/timers.
-   * Outputs: disabled manager and event subscriptions. Logic: bounded state; default timer wrappers retain the Window/global receiver.
-   * Constraints: device acceptance does not establish audible output or physical vibration. */
-  constructor({speech, vibration, now = () => performance.now(),
+  /** Functionality: Bind existing controllers. Inputs: speech/vibration, optional risk selection/text/completion and clock/timers.
+   * Outputs: disabled manager and event subscriptions. Logic: bounded state; default policies retain camera/demo behavior and timer wrappers retain the global receiver.
+   * Constraints: completion only permits already-started speech to finish; it never extends source TTL/cooldown;
+   * device acceptance is not audible output or physical vibration. */
+  constructor({speech, vibration, selectAlert = selectRisk, alertText = riskText, finishStartedRiskSpeech = false,
+    now = () => performance.now(),
     setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
     clearTimer = timer => globalThis.clearTimeout(timer)}) {
-    Object.assign(this, {speech, vibration, now, setTimer, clearTimer});
+    Object.assign(this, {speech, vibration, selectAlert, alertText, now, setTimer, clearTimer});
+    this.finishStartedRiskSpeech = finishStartedRiskSpeech === true;
     this.events = new EventBus();
     this.enabled = false;
     this.voiceId = "";
@@ -309,21 +315,26 @@ export class GuidanceManager {
   }
   /** Functionality: Consume latest eligible risk or unexpired navigation. Inputs: manager state.
    * Outputs: one target per snapshot, owned output actions. Logic: reentrancy guard protects synchronous native callbacks.
-   * Constraints: no frame FIFO, retries, hidden output enablement or cancellation of unrelated requests. */
+   * Opt-in video speech may finish after an empty/stale frame; higher priority still preempts it.
+   * Constraints: no frame FIFO, stale new submissions, retries, hidden enablement or cancellation of unrelated requests;
+   * unstarted speech, vibration and the default camera policy retain immediate source-loss cancellation. */
   pump() {
     if (!this.enabled || !this.sessionId || this.suspended || this.pumping) return;
     this.pumping = true;
     try {
-      const box = this.fresh() ? selectRisk(this.latest.metadata.boxes) : null;
+      const box = this.fresh() ? this.selectAlert(this.latest.metadata.boxes) : null;
       for (const channel of ["speech", "vibration"]) {
         const active = this.active[channel];
-        if (active && (!box && active.kind === "risk" || box &&
-            (active.kind === "navigation" || box.alert_priority > active.box.alert_priority))) this.cancel(channel);
+        if (!active) continue;
+        const sourceLost = !box && active.kind === "risk";
+        const finishSpeech = channel === "speech" && active.started && this.finishStartedRiskSpeech;
+        if (sourceLost && !finishSpeech || box &&
+            (active.kind === "navigation" || box.alert_priority > active.box.alert_priority)) this.cancel(channel);
       }
       if (box) {
         const descriptor = this.riskDescriptor(box);
         if (!this.eligible(box)) return this.suppress("cooldown_or_downgrade", descriptor);
-        if (!this.active.speech) this.submitSpeech(descriptor, riskText(box, this.language), this.language);
+        if (!this.active.speech) this.submitSpeech(descriptor, this.alertText(box, this.language), this.language);
         if (!this.active.vibration || this.active.vibration.elapsed) {
           if (this.active.vibration) this.cancel("vibration");
           this.submitVibration(descriptor);

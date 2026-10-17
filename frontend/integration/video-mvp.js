@@ -1,6 +1,7 @@
 /** Responsibilities: Bind independent local-video replay, results and shared native outputs to a simple UI.
- * Implementation: Explicit File/start/stop, structured lifecycle subscriptions, local voice choices and demo navigation.
- * Related Modules: video.html/video.css/video-replay.js/guidance.js/catalog.js;
+ * Implementation: Explicit File/start/stop, lifecycle subscriptions, short class/motion alert speech with started-sentence completion,
+ * local voice choices and existing demo controls.
+ * Related Modules: video.html/video.css/video-replay.js/guidance.js/catalog.js/video-alerts.js;
  * existing /live/assets FramePipeline/LiveDetectionClient/SpeechOutput/VibrationTester single module URLs.
  * Declaration Index: node; renderControls; renderStats; renderResults; onReplay; onGuidance;
  * applyVoice; readVoices; selectFile; startVideo; initialize; videoReplay; guidanceManager; videoMvpReady.
@@ -14,10 +15,12 @@ import {speechOutput} from "../../live/assets/speech-output.js";
 import {tester} from "../../live/assets/vibration.js";
 import {VideoReplay} from "./video-replay.js";
 import {GuidanceManager} from "./guidance.js";
+import {selectVideoAlert, videoAlertText} from "./video-alerts.js";
 import {text, resultText} from "./catalog.js";
 const doc = document;
 let latest = null, fileReady = false, fileChoiceGeneration = 0;
-export const guidanceManager = new GuidanceManager({speech: speechOutput, vibration: tester});
+export const guidanceManager = new GuidanceManager({speech: speechOutput, vibration: tester,
+  selectAlert: selectVideoAlert, alertText: videoAlertText, finishStartedRiskSpeech: true});
 export const videoReplay = new VideoReplay({video: doc.getElementById("video-source"), canvas: doc.createElement("canvas"),
   image: doc.getElementById("video-result"),
   clientFactory: (url, failed, ended) => new LiveDetectionClient(url, failed, ended, {provider: "local"}),

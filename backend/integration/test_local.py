@@ -1,7 +1,7 @@
 """Responsibilities: Verify isolated local transport/lifecycle without model substitutes in
 production.
 Implementation: Actual packet parsers and ASGI communicators; explicit synthetic runtime/peer
-fixtures.
+fixtures and isolated video/navigation speech asset delivery.
 Related Modules: integration.protocol/services/inference.services; realtime.protocol;
 core.test_frames.
 Declaration Index: TrackerFixture; TrackerFixture.__init__; TrackerFixture.reset;
@@ -22,6 +22,7 @@ GatewayTests.test_stop_suppressed_result_counts; GatewayTests.test_early_result_
 GatewayTests.test_invalid_terminal_counts; GatewayTests.test_repeated_cancel_preserves_cleanup;
 WrapperTests; WrapperTests.test_delegation_disabled_routes_and_status;
 WrapperTests.test_page_injection_and_asset_allowlist; WrapperTests.test_video_entry_isolated;
+WrapperTests.test_navigation_entry_isolated;
 WrapperTests.test_inference_health_is_lazy.
 Variable Index: ORIGIN — explicit local browser origin; MANIFEST — valid original identity fixture;
 factory — Mock callable, never automatic fallback; gate/started — native-work cancellation controls.
@@ -853,9 +854,9 @@ class WrapperTests(SimpleTestCase):
 
     async def test_video_entry_isolated(self):
         """Functionality: Serve the independent file-video entry without camera permission.
-        Inputs: real fixed video HTML, HEAD and invalid method requests.
-        Outputs: safe CSP/blob media, denied camera/microphone and exact body semantics.
-        Logic: verify browser entry isolation before any input or inference can run.
+        Inputs: real video HTML/speech asset, HEAD and invalid method requests.
+        Outputs: safe CSP/blob media, denied camera/microphone and video speech strategy wiring.
+        Logic: verify isolated entry and actual module serving before input/inference can run.
         Constraints: codec, motion and actual GPU behavior need separate browser validation.
         """
         wrapper = IntegrationApplication(Mock())
@@ -876,6 +877,83 @@ class WrapperTests(SimpleTestCase):
                 else:
                     self.assertEqual(body, b"")
                     self.assertGreater(int(headers[b"content-length"]), 0)
+            await response.wait()
+
+        for name in ("video-alerts.js", "video-mvp.js"):
+            response = ApplicationCommunicator(
+                wrapper, {"type": "http", "path": "/integration/assets/" + name, "method": "GET"}
+            )
+            start = await response.receive_output()
+            body = (await response.receive_output())["body"]
+            self.assertEqual(start["status"], 200)
+            self.assertEqual(dict(start["headers"])[b"content-type"], b"text/javascript")
+            if name == "video-mvp.js":
+                self.assertIn(b'from "./video-alerts.js"', body)
+                self.assertIn(b"selectAlert: selectVideoAlert, alertText: videoAlertText", body)
+            else:
+                self.assertIn(b"export function selectVideoAlert", body)
+                self.assertIn(b"export function videoAlertText", body)
+            await response.wait()
+
+    async def test_navigation_entry_isolated(self):
+        """Functionality: Serve offline navigation replay without device or external dependencies.
+        Inputs: real replay page/modules/source, HEAD and invalid methods. Outputs: fixed assets,
+        synthetic provenance and denied camera/microphone/geolocation policy.
+        Logic: route only the isolated page/assets; original maps and core remain unchanged.
+        Constraints: this checks serving boundaries, not browser speech or real GPS/ORS accuracy.
+        """
+        wrapper = IntegrationApplication(Mock())
+        for method in ("GET", "HEAD", "POST"):
+            response = ApplicationCommunicator(
+                wrapper, {"type": "http", "path": "/integration/navigation/", "method": method}
+            )
+            start = await response.receive_output()
+            body = (await response.receive_output())["body"]
+            self.assertEqual(start["status"], 405 if method == "POST" else 200)
+            if method != "POST":
+                headers = dict(start["headers"])
+                self.assertEqual(
+                    headers[b"permissions-policy"], b"camera=(), microphone=(), geolocation=()"
+                )
+                self.assertNotIn(b"https://", headers[b"content-security-policy"])
+                if method == "GET":
+                    self.assertIn(b"navigation-mvp.js", body)
+                    self.assertIn(b'data-local-mvp="true"', body)
+                    self.assertNotIn(b"video-mvp.js", body)
+                    self.assertNotIn(b"maps-page.js", body)
+                else:
+                    self.assertEqual(body, b"")
+            await response.wait()
+        for name in (
+            "navigation-mvp.js", "navigation-speech.js", "navigation-replay.js",
+            "navigation.css", "navigation-sample.json",
+        ):
+            response = ApplicationCommunicator(
+                wrapper, {"type": "http", "path": "/integration/assets/" + name, "method": "GET"}
+            )
+            start = await response.receive_output()
+            body = (await response.receive_output())["body"]
+            self.assertEqual(start["status"], 200)
+            if name.endswith(".json"):
+                self.assertEqual(dict(start["headers"])[b"content-type"], b"application/json")
+                sample = json.loads(body)
+                self.assertEqual(sample["source"], "synthetic")
+                self.assertTrue(sample["fixes"])
+            elif name == "navigation-mvp.js":
+                self.assertIn(b"new WalkingNavigation", body)
+                self.assertIn(b"new NavigationSpeechAdapter", body)
+                self.assertNotIn(b"GuidanceManager", body)
+            await response.wait()
+
+        for path in ("/integration/navigation.js", "/integration/maps-client.js"):
+            response = ApplicationCommunicator(
+                wrapper, {"type": "http", "path": path, "method": "GET"}
+            )
+            start = await response.receive_output()
+            body = (await response.receive_output())["body"]
+            self.assertEqual(start["status"], 200)
+            self.assertEqual(dict(start["headers"])[b"content-type"], b"text/javascript")
+            self.assertTrue(body)
             await response.wait()
 
     async def test_inference_health_is_lazy(self):

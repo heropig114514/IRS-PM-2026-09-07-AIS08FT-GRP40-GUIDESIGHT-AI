@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- Responsibilities: Isolated local route/location replay and navigation speech controls.
+Implementation: Explicit synthetic-source loading/start/stop, offline route sketch and shared local speech at adjustable 2x default.
+Related Modules: navigation-mvp.js/navigation-replay.js/navigation-speech.js/navigation.css; existing navigation.js/speech-output.js.
+Declaration Index: None. Variable Index: None; DOM IDs bind only this replay entry. -->
+<html lang="zh-CN" data-local-mvp="true">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PRS · 本地导航播报测试</title>
+    <link rel="stylesheet" href="/live/assets/camera.css" />
+    <link rel="stylesheet" href="/integration/assets/navigation.css" />
+    <script type="module" src="/integration/assets/navigation-mvp.js"></script>
+  </head>
+  <body class="navigation-mvp">
+    <main>
+      <header><h1>本地导航播报测试</h1><a href="/integration/video/">视频测试入口</a></header>
+      <p>独立验证路线、定位状态与语音的同步。本页只回放明确选择的本地数据，不申请设备定位、摄像头或麦克风权限。</p>
+      <section class="workspace">
+        <h2>路线与定位回放</h2>
+        <p>内置示例使用合成路线与合成定位点，不是真实道路、设备位置或在线规划结果。回放不接入视频检测。</p>
+        <div class="navigation-actions"><button id="navigation-load-sample" class="button secondary">加载内置回放示例</button><a href="/integration/assets/navigation-sample.json" download>下载示例 JSON</a></div>
+        <label>本地回放文件（路线＋定位点 JSON，最大1MiB）<input id="navigation-file" type="file" accept=".json,application/json" /></label>
+        <p id="navigation-source-status" role="status">请先加载示例或选择本地回放文件。</p>
+        <div class="navigation-actions"><button id="navigation-replay-start" class="button primary" disabled>开始导航回放</button><button id="navigation-replay-stop" class="button secondary" disabled>停止回放</button></div>
+        <div class="navigation-grid">
+          <figure><figcaption>合成路线与定位示意（非地图）</figcaption><svg id="navigation-sketch" viewBox="0 0 360 220" role="img" aria-label="本地回放路线示意"><polyline id="navigation-route-line" points="" /><circle id="navigation-position-dot" cx="0" cy="0" r="6" hidden /></svg></figure>
+          <div><h3>路线步骤</h3><ol id="navigation-route-steps"></ol></div>
+        </div>
+      </section>
+      <section class="workspace">
+        <h2>导航进度</h2>
+        <p id="navigation-replay-status" role="status" aria-live="polite">尚未开始回放。</p>
+        <p id="navigation-current">等待当前指令。</p><p id="navigation-next">等待下一指令。</p>
+        <p id="navigation-progress">尚无可靠进度。</p><p id="navigation-position">尚无回放位置。</p>
+        <p>相同步骤的定位更新不会重复播报；步骤变化、偏航、定位精度不足和到达分别处理。定位失效、停止、换路线或隐藏页面会撤销本模块的旧语音，不自动恢复。</p>
+        <pre id="navigation-replay-stats" aria-label="回放与语音状态">尚无回放。</pre>
+      </section>
+      <section class="workspace">
+        <h2>导航语音</h2>
+        <label><input id="navigation-speech-enabled" type="checkbox" />启用导航播报（默认关闭）</label>
+        <label>播报语言 <select id="navigation-speech-language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
+        <label>本地声音 <select id="navigation-speech-voice"><option value="">请选择本地声音</option></select></label>
+        <div class="navigation-actions"><button id="navigation-voices-refresh" class="button secondary">读取本地声音</button><button id="navigation-speech-resume" class="button secondary" disabled>手动恢复导航语音</button></div>
+        <p>还须启用下方语音输出。只使用明确选择的匹配语言本地声音，失败后需手动恢复；手动朗读的请求归属独立。</p>
+        <p id="navigation-speech-status" role="status">导航播报已关闭。</p>
+      </section>
+      <section id="speech-test" class="workspace speech-test">
+        <h2>原生语音输出 <span id="speech-status" class="status">正在检查接口</span></h2>
+        <label><input id="speech-enabled" type="checkbox" disabled />启用语音输出</label>
+        <label class="speech-field">手动朗读文本（最多1000个字符）<textarea id="speech-text" rows="2" maxlength="2000" disabled>这是 PRS 本地导航语音测试。</textarea></label>
+        <div class="speech-settings">
+          <label>朗读语言 <select id="speech-language" disabled><option value="zh-CN">中文朗读</option><option value="en-US">English</option></select></label>
+          <label>语音选择 <select id="speech-voice" disabled><option value="">须明确选择本地声音</option></select></label>
+          <label>语速（默认2倍，可调整） <output id="speech-rate-value">2.0×</output><input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="2" disabled /></label>
+          <label>音量 <output id="speech-volume-value">100%</output><input id="speech-volume" type="range" min="0" max="1" step="0.1" value="1" disabled /></label>
+        </div>
+        <div class="navigation-actions"><button id="speech-play" class="button primary" disabled>朗读文本</button><button id="speech-stop" class="button secondary" disabled>停止朗读</button></div>
+        <p id="speech-message" role="status"></p><p id="speech-request">尚无语音请求。</p>
+        <p>提交、起播和完整结束分别记录；引擎事件不等于实际扬声器听音验证。</p>
+      </section>
+    </main>
+  </body>
+</html>
