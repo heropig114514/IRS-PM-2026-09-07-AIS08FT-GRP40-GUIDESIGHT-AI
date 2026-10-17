@@ -9,7 +9,8 @@ LocalGateway.bridge; LocalGateway.forward; LocalGateway.return_results; LocalGat
 LocalGateway.cleanup; LocalGateway.finish; IntegrationApplication; IntegrationApplication.__init__;
 IntegrationApplication.__call__; IntegrationApplication.asset; IntegrationApplication.status.
 Variable Index: logger — lifecycle diagnostics without URLs/media; ASSETS — fixed frontend
-allowlist;
+allowlist including video alert speech and independent navigation replay;
+NAVIGATION_SHARED_ASSETS — fixed aliases for unchanged core modules, preserving relative imports;
 FRONTEND — fixed repository frontend root; input_times/incoming — twelve outstanding frames;
 submitted — attempted provider sends; forwarded — send-completed or worker-confirmed prefix;
 worker_verified — complete validated provider results; delivered — completed browser ASGI sends;
@@ -42,8 +43,14 @@ from .protocol import (
 logger = logging.getLogger(__name__)
 FRONTEND = ROOT.parent / "frontend"
 ASSETS = {
+    "navigation-mvp.js": "text/javascript",
+    "navigation-speech.js": "text/javascript",
+    "navigation-replay.js": "text/javascript",
+    "navigation.css": "text/css",
+    "navigation-sample.json": "application/json",
     "video-mvp.js": "text/javascript",
     "video-replay.js": "text/javascript",
+    "video-alerts.js": "text/javascript",
     "video.css": "text/css",
     "devices.js": "text/javascript",
     "events.js": "text/javascript",
@@ -51,6 +58,10 @@ ASSETS = {
     "guidance.js": "text/javascript",
     "local-mvp.js": "text/javascript",
     "local-mvp.css": "text/css",
+}
+NAVIGATION_SHARED_ASSETS = {
+    "/integration/navigation.js": "navigation.js",
+    "/integration/maps-client.js": "maps-client.js",
 }
 LOCAL_DISABLED = {
     "code": "local_only_external_disabled",
@@ -97,10 +108,11 @@ def read_health(url):
 
 
 async def http_response(
-    send, status, body, content_type="application/json", *, head=False, camera_access=True
+    send, status, body, content_type="application/json", *, head=False, camera_access=True,
+    deny_geolocation=False,
 ):
     """Functionality: Return a bounded no-store integration response with same-origin assets policy.
-    Inputs: send/status/body/MIME/HEAD flag and camera permission policy. Outputs: HTTP start/body.
+    Inputs: send/status/body/MIME/HEAD flag and camera/geolocation policy. Outputs: HTTP start/body.
     Logic: finite JSON or literal bytes; fixed CSP permits current browser media/control needs.
     Constraints: no user-controlled file path, external connection permission or embedded scripts.
     """
@@ -120,7 +132,8 @@ async def http_response(
         (b"content-length", str(len(raw)).encode()),
         (
             b"permissions-policy",
-            b"camera=(self), microphone=()" if camera_access else b"camera=(), microphone=()",
+            (b"camera=(self), microphone=()" if camera_access else b"camera=(), microphone=()")
+            + (b", geolocation=()" if deny_geolocation else b""),
         ),
         (b"content-security-policy", policy.encode()),
     ]
@@ -489,14 +502,17 @@ class IntegrationApplication:
                 return await http_response(send, 403, LOCAL_DISABLED)
             if path == "/integration/status/":
                 return await self.status(scope, send)
-            if path in {"/live/", "/integration/video/"} or path.startswith("/integration/assets/"):
+            if path in {"/live/", "/integration/video/", "/integration/navigation/"} or (
+                path.startswith("/integration/assets/")
+            ) or path in NAVIGATION_SHARED_ASSETS:
                 return await self.asset(scope, send)
         await self.software(scope, receive, send)
 
     async def asset(self, scope, send):
         """Functionality: Serve fixed frontend modules or inject the independent local MVP entry.
         Inputs: fixed route/method. Outputs: no-store resource/404/405.
-        Logic: whitelist names before any read; fixed video page uses file media and denies camera;
+        Logic: whitelist names before any read; video/navigation pages deny camera, navigation
+        replay also denies real device location;
         only live page receives the independent camera module/data attribute.
         Constraints: no arbitrary traversal, writes to index.html or exposure of project/private
         files.
@@ -519,6 +535,12 @@ class IntegrationApplication:
             elif path == "/integration/video/":
                 body = (FRONTEND / "integration/video.html").read_bytes()
                 mime = "text/html; charset=utf-8"
+            elif path == "/integration/navigation/":
+                body = (FRONTEND / "integration/navigation.html").read_bytes()
+                mime = "text/html; charset=utf-8"
+            elif path in NAVIGATION_SHARED_ASSETS:
+                body = (FRONTEND / NAVIGATION_SHARED_ASSETS[path]).read_bytes()
+                mime = "text/javascript"
             else:
                 name = path.removeprefix("/integration/assets/")
                 if name not in ASSETS:
@@ -526,7 +548,8 @@ class IntegrationApplication:
                 body, mime = (FRONTEND / "integration" / name).read_bytes(), ASSETS[name]
             await http_response(
                 send, 200, body, mime, head=scope.get("method") == "HEAD",
-                camera_access=path != "/integration/video/",
+                camera_access=path not in {"/integration/video/", "/integration/navigation/"},
+                deny_geolocation=path == "/integration/navigation/",
             )
         except OSError:
             await http_response(send, 404, {"code": "integration_asset_missing"})

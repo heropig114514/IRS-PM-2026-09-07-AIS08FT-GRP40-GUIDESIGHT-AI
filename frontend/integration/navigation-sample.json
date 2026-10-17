@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "source": "synthetic",
+  "label": "合成路线与定位回放",
+  "description": "非真实道路、设备GPS或ORS结果；坐标及4秒间隔只用于验证状态和语音，不代表真实步速。",
+  "route": {
+    "provider": "openrouteservice",
+    "profile": "foot-walking",
+    "request_id": "local-navigation-synthetic",
+    "attribution": "Synthetic local test fixture; ORS-compatible schema only",
+    "geometry": {"type": "LineString", "coordinates": [[0, 0], [0.001, 0], [0.001, 0.001], [0.002, 0.001]]},
+    "summary": {"distance_m": 333.585, "duration_s": 240},
+    "steps": [
+      {"type": 11, "instruction": "Head east on the synthetic route", "way_points": [0, 1], "distance_m": 111.195, "duration_s": 80},
+      {"type": 0, "instruction": "Turn left onto the synthetic northbound segment", "way_points": [1, 2], "distance_m": 111.195, "duration_s": 80},
+      {"type": 1, "instruction": "Turn right onto the synthetic eastbound segment", "way_points": [2, 3], "distance_m": 111.195, "duration_s": 80},
+      {"type": 10, "instruction": "Arrive at the synthetic destination", "way_points": [3, 3], "distance_m": 0, "duration_s": 0}
+    ]
+  },
+  "fixes": [
+    {"offset_ms": 0, "longitude": 0, "latitude": 0, "accuracy_m": 5},
+    {"offset_ms": 4000, "longitude": 0.00045, "latitude": 0, "accuracy_m": 5},
+    {"offset_ms": 8000, "longitude": 0.001, "latitude": 0.00015, "accuracy_m": 5},
+    {"offset_ms": 12000, "longitude": 0.001, "latitude": 0.00035, "accuracy_m": 80},
+    {"offset_ms": 16000, "longitude": 0.001, "latitude": 0.0005, "accuracy_m": 5},
+    {"offset_ms": 20000, "longitude": 0.00165, "latitude": 0.00035, "accuracy_m": 5},
+    {"offset_ms": 24000, "longitude": 0.001, "latitude": 0.00075, "accuracy_m": 5},
+    {"offset_ms": 28000, "longitude": 0.0013, "latitude": 0.001, "accuracy_m": 5},
+    {"offset_ms": 32000, "longitude": 0.00175, "latitude": 0.001, "accuracy_m": 5},
+    {"offset_ms": 36000, "longitude": 0.002, "latitude": 0.001, "accuracy_m": 5}
+  ]
+}
