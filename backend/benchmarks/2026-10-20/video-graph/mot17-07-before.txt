@@ -1,0 +1,1283 @@
+INFO:realtime.depth:YOLO26 depth model loaded task=depth input_edge=768
+INFO:zerogpu.runtime:Verified model initialized device=cuda dtype=float32 channels_last=False fused=True
+INFO:realtime.depth:Depth model activated device=cuda precision=FP32
+INFO:realtime.tracking:BoT-SORT initialized CMC=sparseOptFlow ReID=False history=8
+INFO:realtime.detector:Resident model initialized load_ms=357.9 precision=FP32 edge=640 config={}
+INFO:zerogpu.runtime:Graph warmup start dtype=torch.float32 stride=[1228800, 409600, 640, 1] calls=10 GPU=NVIDIA GeForce RTX 3060 Laptop GPU
+INFO:zerogpu.runtime:Graph warmup completed; capture start forward_dtype=torch.float32
+INFO:zerogpu.runtime:Graph initialized setup_ms=1072.07 evidence={'compute_dtype': 'torch.float32', 'forward_dtype': 'torch.float32', 'input_stride': [1228800, 409600, 640, 1], 'pinned_input': True, 'graph_captured': True, 'gpu': 'NVIDIA GeForce RTX 3060 Laptop GPU', 'capability': [8, 6], 'torch': '2.8.0+cu126', 'cuda': '12.6', 'cpu_threads': 1, 'cpu_interop_threads': 1, 'tf32_matmul': False, 'tf32_cudnn': False, 'cudnn_benchmark': False}
+INFO:realtime.detector:Resident graph initialized setup_ms=1072.1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=approaching
+INFO:realtime.tracking:Motion state changed id=3 state=approaching
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=4 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=9 state=approaching
+INFO:realtime.tracking:Motion state changed id=10 state=moving_away
+INFO:realtime.tracking:Motion state changed id=7 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=11 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=13 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=4 state=stationary
+INFO:realtime.tracking:Motion state changed id=15 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=11 state=stationary
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=4 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=16 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=13 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=moving_away
+INFO:realtime.tracking:Motion state changed id=3 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=9 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=15 state=moving_away
+INFO:realtime.tracking:Motion state changed id=44 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=7 state=moving_away
+INFO:realtime.tracking:Motion state changed id=4 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=stationary
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=53 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=29 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=3 state=approaching
+INFO:realtime.tracking:Motion state changed id=7 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=66 state=moving_away
+INFO:realtime.tracking:Motion state changed id=44 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=66 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=moving_away
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=80 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=3 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=7 state=moving_away
+INFO:realtime.tracking:Motion state changed id=3 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=13 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=44 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=7 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=44 state=moving_away
+INFO:realtime.tracking:Motion state changed id=80 state=approaching
+INFO:realtime.tracking:Motion state changed id=13 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=44 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=15 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=112 state=approaching
+INFO:realtime.tracking:Motion state changed id=13 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=13 state=moving_away
+INFO:realtime.tracking:Motion state changed id=122 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=129 state=approaching
+INFO:realtime.tracking:Motion state changed id=13 state=approaching
+INFO:realtime.tracking:Motion state changed id=3 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=129 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=129 state=approaching
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=approaching
+INFO:realtime.tracking:Motion state changed id=44 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=13 state=moving_away
+INFO:realtime.tracking:Motion state changed id=29 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=164 state=approaching
+INFO:realtime.tracking:Motion state changed id=3 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=129 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=13 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=3 state=moving_away
+INFO:realtime.tracking:Motion state changed id=1 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=stationary
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+INFO:realtime.tracking:Motion state changed id=122 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=3 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=122 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=195 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=3 state=moving_away
+WARNING:realtime.tracking:Track class changed id=199; distance history restarted
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=129 state=approaching
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=191 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=202 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=202 state=moving_away
+INFO:realtime.tracking:Motion state changed id=211 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=129 state=moving_away
+INFO:realtime.tracking:Motion state changed id=3 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=129 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=221 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=202 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=129 state=moving_away
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+INFO:realtime.tracking:Motion state changed id=221 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=3 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=202 state=stationary
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=129 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=231 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=202 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+INFO:realtime.tracking:Motion state changed id=129 state=moving_away
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=255 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=264 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=259 state=approaching
+INFO:realtime.tracking:Motion state changed id=268 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=202 state=approaching
+INFO:realtime.tracking:Motion state changed id=221 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=129 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=280 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=255 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=261 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=264 state=approaching
+INFO:realtime.tracking:Motion state changed id=286 state=approaching
+INFO:realtime.tracking:Motion state changed id=293 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+INFO:realtime.tracking:Motion state changed id=295 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=129 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=255 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=129 state=approaching
+INFO:realtime.tracking:Motion state changed id=264 state=moving_away
+INFO:realtime.tracking:Motion state changed id=286 state=moving_away
+INFO:realtime.tracking:Motion state changed id=122 state=moving_away
+INFO:realtime.tracking:Motion state changed id=295 state=moving_away
+INFO:realtime.tracking:Motion state changed id=297 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=304 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=261 state=moving_away
+INFO:realtime.tracking:Motion state changed id=304 state=approaching
+INFO:realtime.tracking:Motion state changed id=255 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+INFO:realtime.tracking:Motion state changed id=311 state=approaching
+INFO:realtime.tracking:Motion state changed id=314 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=280 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=129 state=moving_away
+INFO:realtime.tracking:Motion state changed id=255 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=286 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=311 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+INFO:realtime.tracking:Motion state changed id=259 state=moving_away
+WARNING:realtime.tracking:Track class changed id=295; distance history restarted
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING:realtime.tracking:Track class changed id=295; distance history restarted
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=122 state=approaching
+INFO:realtime.tracking:Motion state changed id=261 state=approaching
+INFO:realtime.tracking:Motion state changed id=264 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=122 state=moving_away
+INFO:realtime.tracking:Motion state changed id=264 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=295 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=261 state=moving_away
+INFO:realtime.tracking:Motion state changed id=293 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=264 state=approaching
+INFO:realtime.tracking:Motion state changed id=122 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=293 state=approaching
+INFO:realtime.tracking:Motion state changed id=261 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=347 state=moving_away
+INFO:realtime.tracking:Motion state changed id=264 state=moving_away
+INFO:realtime.tracking:Motion state changed id=255 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=264 state=approaching
+INFO:realtime.tracking:Motion state changed id=364 state=approaching
+INFO:realtime.tracking:Motion state changed id=255 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=347 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=369 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=280 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=371 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=255 state=approaching
+INFO:realtime.tracking:Motion state changed id=340 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=384 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=364 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=384 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=347 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=347 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=384 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=364 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=261 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=364 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=384 state=moving_away
+INFO:realtime.tracking:Motion state changed id=261 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=423 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=408 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=415 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=264 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=423 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=408 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=264 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=423 state=moving_away
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=408 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=264 state=moving_away
+INFO:realtime.tracking:Motion state changed id=460 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=459 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=423 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=408 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+INFO:realtime.tracking:Motion state changed id=408 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=423 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=493 state=approaching
+WARNING:realtime.tracking:Track class changed id=491; distance history restarted
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=3
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=423 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=12 state=approaching
+INFO:realtime.tracking:Motion state changed id=408 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=460 state=approaching
+INFO:realtime.tracking:Motion state changed id=491 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=408 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=12 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+WARNING:realtime.tracking:Track class changed id=535; distance history restarted
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+INFO:realtime.tracking:Motion state changed id=542 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=553 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=572 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=518 state=approaching
+INFO:realtime.tracking:Motion state changed id=573 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=572 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=460 state=moving_away
+INFO:realtime.tracking:Motion state changed id=553 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=598 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=551 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=518 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=553 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=572 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=642 state=moving_away
+INFO:realtime.tracking:Motion state changed id=630 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=460 state=approaching
+INFO:realtime.tracking:Motion state changed id=537 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=646 state=moving_away
+INFO:realtime.tracking:Motion state changed id=518 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=654 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=642 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=661 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=622 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=661 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+INFO:realtime.tracking:Motion state changed id=654 state=moving_away
+INFO:realtime.tracking:Motion state changed id=460 state=moving_away
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=675 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=642 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=675 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=460 state=approaching
+INFO:realtime.tracking:Motion state changed id=642 state=approaching
+INFO:realtime.tracking:Motion state changed id=646 state=approaching
+INFO:realtime.tracking:Motion state changed id=630 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=5 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=693 state=moving_away
+INFO:realtime.tracking:Motion state changed id=518 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+INFO:realtime.tracking:Motion state changed id=661 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=693 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=630 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=5 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=642 state=moving_away
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=460 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=693 state=moving_away
+INFO:realtime.tracking:Motion state changed id=720 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=698 state=moving_away
+INFO:realtime.tracking:Motion state changed id=646 state=moving_away
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=460 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=725 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=693 state=approaching
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=698 state=approaching
+INFO:realtime.tracking:Motion state changed id=725 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=395 state=stationary
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+INFO:realtime.tracking:Motion state changed id=460 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=698 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=693 state=moving_away
+INFO:realtime.tracking:Motion state changed id=725 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=736 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=698 state=approaching
+INFO:realtime.tracking:Motion state changed id=739 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=693 state=approaching
+INFO:realtime.tracking:Motion state changed id=646 state=approaching
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=725 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=646 state=moving_away
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=460 state=approaching
+INFO:realtime.tracking:Motion state changed id=661 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=698 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=693 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=460 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=754 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=736 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=646 state=approaching
+INFO:realtime.tracking:Motion state changed id=766 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=768 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=768 state=moving_away
+INFO:realtime.tracking:Motion state changed id=774 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=754 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+INFO:realtime.tracking:Motion state changed id=646 state=moving_away
+INFO:realtime.tracking:Motion state changed id=766 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=642 state=approaching
+INFO:realtime.tracking:Motion state changed id=774 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=768 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=646 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=754 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+INFO:realtime.tracking:Motion state changed id=642 state=moving_away
+INFO:realtime.tracking:Motion state changed id=736 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=793 state=moving_away
+INFO:realtime.tracking:Motion state changed id=646 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=642 state=approaching
+INFO:realtime.tracking:Motion state changed id=796 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=2
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=754 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+INFO:realtime.tracking:Motion state changed id=796 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=646 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=646 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=736 state=approaching
+INFO:realtime.tracking:Motion state changed id=774 state=moving_away
+INFO:realtime.tracking:Motion state changed id=779 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+INFO:realtime.tracking:Motion state changed id=754 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=336 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=736 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=793 state=approaching
+INFO:realtime.tracking:Motion state changed id=646 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+INFO:realtime.tracking:Motion state changed id=779 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+INFO:realtime.tracking:Motion state changed id=768 state=moving_away
+INFO:realtime.tracking:Motion state changed id=736 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=336 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=774 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=779 state=moving_away
+INFO:realtime.tracking:Motion state changed id=754 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=779 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=646 state=moving_away
+INFO:realtime.tracking:Motion state changed id=768 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+INFO:realtime.tracking:Motion state changed id=793 state=moving_away
+INFO:realtime.tracking:Motion state changed id=779 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=754 state=moving_away
+INFO:realtime.tracking:Motion state changed id=768 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=833 state=moving_away
+INFO:realtime.tracking:Motion state changed id=796 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=646 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+INFO:realtime.tracking:Motion state changed id=774 state=moving_away
+INFO:realtime.tracking:Motion state changed id=736 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=3
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=838 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=793 state=approaching
+INFO:realtime.tracking:Motion state changed id=779 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=843 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=833 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=736 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=779 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=793 state=moving_away
+INFO:realtime.tracking:Motion state changed id=736 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=793 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=approaching
+INFO:realtime.tracking:Motion state changed id=779 state=approaching
+INFO:realtime.tracking:Motion state changed id=2 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=843 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=862 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=838 state=approaching
+INFO:realtime.tracking:Motion state changed id=796 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=6 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=2 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=774 state=approaching
+INFO:realtime.tracking:Motion state changed id=876 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=843 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=793 state=moving_away
+INFO:realtime.tracking:Motion state changed id=862 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=880 state=approaching
+INFO:realtime.tracking:Motion state changed id=779 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=793 state=approaching
+INFO:realtime.tracking:Motion state changed id=862 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+INFO:realtime.tracking:Motion state changed id=779 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+INFO:realtime.tracking:Motion state changed id=843 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=885 state=approaching
+INFO:realtime.tracking:Motion state changed id=736 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=890 state=moving_away
+INFO:realtime.tracking:Motion state changed id=883 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=793 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=736 state=moving_away
+INFO:realtime.tracking:Motion state changed id=774 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+INFO:realtime.tracking:Motion state changed id=779 state=moving_away
+INFO:realtime.tracking:Motion state changed id=838 state=moving_away
+INFO:realtime.tracking:Motion state changed id=796 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=843 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=904 state=moving_away
+INFO:realtime.tracking:Motion state changed id=876 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=838 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=779 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=moving_away
+INFO:realtime.tracking:Motion state changed id=904 state=approaching
+INFO:realtime.tracking:Motion state changed id=843 state=approaching
+INFO:realtime.tracking:Motion state changed id=796 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+INFO:realtime.tracking:Motion state changed id=774 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=395 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+INFO:realtime.tracking:Motion state changed id=904 state=moving_away
+INFO:realtime.tracking:Motion state changed id=774 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=796 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=933 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=904 state=approaching
+INFO:realtime.tracking:Motion state changed id=359 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=774 state=approaching
+INFO:realtime.tracking:Motion state changed id=796 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=approaching
+INFO:realtime.tracking:Motion state changed id=665 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=938 state=approaching
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=904 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=843 state=moving_away
+INFO:realtime.tracking:Motion state changed id=359 state=moving_away
+INFO:realtime.tracking:Motion state changed id=923 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=722 state=moving_away
+INFO:realtime.tracking:Motion state changed id=665 state=moving_away
+INFO:realtime.tracking:Motion state changed id=796 state=moving_away
+INFO:realtime.tracking:Motion state changed id=774 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=1
+INFO:realtime.tracking:Motion state changed id=779 state=moving_away
+INFO:realtime.tracking:Motion state changed id=838 state=moving_away
+INFO:realtime.tracking:Motion state changed id=952 state=moving_away
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=956 state=moving_away
+{"status": "completed", "completed_frames": 500, "mismatched_frames": 0}

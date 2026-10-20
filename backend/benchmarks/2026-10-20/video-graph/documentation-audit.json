@@ -1,0 +1,43 @@
+{
+  "files": [
+    {
+      "path": "tools/benchmark_video.py",
+      "sha256": "5d5cca2749f8fa49d20dad54ddb8bdb363be6ac79957f47f789853335b66820a",
+      "declarations": [
+        "VideoFrames",
+        "VideoFrames.__init__",
+        "VideoFrames.__iter__",
+        "VideoFrames.close",
+        "DepthEvidence",
+        "DepthEvidence.__init__",
+        "DepthEvidence.__call__",
+        "DepthEvidence.consume",
+        "frame_identity",
+        "validate_reference",
+        "install_tracking_trace",
+        "file_hash",
+        "run",
+        "main"
+      ],
+      "fields_and_index_exact": true
+    },
+    {
+      "path": "core/test_video_benchmark.py",
+      "sha256": "98a5a1f8eb51b7ca7e439fa8a811140906ec1ea39893ec81a83106e21cf61ff0",
+      "declarations": [
+        "VideoBenchmarkTests",
+        "VideoBenchmarkTests.test_real_codec",
+        "VideoBenchmarkTests.test_decoder_boundaries",
+        "VideoBenchmarkTests.test_invalid_metadata",
+        "VideoBenchmarkTests.test_depth_evidence",
+        "VideoBenchmarkTests.test_frame_identity",
+        "VideoBenchmarkTests.test_trace_restoration",
+        "VideoBenchmarkTests.test_reference_roundtrip",
+        "VideoBenchmarkTests.test_preconditions"
+      ],
+      "fields_and_index_exact": true
+    }
+  ],
+  "check_docs_tool_exists": false,
+  "manual_review": "Reviewed source-time and whole-stream contracts, lossless JSON identity checks, retained tensor ownership, first-frame Graph readiness, failure recording, exact comparison coverage, reversible trace wrappers and nested timing documentation. AST scan assists manual review."
+}

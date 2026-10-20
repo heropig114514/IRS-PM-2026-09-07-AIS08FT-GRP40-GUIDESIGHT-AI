@@ -38,7 +38,7 @@
 
 | 候选 | 证据含义 | 使用边界 |
 | --- | --- | --- |
-| 深度 CUDA Graph | 静态多输入原始深度与距离一致；浏览器吞吐提高，但原最大 500ms 延迟门槛未通过 | 独立实验，优先剖析剩余完整帧开销 |
+| 深度 CUDA Graph | 静态多输入及两个完整视频的深度/检测/跟踪/风险/JPEG一致，视频离线整帧耗时降低；已有静态浏览器对照仍未通过最大 500ms 门槛 | 独立实验；支持进入移动图源浏览器验证，默认服务不启用 |
 | GPU ROI 完整排序中位数 | 样例一致，但多数 ROI 及整帧未加速 | 不接入默认服务 |
 | 复用已初始化 SDK predictor | 每帧配置分派仅节约约 0.20ms，未证实稳定整帧收益 | 不作为当前主要优化方向 |
 | 有界完整标签栅格缓存 | 静态重复图可减少绘制耗时；两个完整 MOT17 视频中命中率为 0，反而增加标注耗时，逐帧 RGB/JPEG 一致 | 保留独立诊断工具，不接入默认服务，不进入浏览器准入 |
@@ -54,9 +54,19 @@
 5. 对仓库两个原始 MOT17 预览按原顺序处理全部 500/654 帧，用源时间戳驱动跟踪，不抽帧；每帧将同一图像及同一实际检测/距离/运动结果交给原始、缓存、原始渲染，比较 RGB/JPEG 并记录绘制耗时和命中率。该额外绘制诊断不作为浏览器吞吐或深度准确率成绩。
 6. 仅在静态整帧及移动场景均有收益时继续浏览器准入；否则保留负结果、默认关闭并根据证据选择下一任务。
 
-### 后续执行入口
+### 移动视频对照与后续准入
 
-标签缓存未满足移动场景收益条件。下一任务转为完整视频上的深度与跟踪阶段剖析，以及独立深度 Graph 的原始/候选/原始对照。保持缓存关闭、源帧顺序和时间戳、模型/距离/跟踪参数不变；先确认稠密场景瓶颈和逐值/逐帧输出，再决定是否进入原 30FPS/12 在途浏览器门槛。不将降低深度频率、坐标取整、修改跟踪阈值或隐藏慢帧作为该任务的默认动作。
+标签缓存未满足移动场景收益条件。完整视频诊断保持缓存关闭、源帧顺序和时间戳、模型/距离/跟踪参数不变；剖析稠密场景瓶颈，逐帧比较输出，并以无剖析前后对照评估收益。不将降低深度频率、坐标取整、修改跟踪阈值或隐藏慢帧作为默认动作。
+
+移动视频诊断按以下顺序执行：
+
+1. 两个原始 MOT17 预览分别使用独立进程，完整读取 500/654 帧，以解码器源时间戳驱动跟踪；沿用 RGB、最大边 640、双线性缩放及 JPEG80。
+2. 每个视频依次运行原始、Graph 无剖析、Graph 显式阶段剖析、Graph 无剖析、原始；首帧独立，后续所有帧保留。Graph 在首张真实帧后准备一次，准备成本计入首帧就绪，拒绝形状变化。
+3. 在预测计时之外复制并散列完整对齐深度图，记录类型/尺寸以及验证开销；逐帧比对源输入、检测、深度、全部目标字段和 JPEG。对照采用相同源时间戳，不能用真实处理速度差异解释数值变化。差异保留并阻止准入，不调容差、阈值或随机种子。
+4. 阶段剖析复用原 SDK 同步时钟，补充 BoT-SORT 更新、GMC、特征提取、光流及仿射估计；不增加 CUDA 同步，不修改 OpenCV 算法。前后无剖析 Graph 运行用于区分诊断扰动。
+5. 若一致性与移动场景性能均支持收益，进入移动图源的浏览器验证；否则先调查差异或瓶颈。此工具的离线逐帧处理不等于实时采集、排队或浏览器延迟验收。
+
+两个视频的数值一致性和无剖析性能证据支持进入下一任务：使用仓库现有 H.264 副本作为浏览器移动图源，执行原始/Graph/原始对照，保留原 30FPS/12 在途、首帧隔离、完整请求/返回计数和会话生命周期检查。记录媒体时间与实际采集时间，但不把它们误称为 resident-v1 的 GPU 跟踪时间；该服务仍使用工作线程时间。浏览器性能达标与真值质量验证完成前，不启用默认 Graph。
 
 显式阶段诊断显示 SDK 推理结束后的同步在等待必要 GPU 工作，不能把全部等待算作可删除开销。当前环境的一份 cProfile 记录出现自耗时大于累计耗时等内部矛盾，保留原始记录但不用于归因；工具报告基础一致性异常，不自动修正数据或更换诊断方式。具体对照与阶段记录见下方报告。
 
@@ -85,6 +95,18 @@
 node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --depth-graph
 ```
 
+连续视频使用独立 `benchmark_video`，每个命令执行视频全部帧。例如对一个视频依次执行：
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.benchmark_video --video model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4 --output benchmarks/NEW_VIDEO/before
+.\.venv\Scripts\python.exe -m tools.benchmark_video --video model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4 --depth-graph --reference benchmarks/NEW_VIDEO/before --output benchmarks/NEW_VIDEO/graph-before
+.\.venv\Scripts\python.exe -m tools.benchmark_video --video model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4 --depth-graph --trace-steady --reference benchmarks/NEW_VIDEO/before --output benchmarks/NEW_VIDEO/graph-trace
+.\.venv\Scripts\python.exe -m tools.benchmark_video --video model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4 --depth-graph --reference benchmarks/NEW_VIDEO/before --output benchmarks/NEW_VIDEO/graph-after
+.\.venv\Scripts\python.exe -m tools.benchmark_video --video model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4 --reference benchmarks/NEW_VIDEO/before --output benchmarks/NEW_VIDEO/after
+```
+
+对另一个视频换用其原始路径和新的输出根目录，不能跨视频或版本复用对照。`--reference` 核对输入/权重/代码/SDK/环境/配置身份后逐帧精确比较；退出 2 表示记录完成但存在差异，退出 1 表示执行失败。保留差异，后续独立对照用于归因，不代表重试失败候选。`predict_wall_ms` 的首帧包含深度 Graph 准备，`server_ms` 仍为原管线内部时间；后续深度图复制与散列单列 `depth_evidence_ms`。临时保留深度张量及诊断工作会影响资源占用，不能据此宣称服务显存、浏览器吞吐或最大延迟达标。
+
 数值检查工具为 `validate_depth_graph`、`validate_depth_fusion`、`validate_depth_predictor`，须显式提供原输入与样本数；完整命令可用 `python -m tools.TOOL --help` 查看。
 
 `--label-cache` 与深度候选互斥。`validate_label_cache` 读取完整视频，不抽帧；同一次真实推理的图像及结果依次交给原始/候选/原始渲染器，直接比较 JPEG 编码前 RGB 和 JPEG 字节。计时包含轻量编码引用捕获；额外三次绘制会扰动完整帧耗时，不能拿此工具的整帧或阶段诊断替代无诊断服务对照。静态分进程运行采用实际工作时间，运动确认可能在不同帧出现，须将这类标签差异与同输入渲染一致性分开核对。
@@ -103,6 +125,7 @@ node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --dep
 | [Graph 输出比较](benchmarks/2026-10-20/graph-service/output-comparison.json) | 检测/距离与真实时间导致的标注差异 |
 | [Graph 剩余阶段诊断](benchmarks/2026-10-20/graph-profile/summary.json) | 显式阶段计时、前后对照、cProfile异常和下个候选依据 |
 | [标签栅格缓存诊断](benchmarks/2026-10-20/label-cache/summary.json) | 静态对照、两个完整视频的像素/JPEG一致性、缓存边界与移动场景负结果 |
+| [完整视频 Graph 与阶段诊断](benchmarks/2026-10-20/video-graph/summary.json) | 源时间戳下的完整深度/目标/JPEG比较、无剖析前后对照、GMC/光流/融合/绘制耗时及保留的预检失败 |
 
 运行详情保留在结构化报告及逐帧 JSONL，历史报告描述其采集时的代码与状态，不能当作当前部署状态。
 

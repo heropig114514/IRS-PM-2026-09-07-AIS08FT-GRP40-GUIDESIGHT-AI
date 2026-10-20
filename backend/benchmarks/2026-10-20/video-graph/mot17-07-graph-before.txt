@@ -1,0 +1,13 @@
+ERROR:__main__:Video experiment failed type=ValueError
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "E:\AI_map\backend\tools\benchmark_video.py", line 339, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "E:\AI_map\backend\tools\benchmark_video.py", line 331, in main
+    report = run(args.video, args.output, depth_graph=args.depth_graph,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\tools\benchmark_video.py", line 241, in run
+    raise ValueError(f"Reference {field} differs")
+ValueError: Reference settings differs

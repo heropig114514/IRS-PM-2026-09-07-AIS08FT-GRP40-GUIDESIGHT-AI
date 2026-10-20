@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "working_directory": "backend",
+  "commands": [
+    {
+      "command": "python manage.py check",
+      "exit_code": 0,
+      "log": "check.txt"
+    },
+    {
+      "command": "python manage.py makemigrations --check --dry-run",
+      "exit_code": 0,
+      "log": "migrations.txt"
+    },
+    {
+      "command": "python manage.py test --noinput",
+      "exit_code": 0,
+      "tests": 263,
+      "skips": 0,
+      "log": "tests.txt"
+    },
+    {
+      "command": "ruff check .",
+      "exit_code": 0,
+      "log": "ruff.txt"
+    },
+    {
+      "command": "python -m pip check",
+      "exit_code": 0,
+      "log": "pip.txt"
+    }
+  ],
+  "focused_regression": {
+    "tests": 8,
+    "passed": true
+  },
+  "primary_video_runs": 10,
+  "primary_processed_frames": 5770,
+  "exact_reference_comparisons": 4616,
+  "source_video_frames": 1154,
+  "all_primary_source_identities_match_delivered_code": true,
+  "manual_annotations_and_indexes_reviewed": true,
+  "documentation_audit": "documentation-audit.json",
+  "frontend_tests": "Not rerun: no frontend or browser-tool changes",
+  "earlier_diagnostics": [
+    "Initial lint line-length findings corrected before measurements",
+    "Preflight JSON list/tuple comparison error fixed without changing values; failed run and original run retained outside verified results"
+  ],
+  "logs_normalized": "UTF-8 and LF; log content retained",
+  "unverified": [
+    "Moving-source browser admission and original max500ms gate",
+    "Metric depth/distance ground truth and detection quality gates",
+    "Physical camera, public network, remote services/deployment"
+  ]
+}
