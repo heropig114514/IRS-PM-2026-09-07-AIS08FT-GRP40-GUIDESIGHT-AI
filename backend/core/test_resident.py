@@ -112,9 +112,10 @@ class ResidentTests(SimpleTestCase):
     """
 
     async def test_reuse_and_reset(self):
-        """Functionality: Keep the same model/thread while replacing tracking per lease.
-        Inputs: two explicit fake trackers and two leases. Outputs: distinct trackers, one model.
-        Logic: assert factory call count and ownership. Constraints: no real tracking-quality claim.
+        """Functionality: Keep models/thread while resetting tracking, distance and counters.
+        Inputs: two fake trackers/leases and first-session statistics. Outputs: isolated state.
+        Logic: assert factory count, ownership and zero second-session counters with unchanged
+        strategy configuration. Constraints: no real tracking-quality claim.
         """
         with patch("realtime.tracking.ObjectTracker", side_effect=[object(), object()]) as tracker:
             service = ResidentService(Path(), "full", factory=Detector)
@@ -124,11 +125,21 @@ class ResidentTests(SimpleTestCase):
                 first = service.claim()
                 await service.begin(first)
                 old = detector.object_tracker
+                old_strategy, old_performance = detector.distance_strategy, detector.performance
+                old_performance.record(detection_ms=1, distance_ms=2, end_to_end_ms=3,
+                                       depth_frame=True)
+                old_strategy.frame_index = 9
                 await service.predict(first, jpeg())
                 service.release(first)
                 second = service.claim()
                 await service.begin(second)
                 self.assertIsNot(old, detector.object_tracker)
+                self.assertIsNot(old_strategy, detector.distance_strategy)
+                self.assertEqual(detector.distance_strategy.config, old_strategy.config)
+                self.assertEqual(detector.distance_strategy.frame_index, 0)
+                self.assertIsNot(old_performance, detector.performance)
+                self.assertEqual(detector.performance.total_frames, 0)
+                self.assertEqual(detector.performance.depth_model_calls, 0)
                 self.assertIs(detector, service.detector)
                 self.assertEqual(tracker.call_count, 2)
                 await service.predict(second, jpeg())

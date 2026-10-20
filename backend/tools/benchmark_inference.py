@@ -4,9 +4,11 @@ separate the first call and summarize subsequent calls without trimming or retri
 An explicit depth-graph probe replaces only SDK inference after the first frame; its preparation
 cost is recorded separately. Mutually exclusive probes replace ROI reduction or reuse the
 initialized depth predictor without rebuilding its constant arguments.
+Optional cProfile or explicit stage tracing excludes first frame, probe setup and evidence writes;
+profiling durations are diagnostic, with unchanged before/after controls measured separately.
 The default and production inference algorithms remain unchanged.
 Related Modules: realtime.detector/depth/tracking/risk;
-tools.fixtures/depth_graph_probe/depth_fusion_probe/depth_predictor_probe;
+tools.fixtures/depth_graph_probe/depth_fusion_probe/depth_predictor_probe/inference_profile;
 core.test_inference_benchmark.
 Declaration Index: distribution; summarize_frames; build_detector; run; main.
 Variable Index: ROOT — backend asset root; TIMINGS — nested duration fields in milliseconds.
@@ -81,7 +83,8 @@ def build_detector(mode, weights, manifest_path, depth_weights):
 
 def run(args):
     """Functionality: Save identities, all predictions and timing summaries for one local probe.
-    Inputs: explicit mode/frame count, optional graph/fusion/predictor probe, assets and directory.
+    Inputs: explicit mode/frame count, optional graph/fusion/predictor probe, profiler/stage tracer,
+    assets and directory.
     Outputs: report.json and flushed frames.jsonl; exceptions propagate after failure recording.
     Logic: encode once, create one model, time ordered predict calls, retain hashes/boxes;
     copy the depth SDK's existing synchronized timings after each measured call without new sync;
@@ -90,6 +93,10 @@ def run(args):
     own duration/equality evidence; the first-frame field alone is not candidate readiness time.
     Optional fusion-sort substitution applies to every frame and is restored even on failure.
     Cached predictor substitution occurs after the unchanged first frame; setup is recorded.
+    Optional cProfile collects only subsequent predict calls, including failed attempts, and
+    saves every function/caller after timing. Its durations cannot establish a speed improvement.
+    A separate explicit stage trace wraps original calls and existing SDK clocks, without adding
+    synchronization. Trace installation/source hashing is separate from frame timing.
     Constraints: no ground-truth accuracy, video, HF, FP16-plan or moving-scene validation claim;
     output writing is outside predict timing; failures stop without retry or skipped frames.
     """
@@ -98,6 +105,10 @@ def run(args):
     depth_graph = getattr(args, "depth_graph", False)
     fusion_sort = getattr(args, "depth_fusion_sort", False)
     cached_predictor = getattr(args, "depth_cached_predictor", False)
+    profile_steady = getattr(args, "profile_steady", False)
+    trace_steady = getattr(args, "trace_steady", False)
+    if trace_steady and (args.mode != "full" or profile_steady):
+        raise ValueError("Stage tracing requires full mode and a separate run from cProfile")
     if any((depth_graph, fusion_sort, cached_predictor)) and args.mode == "detection":
         raise ValueError("Depth probes require depth or full workload")
     if sum((depth_graph, fusion_sort, cached_predictor)) > 1:
@@ -114,10 +125,11 @@ def run(args):
             identities[name] = hashlib.file_digest(source, "sha256").hexdigest()
     implementation = {}
     for relative in ("core/detector.py", "realtime/detector.py", "realtime/depth.py",
-                     "realtime/tracking.py", "realtime/risk.py", "zerogpu/runtime.py",
+                     "realtime/tracking.py", "realtime/risk.py", "realtime/distance.py",
+                     "realtime/distance_config.py", "realtime/performance.py", "zerogpu/runtime.py",
                      "tools/fixtures.py", "tools/benchmark_inference.py",
                      "tools/depth_graph_probe.py", "tools/depth_fusion_probe.py",
-                     "tools/depth_predictor_probe.py"):
+                     "tools/depth_predictor_probe.py", "tools/inference_profile.py"):
         implementation[relative] = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
     output.mkdir(parents=True)
     report = {"schema_version": 1, "status": "running", "mode": args.mode,
@@ -126,7 +138,8 @@ def run(args):
               "identities": identities, "implementation_sha256": implementation,
               "settings": {"detection_config": {}, "depth_graph_probe": depth_graph,
               "depth_fusion_sort_probe": fusion_sort,
-              "depth_cached_predictor_probe": cached_predictor, "batch": 1,
+              "depth_cached_predictor_probe": cached_predictor,
+              "profile_steady": profile_steady, "trace_steady": trace_steady, "batch": 1,
               "detection_edge": 640, "confidence_threshold": 0.25, "jpeg_quality": 80,
               "depth_edge": 768 if args.mode != "detection" else None,
               "depth_precision": "FP32" if args.mode != "detection" else None},
@@ -138,6 +151,16 @@ def run(args):
                                "Stage durations overlap with server_ms and predict_wall_ms",
                                "Tracking uses actual worker timestamps; static image repeated"]}
     frames = []
+    profiler = None
+    if profile_steady:
+        from tools.inference_profile import SteadyProfile
+
+        profiler = SteadyProfile()
+    tracer = None
+    if trace_steady:
+        from tools.inference_profile import StageTrace
+
+        tracer = StageTrace()
     try:
         import torch
         import ultralytics
@@ -173,7 +196,12 @@ def run(args):
                 experiment.enter_context(patch("realtime.depth.roi_median", sorted_roi_median))
             for index in range(args.frames):
                 started = time.perf_counter()
-                metadata, _ = detector.predict(frame_bytes)
+                if profiler is not None:
+                    metadata, _ = profiler.call(index, detector.predict, frame_bytes)
+                elif tracer is not None:
+                    metadata, _ = tracer.call(index, detector.predict, frame_bytes)
+                else:
+                    metadata, _ = detector.predict(frame_bytes)
                 wall_ms = (time.perf_counter() - started) * 1000
                 frame = {name: metadata[name] for name in TIMINGS if name in metadata}
                 frame.update(index=index, predict_wall_ms=wall_ms)
@@ -206,6 +234,10 @@ def run(args):
                     probe = DepthGraphProbe(predictor.inference, example)
                     predictor.inference = probe
                     report["depth_graph"] = probe.evidence
+                if index == 0 and tracer is not None:
+                    trace_started = time.perf_counter()
+                    tracer.install(detector, experiment)
+                    report["stage_trace_setup_ms"] = (time.perf_counter() - trace_started) * 1000
         report.update(status="complete", gpu_peak_allocated_bytes=torch.cuda.max_memory_allocated(),
                       gpu_peak_reserved_bytes=torch.cuda.max_memory_reserved())
     except Exception as error:
@@ -213,6 +245,10 @@ def run(args):
         raise
     finally:
         report.update(summarize_frames(frames))
+        if profiler is not None:
+            report["steady_profile"] = profiler.write(output)
+        if tracer is not None:
+            report["steady_stage_trace"] = tracer.write(output)
         (output / "report.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n",
                                             encoding="utf-8")
     return report
@@ -234,6 +270,11 @@ def main(argv=None):
                         help="Experimental device-count exact ROI median; no deployment")
     probes.add_argument("--depth-cached-predictor", action="store_true",
                         help="Experimental initialized SDK predictor reuse; no deployment")
+    diagnostics = parser.add_mutually_exclusive_group()
+    diagnostics.add_argument("--profile-steady", action="store_true",
+                             help="Diagnostic cProfile after first frame; perturbs timings")
+    diagnostics.add_argument("--trace-steady", action="store_true",
+                             help="Full mode explicit stage wrappers; nested host timings")
     parser.add_argument("--input", type=Path, default=ROOT / "model_tests/samples/bus.jpg")
     parser.add_argument("--weights", type=Path, default=ROOT / "models/yolo26n.pt")
     parser.add_argument("--manifest", type=Path, default=ROOT / "models/yolo26n.json")

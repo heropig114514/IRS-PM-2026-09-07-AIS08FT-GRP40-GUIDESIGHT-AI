@@ -1,0 +1,2888 @@
+{
+  "attempted_steady_calls": 30,
+  "completed_steady_calls": 30,
+  "cold_call_traced": false,
+  "timing": "Nested host intervals; original SDK clocks retain CUDA waits",
+  "events": [
+    {
+      "frame_index": 1,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.9879999999830034,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "letterbox",
+      "elapsed_ms": 2.744499999607797,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "tracking_associate",
+      "elapsed_ms": 7.59349999952974,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.057500000366417225,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.03959999998915,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10620000011840602,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007899999218352605,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.3429000007599825,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.351399999810383,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.019800000700342935,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.2007000002777204,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01809999957913533,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.468400000405381,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.21050000032118987,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "jpeg_save",
+      "elapsed_ms": 1.0124999998879503,
+      "completed": true
+    },
+    {
+      "frame_index": 1,
+      "stage": "annotate",
+      "elapsed_ms": 3.3453000005465583,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.8165999999837368,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "letterbox",
+      "elapsed_ms": 2.0983000003980123,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.432400000448979,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.056799999583745375,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.09169999925507,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10479999946255703,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007900000127847306,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2706000004764064,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 10.889099999985774,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.054799999816168565,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.2272000001539709,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01680000059423037,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.760599999826809,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.04600000011123484,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9588000002622721,
+      "completed": true
+    },
+    {
+      "frame_index": 2,
+      "stage": "annotate",
+      "elapsed_ms": 3.279500000644475,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.63319999956002,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9449000001259265,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.504200000563287,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.04739999985758914,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.004799999667739,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.3143999992971658,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01049999991664663,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.26500000058149453,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.017500000278233,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.018900000213761814,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.16080000023066532,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01539999993838137,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.098299999895971,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.04330000047048088,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9528999999020016,
+      "completed": true
+    },
+    {
+      "frame_index": 3,
+      "stage": "annotate",
+      "elapsed_ms": 3.1875000004220055,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.6478000006827642,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "letterbox",
+      "elapsed_ms": 1.836100000218721,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.452099999478378,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05670000064128544,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.140300000064599,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.40999999964697054,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.00869999985297909,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.28699999984382885,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.099399999991874,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.010900000233959872,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.16570000025240006,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014700000065204222,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.731800000627118,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.1095000006898772,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9952000000339467,
+      "completed": true
+    },
+    {
+      "frame_index": 4,
+      "stage": "annotate",
+      "elapsed_ms": 3.6286999993535574,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.8998999994437327,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "letterbox",
+      "elapsed_ms": 2.1542000004046713,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "tracking_associate",
+      "elapsed_ms": 7.11570000021311,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.052800000048591755,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9353999996383209,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.11240000003454043,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007300000106624793,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2626000004966045,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.223599999837461,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.021099999685247894,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.16080000023066532,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014200000805431046,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.6314999999594875,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.2914000006057904,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9430000000065775,
+      "completed": true
+    },
+    {
+      "frame_index": 5,
+      "stage": "annotate",
+      "elapsed_ms": 3.966299999774492,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.7377999993186677,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "letterbox",
+      "elapsed_ms": 2.0852000006925664,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "tracking_associate",
+      "elapsed_ms": 7.030800000393356,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05880000026081689,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.223200000116776,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.11849999918922549,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.009299999874201603,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.27520000003278255,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.910700000342331,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.025499999537714757,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.18000000000029104,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.02229999972769292,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.687700000431505,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08750000051804818,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9546000001137145,
+      "completed": true
+    },
+    {
+      "frame_index": 6,
+      "stage": "annotate",
+      "elapsed_ms": 3.9096999998946558,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.6616000002613873,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "letterbox",
+      "elapsed_ms": 1.980099999855156,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.52280000031169,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05980000059935264,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.1722999999838066,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.09490000047662761,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.00889999955688836,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.3076999992117635,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.434899999883783,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.030000000151630957,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.20500000027823262,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.015800000255694613,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.201599999760219,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08600000001024455,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9648999994169571,
+      "completed": true
+    },
+    {
+      "frame_index": 7,
+      "stage": "annotate",
+      "elapsed_ms": 4.019099999823084,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5780000003360328,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8959999997605337,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.28340000002936,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05899999996472616,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.180700000280922,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10959999963233713,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007300000106624793,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2556999997977982,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.895599999756087,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.012900000001536682,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.14340000052470714,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014100000043981709,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.784999999174033,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08789999992586672,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.969499999882828,
+      "completed": true
+    },
+    {
+      "frame_index": 8,
+      "stage": "annotate",
+      "elapsed_ms": 3.945200000089244,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.7512999993414269,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8700999999055057,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.471300000157498,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.053200000365905,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.0603000002665794,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.1283999999941443,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.006999999641266186,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.24710000070626847,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.117100000163191,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01089999932446517,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.1426999997420353,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014199999895936344,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "depth_fusion",
+      "elapsed_ms": 7.376699999440461,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09130000034929253,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9702999996079598,
+      "completed": true
+    },
+    {
+      "frame_index": 9,
+      "stage": "annotate",
+      "elapsed_ms": 4.142499999943539,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.8473999998604995,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "letterbox",
+      "elapsed_ms": 2.1643999998559593,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.581799999366922,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.044800000068789814,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9718000003194902,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.04160000025876798,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007300000106624793,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2420999999230844,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.879699999852164,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.025800000003073364,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.16400000004068715,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014000000192027073,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.139699999541335,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08630000047560316,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9332999998150626,
+      "completed": true
+    },
+    {
+      "frame_index": 10,
+      "stage": "annotate",
+      "elapsed_ms": 3.905099999428785,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5728999997008941,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9879999999830034,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.4526000005571404,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05160000000614673,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.373299999817391,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.4861999996137456,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.00960000033956021,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.26059999981953297,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.911500000067463,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.015300000086426735,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.16210000012506498,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013699999726668466,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.688699999860546,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.154300000758667,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9443999997529318,
+      "completed": true
+    },
+    {
+      "frame_index": 11,
+      "stage": "annotate",
+      "elapsed_ms": 3.9983000006031943,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5447999994648853,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8698000003496418,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.468799999311159,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05289999990054639,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.0223000001351465,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10150000071007526,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.010799999472510535,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.24899999971239595,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.852500000808504,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013300000318849925,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.14199999986885814,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01320000046689529,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "depth_fusion",
+      "elapsed_ms": 5.118000000038592,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09199999931297498,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9497000000919797,
+      "completed": true
+    },
+    {
+      "frame_index": 12,
+      "stage": "annotate",
+      "elapsed_ms": 3.9317999999184394,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5275999994628364,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9266999997853418,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.636499999331136,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05229999987932388,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.95979999989504,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.11450000056356657,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007700000423938036,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.26030000026366906,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.684499999617401,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.044299999899521936,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.21080000078654848,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.045700000555370934,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.090800000085437,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08949999937613029,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.930599999264814,
+      "completed": true
+    },
+    {
+      "frame_index": 13,
+      "stage": "annotate",
+      "elapsed_ms": 3.8630999997621984,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5993999995771446,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "letterbox",
+      "elapsed_ms": 1.876599999377504,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.518999999570951,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05259999943518778,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9588999994084588,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10920000022451859,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.006799999937356915,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.24990000019897707,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.431000000200584,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.018400000044493936,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.14909999936207896,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013799999578623101,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.146299999774783,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08380000053875847,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9190000000671716,
+      "completed": true
+    },
+    {
+      "frame_index": 14,
+      "stage": "annotate",
+      "elapsed_ms": 3.8673999997627106,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5484000005017151,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9628999998531071,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.2822999998388696,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05000000055588316,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.013700000134122,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.1816000003600493,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007100000402715523,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2578000003268244,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.055100000092352,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01649999921937706,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.1557000005050213,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013699999726668466,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.076199999872188,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.0870000003487803,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9551000002829824,
+      "completed": true
+    },
+    {
+      "frame_index": 15,
+      "stage": "annotate",
+      "elapsed_ms": 3.8841000005049864,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5714999999545398,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8512999995436985,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.4681000003474765,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05510000028152717,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.0000000004074536,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10920000022451859,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.02750000021478627,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2651999993759091,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.868499999858614,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01849999989644857,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.19250000059400918,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01650000012887176,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "depth_fusion",
+      "elapsed_ms": 6.762699999853794,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09140000020124717,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9758000005604117,
+      "completed": true
+    },
+    {
+      "frame_index": 16,
+      "stage": "annotate",
+      "elapsed_ms": 4.468099999940023,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.6984000003503752,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "letterbox",
+      "elapsed_ms": 2.0887999999104068,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.982900000366499,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.04830000034417026,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9306000003780355,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.12960000003658934,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.00650000038149301,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.234499999351101,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.940400000028603,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.010100000508828089,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.13699999999516876,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013500000022759195,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.180599999926926,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08619999971415382,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9247999996659928,
+      "completed": true
+    },
+    {
+      "frame_index": 17,
+      "stage": "annotate",
+      "elapsed_ms": 3.8628000002063345,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.697499999863794,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9158000004608766,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.834999999227875,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.0503999999637017,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9277999999758322,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.038300000596791506,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.006900000698806252,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2573000001575565,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 11.298400000669062,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.03329999981360743,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.284000000647211,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.022000000171829015,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "depth_fusion",
+      "elapsed_ms": 6.04380000004312,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.11580000045796623,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "jpeg_save",
+      "elapsed_ms": 1.0080000001835288,
+      "completed": true
+    },
+    {
+      "frame_index": 18,
+      "stage": "annotate",
+      "elapsed_ms": 4.529400000137684,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "decode_frame",
+      "elapsed_ms": 2.083899999888672,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "letterbox",
+      "elapsed_ms": 2.067899999929068,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.470700000136276,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.048800000513438135,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9449000001259265,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10709999969549244,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.006900000698806252,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.27070000032836106,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.862299999942479,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.009299999874201603,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.12570000035339035,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013500000022759195,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "depth_fusion",
+      "elapsed_ms": 5.078700000012759,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09229999977833359,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9354000003440888,
+      "completed": true
+    },
+    {
+      "frame_index": 19,
+      "stage": "annotate",
+      "elapsed_ms": 3.936299999622861,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.7044000005626003,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9156999996994273,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.534500000270782,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05469999996421393,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.223700000286044,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.204699999812874,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013699999726668466,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.3299999998489511,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.937100000366627,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.04489999992074445,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.19220000012865057,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014899999769113492,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.238200000145298,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09270000009564683,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9258999998564832,
+      "completed": true
+    },
+    {
+      "frame_index": 20,
+      "stage": "annotate",
+      "elapsed_ms": 3.8316000000122585,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.7145000001619337,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "letterbox",
+      "elapsed_ms": 2.0518999999694643,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.3950999992812285,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05270000019663712,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9447000004220172,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.12690000039583538,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.0070000005507608876,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.23969999983819434,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.76090000019758,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.026900000193563756,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.1920000004247413,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.015300000086426735,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.478200000448851,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08969999998953426,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9599000004527625,
+      "completed": true
+    },
+    {
+      "frame_index": 21,
+      "stage": "annotate",
+      "elapsed_ms": 3.9083000001483015,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.7729000001054374,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9718000003194902,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.29069999922649,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05309999960445566,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.0518000001175096,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10910000037256395,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007100000402715523,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.252800000453135,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.9089000000749365,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013699999726668466,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.13900000067224028,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013500000022759195,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.144100000303297,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08799999977782136,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9569000003466499,
+      "completed": true
+    },
+    {
+      "frame_index": 22,
+      "stage": "annotate",
+      "elapsed_ms": 3.9462000004277797,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.730400000269583,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "letterbox",
+      "elapsed_ms": 1.9423000003371271,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.458599999859871,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.04650000028050272,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.194499999859545,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.1520000005257316,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01160000010713702,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.3203999995093909,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.851899999877787,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.0335000004270114,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.17699999989417847,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014100000043981709,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.346300000179326,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08579999939684058,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9368999999423977,
+      "completed": true
+    },
+    {
+      "frame_index": 23,
+      "stage": "annotate",
+      "elapsed_ms": 3.959799999392999,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.805699999749777,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "letterbox",
+      "elapsed_ms": 1.7832000003181747,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.441000000450003,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.06010000015521655,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.0056999992448254,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.1247000000148546,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.006999999641266186,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.26340000022173626,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.896799999798532,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.02010000025620684,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.17670000033831457,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014199999895936344,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "depth_fusion",
+      "elapsed_ms": 5.532499999389984,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09640000007493654,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9612999992896221,
+      "completed": true
+    },
+    {
+      "frame_index": 24,
+      "stage": "annotate",
+      "elapsed_ms": 3.934299999855284,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.554299999952491,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8381999998382526,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.462999999712338,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.047700000322947744,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.941100000294682,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.03999999989900971,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007199999345175456,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.24919999941630522,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 11.490799999592127,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.038500000300700776,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.19770000017160783,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.015699999494245276,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.173099999206897,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08950000028562499,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9443999997529318,
+      "completed": true
+    },
+    {
+      "frame_index": 25,
+      "stage": "annotate",
+      "elapsed_ms": 3.913999999895168,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.7906000002767541,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8850000005841139,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.62949999968987,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.044299999899521936,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.975299999685376,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10259999999107094,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007099999493220821,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2542000001994893,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.507499999723223,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.017100000150094274,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.25800000003073364,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.015800000255694613,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "depth_fusion",
+      "elapsed_ms": 5.920300000070711,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.19799999972747173,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9833000003709458,
+      "completed": true
+    },
+    {
+      "frame_index": 26,
+      "stage": "annotate",
+      "elapsed_ms": 4.090700000233483,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.8022000003838912,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "letterbox",
+      "elapsed_ms": 2.048399999694084,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.554399999913585,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05449999935080996,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.948400000401307,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.11410000024625333,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.0070000005507608876,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.25550000009388896,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.896899999650486,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014700000065204222,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.14420000024983892,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.013999999282532372,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "depth_fusion",
+      "elapsed_ms": 5.154899999979534,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09349999982077861,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9819999995670514,
+      "completed": true
+    },
+    {
+      "frame_index": 27,
+      "stage": "annotate",
+      "elapsed_ms": 4.012999999758904,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.6537999999854947,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8577000000732369,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.159300000035728,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05019999935029773,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 1.9596999991335906,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10719999954744708,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007100000402715523,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2716999997574021,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.949299999585492,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.016399999367422424,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.16830000004119938,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014500000361294951,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.1703000006236834,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09129999943979783,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "jpeg_save",
+      "elapsed_ms": 1.3367000001380802,
+      "completed": true
+    },
+    {
+      "frame_index": 28,
+      "stage": "annotate",
+      "elapsed_ms": 4.492500000196742,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.6761000006226823,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8553999998403015,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.857800000034331,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05710000004910398,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.0903000004182104,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10310000016033882,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.007599999662488699,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.2684999999473803,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 8.799899999758054,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.03300000025774352,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.1909000002342509,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014799999917158857,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.201799999464129,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.09169999975711107,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.9495999993305304,
+      "completed": true
+    },
+    {
+      "frame_index": 29,
+      "stage": "annotate",
+      "elapsed_ms": 3.952500000195869,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "decode_frame",
+      "elapsed_ms": 1.5983999992386089,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "letterbox",
+      "elapsed_ms": 1.8481999995856313,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "tracking_associate",
+      "elapsed_ms": 6.172599999445083,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.05229999987932388,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_preprocess",
+      "elapsed_ms": 2.048299999842129,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.10889999975915998,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.006999999641266186,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_inference",
+      "elapsed_ms": 0.25300000015704427,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 7.857900000090012,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.01739999970595818,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_postprocess",
+      "elapsed_ms": 0.15379999967990443,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_profile_clock",
+      "elapsed_ms": 0.014199999895936344,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "depth_fusion",
+      "elapsed_ms": 4.126599999835889,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "tracking_enrich",
+      "elapsed_ms": 0.08729999990464421,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "jpeg_save",
+      "elapsed_ms": 0.960500000473985,
+      "completed": true
+    },
+    {
+      "frame_index": 30,
+      "stage": "annotate",
+      "elapsed_ms": 3.9518000003226916,
+      "completed": true
+    }
+  ]
+}

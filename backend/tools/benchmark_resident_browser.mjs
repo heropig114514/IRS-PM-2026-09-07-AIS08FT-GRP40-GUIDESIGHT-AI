@@ -1,5 +1,6 @@
 /** Responsibilities: Verify the actual camera page and resident GPU path in headless Chrome.
- * Implementation: Local Uvicorn, real DOM/codec/WS/GPU; explicit canvas image replaces only camera.
+ * Implementation: Local Uvicorn, real DOM/codec/WS/GPU, per-session counter isolation;
+ * explicit canvas image replaces only camera.
  * Related Modules: config.resident_asgi; tools.resident_graph_asgi/resident_graph_probe;
  * frontend camera/live-detection-client/frame-pipeline.
  * Declaration Index: preparePage; preparePage.drawFixture; preparePage.fakeCamera; preparePage.finiteRun;
@@ -143,7 +144,7 @@ function waitForStartup(server) {
 /** Functionality: Exercise two complete UI sessions, busy rejection and explicit user stop.
  * Inputs: new output directory, optional --depth-graph and PRS_PLAYWRIGHT_PATH.
  * Outputs: JSON/screenshots/server diagnostics with separate functional/performance verdicts.
- * Logic: one local model process, unchanged 30 FPS/twelve-window page path, real Chrome rendering.
+ * Logic: one model process, unchanged 30 FPS/twelve-window path; counters restart per session.
  * Constraints: uses fixed local port8766 and no outside hosts; port conflicts fail, never kill others. */
 async function main() {
   if (!output || !runtime) throw new Error("Use OUTPUT_DIR and set PRS_PLAYWRIGHT_PATH");
@@ -153,7 +154,8 @@ async function main() {
   report.source_code_sha256 = {};
   for (const path of ["../frontend/camera.js", "../frontend/live-detection-client.js",
     "../frontend/frame-pipeline.js", "realtime/services.py", "realtime/resident_asgi.py",
-    "realtime/detector.py", "realtime/depth.py", "tools/depth_graph_probe.py",
+    "realtime/detector.py", "realtime/depth.py", "realtime/distance.py",
+    "realtime/distance_config.py", "realtime/performance.py", "tools/depth_graph_probe.py",
     "tools/resident_graph_probe.py", "tools/resident_graph_asgi.py",
     "tools/benchmark_resident_browser.mjs"])
     report.source_code_sha256[path] = createHash("sha256").update(await readFile(resolve(root, path))).digest("hex");
@@ -231,6 +233,9 @@ async function main() {
             ((graph.prepare_ms > 0) !== (session === 0 && index === 0))) : graph !== undefined)
           throw new Error("Unexpected experimental Graph capture/reuse evidence");
         if (row.metadata.tracking_status !== "active") throw new Error("Tracking became unavailable");
+        if (row.metadata.performance?.total_frames !== index + 1 ||
+            row.metadata.performance?.depth_model_calls !== index + 1)
+          throw new Error("Resident processing counters leaked across sessions");
       }
       evidence.summary = summarizeSession(evidence);
       await page.screenshot({path: resolve(output, `session-${session}.png`), fullPage: true});

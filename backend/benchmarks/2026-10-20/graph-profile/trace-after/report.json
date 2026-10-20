@@ -1,0 +1,506 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "mode": "full",
+  "scope": "Native FP32 static-image probe; not production FP16 or video validation",
+  "requested_frames": 31,
+  "completed_frames": 31,
+  "identities": {
+    "input": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "detection": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "manifest": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023",
+    "depth": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+  },
+  "implementation_sha256": {
+    "core/detector.py": "255511e15c08bcf63a166c53d44eddfaa6ef7da879dfad2fcb4d5f0a349e5cba",
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "realtime/distance.py": "f5e65e2d873f57f8d1f621cdd8aec569c803616885f9ae3feee7c909f239536f",
+    "realtime/distance_config.py": "45b1d0e1cfcea67bf5ee150be532394e92d57f94d587e505b4e86045cebe2940",
+    "realtime/performance.py": "50936879aad1c4bcd9829a9649b3b5c4d2e7c782dd6c690f7fa9cdc404d3a246",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/fixtures.py": "998caefb7c075442f0e849550681145eef822040e5b848358a325a41c562ae66",
+    "tools/benchmark_inference.py": "a1b87b8dee68bedc98cf74bfde85d7ea57aa5f945d18987c76fae1c2bd5ac26c",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+    "tools/depth_fusion_probe.py": "2d1aac834e44322813fb5de42764e630311eb1ee52cd5b536448dbc9dfad1cb4",
+    "tools/depth_predictor_probe.py": "7bf24a8ba06a5fd48911894181e3a4b58f8abfff53846cf816d6440e39e31c3e",
+    "tools/inference_profile.py": "c62b2f313961b85c7670a8c21ff67b28cee45066dd29352425bc5d9cf9063b2d"
+  },
+  "settings": {
+    "detection_config": {},
+    "depth_graph_probe": true,
+    "depth_fusion_sort_probe": false,
+    "depth_cached_predictor_probe": false,
+    "profile_steady": false,
+    "trace_steady": false,
+    "batch": 1,
+    "detection_edge": 640,
+    "confidence_threshold": 0.25,
+    "jpeg_quality": 80,
+    "depth_edge": 768,
+    "depth_precision": "FP32",
+    "tracking": {
+      "tracker": "botsort.yaml",
+      "history_size": 8,
+      "min_valid_samples": 3,
+      "ema_alpha": 0.5,
+      "stale_timeout_s": 2.0,
+      "motion_history_timeout_s": 2.0,
+      "min_time_span_s": 0.1,
+      "approaching_threshold_mps": 0.2,
+      "moving_away_threshold_mps": 0.2,
+      "confirmation_updates": 2
+    },
+    "risk": {
+      "min_closing_speed_mps": 0.2,
+      "max_ttc_sec": 10.0,
+      "distance_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          25
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          10.0,
+          5
+        ]
+      ],
+      "ttc_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          30
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          8.0,
+          5
+        ]
+      ],
+      "closing_speed_bands": [
+        [
+          1.0,
+          5
+        ],
+        [
+          2.0,
+          10
+        ]
+      ],
+      "motion_weights": [
+        [
+          "approaching",
+          15
+        ],
+        [
+          "moving_away",
+          -10
+        ],
+        [
+          "stationary",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "direction_weights": [
+        [
+          "front",
+          10
+        ],
+        [
+          "front_left",
+          7
+        ],
+        [
+          "front_right",
+          7
+        ],
+        [
+          "left",
+          3
+        ],
+        [
+          "right",
+          3
+        ],
+        [
+          "behind",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "class_weights": [
+        [
+          "car",
+          15
+        ],
+        [
+          "truck",
+          18
+        ],
+        [
+          "bus",
+          18
+        ],
+        [
+          "motorcycle",
+          15
+        ],
+        [
+          "bicycle",
+          12
+        ],
+        [
+          "scooter",
+          12
+        ],
+        [
+          "person",
+          5
+        ],
+        [
+          "animal",
+          5
+        ],
+        [
+          "bird",
+          5
+        ],
+        [
+          "cat",
+          5
+        ],
+        [
+          "dog",
+          5
+        ],
+        [
+          "horse",
+          5
+        ],
+        [
+          "sheep",
+          5
+        ],
+        [
+          "cow",
+          5
+        ],
+        [
+          "elephant",
+          5
+        ],
+        [
+          "bear",
+          5
+        ],
+        [
+          "zebra",
+          5
+        ],
+        [
+          "giraffe",
+          5
+        ],
+        [
+          "bench",
+          1
+        ],
+        [
+          "chair",
+          1
+        ],
+        [
+          "stop sign",
+          1
+        ],
+        [
+          "fire hydrant",
+          1
+        ],
+        [
+          "pole",
+          1
+        ],
+        [
+          "sign",
+          1
+        ]
+      ],
+      "default_class_weight": 5,
+      "risk_level_thresholds": [
+        25,
+        50,
+        75
+      ],
+      "alert_priorities": [
+        [
+          "low",
+          0
+        ],
+        [
+          "medium",
+          2
+        ],
+        [
+          "high",
+          3
+        ],
+        [
+          "critical",
+          4
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "medium_alert_enabled": true,
+      "medium_alert_max_distance_m": 3.0,
+      "medium_alert_directions": [
+        "front",
+        "front_left",
+        "front_right"
+      ],
+      "front_left_fraction": 0.3333333333333333,
+      "front_right_fraction": 0.6666666666666666
+    }
+  },
+  "timing_notes": [
+    "Only first frame excluded from steady summaries",
+    "inference_ms includes transfers; forward_event_ms is CUDA replay",
+    "depth_ms includes box decoding and depth inference/fusion",
+    "depth substages use host clocks, with no added CUDA sync",
+    "depth_sdk timings come from the existing synchronized SDK profiler",
+    "Stage durations overlap with server_ms and predict_wall_ms",
+    "Tracking uses actual worker timestamps; static image repeated"
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "ultralytics": "8.4.171",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "prepared_input": {
+    "sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+    "size": [
+      480,
+      640
+    ],
+    "bytes": 78850
+  },
+  "model_initialization_ms": 629.6425000000454,
+  "depth_graph": {
+    "adapter": "experimental_native_fp32_depth_graph",
+    "shape": [
+      1,
+      3,
+      768,
+      576
+    ],
+    "dtype": "torch.float32",
+    "setup_ms": 289.2155999998067,
+    "preparation_output_equal": true,
+    "scope": "One fixture raw-output equality; no dataset quality claim"
+  },
+  "gpu_peak_allocated_bytes": 260067328,
+  "gpu_peak_reserved_bytes": 411041792,
+  "first_frame": {
+    "forward_event_ms": 4.364831924438477,
+    "inference_ms": 5.492499999490974,
+    "prepare_ms": 5.032699999901524,
+    "gpu_stage_ms": 557.1731,
+    "depth_ms": 3370.3205000001617,
+    "depth_predict_ms": 3258.2141000002594,
+    "depth_fusion_ms": 111.8559999995341,
+    "decode_boxes_ms": 0.25040000036824495,
+    "tracking_ms": 4.030500000226311,
+    "risk_ms": 0.16789999972388614,
+    "render_ms": 4.383499999676133,
+    "server_ms": 3941.1081999996895,
+    "graph_setup_ms": 551.323599999705,
+    "index": 0,
+    "predict_wall_ms": 3941.2877999993725,
+    "depth_sdk_preprocess_ms": 16.625000000203727,
+    "depth_sdk_inference_ms": 14.936800000214134,
+    "depth_sdk_postprocess_ms": 0.25889999960782006
+  },
+  "steady": {
+    "predict_wall_ms": {
+      "count": 30,
+      "mean_ms": 35.950373333222764,
+      "min_ms": 33.126300000731135,
+      "max_ms": 43.222700000114855,
+      "p50_ms": 35.62379999948462,
+      "p95_ms": 39.85015500006739,
+      "p99_ms": 42.4101490000794
+    },
+    "forward_event_ms": {
+      "count": 30,
+      "mean_ms": 3.8619263648986815,
+      "min_ms": 3.4080960750579834,
+      "max_ms": 5.9121599197387695,
+      "p50_ms": 3.605952024459839,
+      "p95_ms": 5.1529151678085325,
+      "p99_ms": 5.881953568458557
+    },
+    "inference_ms": {
+      "count": 30,
+      "mean_ms": 5.012190000131038,
+      "min_ms": 4.525400000602531,
+      "max_ms": 7.072600000356033,
+      "p50_ms": 4.759200000080455,
+      "p95_ms": 6.33908000017982,
+      "p99_ms": 7.039134000315244
+    },
+    "prepare_ms": {
+      "count": 30,
+      "mean_ms": 4.187873333315413,
+      "min_ms": 3.5901000001103966,
+      "max_ms": 5.7628000004115165,
+      "p50_ms": 4.02894999979253,
+      "p95_ms": 4.96189999953458,
+      "p99_ms": 5.594484000084776
+    },
+    "gpu_stage_ms": {
+      "count": 30,
+      "mean_ms": 5.057686666653656,
+      "min_ms": 4.561400000056892,
+      "max_ms": 7.118699999409728,
+      "p50_ms": 4.8021500001596,
+      "p95_ms": 6.382389999953375,
+      "p99_ms": 7.082362999663019
+    },
+    "depth_ms": {
+      "count": 30,
+      "mean_ms": 15.468143333358361,
+      "min_ms": 13.804000000163796,
+      "max_ms": 19.583000000238826,
+      "p50_ms": 15.168500000527274,
+      "p95_ms": 18.33447999983946,
+      "p99_ms": 19.52363700002934
+    },
+    "depth_predict_ms": {
+      "count": 30,
+      "mean_ms": 11.034046666676053,
+      "min_ms": 9.933500000443019,
+      "max_ms": 14.755600000171398,
+      "p50_ms": 10.947849999865866,
+      "p95_ms": 12.811465000140743,
+      "p99_ms": 14.268574000088847
+    },
+    "depth_fusion_ms": {
+      "count": 30,
+      "mean_ms": 4.274090000035358,
+      "min_ms": 3.4914000007120194,
+      "max_ms": 8.448300000054587,
+      "p50_ms": 3.835800000160816,
+      "p95_ms": 5.776089999835676,
+      "p99_ms": 7.707002000033754
+    },
+    "decode_boxes_ms": {
+      "count": 30,
+      "mean_ms": 0.16000666664695018,
+      "min_ms": 0.12869999955000822,
+      "max_ms": 0.2075000002150773,
+      "p50_ms": 0.1567000003888097,
+      "p95_ms": 0.20039499991071352,
+      "p99_ms": 0.2071230002457014
+    },
+    "depth_sdk_preprocess_ms": {
+      "count": 30,
+      "mean_ms": 2.3787966666532157,
+      "min_ms": 2.0695000002888264,
+      "max_ms": 2.8887000007671304,
+      "p50_ms": 2.3185000000012224,
+      "p95_ms": 2.8432550000161427,
+      "p99_ms": 2.887018000619719
+    },
+    "depth_sdk_inference_ms": {
+      "count": 30,
+      "mean_ms": 7.405929999913496,
+      "min_ms": 6.684799999675306,
+      "max_ms": 9.73829999929876,
+      "p50_ms": 7.178949999797624,
+      "p95_ms": 9.307014999740204,
+      "p99_ms": 9.624358999444667
+    },
+    "depth_sdk_postprocess_ms": {
+      "count": 30,
+      "mean_ms": 0.27026666672706295,
+      "min_ms": 0.15629999961674912,
+      "max_ms": 0.56010000025708,
+      "p50_ms": 0.2431000007163675,
+      "p95_ms": 0.49813999980869994,
+      "p99_ms": 0.5518930002745037
+    },
+    "tracking_ms": {
+      "count": 30,
+      "mean_ms": 6.830826666676633,
+      "min_ms": 6.274999999732245,
+      "max_ms": 8.896000000277127,
+      "p50_ms": 6.694099999549508,
+      "p95_ms": 7.734695000408465,
+      "p99_ms": 8.655126000285236
+    },
+    "risk_ms": {
+      "count": 30,
+      "mean_ms": 0.11095999995328991,
+      "min_ms": 0.09620000037102727,
+      "max_ms": 0.18190000082540791,
+      "p50_ms": 0.10514999985389295,
+      "p95_ms": 0.15563999972982856,
+      "p99_ms": 0.17673800055490574
+    },
+    "render_ms": {
+      "count": 30,
+      "mean_ms": 4.102583333375757,
+      "min_ms": 3.6305000003267196,
+      "max_ms": 5.412700000306359,
+      "p50_ms": 4.03439999990951,
+      "p95_ms": 4.50184500055002,
+      "p99_ms": 5.154281000441188
+    },
+    "server_ms": {
+      "count": 30,
+      "mean_ms": 35.75807333333311,
+      "min_ms": 32.9756000000998,
+      "max_ms": 42.9615000002741,
+      "p50_ms": 35.43630000012854,
+      "p95_ms": 39.644639999733045,
+      "p99_ms": 42.17484600014359
+    },
+    "graph_setup_ms": {
+      "count": 30,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    }
+  }
+}

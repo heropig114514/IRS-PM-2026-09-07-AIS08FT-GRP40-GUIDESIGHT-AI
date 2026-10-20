@@ -1,6 +1,8 @@
 """Responsibilities: Own one resident GPU pipeline and exclusive video-session state.
-Implementation: One executor loads once, resets tracking between sessions and infers serially.
-Related Modules: realtime.detector/depth/tracking; realtime.resident_asgi; config.resident_asgi.
+Implementation: One executor loads once, resets tracking/distance/statistics per session and
+infers serially.
+Related Modules: realtime.detector/depth/tracking/distance/performance;
+realtime.resident_asgi; config.resident_asgi.
 Declaration Index: build_detector; ResidentService; ResidentService.__init__;
 ResidentService.execute; ResidentService.start; ResidentService.claim; ResidentService.begin;
 ResidentService.reset_tracking; ResidentService.predict; ResidentService.release;
@@ -121,16 +123,24 @@ class ResidentService:
         await self.execute(self.reset_tracking)
 
     def reset_tracking(self):
-        """Functionality: Discard prior IDs, image shape, motion and risk history on reconnect.
-        Inputs: loaded detector and workload. Outputs: new tracker or explicit disabled state.
-        Logic: reconstruct only ObjectTracker with the original immutable default configuration.
+        """Functionality: Discard prior IDs, distance state and processing counters on reconnect.
+        Inputs: loaded detector and workload. Outputs: fresh tracker/distance/statistics state.
+        Logic: preserve selected immutable configuration while resetting mutable per-stream state.
         Constraints: worker-only; does not reload either model or recreate the detection Graph.
         """
+        from realtime.distance import DistanceStrategy
+        from realtime.distance_config import DEFAULT_DISTANCE_CONFIG
+        from realtime.performance import PerformanceStats
         from realtime.tracking import DEFAULT_TRACKING_CONFIG, ObjectTracker
 
+        strategy = getattr(self.detector, "distance_strategy", None)
+        self.detector.distance_strategy = DistanceStrategy(
+            strategy.config if strategy is not None else DEFAULT_DISTANCE_CONFIG)
+        self.detector.performance, self.detector.performance_epoch = PerformanceStats(), 0
         self.detector.object_tracker = (
             ObjectTracker(DEFAULT_TRACKING_CONFIG, self.detector.manifest["build"]["ultralytics"])
             if self.mode == "full" else None)
+        logger.info("Resident session state reset mode=%s", self.mode)
 
     async def predict(self, lease, jpeg):
         """Functionality: Process one ordered frame for the active owner.

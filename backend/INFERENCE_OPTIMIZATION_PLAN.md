@@ -41,6 +41,11 @@
 | 深度 CUDA Graph | 静态多输入原始深度与距离一致；浏览器吞吐提高，但原最大 500ms 延迟门槛未通过 | 独立实验，优先剖析剩余完整帧开销 |
 | GPU ROI 完整排序中位数 | 样例一致，但多数 ROI 及整帧未加速 | 不接入默认服务 |
 | 复用已初始化 SDK predictor | 每帧配置分派仅节约约 0.20ms，未证实稳定整帧收益 | 不作为当前主要优化方向 |
+| 有界完整标签图像缓存 | 显式阶段计时中，标注扣除 JPEG 编码约占 3ms；可在不改模型/跟踪的前提下实验复用重复文字图像 | 下一独立候选；尚未实现或宣称加速 |
+
+标签缓存候选须将字体、字号、完整文字、颜色等渲染身份纳入键，限制内存并验证命中/未命中、边缘裁剪、中文、空距离、运动与风险文字的逐像素/JPEG一致性。移动视频可能使文字频繁变化，必须记录命中率和额外开销，不能将静态重复标签收益外推为视频收益。
+
+显式阶段诊断显示 SDK 推理结束后的同步在等待必要 GPU 工作，不能把全部等待算作可删除开销。当前环境的一份 cProfile 记录出现自耗时大于累计耗时等内部矛盾，保留原始记录但不用于归因；工具报告基础一致性异常，不自动修正数据或更换诊断方式。具体对照与阶段记录见下方报告。
 
 ## 数据与质量边界
 
@@ -59,10 +64,14 @@
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-graph --output benchmarks/NEW_RUN/graph
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-fusion-sort --output benchmarks/NEW_RUN/fusion
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-cached-predictor --output benchmarks/NEW_RUN/predictor
+.\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-graph --trace-steady --output benchmarks/NEW_RUN/trace
+.\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-graph --profile-steady --output benchmarks/NEW_RUN/profile
 node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --depth-graph
 ```
 
 数值检查工具为 `validate_depth_graph`、`validate_depth_fusion`、`validate_depth_predictor`，须显式提供原输入与样本数；完整命令可用 `python -m tools.TOOL --help` 查看。
+
+`--trace-steady` 仅用于 full 模式，以临时包装测量原始阶段及 SDK 原有同步时钟；退出时恢复，输出 `stage-trace.json`。`--profile-steady` 输出完整 `profile.json` 与 `profile.pstats`。两者互斥，不计首帧、捕获和报告写入；都需要前后无诊断对照，不能把诊断扰动当作加速。
 
 | 报告 | 用途 |
 | --- | --- |
@@ -74,6 +83,7 @@ node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --dep
 | [SDK 调用诊断](benchmarks/2026-10-20/summary.json) | 配置分派与多输入数值比较 |
 | [Graph 服务诊断](benchmarks/2026-10-20/graph-service/summary.json) | 浏览器对照、捕获/复用及性能门槛 |
 | [Graph 输出比较](benchmarks/2026-10-20/graph-service/output-comparison.json) | 检测/距离与真实时间导致的标注差异 |
+| [Graph 剩余阶段诊断](benchmarks/2026-10-20/graph-profile/summary.json) | 显式阶段计时、前后对照、cProfile异常和下个候选依据 |
 
 运行详情保留在结构化报告及逐帧 JSONL，历史报告描述其采集时的代码与状态，不能当作当前部署状态。
 

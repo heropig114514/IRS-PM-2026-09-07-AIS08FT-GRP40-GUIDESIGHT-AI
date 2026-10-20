@@ -1,0 +1,594 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "mode": "full",
+  "scope": "Native FP32 static-image probe; not production FP16 or video validation",
+  "requested_frames": 31,
+  "completed_frames": 31,
+  "identities": {
+    "input": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "detection": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "manifest": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023",
+    "depth": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+  },
+  "implementation_sha256": {
+    "core/detector.py": "255511e15c08bcf63a166c53d44eddfaa6ef7da879dfad2fcb4d5f0a349e5cba",
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "realtime/distance.py": "f5e65e2d873f57f8d1f621cdd8aec569c803616885f9ae3feee7c909f239536f",
+    "realtime/distance_config.py": "45b1d0e1cfcea67bf5ee150be532394e92d57f94d587e505b4e86045cebe2940",
+    "realtime/performance.py": "50936879aad1c4bcd9829a9649b3b5c4d2e7c782dd6c690f7fa9cdc404d3a246",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/fixtures.py": "998caefb7c075442f0e849550681145eef822040e5b848358a325a41c562ae66",
+    "tools/benchmark_inference.py": "53afe0a94263ab47cc070cea99ba98f7c794ff74e50fc8a1b6ac8398da6f098c",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+    "tools/depth_fusion_probe.py": "2d1aac834e44322813fb5de42764e630311eb1ee52cd5b536448dbc9dfad1cb4",
+    "tools/depth_predictor_probe.py": "7bf24a8ba06a5fd48911894181e3a4b58f8abfff53846cf816d6440e39e31c3e",
+    "tools/inference_profile.py": "80800266ffc970799b483c495f7224af89bdf7844d8b91b22472dac25eb9694b"
+  },
+  "settings": {
+    "detection_config": {},
+    "depth_graph_probe": true,
+    "depth_fusion_sort_probe": false,
+    "depth_cached_predictor_probe": false,
+    "profile_steady": true,
+    "batch": 1,
+    "detection_edge": 640,
+    "confidence_threshold": 0.25,
+    "jpeg_quality": 80,
+    "depth_edge": 768,
+    "depth_precision": "FP32",
+    "tracking": {
+      "tracker": "botsort.yaml",
+      "history_size": 8,
+      "min_valid_samples": 3,
+      "ema_alpha": 0.5,
+      "stale_timeout_s": 2.0,
+      "motion_history_timeout_s": 2.0,
+      "min_time_span_s": 0.1,
+      "approaching_threshold_mps": 0.2,
+      "moving_away_threshold_mps": 0.2,
+      "confirmation_updates": 2
+    },
+    "risk": {
+      "min_closing_speed_mps": 0.2,
+      "max_ttc_sec": 10.0,
+      "distance_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          25
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          10.0,
+          5
+        ]
+      ],
+      "ttc_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          30
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          8.0,
+          5
+        ]
+      ],
+      "closing_speed_bands": [
+        [
+          1.0,
+          5
+        ],
+        [
+          2.0,
+          10
+        ]
+      ],
+      "motion_weights": [
+        [
+          "approaching",
+          15
+        ],
+        [
+          "moving_away",
+          -10
+        ],
+        [
+          "stationary",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "direction_weights": [
+        [
+          "front",
+          10
+        ],
+        [
+          "front_left",
+          7
+        ],
+        [
+          "front_right",
+          7
+        ],
+        [
+          "left",
+          3
+        ],
+        [
+          "right",
+          3
+        ],
+        [
+          "behind",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "class_weights": [
+        [
+          "car",
+          15
+        ],
+        [
+          "truck",
+          18
+        ],
+        [
+          "bus",
+          18
+        ],
+        [
+          "motorcycle",
+          15
+        ],
+        [
+          "bicycle",
+          12
+        ],
+        [
+          "scooter",
+          12
+        ],
+        [
+          "person",
+          5
+        ],
+        [
+          "animal",
+          5
+        ],
+        [
+          "bird",
+          5
+        ],
+        [
+          "cat",
+          5
+        ],
+        [
+          "dog",
+          5
+        ],
+        [
+          "horse",
+          5
+        ],
+        [
+          "sheep",
+          5
+        ],
+        [
+          "cow",
+          5
+        ],
+        [
+          "elephant",
+          5
+        ],
+        [
+          "bear",
+          5
+        ],
+        [
+          "zebra",
+          5
+        ],
+        [
+          "giraffe",
+          5
+        ],
+        [
+          "bench",
+          1
+        ],
+        [
+          "chair",
+          1
+        ],
+        [
+          "stop sign",
+          1
+        ],
+        [
+          "fire hydrant",
+          1
+        ],
+        [
+          "pole",
+          1
+        ],
+        [
+          "sign",
+          1
+        ]
+      ],
+      "default_class_weight": 5,
+      "risk_level_thresholds": [
+        25,
+        50,
+        75
+      ],
+      "alert_priorities": [
+        [
+          "low",
+          0
+        ],
+        [
+          "medium",
+          2
+        ],
+        [
+          "high",
+          3
+        ],
+        [
+          "critical",
+          4
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "medium_alert_enabled": true,
+      "medium_alert_max_distance_m": 3.0,
+      "medium_alert_directions": [
+        "front",
+        "front_left",
+        "front_right"
+      ],
+      "front_left_fraction": 0.3333333333333333,
+      "front_right_fraction": 0.6666666666666666
+    }
+  },
+  "timing_notes": [
+    "Only first frame excluded from steady summaries",
+    "inference_ms includes transfers; forward_event_ms is CUDA replay",
+    "depth_ms includes box decoding and depth inference/fusion",
+    "depth substages use host clocks, with no added CUDA sync",
+    "depth_sdk timings come from the existing synchronized SDK profiler",
+    "Stage durations overlap with server_ms and predict_wall_ms",
+    "Tracking uses actual worker timestamps; static image repeated"
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "ultralytics": "8.4.171",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "prepared_input": {
+    "sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+    "size": [
+      480,
+      640
+    ],
+    "bytes": 78850
+  },
+  "model_initialization_ms": 703.2282999998642,
+  "depth_graph": {
+    "adapter": "experimental_native_fp32_depth_graph",
+    "shape": [
+      1,
+      3,
+      768,
+      576
+    ],
+    "dtype": "torch.float32",
+    "setup_ms": 258.74019999992015,
+    "preparation_output_equal": true,
+    "scope": "One fixture raw-output equality; no dataset quality claim"
+  },
+  "gpu_peak_allocated_bytes": 260067328,
+  "gpu_peak_reserved_bytes": 411041792,
+  "first_frame": {
+    "forward_event_ms": 4.368159770965576,
+    "inference_ms": 5.680799999936426,
+    "prepare_ms": 5.371000000195636,
+    "gpu_stage_ms": 606.1296999996557,
+    "depth_ms": 3473.2895000006465,
+    "depth_predict_ms": 3368.2548000006136,
+    "depth_fusion_ms": 104.81519999939337,
+    "decode_boxes_ms": 0.21950000063952757,
+    "tracking_ms": 3.9891999995234073,
+    "risk_ms": 0.13080000007903436,
+    "render_ms": 4.275700000107463,
+    "server_ms": 4093.1859000002078,
+    "graph_setup_ms": 600.1621000004889,
+    "index": 0,
+    "predict_wall_ms": 4093.368400000145,
+    "depth_sdk_preprocess_ms": 19.07039999969129,
+    "depth_sdk_inference_ms": 15.903500000604254,
+    "depth_sdk_postprocess_ms": 0.2702000001590932
+  },
+  "steady": {
+    "predict_wall_ms": {
+      "count": 30,
+      "mean_ms": 39.137993333254904,
+      "min_ms": 36.917600000379025,
+      "max_ms": 41.14069999923231,
+      "p50_ms": 39.13705000013579,
+      "p95_ms": 40.60161999991578,
+      "p99_ms": 41.00321099942448
+    },
+    "forward_event_ms": {
+      "count": 30,
+      "mean_ms": 4.591660785675049,
+      "min_ms": 4.309855937957764,
+      "max_ms": 4.808864116668701,
+      "p50_ms": 4.625423908233643,
+      "p95_ms": 4.759150505065918,
+      "p99_ms": 4.79469358921051
+    },
+    "inference_ms": {
+      "count": 30,
+      "mean_ms": 5.76921666661292,
+      "min_ms": 5.406700000094133,
+      "max_ms": 6.065300000045681,
+      "p50_ms": 5.815250000068772,
+      "p95_ms": 6.02590000003147,
+      "p99_ms": 6.064053000045533
+    },
+    "prepare_ms": {
+      "count": 30,
+      "mean_ms": 4.09512999992027,
+      "min_ms": 3.5499000005074777,
+      "max_ms": 4.7022000007928,
+      "p50_ms": 4.186199999821838,
+      "p95_ms": 4.577939999899172,
+      "p99_ms": 4.685844000478028
+    },
+    "gpu_stage_ms": {
+      "count": 30,
+      "mean_ms": 5.827156666752368,
+      "min_ms": 5.456200000480749,
+      "max_ms": 6.127500000729924,
+      "p50_ms": 5.874700000276789,
+      "p95_ms": 6.0814999998910935,
+      "p99_ms": 6.124078000520967
+    },
+    "depth_ms": {
+      "count": 30,
+      "mean_ms": 17.366689999926166,
+      "min_ms": 16.386399999646528,
+      "max_ms": 18.514999999752035,
+      "p50_ms": 17.287150000356633,
+      "p95_ms": 17.993435000153113,
+      "p99_ms": 18.373363999753565
+    },
+    "depth_predict_ms": {
+      "count": 30,
+      "mean_ms": 12.585666666594383,
+      "min_ms": 11.963599999944563,
+      "max_ms": 13.04950000030658,
+      "p50_ms": 12.569900000016787,
+      "p95_ms": 12.965245000305003,
+      "p99_ms": 13.02557500038347
+    },
+    "depth_fusion_ms": {
+      "count": 30,
+      "mean_ms": 4.598613333352357,
+      "min_ms": 4.242099999828497,
+      "max_ms": 6.079900000258931,
+      "p50_ms": 4.546000000118511,
+      "p95_ms": 4.847374999599197,
+      "p99_ms": 5.730623999861564
+    },
+    "decode_boxes_ms": {
+      "count": 30,
+      "mean_ms": 0.18240999997942708,
+      "min_ms": 0.16210000012506498,
+      "max_ms": 0.23659999988012714,
+      "p50_ms": 0.17865000017991406,
+      "p95_ms": 0.20828500064453692,
+      "p99_ms": 0.22874100017361343
+    },
+    "depth_sdk_preprocess_ms": {
+      "count": 30,
+      "mean_ms": 2.320256666522861,
+      "min_ms": 2.053899999737041,
+      "max_ms": 2.7493999996295315,
+      "p50_ms": 2.29429999990316,
+      "p95_ms": 2.623995000249124,
+      "p99_ms": 2.7178479999201954
+    },
+    "depth_sdk_inference_ms": {
+      "count": 30,
+      "mean_ms": 8.744176666611262,
+      "min_ms": 8.359800000107498,
+      "max_ms": 9.10569999996369,
+      "p50_ms": 8.72544999992897,
+      "p95_ms": 9.020525000050839,
+      "p99_ms": 9.085632000133046
+    },
+    "depth_sdk_postprocess_ms": {
+      "count": 30,
+      "mean_ms": 0.2805433333075295,
+      "min_ms": 0.21400000059657032,
+      "max_ms": 0.5400999998528278,
+      "p50_ms": 0.27590000036070705,
+      "p95_ms": 0.3100999998878251,
+      "p99_ms": 0.47366099983264576
+    },
+    "tracking_ms": {
+      "count": 30,
+      "mean_ms": 7.159410000046289,
+      "min_ms": 6.594300000870135,
+      "max_ms": 8.312900000419177,
+      "p50_ms": 7.150250000449887,
+      "p95_ms": 7.629634999420887,
+      "p99_ms": 8.12228300013885
+    },
+    "risk_ms": {
+      "count": 30,
+      "mean_ms": 0.22826333333796356,
+      "min_ms": 0.2144999998563435,
+      "max_ms": 0.25319999986095354,
+      "p50_ms": 0.22695000006933697,
+      "p95_ms": 0.24221000012403238,
+      "p99_ms": 0.2505610000753222
+    },
+    "render_ms": {
+      "count": 30,
+      "mean_ms": 4.171256666631962,
+      "min_ms": 3.478999999970256,
+      "max_ms": 4.8894000001382665,
+      "p50_ms": 4.166499999882944,
+      "p95_ms": 4.677955000124712,
+      "p99_ms": 4.866200000196841
+    },
+    "server_ms": {
+      "count": 30,
+      "mean_ms": 38.84790666661502,
+      "min_ms": 36.692600000606035,
+      "max_ms": 40.81729999961681,
+      "p50_ms": 38.862549999521434,
+      "p95_ms": 40.274200000112614,
+      "p99_ms": 40.673372999845014
+    },
+    "graph_setup_ms": {
+      "count": 30,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    }
+  },
+  "steady_profile": {
+    "attempted_steady_calls": 30,
+    "completed_steady_calls": 30,
+    "cold_call_profiled": false,
+    "scope": "Prediction only; excludes first frame, capture and report writing",
+    "warning": "Host-call diagnostics; profiler perturbation; nested totals",
+    "function_count": 631,
+    "source_sha256": {
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\_jit_internal.py": "109c1a7e2dc1ff708b9fdb76f58629756f85cffe699499db24e22d154a202469",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\utils\\_pytree.py": "b62f4e6e6fb5905a13c536fe5263acbdba36f902aa5c3b82601566f980e8d3f1",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\email\\message.py": "ba32efea2602ea52e73028a2817afddccccacc4385b9800896556d5c22db2b90",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\nn\\functional.py": "fc13e05f04b956964dcdf7ddb89d4cd5560c9e791492f8b52fc4e80a9052cf7f",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\autograd\\grad_mode.py": "de7fde07bf00afbb68b7805148403e396d3fb6730e2415f1c8070805c2223d10",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\email\\feedparser.py": "6046239fcdd6977d1c25841581cabedaeec8046cc5fedcb8ff2d6450a36442bd",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\http\\client.py": "c2c0694155837d72fc710a4138e5d1e53ae1a652b117a2e23a5b1b0db527a0f9",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\ssl.py": "039a0e3f1782e14824b1624c7ffefc2de31714b4a9994424be45a4271966097c",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\data\\build.py": "acc9ec58b8c606da0a91a20b013094927a49cdc0f9cb7d1e2f0355c7de00af8e",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\trackers\\utils\\stracks.py": "9534294af850c3a6755c3a5a1ba9b2b068c5b79a11166c8547652944e2632f58",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\JpegImagePlugin.py": "049fc12cf436b101a5622456a1b83ba8b28b54cf8106d3953aed751bb0c08f3f",
+      "E:\\AI_map\\backend\\realtime\\performance.py": "50936879aad1c4bcd9829a9649b3b5c4d2e7c782dd6c690f7fa9cdc404d3a246",
+      "E:\\AI_map\\backend\\core\\detector.py": "255511e15c08bcf63a166c53d44eddfaa6ef7da879dfad2fcb4d5f0a349e5cba",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\ImageFile.py": "e972c9d8785ad1fd44f860a375d8719f3fdff8e46da1cc311950699f93e4f539",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\cfg\\__init__.py": "2029d8aa2bd152f4c0a54f756d89bd0fb87dbd9f0358223b6a67c7f60e4814dd",
+      "E:\\AI_map\\backend\\realtime\\depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\Image.py": "59f1b98ed7bfd7b516b9f13ffd9dd3bc0aa1a495042accdb5ae4609b41c329d5",
+      "E:\\AI_map\\backend\\realtime\\risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+      "E:\\AI_map\\backend\\realtime\\tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\ImageText.py": "082c1145853cadd845f42775d7ac896b6cc63d9b2e80572cf579acb6fcc01d54",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\metrics.py": "a41b9c09c19f5c41990b00d323efc3ef657d391ad0a1a7eb1774b5556d2fd37e",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\engine\\results.py": "062762a953f2c9c24d51cc33c3771e86aeef4f191238994e276df194937c1bea",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\email\\utils.py": "65d259aded3b7d29609d320decdb59cb0a0f7f0e5c453e1d3c380e8a4a5d61c9",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\email\\_policybase.py": "284be073d7fe99d1021958e6dbeefe4c98a6c00021ea465d01aac71338d1579f",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\events.py": "69b447a6df66ff61bf1e0417739907e964d972ab2e082b1d01364de891ad14af",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\email\\parser.py": "88890ea9994c55ff7d6c1fd570fece2785f51ed407ee95df4aff946e250bcd66",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\urllib\\request.py": "6ffc7d993de64319a40fad631966bd1fd643d355a5c154c1a8b1821f49e5c470",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\__init__.py": "5d89296d30ab407ce2fbdaab0706dca66e94260bd5c35bbcc6a2f7f0ae5cadab",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\_util.py": "78ff087e658999b13f3ea6d425be2a4ea18d2e2e334f44d369daebaa6ca483b6",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\ImageDraw.py": "98aa4388d2629866aad9dd734bec67ad3f9981ab1ed4390281b4c17be9027cf6",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\checks.py": "63bbc459f4ab25fd09146466fd3d6dfb0c6db9c81de790d3ddec9b231530a61f",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\trackers\\byte_tracker.py": "da509523f9acd0c223aaa9aed77493aad89a675c60787c6a3ee4371fa379ec21",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\ops.py": "400c4b1572bc074757440603bf4ea5b931a4a529fdaba3f6a4aeadf8c292c497",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\models\\yolo\\depth\\predict.py": "f0f5c1dbf588579be44ec2ebb4692e576a83aa281d2d13845f818c85830b8397",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\data\\loaders.py": "6ccb678c8eec32d5e1115a718c95c421e09e14e2ae1e69350a21575aaaad0abb",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\trackers\\utils\\gmc.py": "d797f701a22347001d780b0dc4d0f2f5cabdfefb895c36bbab084ceb2dfc4000",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\engine\\predictor.py": "d3de9cc0aa0c1f2c0b17c28ea35d1ae971ae7b56f1b7a5c2e3513e5b45e5efaa",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\trackers\\bot_sort.py": "a298b6eb7d75aae56a21d15822092dc646b6e054859d706c9c060cb5b9d37498",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\trackers\\utils\\matching.py": "318bf81030558863a4ec6effea3c9d063a297f299367e379a58b89c24e3f421f",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\data\\augment.py": "4bd6573fbef1a7ff746b88b5f8d6847e2a06666d68a53cab36c6ae62cdd4b2f3",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\trackers\\utils\\kalman_filter.py": "162c612980d35c34de2acbcc44983f9a253c8da9496577f21c283e6778d00409",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\torch_utils.py": "8d3fcbd8a3e548427e7eea930470ba6b3f71058d17298769f812d7d44a8766c5",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\patches.py": "39f2acc64810c2cd12bd8bdd6b9f0882e4648b72c1f334bc30ffdc9e3be6a6b4",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\_binary.py": "ba6dc47fa221e747297ee81afcbdaef2ea9be664c7a4b51f5382563132e0b20b",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\engine\\model.py": "844f7d6be1221ab617533a6685674a9f5221d58eec4ee559c1d849f2cf8718a5",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\PIL\\ImageFont.py": "e9601111f8817e8387fd792b3643e709a5a11febea43cb49de1732e776ba5f60",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\nn\\autobackend.py": "fb0158637251e99c0af0e3747aa6aef13877e6ee794fe98abefa5049f7153eab",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\utils\\callbacks\\base.py": "1d3fd4fa10c5f0549193899f33723e84d73bd4bf9a92af7bfdd8129c42b3ce69",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\ultralytics\\trackers\\basetrack.py": "9ef094b9a54ff2f52c9118b5bd1a2f84ba331aa557277f54186de11728c2f7e8",
+      "E:\\AI_map\\backend\\tools\\depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\logging\\__init__.py": "43f86bbc08fdd5c7b6e697abffe1381f534a92bb32e1f1aee8360d6a142592a1",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\functools.py": "de4a1d37c795e2a065124b5c49357893433bc6bb111b41277ccc9930ef08d4c9",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\threading.py": "846f450ae794e4aab823a163f8c71d27751148af33e91dd3de886686a4e8ebfb",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\_weakrefset.py": "91895a451d06e9f521a1171b31b9b19bc9740f35af00d4fa106338ab7167c9ac",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\pathlib.py": "10ba48ae8063cfe7589436041d0d4628c05f427c7709cf8e75e486f8930cc32c",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\copy.py": "cbd25547933176fcf6bb05c2adc9f4796d15ac20b9b82dcf890daea7203daeab",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\_utils.py": "a74c433f12e3f0867e4b9911d3fb071205198ee946f78ef7dbcfa438bdadd6cb",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\__init__.py": "6d6c92d0b1091fc8f437cfe8228e9c9ad088dc0faf8446b1df8738f61c0834f2",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\typing.py": "be92d60fb8382bb29ead21c128825d7c96d0e8c915b44f840791e49f5a8d554c",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\socket.py": "7d4d4c66e6f4bcc961ab462c4f08002ca97def8713a4be1c7373bdbd970a5274",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\core\\_dtype.py": "4bb11594177149c951731edd076c2d12526e86e5f2a184c3f3057d24d55af8a4",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\core\\fromnumeric.py": "dc43978681e25f101d8c59dff7d6716195cc79ef6de320879831b7e9476a058e",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\core\\multiarray.py": "f462a9ff84bed341b55a86b2ff6b8974ba3cfe18c1ae1bd44aa2130931e0b29a",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\core\\_methods.py": "8f237677b7e9445a6003c5a60ebb1d5501f8566782427b74d42308cca0964380",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\linalg\\linalg.py": "f67476e5a13f8e83591eac649baa923b2cd84e5ab396834af28b1c238e703d64",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\core\\numerictypes.py": "aad5dd20f0e9b040b84b9656a2511240dca6609a9eb7abcfb358d822d8fa8df1",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\core\\numeric.py": "3068fb2ee1756a2fe25bed71eca20e74f425824dd31c8cbb4f7e5ce55d653b8a",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\core\\shape_base.py": "5549c7648a19fb5e28436f3fe089bf716291a3e1eb2bc00cd8ce6bf07a0fcf9e",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\lib\\shape_base.py": "960ba3952095117628f2863ad53c794b5bafae6a8b4af02724f57b5c84766bea",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\lib\\index_tricks.py": "b86a2d2987036da865acb3439cff143f58efbf5541c2db6197a0105d3d5fc81e",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\cuda\\_utils.py": "bc4a7f5b36a8ccde60610e08aa7524370e55060c5e16cafd3e2cad65283bc2d4",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\cuda\\__init__.py": "40e0008664fbd6f25620a810a5fa85c9bb91e6aa75bb0046b28170ba0d8590f9",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\utils\\_contextlib.py": "8dbb55c826ff61869d07824c8a1901fe2639d0336edb89ab73c209030e4d5135",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\lib\\twodim_base.py": "f16fa0b887600bba6973e1289ba5a1e1c9c040b2a3dcb95d4ed0fc096179ea42",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\numpy\\lib\\function_base.py": "dcfe822a866c320a4df4e1194ed25c8108f942e524b7da8f91bde5f921268b0f",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\cuda\\streams.py": "c1d32197ffdfa899dc1387c10a13e710110b8af2ccb02488f0d6af022ca065e9",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\nn\\modules\\module.py": "cee60da63ae4cf0aeb16b23cb84fad3d98eecc855491819cb8b3800581a04bd4",
+      "E:\\AI_map\\backend\\.venv\\Lib\\site-packages\\torch\\cuda\\graphs.py": "e2beacf7b5a7c15b9ad3157def1d816ca9614ea9d9c9c7723bdbd384f57eb694",
+      "C:\\Users\\pc\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\Lib\\multiprocessing\\process.py": "67f0c2a7a3a83c92dd024705bac18619a2e123c9df77c414beb81035ea4a0e18"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "status": "passed_code_and_functional_checks",
+  "checks": [
+    {
+      "name": "django_check",
+      "exit_code": 0
+    },
+    {
+      "name": "migrations",
+      "exit_code": 0
+    },
+    {
+      "name": "backend_tests",
+      "exit_code": 0
+    },
+    {
+      "name": "ruff",
+      "exit_code": 0
+    },
+    {
+      "name": "pip",
+      "exit_code": 0
+    },
+    {
+      "name": "node_syntax",
+      "exit_code": 0
+    },
+    {
+      "name": "diff",
+      "exit_code": 0
+    }
+  ],
+  "backend_tests": 248,
+  "backend_skipped": 0,
+  "frontend_tests": 254,
+  "frontend_note": "Passed after main integration; frontend unchanged since that run. See ../push-checks/merge-frontend.txt",
+  "browser": "Final two sessions: 362/362 displayed, counters isolated, busy rejection, reconnect and stop passed",
+  "performance": "Original >=10FPS/max500ms gate still unmet; final browser exit2 preserved",
+  "static_graph": "Two before/diagnostic/after groups: 186 frames, paired raw detection/identity/distance/JPEG exact; separate final trace tool check31 frames",
+  "diagnostics": "cProfile CUDA/context-exit accounting inconsistent; raw evidence retained and rejected for attribution. Explicit stage trace collected30 steady frames with6 original SDK clocks each.",
+  "manual_review": "Six changed/new code files manually reviewed for headers, qualified declaration indexes, failure cleanup, frame accounting and timing semantics; Python AST assisted checks passed. Existing browser screenshot visually inspected; no check_docs.py added.",
+  "unverified": [
+    "New label raster cache candidate not implemented or benchmarked",
+    "Moving-video inference/metric depth quality",
+    "Physical camera and public network",
+    "Remote deployment, HF and DashScope",
+    "Multi-user throughput"
+  ],
+  "default_candidate_enabled": false,
+  "deployed": false
+}
