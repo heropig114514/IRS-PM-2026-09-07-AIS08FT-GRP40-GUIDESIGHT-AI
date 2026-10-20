@@ -1,7 +1,7 @@
 """Responsibilities: Expose PRS system, browser and database capabilities through MCP.
 Implementation: Official MCP SDK tools share the ASGI browser hub and existing Django services.
 Related Modules: config.asgi, core.ai_bridge/ai_database;
-frontend/ai-control.js/vibration.js/speech-output.js; MCP.md.
+frontend/ai-control.js/vibration.js/speech-output.js/navigation.js; MCP.md.
 Declaration Index: database_call — threaded ORM/errors; browser_call — browser command/errors;
 register_tool — explicit registry profile; register_tool.register — selected tool decorator;
 system_status — connectivity/configuration; system_routes — route discovery;
@@ -11,13 +11,15 @@ vibration_status — read browser prerequisites; vibration_test — one fixed vi
 vibration_stop — one cancellation request;
 speech_status — observe engine state; speech_voices — list device voices;
 speech_speak — submit one bounded utterance; speech_stop — cancel page speech;
+navigation_status — read walking guidance; navigation_start — request GPS watch;
+navigation_stop — cancel walking guidance;
 database_schema — schema tool; database_query — ORM read; database_write — ORM mutation;
 database_sql — explicit raw SQL tool.
 Variable Index: logger — operation diagnostics; mcp — protocol/tool registry; mcp_application —
 unauthenticated stateless Streamable HTTP app at /mcp, requiring ASGI lifespan startup.
 SpeechText/SpeechRate/SpeechVolume/SpeechVoice — SDK-validated text/option schemas.
 MCP_PROFILE — explicit full(default)/outputs registration policy; OUTPUT_TOOL_NAMES —
-session discovery and device output allowlist; no database/DOM tools in the outputs profile.
+session discovery, device output and navigation allowlist; no database/DOM tools in outputs.
 """
 
 import asyncio
@@ -47,6 +49,7 @@ if MCP_PROFILE not in {"full", "outputs"}:
 OUTPUT_TOOL_NAMES = frozenset({
     "ui_sessions", "vibration_status", "vibration_test", "vibration_stop",
     "speech_status", "speech_voices", "speech_speak", "speech_stop",
+    "navigation_status", "navigation_start", "navigation_stop",
 })
 SpeechText = Annotated[str, Field(min_length=1, max_length=1000)]
 SpeechRate = Annotated[float, Field(strict=True, ge=0.5, le=2, allow_inf_nan=False)]
@@ -61,7 +64,10 @@ mcp = MCPServer(
         "status, voice inventory, one test/speak request or stop. The user must enable the "
         "output switch and interact with the visible page. Do not automatically enable, "
         "replace voices or repeat timed-out actions. Submission/engine completion never "
-        "verifies physical vibration or audible output."
+        "verifies physical vibration or audible output. Navigation tools operate on a maps "
+        "tab with an already planned route. navigation_start requests location permission; "
+        "read navigation_status for fresh guidance and navigation_stop to release GPS. "
+        "Status includes device location. No automatic rerouting or background navigation."
     ) if MCP_PROFILE == "outputs" else (
         "Control PRS through browser and database tools. First call system_status, "
         "system_routes and ui_sessions. Browser tools require an open PRS tab; choose "
@@ -75,7 +81,10 @@ mcp = MCPServer(
         " Speech tools use the same explicit camera tab and user prerequisites. Read "
         "speech_voices for exact voice IDs, and speech_status for queued/start/end/error "
         "state after submission. Never infer audible output or automatically replace an "
-        "unavailable selected voice."
+        "unavailable selected voice. Navigation requires a planned route on the maps page. "
+        "Use navigation_start/stop/status with that explicit session_id. Start acceptance "
+        "does not mean a GPS fix or arrival; inspect state and position age. Status returns "
+        "device location. Hidden pages stop navigation; no automatic rerouting."
     ),
 )
 
@@ -92,7 +101,7 @@ def register_tool(*, description):
         """Functionality: Apply the official SDK decorator to a selected callable.
         Inputs: function, captured description and explicit registry policy.
         Outputs: SDK-registered original function, or the same unregistered callable.
-        Logic: full preserves prior registrations; outputs exposes exactly the device allowlist.
+        Logic: full registers all tools; outputs exposes the device/navigation allowlist.
         Constraints: Does not change arguments, validation or execution/failure semantics.
         """
         if MCP_PROFILE == "full" or function.__name__ in OUTPUT_TOOL_NAMES:
@@ -339,6 +348,44 @@ async def ui_action(
         },
         timeout=timeout + 1,
     )
+
+
+@register_tool(description="Read walking navigation in an explicit maps tab without starting GPS. "
+               "Returns state/reason, active, policy, route summary, last device coordinates and "
+               "accuracy/timestamp/age, remaining distance/estimated duration and current/next "
+               "instructions. Check active/state/age before using guidance; no obstacle detection.")
+async def navigation_status(session_id: str) -> dict[str, Any]:
+    """Functionality: Read one live snapshot of the shared maps navigation controller.
+    Inputs: Explicit session_id. Outputs: Structured navigation state or page_unavailable.
+    Logic: One correlated browser query; device coordinates are returned only on this request.
+    Constraints: No GPS start, route request, persistence or retry; transport failure is MCP error.
+    """
+    return await browser_call(session_id, "navigation_status")
+
+
+@register_tool(description="Start continuous walking navigation on an already planned route in "
+               "an explicit visible maps tab. Browser location permission is required. Returns "
+               "accepted/reason; acceptance means watch submitted, not location acquired. Read "
+               "navigation_status afterwards. No automatic planning, retry, voice or rerouting.")
+async def navigation_start(session_id: str) -> dict[str, Any]:
+    """Functionality: Start the same GPS/navigation session as the maps start button.
+    Inputs: Explicit session_id. Outputs: State and accepted/reason for a single watch request.
+    Logic: Dispatch once; browser controller validates route/support/visibility/active session.
+    Constraints: Browser owns permission; timeout means unknown completion, never auto-repeat.
+    """
+    return await browser_call(session_id, "navigation_start")
+
+
+@register_tool(description="Stop walking navigation and release its GPS watch in an explicit "
+               "maps tab. Retains the planned route for an explicit restart. Returns accepted "
+               "and state; stop_failed means native cancellation could not be confirmed.")
+async def navigation_stop(session_id: str) -> dict[str, Any]:
+    """Functionality: Cancel shared walking guidance, including pending location acquisition.
+    Inputs: Explicit session_id. Outputs: Structured cancellation acknowledgement.
+    Logic: One browser command invalidates callbacks and clears watch/deadline.
+    Constraints: No restart, page change, voice cancellation or database mutation.
+    """
+    return await browser_call(session_id, "navigation_stop")
 
 
 @register_tool(

@@ -1,0 +1,5677 @@
+TAP version 13
+# Camera processing failed: {
+#   message: '请先明确选择本地摄像头。',
+#   mode: 'camera',
+#   cameraPhase: 'permission',
+#   completedFrames: 0
+# }
+# Camera processing failed: {
+#   message: '本地 MVP 不允许调用 Hugging Face。',
+#   mode: 'camera',
+#   cameraPhase: 'permission',
+#   completedFrames: 0
+# }
+# Camera processing failed: {
+#   message: 'permission denied',
+#   mode: 'camera',
+#   cameraPhase: 'permission',
+#   completedFrames: 0
+# }
+# Camera frame timings {
+#   reason: 'first_frame',
+#   processing: 'hf',
+#   completedFrames: 1,
+#   firstFrameMs: {
+#     capture: 10,
+#     transport: 1055,
+#     renderQueue: 0,
+#     decode: 15,
+#     captureToResult: 1065,
+#     captureToDecoded: 1080
+#   },
+#   steadyFrames: 0,
+#   steadyFps: null,
+#   steadyMeanMs: null,
+#   steadyMaxMs: null,
+#   steadyScheduling: null
+# }
+# Subtest: Echo、HF与常驻GPU模式使用明确路径和提示
+ok 1 - Echo、HF与常驻GPU模式使用明确路径和提示
+  ---
+  duration_ms: 2.3838
+  type: 'test'
+  ...
+# Subtest: camera publishes explicit session/result/stop events without DOM polling
+ok 2 - camera publishes explicit session/result/stop events without DOM polling
+  ---
+  duration_ms: 0.8556
+  type: 'test'
+  ...
+# Subtest: local mode requires explicit device and local-only page blocks HF
+ok 3 - local mode requires explicit device and local-only page blocks HF
+  ---
+  duration_ms: 3.2066
+  type: 'test'
+  ...
+# Subtest: 独立视频入口沿用同源API挂载点
+ok 4 - 独立视频入口沿用同源API挂载点
+  ---
+  duration_ms: 0.5757
+  type: 'test'
+  ...
+# Subtest: 权限拒绝后释放状态并显示错误
+ok 5 - 权限拒绝后释放状态并显示错误
+  ---
+  duration_ms: 0.8502
+  type: 'test'
+  ...
+# Subtest: 停止后的延迟授权不会打开连接并立即释放轨道
+ok 6 - 停止后的延迟授权不会打开连接并立即释放轨道
+  ---
+  duration_ms: 0.4175
+  type: 'test'
+  ...
+# Subtest: 停止后的延迟解码不会重新显示旧帧
+ok 7 - 停止后的延迟解码不会重新显示旧帧
+  ---
+  duration_ms: 1.6977
+  type: 'test'
+  ...
+# Subtest: 相同尺寸复用画布且保持640/JPEG0.8
+ok 8 - 相同尺寸复用画布且保持640/JPEG0.8
+  ---
+  duration_ms: 3.8997
+  type: 'test'
+  ...
+# Subtest: latestJpeg复用新鲜帧，过期重采，未开启返回null
+ok 9 - latestJpeg复用新鲜帧，过期重采，未开启返回null
+  ---
+  duration_ms: 1.417
+  type: 'test'
+  ...
+# Subtest: 慢首帧与稳态分开，停顿不被排除
+ok 10 - 慢首帧与稳态分开，停顿不被排除
+  ---
+  duration_ms: 1.3431
+  type: 'test'
+  ...
+# Subtest: each started request has one matching completion or accepted cancellation
+ok 11 - each started request has one matching completion or accepted cancellation
+  ---
+  duration_ms: 3.457
+  type: 'test'
+  ...
+# Subtest: a queued request may be canceled successfully without native start
+ok 12 - a queued request may be canceled successfully without native start
+  ---
+  duration_ms: 0.4403
+  type: 'test'
+  ...
+# Subtest: an unrelated native end cannot complete another started request
+ok 13 - an unrelated native end cannot complete another started request
+  ---
+  duration_ms: 1.9083
+  type: 'test'
+  ...
+# Subtest: missing terminal events fail for both started and queued requests
+ok 14 - missing terminal events fail for both started and queued requests
+  ---
+  duration_ms: 1.5863
+  type: 'test'
+  ...
+# Subtest: duplicate submissions starts and terminal events cannot pass
+ok 15 - duplicate submissions starts and terminal events cannot pass
+  ---
+  duration_ms: 2.5155
+  type: 'test'
+  ...
+# Subtest: rejected and orphaned cancellations do not count as terminated output
+ok 16 - rejected and orphaned cancellations do not count as terminated output
+  ---
+  duration_ms: 0.5616
+  type: 'test'
+  ...
+# Subtest: each adapter phase needs one original matching driver observation
+ok 17 - each adapter phase needs one original matching driver observation
+  ---
+  duration_ms: 1.3821
+  type: 'test'
+  ...
+# Subtest: utterances cannot be rebound or counted when their source checks fail
+ok 18 - utterances cannot be rebound or counted when their source checks fail
+  ---
+  duration_ms: 1.0913
+  type: 'test'
+  ...
+# Subtest: native failures and unobserved starts cannot produce successful evidence
+ok 19 - native failures and unobserved starts cannot produce successful evidence
+  ---
+  duration_ms: 1.0888
+  type: 'test'
+  ...
+# Subtest: synchronous native start may precede the adapter submission report
+ok 20 - synchronous native start may precede the adapter submission report
+  ---
+  duration_ms: 0.8442
+  type: 'test'
+  ...
+# Subtest: a response gate that never opens fails on one bounded deadline
+ok 21 - a response gate that never opens fails on one bounded deadline
+  ---
+  duration_ms: 0.9158
+  type: 'test'
+  ...
+# Subtest: settled gates preserve the original result and always release their deadline
+ok 22 - settled gates preserve the original result and always release their deadline
+  ---
+  duration_ms: 0.5213
+  type: 'test'
+  ...
+# Subtest: gate deadlines must be positive and finite
+ok 23 - gate deadlines must be positive and finite
+  ---
+  duration_ms: 0.4842
+  type: 'test'
+  ...
+# Subtest: 二进制回传逐字节一致
+ok 24 - 二进制回传逐字节一致
+  ---
+  duration_ms: 5.2822
+  type: 'test'
+  ...
+# Subtest: 不同内容失败且只通知一次
+ok 25 - 不同内容失败且只通知一次
+  ---
+  duration_ms: 1.1116
+  type: 'test'
+  ...
+# Subtest: pong 标识不匹配明确失败
+ok 26 - pong 标识不匹配明确失败
+  ---
+  duration_ms: 0.653
+  type: 'test'
+  ...
+# Subtest: 禁止并发在途请求
+ok 27 - 禁止并发在途请求
+  ---
+  duration_ms: 0.4685
+  type: 'test'
+  ...
+# Subtest: 停止取消请求并关闭连接
+ok 28 - 停止取消请求并关闭连接
+  ---
+  duration_ms: 0.7585
+  type: 'test'
+  ...
+# Subtest: 超时处理器停止而不重试
+ok 29 - 超时处理器停止而不重试
+  ---
+  duration_ms: 0.4142
+  type: 'test'
+  ...
+# Subtest: local transport receives capture time before encoding completes
+ok 30 - local transport receives capture time before encoding completes
+  ---
+  duration_ms: 9.0461
+  type: 'test'
+  ...
+# Subtest: twelve-credit ceiling includes all queued display work
+ok 31 - twelve-credit ceiling includes all queued display work
+  ---
+  duration_ms: 4.7152
+  type: 'test'
+  ...
+# Subtest: 30FPS cadence absorbs ordinary timer oversleep
+ok 32 - 30FPS cadence absorbs ordinary timer oversleep
+  ---
+  duration_ms: 6.8172
+  type: 'test'
+  ...
+# Subtest: ordinary timer oversleep does not accumulate across steady captures
+ok 33 - ordinary timer oversleep does not accumulate across steady captures
+  ---
+  duration_ms: 9.3285
+  type: 'test'
+  ...
+# Subtest: a full-interval timer stall resets cadence without a catch-up burst
+ok 34 - a full-interval timer stall resets cadence without a catch-up burst
+  ---
+  duration_ms: 1.9221
+  type: 'test'
+  ...
+# Subtest: credit stalls reset cadence even below one interval
+ok 35 - credit stalls reset cadence even below one interval
+  ---
+  duration_ms: 2.7602
+  type: 'test'
+  ...
+# Subtest: cold first frame and five credits include queued display
+ok 36 - cold first frame and five credits include queued display
+  ---
+  duration_ms: 1.8355
+  type: 'test'
+  ...
+# Subtest: steady stalls and render queue are included in latency
+ok 37 - steady stalls and render queue are included in latency
+  ---
+  duration_ms: 2.7896
+  type: 'test'
+  ...
+# Subtest: transport failure stops admission and is reported once
+ok 38 - transport failure stops admission and is reported once
+  ---
+  duration_ms: 2.9929
+  type: 'test'
+  ...
+# Subtest: normal end drains valid frames without counting unresolved input
+ok 39 - normal end drains valid frames without counting unresolved input
+  ---
+  duration_ms: 2.5494
+  type: 'test'
+  ...
+# Subtest: stop during capture never submits the late frame
+ok 40 - stop during capture never submits the late frame
+  ---
+  duration_ms: 1.8246
+  type: 'test'
+  ...
+# [PRS language] Preference changed: zh-CN
+# [PRS language] Preference changed: en
+# [PRS language] Preference changed: zh-CN
+# [PRS language] Preference changed: system
+# Subtest: language resolution uses browser preference and honors explicit choices
+ok 41 - language resolution uses browser preference and honors explicit choices
+  ---
+  duration_ms: 1.308
+  type: 'test'
+  ...
+# Subtest: catalog translates all entries and preserves diagnostic identifiers
+ok 42 - catalog translates all entries and preserves diagnostic identifiers
+  ---
+  duration_ms: 32.5602
+  type: 'test'
+  ...
+# Subtest: DOM switching retains source strings and follows system and storage events
+ok 43 - DOM switching retains source strings and follows system and storage events
+  ---
+  duration_ms: 2.9674
+  type: 'test'
+  ...
+# Subtest: explicit authorization stops temporary tracks before enumerating and never selects
+ok 44 - explicit authorization stops temporary tracks before enumerating and never selects
+  ---
+  duration_ms: 2.9664
+  type: 'test'
+  ...
+# Subtest: denied authorization does not retry or read devices as a fallback
+ok 45 - denied authorization does not retry or read devices as a fallback
+  ---
+  duration_ms: 1.1119
+  type: 'test'
+  ...
+# Subtest: cleanup failure still attempts all tracks once and stays explicit
+ok 46 - cleanup failure still attempts all tracks once and stays explicit
+  ---
+  duration_ms: 0.4593
+  type: 'test'
+  ...
+# Subtest: inventory preserves only an explicit currently available video ID
+ok 47 - inventory preserves only an explicit currently available video ID
+  ---
+  duration_ms: 0.2632
+  type: 'test'
+  ...
+# Subtest: default browser timer wrappers retain the native global receiver
+ok 48 - default browser timer wrappers retain the native global receiver
+  ---
+  duration_ms: 5.3517
+  type: 'test'
+  ...
+# Subtest: late frames cannot overwrite stopped guidance but active foreign sessions are reported
+ok 49 - late frames cannot overwrite stopped guidance but active foreign sessions are reported
+  ---
+  duration_ms: 2.2947
+  type: 'test'
+  ...
+# Subtest: late engine start retains queued request's original source frame
+ok 50 - late engine start retains queued request's original source frame
+  ---
+  duration_ms: 1.6123
+  type: 'test'
+  ...
+# Subtest: unstarted risk expires by its own source frame even while new frames arrive
+ok 51 - unstarted risk expires by its own source frame even while new frames arrive
+  ---
+  duration_ms: 1.9482
+  type: 'test'
+  ...
+# Subtest: user cancels queued guidance without an automatic resubmission
+ok 52 - user cancels queued guidance without an automatic resubmission
+  ---
+  duration_ms: 1.1625
+  type: 'test'
+  ...
+# Subtest: tracking epoch prevents old cooldown from suppressing a reused ID
+ok 53 - tracking epoch prevents old cooldown from suppressing a reused ID
+  ---
+  duration_ms: 0.9557
+  type: 'test'
+  ...
+# Subtest: a disappearing explicit local voice pauses rather than falling back
+ok 54 - a disappearing explicit local voice pauses rather than falling back
+  ---
+  duration_ms: 0.7281
+  type: 'test'
+  ...
+# Subtest: explicit speech and vibration channels share one target without a FIFO
+ok 55 - explicit speech and vibration channels share one target without a FIFO
+  ---
+  duration_ms: 0.8845
+  type: 'test'
+  ...
+# Subtest: select one required risk by priority/distance/track
+ok 56 - select one required risk by priority/distance/track
+  ---
+  duration_ms: 0.6195
+  type: 'test'
+  ...
+# Subtest: guidance remains opt-in and never substitutes remote or mismatched voices
+ok 57 - guidance remains opt-in and never substitutes remote or mismatched voices
+  ---
+  duration_ms: 1.3848
+  type: 'test'
+  ...
+# Subtest: source capture TTL gates alerts while preserving late results
+ok 58 - source capture TTL gates alerts while preserving late results
+  ---
+  duration_ms: 0.6349
+  type: 'test'
+  ...
+# Subtest: same-track cooldown starts at engine start, upgrades are immediate
+ok 59 - same-track cooldown starts at engine start, upgrades are immediate
+  ---
+  duration_ms: 0.5529
+  type: 'test'
+  ...
+# Subtest: risk preempts own navigation and resumes its whole text
+ok 60 - risk preempts own navigation and resumes its whole text
+  ---
+  duration_ms: 0.5235
+  type: 'test'
+  ...
+# Subtest: guidance never cancels manual/scene or newer manual vibration
+ok 61 - guidance never cancels manual/scene or newer manual vibration
+  ---
+  duration_ms: 0.3187
+  type: 'test'
+  ...
+# Subtest: manual vibration already pending cannot be replaced by a new risk
+ok 62 - manual vibration already pending cannot be replaced by a new risk
+  ---
+  duration_ms: 0.6136
+  type: 'test'
+  ...
+# Subtest: manual vibration replacing guidance remains protected from upgrades and later risks
+ok 63 - manual vibration replacing guidance remains protected from upgrades and later risks
+  ---
+  duration_ms: 0.6241
+  type: 'test'
+  ...
+# Subtest: own vibration can still upgrade and replace after its original cooldown
+ok 64 - own vibration can still upgrade and replace after its original cooldown
+  ---
+  duration_ms: 1.637
+  type: 'test'
+  ...
+# Subtest: latest risk replaces older pending perception rather than queuing
+ok 65 - latest risk replaces older pending perception rather than queuing
+  ---
+  duration_ms: 0.5817
+  type: 'test'
+  ...
+# Subtest: native errors pause their channels until a manual resume
+ok 66 - native errors pause their channels until a manual resume
+  ---
+  duration_ms: 0.406
+  type: 'test'
+  ...
+# Subtest: one pending navigation expires after10s and is not replayed after risk
+ok 67 - one pending navigation expires after10s and is not replayed after risk
+  ---
+  duration_ms: 0.5717
+  type: 'test'
+  ...
+# Subtest: stop and explicit disable clear owned work without losing live-session re-enable
+ok 68 - stop and explicit disable clear owned work without losing live-session re-enable
+  ---
+  duration_ms: 0.4298
+  type: 'test'
+  ...
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: 'accuracy_insufficient' }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'off_route', reason: 'off_route' }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'arrived', reason: null }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'position_stale' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'stopped', reason: 'user' }
+# Subtest: navigation bundle preserves explicit synthetic provenance and deep copies
+ok 69 - navigation bundle preserves explicit synthetic provenance and deep copies
+  ---
+  duration_ms: 4.7362
+  type: 'test'
+  ...
+# Subtest: navigation bundle rejects invalid provenance and route metadata
+ok 70 - navigation bundle rejects invalid provenance and route metadata
+  ---
+  duration_ms: 1.8573
+  type: 'test'
+  ...
+# Subtest: navigation replay rejects invalid source times and positioning values
+ok 71 - navigation replay rejects invalid source times and positioning values
+  ---
+  duration_ms: 3.699
+  type: 'test'
+  ...
+# Subtest: navigation replay enforces route and fix capacities
+ok 72 - navigation replay enforces route and fix capacities
+  ---
+  duration_ms: 12.9014
+  type: 'test'
+  ...
+# Subtest: GPS replay starts asynchronously and exhausts once without looping
+ok 73 - GPS replay starts asynchronously and exhausts once without looping
+  ---
+  duration_ms: 1.7744
+  type: 'test'
+  ...
+# Subtest: delayed timers retain source timestamps rather than refreshing GPS age
+ok 74 - delayed timers retain source timestamps rather than refreshing GPS age
+  ---
+  duration_ms: 0.5294
+  type: 'test'
+  ...
+# Subtest: cleared callbacks and older handles cannot affect a new GPS replay
+ok 75 - cleared callbacks and older handles cannot affect a new GPS replay
+  ---
+  duration_ms: 0.7206
+  type: 'test'
+  ...
+# Subtest: delivery observer cancellation cannot leak a pending location callback
+ok 76 - delivery observer cancellation cannot leak a pending location callback
+  ---
+  duration_ms: 0.544
+  type: 'test'
+  ...
+# Subtest: GPS replay owns copied source and requires explicit stop before replacement
+ok 77 - GPS replay owns copied source and requires explicit stop before replacement
+  ---
+  duration_ms: 0.9824
+  type: 'test'
+  ...
+# Subtest: disposing GPS replay is terminal and cancels all source timers
+ok 78 - disposing GPS replay is terminal and cancels all source timers
+  ---
+  duration_ms: 1.3273
+  type: 'test'
+  ...
+# Subtest: local replay drives navigation turns, quality loss, deviation, recovery and arrival
+ok 79 - local replay drives navigation turns, quality loss, deviation, recovery and arrival
+  ---
+  duration_ms: 8.7879
+  type: 'test'
+  ...
+# Subtest: exhausted replay cannot bypass the existing stale GPS watchdog
+ok 80 - exhausted replay cannot bypass the existing stale GPS watchdog
+  ---
+  duration_ms: 3.8652
+  type: 'test'
+  ...
+# Subtest: explicit navigation stop prevents all later synthetic GPS fixes
+ok 81 - explicit navigation stop prevents all later synthetic GPS fixes
+  ---
+  duration_ms: 1.5113
+  type: 'test'
+  ...
+# [PRS navigation] Location failed { reason: 'position_stale' }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'stop'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'explicit-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'explicit-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'explicit-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'explicit-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 4,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100100,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100100,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 3,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 3,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'off_route',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'off_route',
+#   step_index: null,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'off_route',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 3,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 3,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'accuracy_insufficient',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'accuracy_insufficient',
+#   step_index: null,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'accuracy_insufficient',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 3,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 3,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'arrived',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'arrived',
+#   step_index: null,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'arrived',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_expired_before_start',
+#   at: 115000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_expired_before_start',
+#   at: 115000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   stop_reason: 'stop'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 115000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'speech_busy',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'speech_busy',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'speech_busy',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'explicit_local_voice_required',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'local_voice_unavailable',
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_error',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'native_error',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'paused',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'resumed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'another-run',
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'another-run',
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'another-run',
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'paused',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'resumed',
+#   run_id: 'another-run',
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'another-run',
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'another-run',
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_error',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'native_error',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'native_error',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'paused',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'resumed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancelled',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'paused',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancelled',
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'page_hidden',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'page_hidden'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'new-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'new-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'new-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'new-run',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 4,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: 'disabled',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disabled'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 3,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'stop'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: null,
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 4,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 101000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 101000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 101000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   actual_start: false
+# }
+# [PRS navigation] State changed { state: 'arrived', reason: null }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 102000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 1,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 102000,
+#   kind: 'arrived',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 102000,
+#   request_id: 3,
+#   kind: 'arrived',
+#   step_index: null,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 102000,
+#   request_id: 3,
+#   kind: 'arrived',
+#   step_index: null,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 102000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'error',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'error',
+#   step_index: null,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_end',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 120000,
+#   request_id: 1,
+#   kind: 'error',
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 120000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 129000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 129000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 129000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 2
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 115000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'user',
+#   at: 115000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 115000,
+#   stop_reason: 'user'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'resumed',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_error',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'cancel_failed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'paused',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 1
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 115000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: true,
+#   reason: 'user',
+#   at: 115000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: true,
+#   reason: 'cancel_failed',
+#   at: 115000,
+#   stop_reason: 'user'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'resumed',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'after-explicit-cleanup',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'after-explicit-cleanup',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'after-explicit-cleanup',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'after-explicit-cleanup',
+#   generation: 3,
+#   enabled: true,
+#   paused: false,
+#   reason: 'disposed',
+#   at: 115000,
+#   request_id: 2,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 4,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 115000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'speech_disabled_or_unavailable',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'speech_disabled_or_unavailable',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'suppressed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'page_hidden',
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'new_run'
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'run',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: false,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'enabled',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: 'turn',
+#   step_index: 0
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_submitted',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_start',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   actual_start: true,
+#   hardware_verified: false
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'output_cancel',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: 'source_changed',
+#   at: 100000,
+#   request_id: 1,
+#   kind: 'turn',
+#   step_index: 0,
+#   accepted: true
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'source_changed',
+#   run_id: 'navigation-test',
+#   generation: 1,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   kind: null,
+#   step_index: null
+# }
+# [PRS navigation speech] State changed {
+#   phase: 'stopped',
+#   run_id: null,
+#   generation: 2,
+#   enabled: true,
+#   paused: false,
+#   reason: null,
+#   at: 100000,
+#   stop_reason: 'disposed'
+# }
+# Subtest: navigation speech counts down to the next maneuver rather than the current one
+ok 82 - navigation speech counts down to the next maneuver rather than the current one
+  ---
+  duration_ms: 2.7975
+  type: 'test'
+  ...
+# Subtest: Chinese navigation uses type labels rather than English original instructions
+ok 83 - Chinese navigation uses type labels rather than English original instructions
+  ---
+  duration_ms: 0.6141
+  type: 'test'
+  ...
+# Subtest: English navigation preserves the next maneuver and endpoint semantics
+ok 84 - English navigation preserves the next maneuver and endpoint semantics
+  ---
+  duration_ms: 0.3797
+  type: 'test'
+  ...
+# Subtest: upcoming destination is never announced as an already completed arrival
+ok 85 - upcoming destination is never announced as an already completed arrival
+  ---
+  duration_ms: 0.3059
+  type: 'test'
+  ...
+# Subtest: state notices never reuse a turn and inactive ready states remain silent
+ok 86 - state notices never reuse a turn and inactive ready states remain silent
+  ---
+  duration_ms: 0.8098
+  type: 'test'
+  ...
+# Subtest: navigation speech defaults off and requires an explicit run
+ok 87 - navigation speech defaults off and requires an explicit run
+  ---
+  duration_ms: 6.1036
+  type: 'test'
+  ...
+# Subtest: same-step GPS distance updates neither replay nor interrupt speech
+ok 88 - same-step GPS distance updates neither replay nor interrupt speech
+  ---
+  duration_ms: 2.4053
+  type: 'test'
+  ...
+# Subtest: new and backward steps replace only the adapter's previous instruction
+ok 89 - new and backward steps replace only the adapter's previous instruction
+  ---
+  duration_ms: 2.1668
+  type: 'test'
+  ...
+# Subtest: off-route and poor accuracy replace turns once and recover only on fresh guidance
+ok 90 - off-route and poor accuracy replace turns once and recover only on fresh guidance
+  ---
+  duration_ms: 3.4511
+  type: 'test'
+  ...
+# Subtest: fresh controller arrival is spoken once despite active false
+ok 91 - fresh controller arrival is spoken once despite active false
+  ---
+  duration_ms: 1.145
+  type: 'test'
+  ...
+# Subtest: stale, future and poor-quality fixes cannot produce navigation turns
+ok 92 - stale, future and poor-quality fixes cannot produce navigation turns
+  ---
+  duration_ms: 4.3931
+  type: 'test'
+  ...
+# Subtest: queued turn expires by its own GPS timestamp rather than later same-step fixes
+ok 93 - queued turn expires by its own GPS timestamp rather than later same-step fixes
+  ---
+  duration_ms: 0.9206
+  type: 'test'
+  ...
+# Subtest: started turn cannot remain active after its latest GPS source becomes stale
+ok 94 - started turn cannot remain active after its latest GPS source becomes stale
+  ---
+  duration_ms: 1.1843
+  type: 'test'
+  ...
+# Subtest: manual speech is never interrupted and only the latest pending step is submitted
+ok 95 - manual speech is never interrupted and only the latest pending step is submitted
+  ---
+  duration_ms: 1.2717
+  type: 'test'
+  ...
+# Subtest: foreign completion never resurrects an expired pending maneuver
+ok 96 - foreign completion never resurrects an expired pending maneuver
+  ---
+  duration_ms: 0.6408
+  type: 'test'
+  ...
+# Subtest: default, remote, wrong-language, missing and ambiguous voices are rejected
+ok 97 - default, remote, wrong-language, missing and ambiguous voices are rejected
+  ---
+  duration_ms: 3.3672
+  type: 'test'
+  ...
+# Subtest: speech follows 2x controls and later user rate and volume overrides
+ok 98 - speech follows 2x controls and later user rate and volume overrides
+  ---
+  duration_ms: 1.3038
+  type: 'test'
+  ...
+# Subtest: synchronous submitted and start are bound to one owned request
+ok 99 - synchronous submitted and start are bound to one owned request
+  ---
+  duration_ms: 0.8769
+  type: 'test'
+  ...
+# Subtest: synchronous native errors cannot leave phantom active output or auto retry
+ok 100 - synchronous native errors cannot leave phantom active output or auto retry
+  ---
+  duration_ms: 1.0407
+  type: 'test'
+  ...
+# Subtest: submission failure stays paused across fixes and new runs until manual resume
+ok 101 - submission failure stays paused across fixes and new runs until manual resume
+  ---
+  duration_ms: 1.0043
+  type: 'test'
+  ...
+# Subtest: asynchronous own error pauses and foreign completion cannot recover it
+ok 102 - asynchronous own error pauses and foreign completion cannot recover it
+  ---
+  duration_ms: 0.9546
+  type: 'test'
+  ...
+# Subtest: manual cancellation of owned speech never automatically replays the same instruction
+ok 103 - manual cancellation of owned speech never automatically replays the same instruction
+  ---
+  duration_ms: 0.7719
+  type: 'test'
+  ...
+# Subtest: stop and begin isolate late events and allow the same route step in a new run
+ok 104 - stop and begin isolate late events and allow the same route step in a new run
+  ---
+  duration_ms: 0.9906
+  type: 'test'
+  ...
+# Subtest: disable clears own pending work and stop never cancels later manual speech
+ok 105 - disable clears own pending work and stop never cancels later manual speech
+  ---
+  duration_ms: 0.9278
+  type: 'test'
+  ...
+# Subtest: dispose releases all adapter subscriptions and timers
+ok 106 - dispose releases all adapter subscriptions and timers
+  ---
+  duration_ms: 2.1125
+  type: 'test'
+  ...
+# Subtest: existing navigation controller feeds start, step change and inactive arrival without risk integration
+ok 107 - existing navigation controller feeds start, step change and inactive arrival without risk integration
+  ---
+  duration_ms: 4.6319
+  type: 'test'
+  ...
+# Subtest: navigation diagnostics omit spoken bodies and coordinates and never claim verified audio
+ok 108 - navigation diagnostics omit spoken bodies and coordinates and never claim verified audio
+  ---
+  duration_ms: 0.6873
+  type: 'test'
+  ...
+# Subtest: terminal location errors are announced once without requiring a GPS fix
+ok 109 - terminal location errors are announced once without requiring a GPS fix
+  ---
+  duration_ms: 1.3402
+  type: 'test'
+  ...
+# Subtest: started same-step guidance follows latest GPS freshness without replay
+ok 110 - started same-step guidance follows latest GPS freshness without replay
+  ---
+  duration_ms: 0.8271
+  type: 'test'
+  ...
+# Subtest: failed cancellation retains ownership and never retries on GPS or source expiry
+ok 111 - failed cancellation retains ownership and never retries on GPS or source expiry
+  ---
+  duration_ms: 1.8539
+  type: 'test'
+  ...
+# Subtest: failed external shared stop retains ownership until explicit successful cleanup
+ok 112 - failed external shared stop retains ownership until explicit successful cleanup
+  ---
+  duration_ms: 2.0516
+  type: 'test'
+  ...
+# Subtest: unavailable disabled and hidden shared output cannot be bypassed by navigation
+ok 113 - unavailable disabled and hidden shared output cannot be bypassed by navigation
+  ---
+  duration_ms: 1.2692
+  type: 'test'
+  ...
+# Subtest: ready idle and stopped states cancel old turns without speaking stale directions
+ok 114 - ready idle and stopped states cancel old turns without speaking stale directions
+  ---
+  duration_ms: 1.9241
+  type: 'test'
+  ...
+# Subtest: video selection requires backend alert_required and positive priority
+ok 115 - video selection requires backend alert_required and positive priority
+  ---
+  duration_ms: 3.5713
+  type: 'test'
+  ...
+# Subtest: server alert priority dominates TTC and distance
+ok 116 - server alert priority dominates TTC and distance
+  ---
+  duration_ms: 0.691
+  type: 'test'
+  ...
+# Subtest: equal-level video alerts choose the shortest known positive TTC
+ok 117 - equal-level video alerts choose the shortest known positive TTC
+  ---
+  duration_ms: 0.261
+  type: 'test'
+  ...
+# Subtest: invalid TTC values are unknown rather than coerced or treated as imminent
+ok 118 - invalid TTC values are unknown rather than coerced or treated as imminent
+  ---
+  duration_ms: 0.3807
+  type: 'test'
+  ...
+# Subtest: video alert TTC ties use distance then track ID
+ok 119 - video alert TTC ties use distance then track ID
+  ---
+  duration_ms: 0.227
+  type: 'test'
+  ...
+# Subtest: unknown or invalid distance cannot outrank a known positive distance
+ok 120 - unknown or invalid distance cannot outrank a known positive distance
+  ---
+  duration_ms: 0.2846
+  type: 'test'
+  ...
+# Subtest: video selection does not mutate backend boxes or their array
+ok 121 - video selection does not mutate backend boxes or their array
+  ---
+  duration_ms: 2.0252
+  type: 'test'
+  ...
+# Subtest: video alerts render exact short Chinese and English level speech
+ok 122 - video alerts render exact short Chinese and English level speech
+  ---
+  duration_ms: 0.7454
+  type: 'test'
+  ...
+# Subtest: high video speech preserves all directions and confirmed approach
+ok 123 - high video speech preserves all directions and confirmed approach
+  ---
+  duration_ms: 1.1286
+  type: 'test'
+  ...
+# Subtest: medium slow-approach speech remains one attention sentence in all directions
+ok 124 - medium slow-approach speech remains one attention sentence in all directions
+  ---
+  duration_ms: 0.8613
+  type: 'test'
+  ...
+# Subtest: distance TTC and confirmed speed magnitude never add numeric narration to any grade
+ok 125 - distance TTC and confirmed speed magnitude never add numeric narration to any grade
+  ---
+  duration_ms: 0.9711
+  type: 'test'
+  ...
+# Subtest: fast approach uses state negative speed and both backend reason markers
+ok 126 - fast approach uses state negative speed and both backend reason markers
+  ---
+  duration_ms: 0.4021
+  type: 'test'
+  ...
+# Subtest: slow unknown stationary receding hysteresis and inconsistent motion never claim fast approach
+ok 127 - slow unknown stationary receding hysteresis and inconsistent motion never claim fast approach
+  ---
+  duration_ms: 0.6958
+  type: 'test'
+  ...
+# Subtest: speech category contract covers exactly all eighty labels in the real model manifest
+ok 128 - speech category contract covers exactly all eighty labels in the real model manifest
+  ---
+  duration_ms: 0.2893
+  type: 'test'
+  ...
+# Subtest: short video speech names all eighty canonical backend object classes
+ok 129 - short video speech names all eighty canonical backend object classes
+  ---
+  duration_ms: 0.676
+  type: 'test'
+  ...
+# Subtest: canonical umbrella speech names the detected umbrella instead of a generic object
+ok 130 - canonical umbrella speech names the detected umbrella instead of a generic object
+  ---
+  duration_ms: 0.2057
+  type: 'test'
+  ...
+# Subtest: a deliberately noncurrent future class uses explicit generic object speech
+ok 131 - a deliberately noncurrent future class uses explicit generic object speech
+  ---
+  duration_ms: 0.1733
+  type: 'test'
+  ...
+# Subtest: critical speech matches the requested approaching left-front person example
+ok 132 - critical speech matches the requested approaching left-front person example
+  ---
+  duration_ms: 0.1579
+  type: 'test'
+  ...
+# Subtest: medium speech matches the requested right-front person attention example
+ok 133 - medium speech matches the requested right-front person attention example
+  ---
+  duration_ms: 0.1607
+  type: 'test'
+  ...
+# Subtest: medium confirmed fast approach uses concise right-front and unknown-direction attention
+ok 134 - medium confirmed fast approach uses concise right-front and unknown-direction attention
+  ---
+  duration_ms: 0.2094
+  type: 'test'
+  ...
+# Subtest: critical unknown direction remains explicit without inventing approach
+ok 135 - critical unknown direction remains explicit without inventing approach
+  ---
+  duration_ms: 0.1746
+  type: 'test'
+  ...
+# Subtest: English video guidance submits short confirmed approach speech
+ok 136 - English video guidance submits short confirmed approach speech
+  ---
+  duration_ms: 4.0764
+  type: 'test'
+  ...
+# Subtest: only explicitly injected video guidance chooses TTC and speaks the video template
+ok 137 - only explicitly injected video guidance chooses TTC and speaks the video template
+  ---
+  duration_ms: 1.0801
+  type: 'test'
+  ...
+# Subtest: shorter TTC does not bypass same-level start-based three-second cooldown
+ok 138 - shorter TTC does not bypass same-level start-based three-second cooldown
+  ---
+  duration_ms: 1.1508
+  type: 'test'
+  ...
+# Subtest: server level escalation interrupts only the manager-owned video alert
+ok 139 - server level escalation interrupts only the manager-owned video alert
+  ---
+  duration_ms: 0.8216
+  type: 'test'
+  ...
+# Subtest: video risk and EOF leave manual speech ownership intact
+ok 140 - video risk and EOF leave manual speech ownership intact
+  ---
+  duration_ms: 0.3734
+  type: 'test'
+  ...
+# Subtest: non-alert video targets never produce speech even with tiny TTC
+ok 141 - non-alert video targets never produce speech even with tiny TTC
+  ---
+  duration_ms: 0.2404
+  type: 'test'
+  ...
+# Subtest: expired future and foreign-session video frames cannot trigger speech
+ok 142 - expired future and foreign-session video frames cannot trigger speech
+  ---
+  duration_ms: 0.2537
+  type: 'test'
+  ...
+# Subtest: unstarted video speech expires by its own source and consumes only the latest fresh TTC
+ok 143 - unstarted video speech expires by its own source and consumes only the latest fresh TTC
+  ---
+  duration_ms: 0.9392
+  type: 'test'
+  ...
+# Subtest: started video speech completes across fresh empty and non-alert frames
+ok 144 - started video speech completes across fresh empty and non-alert frames
+  ---
+  duration_ms: 0.5254
+  type: 'test'
+  ...
+# Subtest: started video speech survives source expiry and does not replay stale risk at end
+ok 145 - started video speech survives source expiry and does not replay stale risk at end
+  ---
+  duration_ms: 0.4098
+  type: 'test'
+  ...
+# Subtest: same or lower priority video targets do not preempt started speech
+ok 146 - same or lower priority video targets do not preempt started speech
+  ---
+  duration_ms: 0.324
+  type: 'test'
+  ...
+# Subtest: queued video speech still cancels when alert disappears or source expires
+ok 147 - queued video speech still cancels when alert disappears or source expires
+  ---
+  duration_ms: 0.5342
+  type: 'test'
+  ...
+# Subtest: disabling video guidance still cancels its started speech immediately
+ok 148 - disabling video guidance still cancels its started speech immediately
+  ---
+  duration_ms: 0.3264
+  type: 'test'
+  ...
+# Subtest: manual cancellation still stops started video speech without replay
+ok 149 - manual cancellation still stops started video speech without replay
+  ---
+  duration_ms: 0.3956
+  type: 'test'
+  ...
+# Subtest: default camera guidance still cancels started speech on no-alert frames and expiry
+ok 150 - default camera guidance still cancels started speech on no-alert frames and expiry
+  ---
+  duration_ms: 0.494
+  type: 'test'
+  ...
+# Subtest: video stop EOF and error clear owned alerts and reject late frames
+ok 151 - video stop EOF and error clear owned alerts and reject late frames
+  ---
+  duration_ms: 0.4484
+  type: 'test'
+  ...
+# Subtest: file metadata selection opens no camera, playback or inference
+ok 152 - file metadata selection opens no camera, playback or inference
+  ---
+  duration_ms: 5.032
+  type: 'test'
+  ...
+# Subtest: capture timestamp is actual draw clock, not media PTS or encode completion
+ok 153 - capture timestamp is actual draw clock, not media PTS or encode completion
+  ---
+  duration_ms: 11.419
+  type: 'test'
+  ...
+# Subtest: first frame is exclusive while source PTS keeps advancing
+ok 154 - first frame is exclusive while source PTS keeps advancing
+  ---
+  duration_ms: 3.5778
+  type: 'test'
+  ...
+# Subtest: total window includes JPEG encoding and dispatch remains in capture order
+ok 155 - total window includes JPEG encoding and dispatch remains in capture order
+  ---
+  duration_ms: 4.5191
+  type: 'test'
+  ...
+# Subtest: EOF sends already admitted JPEG and waits for full ordered delivery before stop
+ok 156 - EOF sends already admitted JPEG and waits for full ordered delivery before stop
+  ---
+  duration_ms: 2.6458
+  type: 'test'
+  ...
+# Subtest: explicit stop does not send a JPEG that finishes encoding later
+ok 157 - explicit stop does not send a JPEG that finishes encoding later
+  ---
+  duration_ms: 1.6873
+  type: 'test'
+  ...
+# Subtest: explicit stop isolates a late annotation decode
+ok 158 - explicit stop isolates a late annotation decode
+  ---
+  duration_ms: 1.455
+  type: 'test'
+  ...
+# Subtest: provider completion during EOF drain seals unsent encodes without changing normal end to error
+ok 159 - provider completion during EOF drain seals unsent encodes without changing normal end to error
+  ---
+  duration_ms: 1.0418
+  type: 'test'
+  ...
+# Subtest: normal provider end drains valid work while unresolved session-ended frames stay undelivered
+ok 160 - normal provider end drains valid work while unresolved session-ended frames stay undelivered
+  ---
+  duration_ms: 3.4906
+  type: 'test'
+  ...
+# Subtest: duplicate source mediaPTS stops explicitly instead of replaying the same frame
+ok 161 - duplicate source mediaPTS stops explicitly instead of replaying the same frame
+  ---
+  duration_ms: 2.5528
+  type: 'test'
+  ...
+# Subtest: seeking, speed changes and loop mutations each stop without automatic correction
+ok 162 - seeking, speed changes and loop mutations each stop without automatic correction
+  ---
+  duration_ms: 1.8478
+  type: 'test'
+  ...
+# Subtest: native playback rejection stops the accepted session without retry or fallback
+ok 163 - native playback rejection stops the accepted session without retry or fallback
+  ---
+  duration_ms: 0.4656
+  type: 'test'
+  ...
+# Subtest: cancelled metadata loading settles and cannot mutate a new file selection
+ok 164 - cancelled metadata loading settles and cannot mutate a new file selection
+  ---
+  duration_ms: 2.5311
+  type: 'test'
+  ...
+# Subtest: dispose during metadata wait detaches and settles without late loaded event
+ok 165 - dispose during metadata wait detaches and settles without late loaded event
+  ---
+  duration_ms: 4.0985
+  type: 'test'
+  ...
+# Subtest: native metadata decode error stays explicit and releases its own Blob URL
+ok 166 - native metadata decode error stays explicit and releases its own Blob URL
+  ---
+  duration_ms: 0.6742
+  type: 'test'
+  ...
+# Subtest: late disconnect from a stopped session cannot cancel a new explicit session
+ok 167 - late disconnect from a stopped session cannot cancel a new explicit session
+  ---
+  duration_ms: 0.4335
+  type: 'test'
+  ...
+# Subtest: native video ended event drains admitted work before reporting EOF
+ok 168 - native video ended event drains admitted work before reporting EOF
+  ---
+  duration_ms: 2.3323
+  type: 'test'
+  ...
+# Subtest: presentation sampling keeps the original30FPS ceiling before capture
+ok 169 - presentation sampling keeps the original30FPS ceiling before capture
+  ---
+  duration_ms: 1.5818
+  type: 'test'
+  ...
+# Subtest: JPEG encoding failure releases the session without retry or inferred delivery
+ok 170 - JPEG encoding failure releases the session without retry or inferred delivery
+  ---
+  duration_ms: 1.4085
+  type: 'test'
+  ...
+# Subtest: HF, local and resident contracts cannot substitute for each other
+ok 171 - HF, local and resident contracts cannot substitute for each other
+  ---
+  duration_ms: 6.7307
+  type: 'test'
+  ...
+# Subtest: local geometry and temporal depth preserve distance tracking and risk interfaces
+ok 172 - local geometry and temporal depth preserve distance tracking and risk interfaces
+  ---
+  duration_ms: 16.1336
+  type: 'test'
+  ...
+# Subtest: distance strategies require explicit valid identity and selected cadence
+ok 173 - distance strategies require explicit valid identity and selected cadence
+  ---
+  duration_ms: 3.059
+  type: 'test'
+  ...
+# Subtest: local native hello is independent from the preserved HF COCO gate
+ok 174 - local native hello is independent from the preserved HF COCO gate
+  ---
+  duration_ms: 1.8507
+  type: 'test'
+  ...
+# Subtest: local PRF2 carries big-endian source capture time and preserves JPEG
+ok 175 - local PRF2 carries big-endian source capture time and preserves JPEG
+  ---
+  duration_ms: 11.2126
+  type: 'test'
+  ...
+# Subtest: local responses bind the same session and exact source timestamp
+ok 176 - local responses bind the same session and exact source timestamp
+  ---
+  duration_ms: 2.9611
+  type: 'test'
+  ...
+# Subtest: depth metadata accepts meters and null while preserving the existing box fields
+ok 177 - depth metadata accepts meters and null while preserving the existing box fields
+  ---
+  duration_ms: 2.3796
+  type: 'test'
+  ...
+# Subtest: depth metadata rejects invalid distances and mismatched box aliases
+ok 178 - depth metadata rejects invalid distances and mismatched box aliases
+  ---
+  duration_ms: 2.5929
+  type: 'test'
+  ...
+# Subtest: depth packets carry 300 objects retaining legacy fields
+ok 179 - depth packets carry 300 objects retaining legacy fields
+  ---
+  duration_ms: 9.537
+  type: 'test'
+  ...
+# Subtest: resident admission is explicit and supports its three workloads
+ok 180 - resident admission is explicit and supports its three workloads
+  ---
+  duration_ms: 4.0213
+  type: 'test'
+  ...
+# Subtest: resident cannot bypass HF admission or accept a changed native plan
+ok 181 - resident cannot bypass HF admission or accept a changed native plan
+  ---
+  duration_ms: 2.0981
+  type: 'test'
+  ...
+# Subtest: resident per-frame stages must match the admitted workload
+ok 182 - resident per-frame stages must match the admitted workload
+  ---
+  duration_ms: 2.1855
+  type: 'test'
+  ...
+# Subtest: resident end preserves final JPEG and checks complete delivery
+ok 183 - resident end preserves final JPEG and checks complete delivery
+  ---
+  duration_ms: 3.6232
+  type: 'test'
+  ...
+# Subtest: resident errors identify busy and unavailable service
+ok 184 - resident errors identify busy and unavailable service
+  ---
+  duration_ms: 0.7603
+  type: 'test'
+  ...
+# Subtest: binary packets preserve JPEG and bound twelve pending requests
+ok 185 - binary packets preserve JPEG and bound twelve pending requests
+  ---
+  duration_ms: 4.4305
+  type: 'test'
+  ...
+# Subtest: corruption and changed model conditions fail without fallback
+ok 186 - corruption and changed model conditions fail without fallback
+  ---
+  duration_ms: 5.0402
+  type: 'test'
+  ...
+# Subtest: out-of-order result stops the whole session
+ok 187 - out-of-order result stops the whole session
+  ---
+  duration_ms: 0.6208
+  type: 'test'
+  ...
+# Subtest: stop and provider end never auto-restart
+ok 188 - stop and provider end never auto-restart
+  ---
+  duration_ms: 0.5263
+  type: 'test'
+  ...
+# Subtest: first response uses55s and steady response10s
+ok 189 - first response uses55s and steady response10s
+  ---
+  duration_ms: 4.2332
+  type: 'test'
+  ...
+# Subtest: final binary is verified before end and close
+ok 190 - final binary is verified before end and close
+  ---
+  duration_ms: 1.017
+  type: 'test'
+  ...
+# Subtest: invalid hello or private capability rejects before input
+ok 191 - invalid hello or private capability rejects before input
+  ---
+  duration_ms: 1.2648
+  type: 'test'
+  ...
+# Subtest: selected precision and backend must match every returned frame
+ok 192 - selected precision and backend must match every returned frame
+  ---
+  duration_ms: 2.6392
+  type: 'test'
+  ...
+# Subtest: risk fields preserve deterministic scores and unavailable TTC
+ok 193 - risk fields preserve deterministic scores and unavailable TTC
+  ---
+  duration_ms: 5.6223
+  type: 'test'
+  ...
+# Subtest: risk rejects invalid or incomplete rule output
+ok 194 - risk rejects invalid or incomplete rule output
+  ---
+  duration_ms: 4.6263
+  type: 'test'
+  ...
+# Subtest: risk supports 300 complete objects
+ok 195 - risk supports 300 complete objects
+  ---
+  duration_ms: 10.2852
+  type: 'test'
+  ...
+# (node:2908) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: tracking fields accept motion and unavailable depth or IDs
+ok 196 - tracking fields accept motion and unavailable depth or IDs
+  ---
+  duration_ms: 2.3989
+  type: 'test'
+  ...
+# Subtest: tracking rejects malformed or incomplete motion data
+ok 197 - tracking rejects malformed or incomplete motion data
+  ---
+  duration_ms: 3.6285
+  type: 'test'
+  ...
+# Subtest: tracking supports 300 objects with complete motion fields
+ok 198 - tracking supports 300 objects with complete motion fields
+  ---
+  duration_ms: 7.931
+  type: 'test'
+  ...
+# Subtest: location preserves device coordinates and constraints
+ok 199 - location preserves device coordinates and constraints
+  ---
+  duration_ms: 4.8077
+  type: 'test'
+  ...
+# Subtest: location errors preserve failure semantics
+ok 200 - location errors preserve failure semantics
+  ---
+  duration_ms: 1.4891
+  type: 'test'
+  ...
+# Subtest: coordinates preserve longitude first and reject missing values
+ok 201 - coordinates preserve longitude first and reject missing values
+  ---
+  duration_ms: 1.1733
+  type: 'test'
+  ...
+# Subtest: walking route uses same-origin POST without a browser key
+ok 202 - walking route uses same-origin POST without a browser key
+  ---
+  duration_ms: 1.6133
+  type: 'test'
+  ...
+# Subtest: HTTP errors expose safe code and request id without retry
+ok 203 - HTTP errors expose safe code and request id without retry
+  ---
+  duration_ms: 0.8289
+  type: 'test'
+  ...
+# Subtest: abort and malformed response fail explicitly
+ok 204 - abort and malformed response fail explicitly
+  ---
+  duration_ms: 12.1996
+  type: 'test'
+  ...
+# Subtest: route validation rejects invalid geometry and instructions
+ok 205 - route validation rejects invalid geometry and instructions
+  ---
+  duration_ms: 2.112
+  type: 'test'
+  ...
+# Subtest: identical endpoints never call the backend
+ok 206 - identical endpoints never call the backend
+  ---
+  duration_ms: 0.9283
+  type: 'test'
+  ...
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'arrived', reason: null }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: 'accuracy_insufficient' }
+# [PRS navigation] State changed { state: 'off_route', reason: 'off_route' }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'stopped', reason: 'user' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'position_stale' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'stopped', reason: 'user' }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'navigating', reason: null }
+# [PRS navigation] State changed { state: 'idle', reason: null }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'permission_denied' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'position_unavailable' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'position_timeout' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'stop_failed' }
+# [PRS navigation] State changed { state: 'stopped', reason: 'user' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'stopped', reason: 'mcp' }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'ready', reason: null }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'position_stale' }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'invalid_position' }
+# [PRS navigation] State changed { state: 'locating', reason: null }
+# [PRS navigation] State changed { state: 'error', reason: 'watch_failed' }
+# Subtest: guidance advances at the corner and releases GPS on arrival
+ok 207 - guidance advances at the corner and releases GPS on arrival
+  ---
+  duration_ms: 8.8079
+  type: 'test'
+  ...
+# Subtest: poor accuracy, off-route fixes and near-end projections cannot falsely arrive
+ok 208 - poor accuracy, off-route fixes and near-end projections cannot falsely arrive
+  ---
+  duration_ms: 3.3978
+  type: 'test'
+  ...
+# Subtest: stale and out-of-order fixes do not extend the freshness deadline
+ok 209 - stale and out-of-order fixes do not extend the freshness deadline
+  ---
+  duration_ms: 1.3522
+  type: 'test'
+  ...
+# Subtest: stop, route edits and restarts reject late callbacks without retrying
+ok 210 - stop, route edits and restarts reject late callbacks without retrying
+  ---
+  duration_ms: 1.3923
+  type: 'test'
+  ...
+# Subtest: GPS failures stop once and cancellation failures remain explicit
+ok 211 - GPS failures stop once and cancellation failures remain explicit
+  ---
+  duration_ms: 2.5704
+  type: 'test'
+  ...
+# Subtest: MCP uses shared state, refuses wrong pages and never starts GPS on read
+ok 212 - MCP uses shared state, refuses wrong pages and never starts GPS on read
+  ---
+  duration_ms: 1.4326
+  type: 'test'
+  ...
+# Subtest: navigation rejects disconnected steps and zero-length geometry
+ok 213 - navigation rejects disconnected steps and zero-length geometry
+  ---
+  duration_ms: 0.869
+  type: 'test'
+  ...
+# Subtest: silent acquisition and invalid native data terminate without starting a replacement
+ok 214 - silent acquisition and invalid native data terminate without starting a replacement
+  ---
+  duration_ms: 1.7717
+  type: 'test'
+  ...
+# Subtest: navigation text is covered by the existing bilingual translator
+ok 215 - navigation text is covered by the existing bilingual translator
+  ---
+  duration_ms: 26.3429
+  type: 'test'
+  ...
+# [PRS navigation] Location failed { reason: 'position_stale' }
+# [PRS navigation] Location failed { reason: 'permission_denied' }
+# [PRS navigation] Location failed { reason: 'position_unavailable' }
+# [PRS navigation] Location failed { reason: 'position_timeout' }
+# [PRS navigation] clearWatch failed { error_type: 'Error' }
+# [PRS navigation] Location failed { reason: 'position_stale' }
+# [PRS navigation] Location failed { reason: 'invalid_position' }
+# [PRS navigation] watchPosition failed { error_type: 'Error' }
+# [PRS navigation] Location failed { reason: 'watch_failed' }
+# Subtest: objects 映射字段、过滤缺失值、排序并截断到50
+ok 216 - objects 映射字段、过滤缺失值、排序并截断到50
+  ---
+  duration_ms: 4.1973
+  type: 'test'
+  ...
+# Subtest: mapBox 与后端校验对齐：trim/控制字符/score 类型/毫米距离
+ok 217 - mapBox 与后端校验对齐：trim/控制字符/score 类型/毫米距离
+  ---
+  duration_ms: 0.5224
+  type: 'test'
+  ...
+# Subtest: 请求体形状符合契约并显示结果
+ok 218 - 请求体形状符合契约并显示结果
+  ---
+  duration_ms: 11.4917
+  type: 'test'
+  ...
+# Subtest: 未开启摄像头或问题过长时不发请求
+ok 219 - 未开启摄像头或问题过长时不发请求
+  ---
+  duration_ms: 0.8464
+  type: 'test'
+  ...
+# Subtest: 每个后端错误码显示本地化提示与 request_id，不显示 detail
+ok 220 - 每个后端错误码显示本地化提示与 request_id，不显示 detail
+  ---
+  duration_ms: 19.5092
+  type: 'test'
+  ...
+# Subtest: 网络失败/超时显示错误，进行中忽略重复点击，无自动重试
+ok 221 - 网络失败/超时显示错误，进行中忽略重复点击，无自动重试
+  ---
+  duration_ms: 10.1559
+  type: 'test'
+  ...
+# Subtest: 仅在语音输出启用时朗读，并使用响应语言
+ok 222 - 仅在语音输出启用时朗读，并使用响应语言
+  ---
+  duration_ms: 1.0123
+  type: 'test'
+  ...
+# Subtest: 未预期异常只显示通用本地化文案，不泄露原始文本
+ok 223 - 未预期异常只显示通用本地化文案，不泄露原始文本
+  ---
+  duration_ms: 0.9782
+  type: 'test'
+  ...
+# Subtest: API 地址遵循 data-api-base 且必须同源
+ok 224 - API 地址遵循 data-api-base 且必须同源
+  ---
+  duration_ms: 1.1994
+  type: 'test'
+  ...
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'origin_rejected',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'invalid_content_type',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'request_too_large',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed { status: 503, code: 'invalid_image', request_id: 'rid-9', objects: 0 }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'invalid_scene_input',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'vlm_not_configured',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'vlm_rate_limit',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed { status: 503, code: 'vlm_capacity', request_id: 'rid-9', objects: 0 }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'vlm_authentication_failed',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'vlm_quota_exceeded',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'vlm_upstream_error',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed { status: 503, code: 'vlm_timeout', request_id: 'rid-9', objects: 0 }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'vlm_invalid_response',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request failed {
+#   status: 503,
+#   code: 'vlm_response_too_large',
+#   request_id: 'rid-9',
+#   objects: 0
+# }
+# [PRS scene] Request not completed { code: 'network_error' }
+# [PRS scene] Request failed { status: 500, code: undefined, request_id: null, objects: 0 }
+# [PRS scene] Request not completed { code: 'timeout' }
+# [PRS scene] Request not completed { code: 'aborted' }
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 1 }
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 0 }
+# Subtest: 页面、白名单提示与翻译覆盖场景区块
+ok 225 - 页面、白名单提示与翻译覆盖场景区块
+  ---
+  duration_ms: 9.0701
+  type: 'test'
+  ...
+# Subtest: describeScene 成功返回响应对象并构造契约请求体
+ok 226 - describeScene 成功返回响应对象并构造契约请求体
+  ---
+  duration_ms: 1.7978
+  type: 'test'
+  ...
+# Subtest: describeScene 把错误映射为 SceneApiError 字段，不重试
+ok 227 - describeScene 把错误映射为 SceneApiError 字段，不重试
+  ---
+  duration_ms: 6.0159
+  type: 'test'
+  ...
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 0 }
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 0 }
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 0 }
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 0 }
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 0 }
+# [PRS scene] Request done { request_id: 'r1', elapsed_ms: 5, objects: 1 }
+# Subtest: describeScene 超时与外部取消分别映射为 timeout/aborted
+ok 228 - describeScene 超时与外部取消分别映射为 timeout/aborted
+  ---
+  duration_ms: 30.5363
+  type: 'test'
+  ...
+# Subtest: 非法 jpeg 抛 invalid_image 且不发请求
+ok 229 - 非法 jpeg 抛 invalid_image 且不发请求
+  ---
+  duration_ms: 59.6876
+  type: 'test'
+  ...
+# Subtest: Blob 输入与 question 处理（trim、超 200 字抛错不截断）
+ok 230 - Blob 输入与 question 处理（trim、超 200 字抛错不截断）
+  ---
+  duration_ms: 0.796
+  type: 'test'
+  ...
+# Subtest: language 与 apiBase 缺省取自 document.documentElement
+ok 231 - language 与 apiBase 缺省取自 document.documentElement
+  ---
+  duration_ms: 0.455
+  type: 'test'
+  ...
+# Subtest: describeCurrentScene 使用摄像头帧与框，未开启时 camera_unavailable
+ok 232 - describeCurrentScene 使用摄像头帧与框，未开启时 camera_unavailable
+  ---
+  duration_ms: 0.7186
+  type: 'test'
+  ...
+# Subtest: output subscriptions expose native lifecycle and preserve request ownership
+ok 233 - output subscriptions expose native lifecycle and preserve request ownership
+  ---
+  duration_ms: 8.0459
+  type: 'test'
+  ...
+# Subtest: local-MVP marker rejects remote and browser-default speech
+ok 234 - local-MVP marker rejects remote and browser-default speech
+  ---
+  duration_ms: 1.0927
+  type: 'test'
+  ...
+# Subtest: 默认关闭、后台和未激活请求不会提交语音
+ok 235 - 默认关闭、后台和未激活请求不会提交语音
+  ---
+  duration_ms: 0.7524
+  type: 'test'
+  ...
+# Subtest: 提交不等于开始/完成且不会自动排队
+ok 236 - 提交不等于开始/完成且不会自动排队
+  ---
+  duration_ms: 0.8506
+  type: 'test'
+  ...
+# Subtest: 文本和数值边界明确拒绝且Unicode计数一致
+ok 237 - 文本和数值边界明确拒绝且Unicode计数一致
+  ---
+  duration_ms: 0.694
+  type: 'test'
+  ...
+# Subtest: 指定声音失效或歧义不会替换为默认声音
+ok 238 - 指定声音失效或歧义不会替换为默认声音
+  ---
+  duration_ms: 0.6995
+  type: 'test'
+  ...
+# Subtest: 语音列表查询失败保持可诊断且不替换声音
+ok 239 - 语音列表查询失败保持可诊断且不替换声音
+  ---
+  duration_ms: 0.4029
+  type: 'test'
+  ...
+# Subtest: 取消失败保留状态，迟到旧事件不能结束新请求
+ok 240 - 取消失败保留状态，迟到旧事件不能结束新请求
+  ---
+  duration_ms: 0.3477
+  type: 'test'
+  ...
+# Subtest: 同步及异步语音错误不会静默重试或泄露正文
+ok 241 - 同步及异步语音错误不会静默重试或泄露正文
+  ---
+  duration_ms: 0.8057
+  type: 'test'
+  ...
+# Subtest: 关闭、隐藏或离页停止，返回前台不自动继续
+ok 242 - 关闭、隐藏或离页停止，返回前台不自动继续
+  ---
+  duration_ms: 0.9117
+  type: 'test'
+  ...
+# Subtest: MCP语音接口不自动启用且与UI共享执行路径
+ok 243 - MCP语音接口不自动启用且与UI共享执行路径
+  ---
+  duration_ms: 0.9682
+  type: 'test'
+  ...
+# Subtest: 语音UI和动态状态完整翻译，朗读正文不属于UI词典
+ok 244 - 语音UI和动态状态完整翻译，朗读正文不属于UI词典
+  ---
+  duration_ms: 23.6038
+  type: 'test'
+  ...
+# Subtest: vibration event identity protects a newer manual pattern from guidance stop
+ok 245 - vibration event identity protects a newer manual pattern from guidance stop
+  ---
+  duration_ms: 4.8307
+  type: 'test'
+  ...
+# Subtest: 默认关闭且每次仅手动发出所选节奏
+ok 246 - 默认关闭且每次仅手动发出所选节奏
+  ---
+  duration_ms: 1.2634
+  type: 'test'
+  ...
+# Subtest: 接口缺失时禁用测试和停止并说明原因
+ok 247 - 接口缺失时禁用测试和停止并说明原因
+  ---
+  duration_ms: 1.1648
+  type: 'test'
+  ...
+# Subtest: 开关、可见性和用户激活阻止非主动请求
+ok 248 - 开关、可见性和用户激活阻止非主动请求
+  ---
+  duration_ms: 0.4299
+  type: 'test'
+  ...
+# Subtest: 拒绝与异常不会宣称接受、重试或触发替代提醒
+ok 249 - 拒绝与异常不会宣称接受、重试或触发替代提醒
+  ---
+  duration_ms: 0.7914
+  type: 'test'
+  ...
+# Subtest: 关闭、隐藏或离页取消请求，回到前台不自动震动
+ok 250 - 关闭、隐藏或离页取消请求，回到前台不自动震动
+  ---
+  duration_ms: 0.8668
+  type: 'test'
+  ...
+# Subtest: 取消被拒绝时保留诊断并允许手动停止
+ok 251 - 取消被拒绝时保留诊断并允许手动停止
+  ---
+  duration_ms: 0.4753
+  type: 'test'
+  ...
+# Subtest: 震动控件及所有动态提示均有英文翻译
+ok 252 - 震动控件及所有动态提示均有英文翻译
+  ---
+  duration_ms: 15.4161
+  type: 'test'
+  ...
+# Subtest: MCP查询和测试复用控制器且不自动启用或伪造激活
+ok 253 - MCP查询和测试复用控制器且不自动启用或伪造激活
+  ---
+  duration_ms: 1.0366
+  type: 'test'
+  ...
+# Subtest: MCP明确返回设备拒绝和异常并保留取消失败状态
+ok 254 - MCP明确返回设备拒绝和异常并保留取消失败状态
+  ---
+  duration_ms: 1.4556
+  type: 'test'
+  ...
+1..254
+# tests 254
+# suites 0
+# pass 254
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 576.1874

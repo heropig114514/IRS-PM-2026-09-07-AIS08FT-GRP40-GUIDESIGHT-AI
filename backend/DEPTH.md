@@ -1,5 +1,9 @@
 # YOLO26 metric depth and object fusion
 
+This document describes the unchanged default A fusion. Explicit geometry (B) and temporal
+depth (C), configuration, cache lifecycle and performance reporting are documented in
+[DISTANCE-MODES.md](DISTANCE-MODES.md). A keeps the same algorithms and fields.
+
 The insertion point is `ResidentDetector.predict()` after unchanged object detection and
 inverse-letterbox box decoding, before JPEG annotation. `AllocatedDetector` inherits this method,
 so native CUDA and HF ZeroGPU use the same fusion code. Echo remains an image-byte diagnostic.

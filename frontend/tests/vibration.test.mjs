@@ -6,7 +6,7 @@
  * TestWindow.info; TestWindow.error; setup; enable; testManual; testManual.native;
  * testUnavailable; testActivation; testActivation.native; testFailures; testFailures.native;
  * testLifecycle; testLifecycle.native; testCancelRejected; testCancelRejected.native; testTranslations。
- * testMcpShared; testMcpShared.native; testMcpFailures; testMcpFailures.native。
+ * testMcpShared; testMcpShared.native; testMcpFailures; testMcpFailures.native; testGuidanceOwnership。
  * Variable Index: None；每个测试的calls记录固定请求，logs记录非敏感诊断，response控制原生替身结果。
  */
 import test from "node:test";
@@ -15,6 +15,19 @@ import {readFile} from "node:fs/promises";
 import {VibrationTester} from "../vibration.js";
 import {translate} from "../i18n.js";
 import {performVibration} from "../ai-control.js";
+
+/** Functionality: Verify real driver's accepted request identity protects newer manual patterns.
+ * Inputs: accepted native fixture. Outputs: start/cancel events and no foreign cancellation.
+ * Logic: each pattern gets a new ID; Constraints: events represent browser API acceptance, not physical motor lifecycle. */
+test("vibration event identity protects a newer manual pattern from guidance stop", function testGuidanceOwnership() {
+  const calls = [], f = setup(pattern => { calls.push(pattern); return true; }), events = [];
+  enable(f.doc); f.tester.subscribe(event => events.push(event));
+  const first = f.tester.testPattern("short"), second = f.tester.testPattern("double");
+  assert.notEqual(first.request_id, second.request_id); assert.equal(f.tester.stopOwned(first.request_id), false);
+  assert.equal(calls.length, 2); assert.equal(f.tester.stopOwned(second.request_id), true);
+  assert.deepEqual(events.map(event => event.phase), ["start", "start", "cancel"]);
+  assert.ok(events.every(event => event.hardware_verified === false));
+});
 
 /** Functionality: 提供可派发点击/变更事件的独立控件。
  * Logic: EventTarget维护监听器，字段仅表示测试所需DOM状态。

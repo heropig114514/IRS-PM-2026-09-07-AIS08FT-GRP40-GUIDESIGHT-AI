@@ -1,6 +1,6 @@
 # 本机／自有服务器常驻 GPU 服务
 
-这是用户选定的后续部署方向。新增入口 `config.resident_asgi:application` 在 ASGI startup 加载一次 GPU 模型；视频连接通过 `/ws/detect/resident/` 直接进入进程内工作线程，省去 HF 分配和 worker 回环 HTTP 交接。原入口 `config.asgi:application` 保持现有行为。
+入口 `config.resident_asgi:application` 在 ASGI startup 加载一次 GPU 模型；视频连接通过 `/ws/detect/resident/` 直接进入进程内工作线程，省去 HF 分配和 worker 回环 HTTP 交接。原入口 `config.asgi:application` 保持现有行为。
 
 ## 结构与优化工作入口
 
@@ -57,7 +57,7 @@ New-Item -ItemType Directory -Force $env:YOLO_CONFIG_DIR, $env:MPLCONFIGDIR | Ou
 - 首条 JSON：`kind=session`、`protocol=resident-v1`，实际模型 SHA／FP32 身份、工作负载、`max_inflight=12`、`idle_seconds=15`、`session_seconds=null`。不宣称继承 HF FP16 的 COCO 验证成绩。
 - 输入复用 `realtime.protocol.pack_request(index, jpeg)`：`PRF1` + 网络序 uint32（从 0 连续递增）+ JPEG；最多 1 MiB、最大边 640，原 JPEG80/阈值 0.25 保持。
 - 输出复用 `unpack_result(packet, expected_index)`：`PRS1` + JSON 字节数 + metadata + JPEG。新增 `resident_queue_ms` 是本机接收至提交执行的等待时间，`server_ms` 包含单帧流水线；阶段计时存在包含关系，不能直接相加。
-- 深度启用时，`depth_ms = decode_boxes_ms + depth_predict_ms + depth_fusion_ms`，分别记录框解析、深度调用及距离融合的主机耗时。没有额外 CUDA 同步，异步设备等待可能落在后续阶段；这些字段不能当成纯 GPU kernel 时间。
+- 深度启用时，`depth_ms = decode_boxes_ms + depth_predict_ms + depth_fusion_ms`，分别记录框解析、深度调用及距离融合的主机耗时。融合包含策略/缓存管理；共享流水线的 C 模式跳过深度时，预测子计时为零。没有额外 CUDA 同步，异步设备等待可能落在后续阶段；这些字段不能当成纯 GPU kernel 时间。
 - 12 帧限制包含已接收但尚未发送完成的全部帧。客户端应在完整收到一帧后释放 credit；超过窗口或乱序直接失败，不丢帧、不重试。
 - 正常停止发送精确文本 `{"kind":"stop"}`。服务排空已接收帧，再返回 `kind=ended` 及 `received/delivered`，最后正常关闭。断连则停止后续排队帧，等待已经进入工作线程的推理完成，再释放槽位。
 - 一个活动视频会话。第二连接收到 `resident_busy` 和 1013，服务尚未就绪或推理故障后收到 `resident_unavailable`。模型推理故障需显式重启进程；损坏输入只终止当前会话。
@@ -68,44 +68,34 @@ New-Item -ItemType Directory -Force $env:YOLO_CONFIG_DIR, $env:MPLCONFIGDIR | Ou
 
 页面保持原最大边 640、JPEG80、首帧单独完成、之后 30FPS 采样上限和 12 个在途作业；采样上限不等于实交付速率。用户点击停止、隐藏页面或出现错误会取消客户端未完成工作并释放摄像头；服务端等待实际正在执行的推理结束。`/api/health/` 仍检查数据库，不代表 GPU 可用；常驻启动日志及 WS admission 才描述本服务状态。
 
-## 复现实测
+## 与本地集成入口的关系
 
-下列工具自行启动临时回环 ASGI 服务，一次模型加载，按 12、24 FPS 各发送 10 秒，换输入后再重连；不需另开服务器。保留全部 metadata/JPEG 哈希、请求/交付计数、首帧、稳态、排队、发送迟到及显存。已有输出目录会拒绝覆盖。
+| 项目 | 常驻服务 | 本地集成 |
+| --- | --- | --- |
+| 入口 | `config.resident_asgi:application` | `integration.asgi` + `integration.inference.asgi` |
+| 进程 | 一个 ASGI/GPU 进程 | Web 与 GPU 独立进程 |
+| WS | `/ws/detect/resident/` | `/ws/detect/local/` |
+| 输入 | PRF1，工作线程开始时间用于跟踪 | PRF2，保留浏览器采集时间 |
+| 模式 | detection/depth/full，默认逐帧深度 | 显式 A/B/C 距离策略及视频/导航集成 |
+
+两者共享 `ResidentDetector`，客户端按所选 provider 独立准入。常驻模式不自动采用几何或低频深度配置；本地集成的采集时间、告警和导航接口继续保持。启动方式见 [本地集成说明](LOCAL-MVP.md)，不要同时占用示例中的 8766 端口。
+
+## 诊断操作
+
+工具自行启动临时回环 ASGI 服务，记录所有帧、首帧/稳态、排队及显存，拒绝覆盖已有输出：
 
 ```powershell
 .\.venv\Scripts\python.exe -m tools.benchmark_resident --mode full --fps 12 24 --seconds 10 --reconnect-input models/experiments/coco8/images/val/000000000036.jpg --output benchmarks/NEW_RUN/resident-full
-```
-
-这是固定图片重复传输的 GPU/协议诊断，不是移动视频或深度质量评估。原传输门槛仍为至少 10 FPS 且最大稳态延迟不超过 500ms；不通过时保留报告并返回非零状态。FP32、检测 640、深度 768、阈值、数据集和质量门槛均未修改。
-
-结果、限制和检查记录持续写入 [推理优化计划](INFERENCE_OPTIMIZATION_PLAN.md)。
-
-## 浏览器验证与数据交接（2026-10-18）
-
-`tools/benchmark_resident_browser.mjs` 自行启动本机 8766 端口服务和无头 Chrome，使用静态公开公交图的 canvas MediaStream 替代传感器，实际执行页面选择、JPEG 编码、二进制校验、GPU 推理、图片解码和 HUD。仅将每次测试限制为 181 帧；采样 30FPS、窗口 12 和模型处理均保持原条件。工具需要 `PRS_PLAYWRIGHT_PATH` 指向现有 Playwright 包，且输出目录必须不存在：
-
-```powershell
 node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-resident
+node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --depth-graph
 ```
 
-本轮 Chrome 155 完成两次 181/181 帧显示、忙碌拒绝、重连及停止释放，页面无未捕获异常。首次视频帧 6007ms，重连首帧 57.1ms，第二会话无 Graph 重建。两次稳态显示 19.26／21.01FPS，采集至解码 P95 761.64／617.35ms，最大 787.8／636.4ms，**均未达到原每帧 ≤500ms 门槛**。完整功能链路通过不能写成性能验收通过；没有改低采样率、删慢帧或启用深度 Graph 来掩盖排队。
+浏览器工具需要 `PRS_PLAYWRIGHT_PATH` 指向已有 Playwright 包，使用实际 Chrome、页面、JPEG 编解码和 GPU，但图源是公开公交图的 canvas MediaStream。每会话 181 帧、采样上限 30FPS、窗口 12；首帧单列。忙碌拒绝、重连和手动停止同样记录。退出 0 表示功能及性能门槛通过，2 表示功能完成但性能门槛未满足，1 表示功能错误。Windows 工具终止自身子进程不能作为 ASGI 优雅关闭证明。
 
-报告及全部帧：[browser-resident-draw/report.json](benchmarks/2026-10-18/browser-resident-draw/report.json)；精简统计：[summary.json](benchmarks/2026-10-18/browser-resident-draw/summary.json)。首次测试因静态画布订阅后没有继续绘制而停在视频启动，未发出推理请求；修正测试供帧后通过，原失败保留。工具在 Windows 上终止自己的测试子进程，不将此操作称为 ASGI 优雅关闭验证；关闭协议的证据仍为后端测试及先前60秒服务实验。
+显式 `--depth-graph` 选择独立 `tools.resident_graph_asgi`。首张真实帧完成后捕获一次，准备时间计入首帧响应；重连复用。形状/类型/设备变化报错，不自动重捕获或回退，默认入口不导入该候选。
 
-深度 Graph 新诊断使用现有公交图和原 COCO8 四张验证图，按正序再逆序共 10 次；对每种实际张量形状显式建立实验 Graph，检查切换输入／复用后的原始深度、检测哈希、框和距离、完整 JPEG。全部完全一致、最大深度差 0；见 [多输入报告](benchmarks/2026-10-18/depth-multi-input/report.json)。未下载或重新划分数据，未把五张图当成准确率评估，默认服务未启用此候选。
+## 性能与质量限制
 
-真实视频及深度／距离真值由同事负责，目前未准备。接入后需记录视频时间戳/帧率/画幅、RGB与米制深度配对和有效掩码、既定数据划分及评估协议；保持当前实验参数与质量门槛。移动场景跟踪/风险质量、真机与公网、多用户吞吐和远程部署仍未验证。
+性能门槛保持至少 10FPS 且最大稳态延迟不超过 500ms。Graph 服务报告中吞吐提高，但最大延迟仍超标；完整链路能运行不代表通过性能或质量验收。计时语义、候选依据与全部结构化证据见 [推理优化计划](INFERENCE_OPTIMIZATION_PLAN.md)。
 
-## 排队与融合诊断（2026-10-19）
-
-已保存浏览器重连样本的服务处理 P50 为45.30ms、排队 P50 为503.38ms，解释了30FPS采样下的窗口积压。本轮新增上述分阶段计时，并单独实验 GPU ROI 排序中位数：五张样例正反序10次对照、465次独立融合均完全一致，但排序在五张图中的四张更慢；完整链路候选 P50 48.63ms，前后对照47.73／44.42ms。因此保留默认融合实现，候选仅在 `tools/` 显式调用，未接入服务。
-
-复现步骤与全部证据见 [计划的本日记录](INFERENCE_OPTIMIZATION_PLAN.md#2026-10-19-排队归因与-roi-融合实验) 和 [实验汇总](benchmarks/2026-10-19/summary.json)。本轮未重跑实际浏览器或改变任何性能门槛，不宣称页面延迟改善。
-
-2026-10-20又独立验证了复用官方深度 predictor、跳过逐帧配置重建的候选。五张图的十次数值对照完全一致，配置开销 P50 从约0.23–0.24ms降至0.035ms，但原实现整帧前后波动大，未证实稳定整帧收益，因此仍不接入默认服务。复现、首帧成本与完整证据见 [SDK实验记录](INFERENCE_OPTIMIZATION_PLAN.md#2026-10-20-深度-sdk-调用开销实验)。
-
-## 深度 Graph 独立服务实验（2026-10-20）
-
-`tools/benchmark_resident_browser.mjs OUTPUT_DIR --depth-graph` 显式选择仅供本机诊断的 `tools.resident_graph_asgi`，默认服务入口不变。实验在首张真实帧计算后捕获一次Graph，准备耗时计入首帧响应，重连复用；形状变化失败，不自动捕获新形状或回退。没有叠加其他候选，也未放宽30FPS／12窗口或500ms门槛。
-
-三组实际浏览器对照共显示1086帧，Graph稳态21.28–22.82FPS，对照17.40–17.80FPS；Graph两次最大延迟555／601ms，**仍未通过500ms门槛**。首次准备466.25ms，重连准备0ms；候选仍未纳入默认服务。细节、逐帧数值／时间相关标注差异及限制见 [服务实验记录](INFERENCE_OPTIMIZATION_PLAN.md#2026-10-20-深度-graph-独立服务与浏览器实验)。浏览器工具将功能完成与性能通过分开记录，退出2表示性能门槛未满足。
+仓库的 MOT17 街景视频可用于连续画面联调，见 [来源清单](model_tests/datasets/street-video/SOURCES.json)；米制深度/距离真值仍需同事提供。固定图片数值一致、mock 测试和 canvas 摄像头均不能证明移动场景精度、真机、公网、多用户或远程部署效果。

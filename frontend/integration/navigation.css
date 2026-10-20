@@ -1,0 +1,26 @@
+/* Responsibilities: Keep the independent navigation replay and native speech controls readable.
+Implementation: Scoped fluid route sketch, wrapped controls and shared camera.css styles.
+Related Modules: navigation.html/navigation-mvp.js. Declaration Index: None.
+Variable Index: None; no route calculation, device access or network dependency. */
+.navigation-mvp main { max-width: 1100px; margin: auto; padding: 1.5rem; display: grid; gap: 1rem; }
+.navigation-mvp header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+.navigation-mvp h1 { font-size: 1.65rem; }
+.navigation-mvp h2 { margin-top: 0; font-size: 1.25rem; }
+.navigation-mvp .workspace { padding: 1.25rem; min-width: 0; }
+.navigation-mvp p, .navigation-mvp li { line-height: 1.65; overflow-wrap: anywhere; }
+.navigation-mvp label { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: .7rem 0; }
+.navigation-mvp select, .navigation-mvp input, .navigation-mvp textarea { max-width: 100%; min-width: 0; }
+.navigation-mvp select { padding: .5rem; }
+.navigation-mvp .speech-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.navigation-mvp .speech-settings label { min-width: 0; }
+.navigation-mvp .navigation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: .8rem 0; }
+.navigation-mvp .navigation-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.navigation-mvp figure { margin: 0; min-width: 0; }
+.navigation-mvp svg { display: block; width: 100%; background: #f1f5f8; border-radius: .5rem; }
+.navigation-mvp polyline { fill: none; stroke: #2c647e; stroke-width: 4; stroke-linejoin: round; }
+.navigation-mvp circle { fill: #16834b; stroke: white; stroke-width: 2; }
+.navigation-mvp circle[data-state="off_route"], .navigation-mvp circle[data-state="locating"] { fill: #b46b0c; }
+.navigation-mvp circle[hidden] { display: none; }
+.navigation-mvp pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; background: #f2f5f6; color: #14252c; padding: .9rem; border-radius: .5rem; }
+.navigation-mvp [data-kind="error"] { color: #a32d32; }
+@media (max-width: 660px) { .navigation-mvp main { padding: .6rem; } .navigation-mvp .workspace { padding: .9rem; } .navigation-mvp .navigation-grid, .navigation-mvp .speech-settings { grid-template-columns: 1fr; } }

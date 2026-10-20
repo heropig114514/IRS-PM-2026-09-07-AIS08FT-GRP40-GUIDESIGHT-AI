@@ -2,7 +2,7 @@
 
 前后端开发仓库。后端沿用 AiInterviewer 的 Django + DRF + ASGI 技术栈及分层思路，独立维护业务与数据库；前端使用原生浏览器 API。
 
-本机开发目录已独立整理为 `D:\my_files\NUS_teamwork\PRS-PracticeModule\development`，请在编辑器中打开此目录；后端位于其 `backend/`。Git 仓库和隔离运行环境随代码迁移，依赖版本保持不变。课程与个人资料保留于外层 `PRS-PracticeModule`。GitHub 仓库内部仍以 `backend/` 和 `frontend/` 为顶层；克隆到其它机器时按实际仓库路径启动。
+仓库以 `backend/` 和 `frontend/` 为顶层，按实际克隆路径启动。本机MVP通过独立Web和CUDA推理进程接通已有软件与算法；两个环境、官方权重、启动器和验证边界见 [本地MVP](backend/LOCAL-MVP.md)。
 
 ```text
 backend/              后端唯一开发入口
@@ -15,18 +15,24 @@ frontend/             摄像头回传、Leaflet/OSM 步行路线与客户端测�
 .github/workflows/    后端自动检查
 ```
 
-当前实现手机摄像头 JPEG 帧经 WebSocket 原样回传，校验字节后显示；另提供应用级 ping/pong。图像只在内存中处理，不录制、不存储。最大 4 个连接、单帧 1 MiB，无自动重连或重试。
+页面入口为 `/live/`。原软件提供Echo/HF；本地集成入口额外启用本地CUDA双模型检测，浏览器经同源WebSocket发送JPEG并显示标注结果。实时图像只在内存中处理，不录制、不存储，无自动重连或重试；Echo最多4个连接，检测会话按各自协议限流。
 
-服务器入口：[摄像头回传](https://47.239.50.129/prs/)。新增可选 YOLO26n COCO 80 类预训练检测：服务端在返回 JPEG 绘制框、类别和置信度，无需额外训练。页面保留默认原样回传，另可点击“测试示例识别”验证公开样例。检测参数、资源测试和范围见 [检测说明](backend/VISION.md)，工件与许可见 [模型说明](backend/models/README.md)。
+本机入口由 `backend/tools/run_local_mvp.py` 启动，默认 http://127.0.0.1:8766/live/ 。算法复用YOLO26n、YOLO26 Depth、BoT-SORT、距离运动状态及TTC/规则风险；浏览器Guidance在用户启用后仲裁语音/振动提醒与导航示例。中台负责协议和运行环境适配，不修改模型参数或风险规则。工件与许可见 [模型说明](backend/models/README.md)。
+
+独立本地视频入口为 `/integration/video/`，用户选择本地文件后按原生1倍速回放，不申请电脑摄像头权限。它复用相同双模型与提醒链路，保留原参数及55秒会话预算；当前选用MOT17白天/夜间移动街景样本，来源及显式转码记录见 [视频数据说明](backend/model_tests/DATASETS.md#连续街景视频用于本地联调)，采集/媒体两个时钟和验收命令见 [连续视频说明](backend/LOCAL-MVP.md#连续本地视频入口)。
+
+MOT17的两个原始预览、两个H.264回放副本及来源清单属于仓库测试素材；完整数据集、标注包和运行输出按目录规则单独管理。验收应区分吞吐、采集到告警的时延和设备实际输出，具体方法见 [本地验收说明](backend/LOCAL-MVP.md#验收方法与边界)。
 
 开发启动与检查见 [后端说明](backend/README.md)，协议与操作见 [前端说明](frontend/README.md)，隔离部署见 [运维说明](backend/deploy/README.md)。当前未实现持久化媒体或业务账号接口。
 
-可选 [Hugging Face ZeroGPU Space](https://huggingface.co/spaces/Heropig114514/prs-yolo26) 已部署并返回标注样例。页面可明确选择该模式，经云服务器转发；只有该模式最多等待60秒，现有推理模式保持原预算。免费配额与服务器 token 配置、实测范围见 [ZeroGPU 说明](backend/ZEROGPU.md)。
+可选 [Hugging Face ZeroGPU Space](https://huggingface.co/spaces/Heropig114514/prs-yolo26) 模式需服务端token及足够免费额度，一次视频最多55秒，首帧/后续等待预算55/10秒。配置及额度边界见 [ZeroGPU说明](backend/ZEROGPU.md)；本地MVP启动器明确关闭外部凭据。
 
-当前只保留原样回传、服务器 CPU 检测、HF GPU 检测和定位/步行路线。模型导出、Space 发布及验证工具集中于 `backend/tools/`；历史测试记录保留于 `backend/benchmarks/`。
+当前提供原样回传、本地CUDA集成、HF GPU检测、可选场景描述和定位/步行路线。模型导出、Space发布及验证工具集中于 `backend/tools/`；结构化实验结果存放于 `backend/benchmarks/`。
 
 [步行路线测试页面](https://47.239.50.129/prs/maps/) 使用 Leaflet 1.9.4 + OpenStreetMap 底图和 ORS `foot-walking` 路线。服务端配置 `ORS_API_KEY`，浏览器仅获配置状态。点击获取设备起点，点选地图终点，再提交路线；也可明确选择 NUS 固定示例。规划时起终点发送 PRS 和 ORS，不存数据库；返回路线、距离、预计时间和转向步骤。初始 NUS 区域预览和示例均不是设备位置。
 
-按用户选择以 ORS 替代原 proposal 中的 Google 路线实现；原 proposal 文件未改写。当前只完成路线规划原型，持续定位、偏航判断、Guidance Manager 与 TTS/避障调度待开发。后续正式实验需明确记录导航实现与地图数据来源。
+按用户选择以 ORS 替代原 proposal 中的 Google 路线实现；原 proposal 文件未改写。地图页现支持持续定位、转向指令、剩余距离、偏航提示、到达判断和手动停止；agent 可通过 `navigation_start`、`navigation_stop`、`navigation_status` 操作同一控制器。需先规划路线并允许浏览器定位，隐藏页面停止，不自动重规划。地图导航尚未接入TTS/避障调度；阈值与验证边界见 [前端说明](frontend/README.md) 和 [MCP 契约](backend/MCP.md)。后续正式实验需记录导航实现与地图数据来源。
+
+本地Guidance的导航示例用于提醒仲裁，不代表GPS/ORS或完整导航验证；真实手机声音、振动和风险准确率需另行验证。
 
 本地已有课程文件、报告和压缩包不纳入 Git；`.gitignore` 使用根目录白名单。未来新增需要提交的根目录路径时，须显式加入白名单。

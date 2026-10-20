@@ -12,6 +12,7 @@ metadata/checksum construction as well as its existing nested model/service time
 depth_estimator — optional separately root-loaded model, activated once per allocation.
 object_tracker — allocation-local BoT-SORT/GMC/history, never retained by the root GPU model.
 risk_config — immutable scalar TTC/rule profile, no additional per-object state.
+distance_config/strategy/performance — allocation-local distance mode/cache and timing sums.
 No retained cross-task graph or subtraction of worker clocks from parent/PRS clocks.
 """
 
@@ -21,6 +22,9 @@ import re
 import time
 
 from realtime.detector import ResidentDetector
+from realtime.distance import DistanceStrategy
+from realtime.distance_config import DEFAULT_DISTANCE_CONFIG
+from realtime.performance import PerformanceStats
 from realtime.protocol import MAX_PACKET_BYTES, pack_result, unpack_request
 from realtime.risk import DEFAULT_RISK_CONFIG
 from realtime.tracking import DEFAULT_TRACKING_CONFIG, ObjectTracker
@@ -36,9 +40,10 @@ class AllocatedDetector(ResidentDetector):
     """
 
     def __init__(self, model, manifest, config=None, *, depth_estimator=None,
-                 tracking_config=DEFAULT_TRACKING_CONFIG, risk_config=DEFAULT_RISK_CONFIG):
+                 tracking_config=DEFAULT_TRACKING_CONFIG, risk_config=DEFAULT_RISK_CONFIG,
+                 distance_config=DEFAULT_DISTANCE_CONFIG):
         """Functionality: Initialize allocation-local CPU/Graph state around the root-loaded model.
-        Inputs: detection model/descriptor/manifest/config; depth and tracking/risk profiles.
+        Inputs: model/descriptor/manifest/config; depth and tracking/risk/distance profiles.
         Outputs: ready original predict state. Logic: FP32 [1,3,640,640] API input storage;
         graph remains None until first real JPEG; metadata declares selected precision.
         AOT or JIT-cache restoration prepares one callable before JPEG processing; load cost and
@@ -61,7 +66,13 @@ class AllocatedDetector(ResidentDetector):
                         "PyTorch resident CUDA")
         self.tensor = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
         self.runner, self.load_ms, self.cache_evidence = None, 0.0, None
-        self.depth_estimator = depth_estimator
+        if distance_config.distance_mode == "temporal_depth" and (
+                depth_estimator is None or tracking_config is None):
+            raise ValueError("temporal_depth requires depth and tracking")
+        self.distance_strategy = DistanceStrategy(distance_config)
+        self.performance, self.performance_epoch = PerformanceStats(), 0
+        self.depth_estimator = (None if distance_config.distance_mode == "geometry" else
+                                depth_estimator)
         if self.execution_config.get("aoti"):
             from zerogpu.aoti import load_package
 
@@ -108,10 +119,11 @@ def exchange(connection, capability, action, body=None):
 
 
 def run_worker(capability, model, manifest, port=7860, factory=AllocatedDetector, config=None,
-               *, depth_estimator=None, tracking_config=None, risk_config=None):
+               *, depth_estimator=None, tracking_config=None, risk_config=None,
+               distance_config=None):
     """Functionality: Hold one model/graph allocation only while this bounded live session runs.
     Inputs:64-hex capability, emulated model or package descriptor/manifest, local port, explicit
-    factory, detection config, optional depth and explicit tracking/risk profiles.
+    factory, detection config, optional depth and explicit tracking/risk/distance profiles.
     Optional keywords are forwarded only when provided; actual allocated detector defaults to
     one BoT-SORT per session. No tracker/history lives in the root-loaded model.
     Outputs: count/timing; Logic: claim parent, pull ordered JPEG, predict and return binary.
@@ -140,6 +152,8 @@ def run_worker(capability, model, manifest, port=7860, factory=AllocatedDetector
             options["tracking_config"] = tracking_config
         if risk_config is not None:
             options["risk_config"] = risk_config
+        if distance_config is not None:
+            options["distance_config"] = distance_config
         detector = factory(*arguments, **options)
         while time.monotonic() - started < SESSION_SECONDS:
             pull_started = time.perf_counter()

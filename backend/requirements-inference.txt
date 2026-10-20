@@ -1,0 +1,15 @@
+# Responsibilities: Independent local CUDA inference service dependencies.
+# Implementation: Pin the native detector/depth/tracker and ASGI transport; no web/MCP/export stack.
+# Related Modules: integration.inference.asgi; realtime.detector/depth/tracking/risk;
+# requirements-depth.txt preserves the original combined native-test profile.
+# Declaration Index: None.
+# Variable Index: None.
+torch==2.8.0
+torchvision==0.23.0
+ultralytics==8.4.171
+numpy==1.26.4
+Pillow==12.3.0
+opencv-python==4.11.0.86
+lap==0.5.12
+uvicorn==0.52.4
+websockets==16.1.1

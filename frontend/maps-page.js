@@ -1,11 +1,11 @@
-/* Responsibilities: Leaflet/OSM 地图、设备位置、显式示例和步行路线界面。
+/* Responsibilities: Leaflet/OSM 地图、设备位置、步行路线和共享持续导航接入。
  * Implementation: 初始化一次地图；串行用户操作；错误和底图状态分别呈现；无隐式重试。
- * Related Modules: maps-client.js, maps.html, i18n.js, core.maps/services。
+ * Related Modules: maps-client.js, navigation-ui.js, maps.html, i18n.js, core.maps/services。
  * Declaration Index: setCoordinates — 填坐标；setBusy — 操作锁；clearRoute — 清旧路线；
  * showFailure — 错误展示；initialize — 配置/地图；locate — 设备起点；useExample — 显式示例；plan — 请求路线。
  * Variable Index: button/planButton/exampleButton/status/message — 状态 DOM；map/tiles — Leaflet 实例；
  * routeLayer/startMarker/endMarker — 唯一可替换图层；busy — 操作锁；configured — 后端配置状态；
- * tileFailed — 本轮底图失败；NUS_START/NUS_END — 明确标记的固定测试点。
+ * tileFailed — 本轮底图失败；navigationMarker — 实时位置图层；NUS_START/NUS_END — 固定测试点。
  */
 import {
   getDevicePosition,
@@ -13,6 +13,7 @@ import {
   requestWalkingRoute,
   turnLabel,
 } from "./maps-client.js";
+import {navigation} from "./navigation-ui.js";
 const button = document.querySelector("#locate");
 const planButton = document.querySelector("#plan");
 const exampleButton = document.querySelector("#example");
@@ -20,7 +21,7 @@ const status = document.querySelector("#maps-status");
 const message = document.querySelector("#maps-message");
 const NUS_START = [103.7766, 1.2971];
 const NUS_END = [103.7735, 1.2991];
-let map, tiles, routeLayer, startMarker, endMarker;
+let map, tiles, routeLayer, startMarker, endMarker, navigationMarker;
 let busy = false,
   configured = false,
   tileFailed = false;
@@ -46,15 +47,18 @@ function setBusy(value) {
     input.disabled = value;
 }
 
-/* Functionality: 清除旧路线和起终点图层，避免错误后继续展示过期结果。
- * Inputs: 当前图层/DOM；Outputs: 删除图层与旧列表/汇总。
- * Logic: Leaflet remove 后置空引用；Constraints: 保留地图、底图和用户输入。
+/* Functionality: 停止导航并清除旧路线和起终点图层，避免展示过期结果。
+ * Inputs: 当前图层/DOM；Outputs: 成功返回 true 并清图层/列表；失败返回 false 并显示诊断。
+ * Logic: 先清除共享导航路线，再移除图层；Constraints: 停止失败中止新操作，不重试，不锁死表单。
  */
 function clearRoute() {
+  try { navigation.setRoute(null); }
+  catch (error) { showFailure(error); return false; }
   for (const layer of [routeLayer, startMarker, endMarker]) layer?.remove();
   routeLayer = startMarker = endMarker = undefined;
   document.querySelector("#steps").replaceChildren();
   document.querySelector("#route-summary").textContent = "尚未请求路线";
+  return true;
 }
 
 /* Functionality: 报告失败，不输出位置或密钥到日志。
@@ -112,7 +116,7 @@ async function initialize() {
     tiles.addTo(map);
     map.on("click", (event) => {
       if (busy) return;
-      clearRoute();
+      if (!clearRoute()) return;
       setCoordinates("end", [event.latlng.lng, event.latlng.lat]);
       endMarker = L.circleMarker(event.latlng, { color: "#147d82", radius: 8 })
         .addTo(map)
@@ -139,8 +143,8 @@ async function initialize() {
  * Constraints: 此动作不上传位置；只有后续规划请求才发送 PRS/ORS。
  */
 async function locate() {
+  if (!clearRoute()) return;
   setBusy(true);
-  clearRoute();
   status.textContent = "定位中";
   message.textContent = "请允许浏览器使用设备位置。";
   document.querySelector("#location-source").textContent = "等待设备定位";
@@ -176,7 +180,7 @@ async function locate() {
  * Logic: 不申请定位、不请求路线；Constraints: 绝不将示例标为设备当前位置。
  */
 function useExample() {
-  clearRoute();
+  if (!clearRoute()) return;
   setCoordinates("start", NUS_START);
   setCoordinates("end", NUS_END);
   document.querySelector("#location-source").textContent =
@@ -187,15 +191,15 @@ function useExample() {
   message.textContent = "点击规划步行路线，真实调用 ORS 验证这组示例起终点。";
 }
 
-/* Functionality: 显示真实 ORS 路线和步骤，供下一阶段 Guidance Manager 接入。
+/* Functionality: 显示真实 ORS 路线和步骤，并将其交给共享导航控制器。
  * Inputs: 用户 submit event、四个输入值；Outputs: 路线图层、汇总、指令列表。
  * Logic: 明确提交后清旧数据；经纬度顺序转换为 Leaflet 纬经度；用 DOM 文本和 data-language-original 标记保留英文原指令。
- * Constraints: 当前仅路线规划，不是持续导航、语音调度或避障；失败无自动重试。
+ * Constraints: 规划成功不自动开始导航；未包含语音调度或避障；失败无自动重试。
  */
 async function plan(event) {
   event.preventDefault();
+  if (!clearRoute()) return;
   setBusy(true);
-  clearRoute();
   status.textContent = "请求路线中";
   message.textContent = "起终点将发送 PRS 服务端和 ORS，等待步行路线。";
   try {
@@ -208,6 +212,7 @@ async function plan(event) {
       document.querySelector("#end-latitude").value,
     );
     const route = await requestWalkingRoute(start, end);
+    navigation.setRoute(route);
     const points = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
     routeLayer = L.polyline(points, { color: "#147d82", weight: 5 }).addTo(map);
     startMarker = L.circleMarker(points[0], { color: "#183047", radius: 8 })
@@ -243,11 +248,25 @@ async function plan(event) {
 }
 
 button.addEventListener("click", locate);
+// Functionality: 显示共享导航位置；Inputs: 控制器事件；Outputs: 单一位置图层。
+// Logic: 活跃/到达时更新标记，停止/清路线时移除；Constraints: 不改路线，不自动移动视图。
+document.addEventListener("prs-navigation-change", ({detail}) => {
+  if (!map) return;
+  if (!detail.position || (!detail.active && detail.state !== "arrived")) {
+    navigationMarker?.remove();
+    navigationMarker = undefined;
+    return;
+  }
+  const point = [detail.position.latitude, detail.position.longitude];
+  if (navigationMarker) navigationMarker.setLatLng(point);
+  else navigationMarker = L.circleMarker(point, {color: "#b45309", radius: 9})
+    .addTo(map).bindTooltip("导航设备位置");
+});
 exampleButton.addEventListener("click", useExample);
 document.querySelector("#route-form").addEventListener("submit", plan);
 for (const input of document.querySelectorAll("#route-form input"))
   input.addEventListener("input", () => {
-    clearRoute();
+    if (!clearRoute()) return;
     status.textContent = "待规划";
     if (input.id.startsWith("start-")) {
       document.querySelector("#location-source").textContent = "手动输入起点";

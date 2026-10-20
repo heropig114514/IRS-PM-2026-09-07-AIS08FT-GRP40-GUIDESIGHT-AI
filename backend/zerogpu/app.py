@@ -10,6 +10,7 @@ demo/live_request/live_result/live_api — the sole Gradio allocation endpoint.
 OMP_NUM_THREADS/MKL_NUM_THREADS/OPENBLAS_NUM_THREADS — one CPU thread as in Kaggle protocol;
 set before Spaces imports Torch and initializes its inter-op thread count.
 depth_path/depth_estimator — explicitly enabled local depth weights and CPU-root-loaded model.
+distance_config — explicit A/B/C selection; B never constructs the depth model.
 tracking_path/tracking_config — optional explicit JSON motion profile, defaults for BoT-SORT;
 risk_path/risk_config — optional explicit JSON TTC/rule profile, validated once at startup;
 mutable tracker/history are created only inside each allocated worker.
@@ -39,6 +40,7 @@ from zerogpu.live_worker import run_worker
 from zerogpu.runtime import load_model
 from core.inference_plan import read_plan
 from realtime.depth import DepthEstimator
+from realtime.distance_config import read_distance_config
 from realtime.tracking import read_tracking_config
 from realtime.risk import read_risk_config
 
@@ -53,8 +55,11 @@ weight = ROOT / "models/yolo26n.pt"
 plan = read_plan(ROOT / "models/inference-plan.json", manifest)
 config = plan["config"]
 depth_path = os.environ.get("PRS_DEPTH_WEIGHTS", "").strip()
+distance_config = read_distance_config()
+if distance_config.distance_mode == "temporal_depth" and not depth_path:
+    raise ValueError("temporal_depth requires PRS_DEPTH_WEIGHTS")
 depth_estimator = (DepthEstimator(ROOT / depth_path, manifest["build"]["ultralytics"])
-                   if depth_path else None)
+                   if depth_path and distance_config.distance_mode != "geometry" else None)
 tracking_path = os.environ.get("PRS_TRACKING_CONFIG", "").strip()
 tracking_config = read_tracking_config(ROOT / tracking_path if tracking_path else None)
 risk_path = os.environ.get("PRS_RISK_CONFIG", "").strip()
@@ -115,7 +120,8 @@ def gpu_live(capability):
     no cross-task callable retention, retries, changed numerical settings or additional live calls.
     """
     return run_worker(capability, model, manifest, config=config, depth_estimator=depth_estimator,
-                      tracking_config=tracking_config, risk_config=risk_config)
+                      tracking_config=tracking_config, risk_config=risk_config,
+                      distance_config=distance_config)
 
 
 def detect_live(capability):

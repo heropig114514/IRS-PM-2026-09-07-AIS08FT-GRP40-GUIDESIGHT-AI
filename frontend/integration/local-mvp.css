@@ -1,0 +1,12 @@
+/* Responsibilities: Style independent local-MVP controls/results without changing the camera layout.
+ * Implementation: Scoped responsive controls, clear status and list wrapping.
+ * Related Modules: local-mvp.js and existing camera.css.
+ * Declaration Index: None.
+ * Variable Index: None; no additional theme or algorithm settings. */
+.local-mvp { padding: 1rem; margin-bottom: 1rem; }
+.local-mvp label { display: block; margin: .8rem 0; }
+.local-mvp select { max-width: 100%; padding: .5rem; margin: .4rem; }
+.local-mvp button { padding: .6rem; margin: .3rem; cursor: pointer; }
+.local-mvp button:disabled { cursor: default; opacity: .6; }
+.local-mvp p, .local-mvp li { overflow-wrap: anywhere; line-height: 1.6; }
+.local-mvp input[type="checkbox"] { margin-right: .5rem; }

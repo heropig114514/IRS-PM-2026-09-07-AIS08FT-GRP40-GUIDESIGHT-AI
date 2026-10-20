@@ -1,0 +1,22 @@
+/* Responsibilities: Keep the independent local video/source/result and native output controls readable.
+Implementation: Scoped fluid two-image grid and wrapped controls, preserving shared camera.css output styles.
+Related Modules: video.html/video-mvp.js. Declaration Index: None.
+Variable Index: None; no state, network dependency or experimental parameter. */
+.video-mvp main { max-width: 1180px; margin: auto; padding: 1.5rem; display: grid; gap: 1.2rem; }
+.video-mvp header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.video-mvp h1 { font-size: 1.65rem; }
+.video-mvp h2 { margin-top: 0; font-size: 1.25rem; }
+.video-mvp .workspace { padding: 1.25rem; min-width: 0; }
+.video-mvp label { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: .7rem 0; }
+.video-mvp input[type="file"], .video-mvp select, .video-mvp textarea { max-width: 100%; min-width: 0; }
+.video-mvp select { padding: .5rem; }
+.video-mvp p { line-height: 1.65; overflow-wrap: anywhere; }
+.video-mvp .video-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
+.video-mvp .video-images { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.video-mvp figure { margin: 0; min-width: 0; }
+.video-mvp video, .video-mvp img { width: 100%; height: auto; display: block; aspect-ratio: 16/9; object-fit: contain; background: #101820; border-radius: .5rem; }
+.video-mvp img[hidden] { display: none; }
+.video-mvp figcaption { margin-bottom: .4rem; }
+.video-mvp pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; background: #f2f5f6; color: #14252c; padding: .9rem; border-radius: .5rem; }
+.video-mvp [data-kind="error"] { color: #a32d32; }
+@media (max-width: 660px) { .video-mvp main { padding: .6rem; } .video-mvp .workspace { padding: .9rem; } .video-mvp .video-images { grid-template-columns: 1fr; } }

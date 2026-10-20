@@ -19,6 +19,7 @@ MCPControlTests.test_vibration_tools — typed routing and structured browser re
 MCPControlTests.test_vibration_validation — reject invalid/missing arguments before dispatch.
 MCPControlTests.test_speech_tools — typed speech routing and structured state;
 MCPControlTests.test_speech_validation — bounds/whitespace validation before dispatch.
+MCPControlTests.test_navigation_tools — navigation routing, schemas and missing-session errors.
 Variable Index: None; each test owns its hub or disposable Django database rows.
 """
 
@@ -272,6 +273,9 @@ class MCPControlTests(TransactionTestCase):
                     "speech_voices",
                     "speech_speak",
                     "speech_stop",
+                    "navigation_status",
+                    "navigation_start",
+                    "navigation_stop",
                     "database_schema",
                     "database_query",
                     "database_write",
@@ -284,6 +288,33 @@ class MCPControlTests(TransactionTestCase):
             self.assertFalse(health.is_error)
             self.assertEqual(health.structured_content["status"], 200)
             self.assertEqual(health.structured_content["body"]["status"], "ok")
+
+    async def test_navigation_tools(self):
+        """Functionality: Verify three typed navigation tools delegate once to the chosen tab.
+        Inputs: Official MCP client and explicitly mocked browser command responses.
+        Outputs: Required session schemas, exact dispatch and preserved refusal/progress state.
+        Logic: Inspect discovery, call each tool, reject missing session before dispatch and
+        verify disconnected sessions remain MCP errors rather than success-shaped navigation.
+        Constraints: No real GPS/browser permission/HTTP transport or route provider verification.
+        """
+        async with Client(mcp) as client:
+            schemas = {tool.name: tool.input_schema for tool in (await client.list_tools()).tools}
+            for name in ("navigation_status", "navigation_start", "navigation_stop"):
+                self.assertIn("session_id", schemas[name]["required"])
+                with self.subTest(tool=name), \
+                        patch("core.ai_mcp.hub.command", new_callable=AsyncMock) as command:
+                    command.return_value = {"active": False, "accepted": False,
+                                            "reason": "route_required"}
+                    result = await client.call_tool(name, {"session_id": "maps-tab"})
+                    self.assertFalse(result.is_error)
+                    self.assertEqual(result.structured_content, command.return_value)
+                    command.assert_awaited_once_with("maps-tab", name, None, 10)
+                with patch("core.ai_mcp.hub.command", new_callable=AsyncMock) as command:
+                    result = await client.call_tool(name, {})
+                    self.assertTrue(result.is_error)
+                    command.assert_not_awaited()
+                missing = await client.call_tool(name, {"session_id": "missing"})
+                self.assertTrue(missing.is_error)
 
     async def test_tool_error(self):
         """Functionality: Verify invalid calls appear as MCP errors instead of success-shaped data.

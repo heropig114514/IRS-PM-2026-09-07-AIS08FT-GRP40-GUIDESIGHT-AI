@@ -1,29 +1,37 @@
 # Backend 开发入口
 
-当前服务推理优化计划、本机基线、独立 Graph 对照及后续条件见 [推理优化计划与执行记录](INFERENCE_OPTIMIZATION_PLAN.md)。
+当前服务推理优化计划、本机基线、独立 Graph 对照及后续条件见 [推理优化计划](INFERENCE_OPTIMIZATION_PLAN.md)。
 
-后续部署目标已选择本机／自有服务器常驻 GPU。服务入口、仓库结构与推理调用链、启动命令及协议见 [常驻 GPU 服务](RESIDENT.md)。仓库页面现已支持显式选择「常驻 GPU」；现有远程部署本轮未更新。
+后续部署目标已选择本机／自有服务器常驻 GPU。服务入口、仓库结构与推理调用链、启动命令及协议见 [常驻 GPU 服务](RESIDENT.md)。页面可显式选择「常驻 GPU」。
 
-> 当前手机优化入口为 https://47.239.50.129/prs/live/ 。真实部署达到10FPS以上；55秒长测仍出现1.10秒延迟，尚不能保证每帧≤500ms。最新原图对照、浏览器测试与边界见 [手机视频优化记录](PHONE-LIVE.md)。旧模式实现已删除；原版本快照和基准报告保留。
+测距默认保留 A 双模型，另支持 B 几何测距和 C 低频深度。
+配置、A/B/C 运行命令、焦距/类别高度及性能记录见 [DISTANCE-MODES.md](DISTANCE-MODES.md)。
 
+> 本机双模型MVP入口为 http://127.0.0.1:8766/live/ ，使用独立Web/GPU环境与中台适配入口；准备、启动器及验证边界见 [LOCAL-MVP.md](LOCAL-MVP.md)。
+
+同一中台入口额外提供 `/integration/video/`，使用浏览器选定的本地视频文件与独立控制器，仍走 `/ws/detect/local/` 和原双模型。原始公共视频来源、1倍速/两个时钟的限制和Chrome验收命令见 [连续视频说明](LOCAL-MVP.md#连续本地视频入口)，不需要启动电脑摄像头。
+
+街景回放使用MOT17-07白天和MOT17-10夜间移动相机序列，浏览器选择H.264副本。两个原始预览、两个回放副本和来源清单属于版本管理范围，完整标注及运行报告单独管理。素材与标注边界见 [视频数据说明](model_tests/DATASETS.md#连续街景视频用于本地联调)，验收方法见 [本地MVP说明](LOCAL-MVP.md#验收方法与边界)。
 
 所有后端开发在本目录进行。采用 Python 3.12、Django、Django REST Framework 和 Uvicorn，运行依赖版本沿用 AiInterviewer 本地环境；独立实现配置及公共接口，不复制面试业务。
 
-HF GPU 由云服务器通过 HTTPS 调用，不需要本地 GPU 或 SSH 隧道。配置和验证见 [ZEROGPU.md](ZEROGPU.md)。
+本地模式由 `integration.asgi` 包裹原软件入口，再连接独立的 `integration.inference.asgi`；直接复用原 `ResidentDetector` 双模型链路，不将Torch装入Web环境。HF模式经后端HTTPS/WS转发，无需本地GPU或SSH隧道；配置见 [ZEROGPU.md](ZEROGPU.md)。
 
 可显式启用独立 YOLO26 Depth 模型，将每个检测框对应的有效深度中位数作为米制距离，
 并显示在标注 JPEG 中。插入位置、原接口兼容、GPU/Space 配置和验证边界见 [DEPTH.md](DEPTH.md)。
-实时路径新增带相机运动补偿的 BoT-SORT，按 ID 平滑距离并输出接近/远离/静止状态。
+实时路径使用带相机运动补偿的 BoT-SORT，按 ID 平滑距离并输出接近/远离/静止状态。
 状态归属、配置、测试、性能和局限见 [TRACKING.md](TRACKING.md)。
-运动估计后新增无状态 TTC 与可配置规则风险，返回分数、等级、告警需求和优先级；
-公式、完整默认权重、配置及验证边界见 [RISK.md](RISK.md)，无新增依赖或 TTS。
+运动估计后计算无状态 TTC 与可配置规则风险，返回分数、等级、告警需求和优先级；
+公式、完整默认权重、配置及验证边界见 [RISK.md](RISK.md)。算法仅输出风险字段；本地页面Guidance在用户明确启用后消费这些字段并调度共享浏览器语音/振动，不修改评分规则。
 
 Qwen2.5-VL 场景描述（`POST /scene/describe/`）的接口、提示词、配置、部署与限制见 [VLM.md](VLM.md)。
-本地模型测试统一放在 [model_tests](model_tests/README.md)，包括运行入口、示例、数据集预留目录和已有测试输出。
-从本目录运行 `.\.venv\Scripts\python.exe -X utf8 -m model_tests.run_depth --output model_tests/outputs/bus-run-3`，
+本地模型测试统一放在 [model_tests](model_tests/README.md)，包括运行入口、示例、素材说明和运行输出约定。
+本地独立GPU环境从本目录运行 `.\.venv-inference\Scripts\python.exe -X utf8 -m model_tests.run_depth --output model_tests/outputs/bus-run-3`，
 默认使用随附公交车图片，保存标注图与 JSONL。公开数据集、建议数量和后续模型对比协议见 [DATASETS.md](model_tests/DATASETS.md)。
 
 ## 安装与启动（PowerShell）
+
+完整本地MVP使用 [独立环境与启动器](LOCAL-MVP.md)。以下命令启动原Web软件入口，提供Echo/HF和已有HTTP功能，不启用新的本地推理适配器；其本地模型测试需要另外准备GPU环境。
 
 从仓库根目录开始：
 
@@ -91,7 +99,12 @@ HF 后端从必需的COCO合格 `models/inference-plan.json` 读取；本机常�
 实验与失败诊断见 [ACCELERATION.md](ACCELERATION.md)，同一个Notebook用版本管理复测。
 HF 身份私有配置，开始前检查每日免费秒数和调用次数；一次视频最多55秒，不自动重新分配。
 
-独立 YOLO26 训练模板见 [训练 Notebook](notebooks/yolo26-training/README.md)。默认在 Kaggle T4 上以项目相同的官方 YOLO26n 初始权重对 COCO8 做真实 1 epoch mock 训练，验证训练、权重保存、重载验证及示例预测流程；小样本指标不用于证明生产能力提升。模板提供 custom 数据入口，不自动替换或部署现有模型。
+本地集成入口额外提供同源 `/ws/detect/local/`，并转发到独立进程 `/ws/infer/`；
+`integration/` 负责契约、会话和进程边界，原 `realtime/` 算法与原HF handler保持原逻辑。
+两环境依赖分别由 `requirements-dev.txt` 和 `requirements-inference.txt` 明确安装，
+新启动器不安装、下载、迁移、重启或部署。模型健康与Web数据库健康分开记录。
+
+当前仓库未提供训练Notebook。现有本地MVP使用预训练权重，不依赖训练流程，也不会自动替换或部署模型。
 
 前端优先通过同源代理访问后端，不开放通配 CORS。会话认证下的业务写请求需有效 CSRF token。接口失败不得隐式重试或改用其他算法；实验参数修改须获得用户明确授权。
 

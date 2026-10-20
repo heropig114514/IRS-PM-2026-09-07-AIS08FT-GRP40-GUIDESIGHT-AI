@@ -1,0 +1,86 @@
+..Object depth unavailable objects=1 total=2
+...Depth model missing or invalid local weight path
+Depth model load failed type=ValueError
+Depth model load failed type=ValueError
+.Depth result rejected
+Depth result rejected
+Depth inference failed type=RuntimeError
+Depth GPU activation failed type=RuntimeError
+.........................2026-10-20 11:57:09,605 WARNING django.request Not Found: /vision/config/
+2026-10-20 11:57:09,606 WARNING django.request Not Found: /vision/frame/
+2026-10-20 11:57:09,606 WARNING django.request Not Found: /vision/hf/config/
+2026-10-20 11:57:09,607 WARNING django.request Not Found: /vision/hf/frame/
+2026-10-20 11:57:09,607 WARNING django.request Not Found: /assets/detection-client.js
+2026-10-20 11:57:09,608 WARNING django.request Not Found: /assets/detection-sample.jpg
+..2026-10-20 11:57:10,894 WARNING django.request Not Found: /assets/README.md
+2026-10-20 11:57:10,894 WARNING django.request Not Found: /assets/.env
+.2026-10-20 11:57:10,896 INFO core.echo echo admitted connection=0b1b6c54e43e active=1
+2026-10-20 11:57:10,896 INFO core.echo echo released connection=0b1b6c54e43e frames=1 bytes=131072 seconds=0.00 active=0
+.2026-10-20 11:57:10,898 INFO core.echo echo admitted connection=e283db7f418f active=1
+2026-10-20 11:57:10,898 INFO core.echo echo admitted connection=253eb4bb1cfb active=2
+2026-10-20 11:57:10,898 INFO core.echo echo admitted connection=d518f8364bef active=3
+2026-10-20 11:57:10,898 INFO core.echo echo admitted connection=a0ed77c7f51a active=4
+2026-10-20 11:57:10,899 WARNING core.echo echo rejected reason=capacity active=4
+2026-10-20 11:57:10,899 INFO core.echo echo released connection=e283db7f418f frames=0 bytes=0 seconds=0.00 active=3
+2026-10-20 11:57:10,899 INFO core.echo echo released connection=253eb4bb1cfb frames=0 bytes=0 seconds=0.00 active=2
+2026-10-20 11:57:10,899 INFO core.echo echo released connection=d518f8364bef frames=0 bytes=0 seconds=0.00 active=1
+2026-10-20 11:57:10,899 INFO core.echo echo released connection=a0ed77c7f51a frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-20 11:57:10,901 INFO core.echo echo admitted connection=1c18e78e3a60 active=1
+2026-10-20 11:57:10,901 WARNING core.echo echo invalid frame connection=1c18e78e3a60 size=0
+2026-10-20 11:57:10,901 INFO core.echo echo released connection=1c18e78e3a60 frames=0 bytes=0 seconds=0.00 active=0
+2026-10-20 11:57:10,901 INFO core.echo echo admitted connection=4c12402ec2d3 active=1
+2026-10-20 11:57:10,901 WARNING core.echo echo invalid frame connection=4c12402ec2d3 size=1048577
+2026-10-20 11:57:10,901 INFO core.echo echo released connection=4c12402ec2d3 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-20 11:57:10,903 INFO core.echo echo admitted connection=b1f360ac6e43 active=1
+2026-10-20 11:57:10,903 WARNING core.echo echo invalid control connection=b1f360ac6e43
+2026-10-20 11:57:10,903 INFO core.echo echo released connection=b1f360ac6e43 frames=0 bytes=0 seconds=0.00 active=0
+2026-10-20 11:57:10,903 INFO core.echo echo admitted connection=53ed4861220e active=1
+2026-10-20 11:57:10,903 WARNING core.echo echo invalid control connection=53ed4861220e
+2026-10-20 11:57:10,903 INFO core.echo echo released connection=53ed4861220e frames=0 bytes=0 seconds=0.00 active=0
+2026-10-20 11:57:10,903 INFO core.echo echo admitted connection=96c75f5b7670 active=1
+2026-10-20 11:57:10,903 WARNING core.echo echo invalid control connection=96c75f5b7670
+2026-10-20 11:57:10,903 INFO core.echo echo released connection=96c75f5b7670 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-20 11:57:10,905 WARNING core.echo echo rejected reason=origin_or_host
+2026-10-20 11:57:10,905 WARNING core.echo echo rejected reason=origin_or_host
+.2026-10-20 11:57:10,907 INFO core.echo echo admitted connection=2531e22c77f6 active=1
+2026-10-20 11:57:10,907 INFO core.echo echo released connection=2531e22c77f6 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-20 11:57:10,912 INFO core.resident.services Resident ready mode=detection load_ms=0.7
+2026-10-20 11:57:10,912 INFO core.resident.asgi Resident admitted id=10987f59a27c mode=detection
+2026-10-20 11:57:10,913 ERROR core.resident.asgi Resident released id=10987f59a27c received=0 delivered=0 failure=ValueError
+2026-10-20 11:57:10,913 INFO core.resident.asgi Resident admitted id=264971c20b77 mode=detection
+2026-10-20 11:57:10,913 ERROR core.resident.asgi Resident released id=264971c20b77 received=0 delivered=0 failure=ValueError
+2026-10-20 11:57:10,914 INFO core.resident.asgi Resident admitted id=2f16af921918 mode=detection
+2026-10-20 11:57:10,914 ERROR core.resident.asgi Resident released id=2f16af921918 received=12 delivered=0 failure=ValueError
+2026-10-20 11:57:10,915 INFO core.resident.services Resident stopped
+.2026-10-20 11:57:10,918 INFO core.resident.services Resident ready mode=detection load_ms=0.7
+2026-10-20 11:57:10,918 INFO core.resident.asgi Resident admitted id=9ad7602cbf25 mode=detection
+2026-10-20 11:57:10,950 INFO core.resident.asgi Resident released id=9ad7602cbf25 received=1 delivered=0 failure=none
+2026-10-20 11:57:10,951 INFO core.resident.services Resident stopped
+.2026-10-20 11:57:10,953 ERROR core.resident.asgi Resident startup failed type=RuntimeError
+2026-10-20 11:57:10,954 INFO core.resident.services Resident stopped
+2026-10-20 11:57:10,955 INFO core.resident.services Resident ready mode=detection load_ms=0.5
+2026-10-20 11:57:10,955 ERROR core.resident.services Resident inference failed id=63c6ad703042 type=DetectionError
+2026-10-20 11:57:10,956 ERROR core.resident.services Resident inference failed id=63c6ad703042 type=RuntimeError
+2026-10-20 11:57:10,956 INFO core.resident.services Resident stopped
+.2026-10-20 11:57:10,959 INFO core.resident.services Resident ready mode=detection load_ms=0.6
+2026-10-20 11:57:10,959 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-20 11:57:10,959 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-20 11:57:10,959 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-20 11:57:10,959 INFO core.resident.asgi Resident admitted id=fc978470e33b mode=detection
+2026-10-20 11:57:10,959 INFO core.resident.asgi Resident released id=fc978470e33b received=0 delivered=0 failure=none
+2026-10-20 11:57:10,960 INFO core.resident.services Resident stopped
+.2026-10-20 11:57:10,962 INFO core.resident.services Resident ready mode=detection load_ms=0.5
+2026-10-20 11:57:10,964 INFO core.resident.services Resident stopped
+.2026-10-20 11:57:10,967 INFO core.resident.services Resident ready mode=full load_ms=0.5
+2026-10-20 11:57:10,968 INFO core.resident.services Resident stopped
+.2026-10-20 11:57:10,971 INFO core.resident.services Resident ready mode=detection load_ms=0.5
+2026-10-20 11:57:10,971 INFO core.resident.asgi Resident admitted id=55de8a621f47 mode=detection
+2026-10-20 11:57:10,973 INFO core.resident.asgi Resident released id=55de8a621f47 received=12 delivered=12 failure=none
+2026-10-20 11:57:10,974 INFO core.resident.services Resident stopped
+.
+----------------------------------------------------------------------
+Ran 47 tests in 5.628s
+
+OK
+Found 47 test(s).
+System check identified no issues (0 silenced).

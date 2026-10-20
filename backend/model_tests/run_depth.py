@@ -1,4 +1,4 @@
-"""Responsibilities: Run explicit local image tests through the existing detection/depth pipeline.
+"""Responsibilities: Run explicit local A/B/C image tests through the existing detector pipeline.
 Implementation: Resident FP32 models; optional sequence tracking/TTC/risk, JSONL and annotations.
 Related Modules: realtime.depth/detector/tracking/risk; tools.fixtures; model_tests.test_cli.
 Declaration Index: collect_inputs; file_digest; write_manifest; build_detector; run; main.
@@ -6,6 +6,7 @@ Variable Index: TEST_ROOT — self-contained test asset root; ROOT — shared ba
 IMAGE_SUFFIXES — accepted source extensions;
 logger — safe phase/count/error diagnostics. No sampling, training or accuracy metrics.
 tracking/risk — explicit immutable profiles recorded for ordered runs, no per-frame reloading.
+distance_config — explicit strategy/calibration profile; performance — last cumulative summary.
 """
 
 import argparse
@@ -66,25 +67,31 @@ def write_manifest(output, report):
 
 
 def build_detector(weights, manifest_path, depth_weights, *, tracking_config=None,
-                   risk_config=None):
-    """Functionality: Initialize both existing models exactly once before the image loop.
-    Inputs: explicit weights/manifest; optional tracking/risk profiles for one ordered sequence.
+                   risk_config=None, distance_config=None):
+    """Functionality: Initialize selected existing models once before the image loop.
+    Inputs: explicit weights/manifest; optional distance/tracking/risk profiles for one sequence.
     Outputs: ResidentDetector on actual CUDA. Logic: reuse pinned loader and explicit FP32 control.
     Constraints: detector remains original YOLO26n; no GPU fallback/download/experiment changes.
     """
     from realtime.depth import DepthEstimator
     from realtime.detector import ResidentDetector
+    from realtime.distance_config import DEFAULT_DISTANCE_CONFIG
 
+    distance_config = DEFAULT_DISTANCE_CONFIG if distance_config is None else distance_config
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    depth = DepthEstimator(depth_weights, manifest["build"]["ultralytics"])
+    if distance_config.distance_mode == "temporal_depth" and tracking_config is None:
+        raise ValueError("temporal_depth requires --track for one ordered sequence")
+    depth = (DepthEstimator(depth_weights, manifest["build"]["ultralytics"])
+             if distance_config.distance_mode != "geometry" else None)
     options = {"risk_config": risk_config} if risk_config is not None else {}
     return ResidentDetector(weights, manifest_path, depth_estimator=depth,
-                            tracking_config=tracking_config, **options)
+                            tracking_config=tracking_config, distance_config=distance_config,
+                            **options)
 
 
 def run(args):
     """Functionality: Produce reviewable local detection/distance outputs for all chosen images.
-    Inputs: CLI namespace with input/output/model paths, positive repeats and explicit --track.
+    Inputs: CLI namespace with paths, distance mode, repeats and explicit --track.
     Outputs: report dict; new run.json/results.jsonl and frame annotations; exceptions propagate.
     Logic: validate paths before GPU work, fingerprint assets, construct once, preprocess each image
     once using the established640/JPEG80 fixture, process every repeat and stream its result.
@@ -94,11 +101,21 @@ def run(args):
     Tracking treats all images/repeats as one stream using inference-start time, not source FPS;
     unrelated dataset stills must leave --track off. Optional tracking/risk profiles load once.
     """
+    from dataclasses import asdict
+
     from PIL import Image
 
+    from realtime.distance_config import DEFAULT_DISTANCE_CONFIG, read_distance_config
     from realtime.risk import read_risk_config
     from realtime.tracking import read_tracking_config
     from tools.fixtures import fixture_bytes
+
+    distance_config = read_distance_config(getattr(args, "distance_config", None),
+                                          distance_mode=getattr(args, "distance_mode", None),
+                                          depth_interval=getattr(args, "depth_interval", None))
+    needs_depth = distance_config.distance_mode != "geometry"
+    if distance_config.distance_mode == "temporal_depth" and not getattr(args, "track", False):
+        raise ValueError("temporal_depth requires --track for one ordered sequence")
 
     root, images = collect_inputs(args.input)
     output = args.output.resolve()
@@ -117,7 +134,7 @@ def run(args):
         raise ValueError("--risk-config requires --track")
     risk = read_risk_config(risk_path) if tracking is not None else None
     report = {"schema_version": 1, "status": "running",
-              "label": args.label or args.depth_weights.stem,
+              "label": args.label or (args.depth_weights.stem if needs_depth else "geometry"),
               "scope": "Native CUDA image inference; no ground-truth accuracy or video FPS claim",
               "input_root": str(root), "repeat": args.repeat, "images": [], "frames": 0,
               "settings": {"detector_config": {}, "detection_edge": 640,
@@ -126,14 +143,22 @@ def run(args):
                            "object_distance": "median of positive finite bbox ROI depths"},
               "models": {"detection_sha256": file_digest(args.weights),
                          "manifest_sha256": file_digest(args.manifest),
-                         "depth_sha256": file_digest(args.depth_weights),
-                         "depth_weights": str(args.depth_weights.resolve())}}
+                         "depth_sha256": file_digest(args.depth_weights) if needs_depth else None,
+                         "depth_weights": (str(args.depth_weights.resolve())
+                                           if needs_depth else None)}}
+    report["settings"].update(distance_mode=distance_config.distance_mode,
+                              distance_config={**asdict(distance_config),
+                                               "object_heights_m": dict(
+                                                   distance_config.object_heights_m)})
+    if not needs_depth:
+        report["settings"].update(depth_edge=None, depth_precision=None,
+                                  object_distance="fy_px * object_height_m / bbox_height_px")
+    elif distance_config.distance_mode == "temporal_depth":
+        report["settings"]["object_distance"] += "; last valid distance on non-depth frames"
     for path in images:
         report["images"].append({"path": path.relative_to(root).as_posix(),
                                  "source_sha256": file_digest(path)})
     if tracking is not None:
-        from dataclasses import asdict
-
         report["settings"]["tracking"] = asdict(tracking)
         report["settings"]["risk"] = asdict(risk)
         report["scope"] += "; ordered sequence tracking using local frame-start timestamps"
@@ -144,6 +169,8 @@ def run(args):
         options = {"tracking_config": tracking} if tracking is not None else {}
         if risk_path is not None:
             options["risk_config"] = risk
+        if distance_config != DEFAULT_DISTANCE_CONFIG:
+            options["distance_config"] = distance_config
         detector = build_detector(args.weights, args.manifest, args.depth_weights, **options)
         with (output / "results.jsonl").open("w", encoding="utf-8") as records:
             for path, identity in zip(images, report["images"], strict=True):
@@ -167,6 +194,8 @@ def run(args):
                     records.write(json.dumps(record, ensure_ascii=False, allow_nan=False) + "\n")
                     records.flush()
                     report["frames"] += 1
+                    if isinstance(metadata.get("performance"), dict):
+                        report["performance"] = metadata["performance"]
                     print(json.dumps({"image": identity["path"], "repeat": repeat,
                                       "predict_wall_ms": round(wall_ms, 2),
                                       "objects": [{key: box[key] for key in (
@@ -196,13 +225,20 @@ def main(argv=None):
     require a new output directory. Relative explicit paths remain relative to the terminal cwd.
     Constraints: errors display only stable codes/types; labels never select models or parameters.
     """
-    parser = argparse.ArgumentParser(description="Local YOLO26 detection + metric depth image test")
+    from realtime.distance_config import DISTANCE_MODES
+
+    parser = argparse.ArgumentParser(description="Local YOLO26 detection + A/B/C distance test")
     parser.add_argument("--input", type=Path, default=TEST_ROOT / "samples/bus.jpg",
                         help="Image or directory; default: bundled official bus image")
     parser.add_argument("--output", type=Path, required=True, help="New output directory")
     parser.add_argument("--weights", type=Path, default=ROOT / "models/yolo26n.pt")
     parser.add_argument("--manifest", type=Path, default=ROOT / "models/yolo26n.json")
     parser.add_argument("--depth-weights", type=Path, default=ROOT / "models/yolo26n-depth.pt")
+    parser.add_argument("--distance-config", type=Path, help="Distance JSON profile")
+    parser.add_argument("--distance-mode", choices=DISTANCE_MODES,
+                        help="A: depth (default), B: geometry, C: temporal_depth")
+    parser.add_argument("--depth-interval", type=int,
+                        help="C depth cadence; positive frames, default 3; 1 means every frame")
     parser.add_argument("--repeat", type=int, default=1,
                         help="Explicit repeats per image; default1")
     parser.add_argument("--label", help="Run label only; default: depth weight filename stem")

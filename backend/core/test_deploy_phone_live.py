@@ -7,6 +7,7 @@ Declaration Index: DeploymentAssetTests; DeploymentAssetTests.check_dependency_c
 DeploymentAssetTests.test_maps_dependency_closure;
 DeploymentAssetTests.test_camera_dependency_closure;
 DeploymentAssetTests.test_scene_files_published.
+DeploymentAssetTests.test_navigation_scope — navigation closure and preserved camera/config paths;
 DeploymentAssetTests.test_overlay_profile_stage;
 DeploymentAssetTests.test_overlay_profile_stage.command;
 DeploymentAssetTests.test_overlay_profile_stage.upload;
@@ -123,7 +124,8 @@ class DeploymentAssetTests(SimpleTestCase):
 
         backend = Path(__file__).resolve().parents[1]
         for profile, mismatch in (("vibration", False), ("vibration", True),
-                                  ("live-tuning", False), ("live-tuning", True)):
+                                  ("live-tuning", False), ("live-tuning", True),
+                                  ("navigation", False), ("navigation", True)):
             with self.subTest(profile=profile, mismatch=mismatch), \
                     tempfile.TemporaryDirectory() as directory:
                 source = Path(directory)
@@ -137,10 +139,12 @@ class DeploymentAssetTests(SimpleTestCase):
                     remote[current + "/backend/" + name] = target.read_bytes()
                 if mismatch:
                     remote[current + "/backend/models/inference-plan.json"] = b"changed"
-                frontend = (publisher.LIVE_FRONTEND if profile == "live-tuning"
-                            else publisher.VIBRATION_FRONTEND)
-                backend_names = (publisher.LIVE_BACKEND if profile == "live-tuning"
-                                 else publisher.VIBRATION_BACKEND)
+                frontend = {"live-tuning": publisher.LIVE_FRONTEND,
+                            "vibration": publisher.VIBRATION_FRONTEND,
+                            "navigation": publisher.NAVIGATION_FRONTEND}[profile]
+                backend_names = {"live-tuning": publisher.LIVE_BACKEND,
+                                 "vibration": publisher.VIBRATION_BACKEND,
+                                 "navigation": publisher.NAVIGATION_BACKEND}[profile]
                 names = ["frontend/" + name for name in frontend]
                 names += ["backend/" + name for name in backend_names]
                 for name in names:
@@ -256,6 +260,37 @@ class DeploymentAssetTests(SimpleTestCase):
                 publisher.stage(Mock(), Mock(), "outputs",
                                 runtime_path=publisher.PREFIX + "/runtime-venv")
             command.assert_not_called()
+
+    def test_navigation_scope(self):
+        """Functionality: Keep navigation publication independent of camera and service upgrades.
+        Inputs: Actual navigation allowlists and explicit mocked SSH boundary.
+        Outputs: Required map/MCP dependencies, absence of camera/config/model files, early refusal
+        without a runtime, and source-only activation. Logic: Assert the selected release contract.
+        Constraints: No network, real systemd restart, credential read or external-service proof.
+        """
+        from tools import deploy_phone_live as publisher
+
+        self.assertLessEqual({"maps.html", "maps-page.js", "navigation.js", "navigation-ui.js",
+                              "maps-client.js", "ai-control.js", "i18n.js", "translations.js",
+                              "vibration.js", "speech-output.js"},
+                             set(publisher.NAVIGATION_FRONTEND))
+        self.assertFalse({"index.html", "camera.js", "camera.css", "frame-pipeline.js",
+                          "live-detection-client.js"} & set(publisher.NAVIGATION_FRONTEND))
+        self.assertFalse({"config/asgi.py", "config/urls.py", "core/hf_video_relay.py",
+                          "models/inference-plan.json", "deploy/prs-camera.service",
+                          "deploy/nginx.locations.conf"} & set(publisher.NAVIGATION_BACKEND))
+        with patch.object(publisher, "execute") as command:
+            with self.assertRaisesRegex(ValueError, "explicit existing runtime"):
+                publisher.stage(Mock(), Mock(), "navigation")
+            command.assert_not_called()
+        manifest = {"profile": "navigation", "path": publisher.PREFIX + "/releases/test-nav",
+                    "previous": publisher.PREFIX + "/releases/test-previous", "release": "test-nav",
+                    "files": {}}
+        with patch.object(publisher, "execute", return_value=manifest["previous"]), \
+                patch.object(publisher, "activate_overlay") as activate:
+            publisher.activate(Mock(), Mock(), manifest)
+            activate.assert_called_once()
+            self.assertIs(activate.call_args.args[1], manifest)
 
     def test_outputs_activation(self):
         """Functionality: Preserve credentials and isolate deployment to the owned service.

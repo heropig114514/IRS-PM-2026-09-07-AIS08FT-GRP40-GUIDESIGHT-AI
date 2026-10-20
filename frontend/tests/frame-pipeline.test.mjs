@@ -8,7 +8,7 @@
  * pacingFixture.sent; pacingFixture.active; pacingFixture.failed; pacingFixture.now;
  * pacingFixture.pause; pacingFixture.client.sendFrame; pacingFixture.client.stop;
  * testBound; testLatency; testFailure; testEnd; testCaptureStop; testPacing; testPacingStall;
- * testCreditPacing; testTwelveBound; testThirtyPacing.
+ * testCreditPacing; testTwelveBound; testThirtyPacing; testCaptureTimestamp.
  * Variable Index: None. Fixture state is local to each test; no camera/network/GPU is used.
  */
 import assert from "node:assert/strict";
@@ -60,7 +60,7 @@ function fixture(frameLimit = null, maxPending = 5) {
   const client = {
     /** Functionality: Record one deferred request. Inputs: bytes. Outputs: result promise.
      * Logic: caller completes it. Constraints: no response skipping/retry. */
-    sendFrame(bytes) { const request = deferred(); state.requests.push(request); return request.promise; },
+    sendFrame(bytes, options) { const request = deferred(); request.options = options; state.requests.push(request); return request.promise; },
     /** Functionality: Record transport stop. Inputs: None. Outputs: stop count.
      * Logic: no implicit completion. Constraints: resource release tested over real sockets elsewhere. */
     stop() { state.stops++; },
@@ -68,6 +68,17 @@ function fixture(frameLimit = null, maxPending = 5) {
   return {state, pipeline: new FramePipeline({client, capture, display, onFrame: frame,
     onSent: sent, isActive: active, onFailure: failed, now, frameLimit, maxPending, rate: 12})};
 }
+
+/** Functionality: Verify transport receives the source timestamp before asynchronous JPEG encoding.
+ * Inputs: controlled100ms encode cost and actual pipeline. Outputs:0ms source versus100ms encode-complete.
+ * Logic: timestamp travels through the explicit sendFrame option; Constraints: not a sensor-exposure measurement. */
+test("local transport receives capture time before encoding completes", async function testCaptureTimestamp() {
+  const {pipeline, state} = fixture(1);
+  const running = pipeline.run(); await flush();
+  assert.equal(state.requests[0].options.capturedAt, 0); assert.equal(state.time, 100);
+  state.requests[0].resolve({bytes: new ArrayBuffer(5)}); await running;
+  assert.equal(state.frames[0].capturedAt, 0); assert.equal(state.frames[0].encodedAt, 100);
+});
 
 /** Functionality: Simulate ordinary timer oversleep or a blocked credit using an explicit clock.
  * Inputs: frameLimit, oversleep list (last value repeats), holdSteady transport flag,

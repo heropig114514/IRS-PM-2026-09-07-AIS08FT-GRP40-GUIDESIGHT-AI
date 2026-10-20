@@ -8,10 +8,12 @@
  * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
  * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
  * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity;
- * testResidentAdmission; testResidentIdentity; testResidentWorkload; testResidentEnd; testResidentErrors.
+ * testResidentAdmission; testResidentIdentity; testResidentWorkload; testResidentEnd; testResidentErrors;
+ * testLocalHello; testLocalCapture; testLocalCorrelation; testDistanceModes; testDistanceModeFailures;
+ * testProviderIsolation.
  * Variable Index: manifest/contract — original public model identity; plan — current deployment's
  * compute/quality contract for integration regression; residentContract — independent native identity;
- * JPEG — synthetic markers.
+ * localContract — independent local capability admission; JPEG — synthetic markers.
  */
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
@@ -31,6 +33,127 @@ const JPEG = Uint8Array.from([255, 216, 1, 255, 217]);
 const residentContract = {...contract, protocol: "resident-v1", mode: "detection",
   session_seconds: null, idle_seconds: 15, model_load_ms: 100};
 for (const key of ["validation", "cold_seconds", "steady_seconds"]) delete residentContract[key];
+const localContract = {...contract, provider: "local", protocol_version: 2, session_id: "1".repeat(32),
+  depth_model: "yolo26n-depth", depth_units: "m", tracking_model: "botsort", risk_model: "rules-v1",
+  capabilities: {detection: true, depth: true, tracking: true, risk: true}};
+delete localContract.validation;
+
+/** Functionality: Keep all three provider contracts isolated after shared-client integration.
+ * Inputs: each valid hello against each explicit provider, plus conflicting constructor selectors.
+ * Outputs: only matching admission succeeds. Logic: exercise provider API and legacy resident alias.
+ * Constraints: synthetic admission verifies protocol separation, not model readiness or quality. */
+test("HF, local and resident contracts cannot substitute for each other", async function testProviderIsolation() {
+  const contracts = {hf: contract, local: localContract, resident: residentContract};
+  for (const [provider, hello] of Object.entries(contracts)) {
+    for (const selected of Object.keys(contracts)) {
+      const f = fixture(selected);
+      if (selected === provider) {
+        await admitted(f, hello); f.client.stop();
+      } else {
+        const waiting = assert.rejects(f.client.connect());
+        f.socket.message(JSON.stringify(hello)); await waiting;
+        assert.equal(f.socket.sent.length, 0);
+      }
+    }
+  }
+  assert.throws(() => new LiveDetectionClient("wss://test.invalid/", null, null,
+    {provider: "local", protocol: "resident-v1"}), /协议/);
+  assert.throws(() => new LiveDetectionClient("wss://test.invalid/", null, null,
+    {provider: "resident", protocol: "hf"}), /协议/);
+});
+
+/** Functionality: Admit and decode complete local B/C outputs through unchanged distance/risk fields.
+ * Inputs: explicit mode identities and independent existing risk fixtures. Outputs: valid distance and Track ID.
+ * Logic: geometry carries its own estimator identity; C keeps depth identity on skipped frames.
+ * Constraints: synthetic protocol fixtures do not verify model performance or accuracy. */
+test("local geometry and temporal depth preserve distance tracking and risk interfaces", async function testDistanceModes() {
+  for (const mode of ["geometry", "temporal_depth"]) {
+    const hello = {...localContract, distance_mode: mode, distance_units: "m", depth_interval: mode === "geometry" ? 0 : 3};
+    const metadata = {...riskMetadata(), provider: "local", session_id: localContract.session_id,
+      capture_time_s: 2, timestamp_source: "browser_capture", distance_mode: mode, distance_units: "m",
+      depth_interval: hello.depth_interval, depth_frame: false, distance_ms: 0.1};
+    if (mode === "geometry") {
+      delete hello.depth_model; delete hello.depth_units;
+      hello.distance_estimator = metadata.distance_estimator = "pinhole-height-v1";
+      hello.capabilities = {...hello.capabilities, depth: false, distance: true};
+      delete metadata.depth_model; delete metadata.depth_units; delete metadata.depth_ms;
+    } else {
+      metadata.boxes = metadata.boxes.map(box => ({...box, distance_source: "cached"}));
+    }
+    const f = await admitted(fixture("local"), hello);
+    try {
+      const parsed = await decodeResult(packet(0, metadata), 0, f.client.contract, {captureTimeS: 2});
+      assert.equal(parsed.metadata.distance_mode, mode);
+      assert.equal(parsed.metadata.boxes[0].distance_m, metadata.boxes[0].distance_m);
+      assert.equal(parsed.metadata.boxes[0].track_id, metadata.boxes[0].track_id);
+      assert.equal(parsed.metadata.boxes[0].risk_level, metadata.boxes[0].risk_level);
+    } finally { f.client.stop(); }
+  }
+});
+
+/** Functionality: Reject implicit/misidentified geometry and mismatched temporal intervals.
+ * Inputs: corrupt explicit mode metadata. Outputs: rejected before guidance receives values.
+ * Logic: keep A depth identity checks and require selected B/C identity. Constraints: no silent fallback. */
+test("distance strategies require explicit valid identity and selected cadence", async function testDistanceModeFailures() {
+  const base = {...riskMetadata(), distance_mode: "geometry", distance_units: "m",
+    distance_estimator: "pinhole-height-v1", distance_ms: 0.1};
+  delete base.depth_model; delete base.depth_units; delete base.depth_ms;
+  for (const changes of [{distance_mode: undefined}, {distance_mode: "unknown"},
+    {distance_estimator: undefined}, {distance_units: "cm"}, {distance_ms: -1}, {depth_model: "yolo26n-depth"}])
+    await assert.rejects(decodeResult(packet(0, {...base, ...changes}), 0, contract));
+  const hello = {...localContract, distance_mode: "temporal_depth", distance_units: "m", depth_interval: 3};
+  const temporal = {...riskMetadata(), provider: "local", session_id: hello.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture", distance_mode: "temporal_depth",
+    distance_units: "m", depth_interval: 2, depth_frame: false};
+  await assert.rejects(decodeResult(packet(0, temporal), 0, hello, {captureTimeS: 2}));
+});
+
+/** Functionality: Verify independent local admission and preserved HF quality gate.
+ * Inputs: native capability hello and separately corrupted identities. Outputs: local success/HF rejection.
+ * Logic: local never borrows COCO validation; Constraints: admission does not prove real model readiness. */
+test("local native hello is independent from the preserved HF COCO gate", async function testLocalHello() {
+  const good = await admitted(fixture("local"), localContract); good.client.stop();
+  for (const changes of [{provider: "hf"}, {protocol_version: 1}, {precision: "FP16"},
+    {validation: contract.validation}, {capabilities: {detection: true}}, {session_id: "wrong"}, {risk_model: undefined}]) {
+    const f = fixture("local"), waiting = assert.rejects(f.client.connect());
+    f.socket.message(JSON.stringify({...localContract, ...changes})); await waiting;
+    assert.equal(f.socket.sent.length, 0); assert.equal(f.state.errors.length, 1);
+  }
+  const hf = fixture(), waiting = assert.rejects(hf.client.connect());
+  hf.socket.message(JSON.stringify(localContract)); await waiting;
+  assert.equal(hf.state.errors.length, 1);
+});
+
+/** Functionality: Verify PRF2 source timestamp and strictly monotonic capture admission.
+ * Inputs: real client, explicit source milliseconds, independent response packet.
+ * Outputs: exact big-endian bytes and original matching result. Logic: capturedAt originates before encoding.
+ * Constraints: synthetic JPEG/GPU fixture; no frame loss, timestamp invention or automatic retry. */
+test("local PRF2 carries big-endian source capture time and preserves JPEG", async function testLocalCapture() {
+  const f = await admitted(fixture("local"), localContract);
+  assert.throws(() => f.client.sendFrame(JPEG.slice().buffer), /采集时间/);
+  const first = f.client.sendFrame(JPEG.slice().buffer, {capturedAt: 1234.5});
+  const bytes = f.socket.sent[0], view = new DataView(bytes);
+  assert.equal(view.getUint32(0), 0x50524632); assert.equal(view.getUint32(4), 0);
+  assert.equal(view.getFloat64(8), 1.2345); assert.deepEqual(new Uint8Array(bytes, 16), JPEG);
+  for (const capturedAt of [1234.5, 1000, -1, Infinity])
+    assert.throws(() => f.client.sendFrame(JPEG.slice().buffer, {capturedAt}), /采集时间/);
+  f.socket.message(packet(0, {...riskMetadata(), provider: "local", session_id: localContract.session_id,
+    capture_time_s: 1.2345, timestamp_source: "browser_capture"}));
+  assert.equal((await first).metadata.capture_time_s, 1.2345); f.client.stop();
+});
+
+/** Functionality: Reject foreign/stale timestamp association at the protocol boundary.
+ * Inputs: independently corrupted local session/source/algorithm identity. Outputs: errors before UI/guidance.
+ * Logic: match original pending capture timestamp exactly; Constraints: no silent omission of required capabilities. */
+test("local responses bind the same session and exact source timestamp", async function testLocalCorrelation() {
+  const base = {...riskMetadata(), provider: "local", session_id: localContract.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture"};
+  const valid = await decodeResult(packet(0, base), 0, localContract, {captureTimeS: 2});
+  assert.equal(valid.metadata.risk_model, "rules-v1");
+  for (const changes of [{session_id: "2".repeat(32)}, {capture_time_s: 2.1},
+    {timestamp_source: "server_received"}, {provider: "hf"}, {depth_model: undefined}, {risk_model: undefined}])
+    await assert.rejects(decodeResult(packet(0, {...base, ...changes}), 0, localContract, {captureTimeS: 2}));
+});
 
 /** Functionality: Accept additive depth fields with finite meters or explicitly unavailable null.
  * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged legacy box.
@@ -112,7 +235,8 @@ function packet(index, overrides = {}, jpeg = JPEG) {
 }
 
 /** Functionality: Bind actual client to explicit socket/lifecycle fixtures.
- * Inputs: explicit protocol, HF by default. Outputs: client/socket/state. Logic: collect diagnostics.
+ * Inputs: provider or resident-v1 alias, HF by default. Outputs: client/socket/state.
+ * Logic: collect diagnostics and exercise both selection APIs.
  * Constraints: never fetches HF quota or requests a GPU. */
 function fixture(protocol = "hf") {
   const socket = new FakeSocket(), state = {errors: [], ends: 0};
@@ -126,7 +250,7 @@ function fixture(protocol = "hf") {
    * Logic: no auto-start. Constraints: no actual resource-release proof. */
   function ended() { state.ends += 1; }
   return {client: new LiveDetectionClient("wss://test.invalid/ws/detect/fixture/", failed, ended,
-    {socketFactory, protocol}), socket, state};
+    {socketFactory, ...(protocol === "resident-v1" ? {protocol} : {provider: protocol})}), socket, state};
 }
 
 /** Functionality: Admit all explicit native workloads and verify an actual envelope response.

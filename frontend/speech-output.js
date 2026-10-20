@@ -1,18 +1,19 @@
 /** Responsibilities: 浏览器语音输出共用接口、测试UI、状态事件及明确失败反馈。
  * Implementation: 默认关闭；手动UI与MCP共享speak/stop，保留前台和用户激活要求；
  * 只提交一个utterance，按start/end/error记录引擎状态，停止及后台取消，不重试或替换语音。
- * Related Modules: index.html, camera.css, translations.js, ai-control.js; core.ai_mcp/core.camera。
+ * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js; core.ai_mcp/core.camera。
  * Declaration Index: SpeechOutput; SpeechOutput.constructor; SpeechOutput.feedback;
  * SpeechOutput.render; SpeechOutput.refreshVoices; SpeechOutput.describe; SpeechOutput.voiceList;
  * SpeechOutput.result; SpeechOutput.speak; SpeechOutput.stop; SpeechOutput.handlePlay;
  * SpeechOutput.handleEnable; SpeechOutput.handleSample; SpeechOutput.handleStart;
  * SpeechOutput.handleEnd; SpeechOutput.handleError; SpeechOutput.handleVisibility;
- * SpeechOutput.handlePageHide。
+ * SpeechOutput.handlePageHide; SpeechOutput.subscribe; SpeechOutput.notify; SpeechOutput.stopOwned。
  * Variable Index: MAX_TEXT_LENGTH — 1000个Unicode码点；LANGUAGES — 显式中英文语言；
  * SAMPLES — 不会自动播放的测试文本；PHASE_LABELS — 引擎状态对应UI；ERROR_CODES — 标准错误白名单；
  * speechOutput — 摄像头页共享实例，其他页为null。实例engine/doc/win为浏览器依赖；
  * current保留utterance并隔离旧事件，canceling隔离取消过程事件，sequence标识请求；
- * phase/lastRequest/lastError/nativeVoices/voiceReadError为有限状态，不持久化或记录朗读正文。
+ * phase/lastRequest/lastError/nativeVoices/voiceReadError为有限状态；listeners订阅非正文生命周期；
+ * localOnly仅由独立integration页面明确声明，拒绝默认/远程声音而不影响原页面。
  */
 export const MAX_TEXT_LENGTH = 1000;
 const LANGUAGES = ["zh-CN", "en-US"];
@@ -60,6 +61,8 @@ export class SpeechOutput {
     this.sequence = 0;
     this.lastRequest = null;
     this.lastError = null;
+    this.listeners = new Set();
+    this.localOnly = doc.documentElement?.dataset?.localMvp === "true";
     this.enabled.checked = false;
     for (const name of ["render", "refreshVoices", "handlePlay", "stop", "handleEnable",
       "handleSample", "handleStart", "handleEnd", "handleError", "handleVisibility", "handlePageHide"])
@@ -80,6 +83,27 @@ export class SpeechOutput {
     }
     this.render();
     win.console.info("[PRS speech] Initialized", {supported: this.supported});
+  }
+  /** Functionality: Subscribe to non-text output events. Inputs: listener. Outputs: unsubscribe callback.
+   * Logic: local Set; events carry request identity and actual browser engine phase.
+   * Constraints: no polling, voice replacement, permission grant or hardware-success inference. */
+  subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
+  /** Functionality: Publish output lifecycle. Inputs: phase and optional reason. Outputs: callbacks.
+   * Logic: stable request_id separates manual, scene and guidance utterances.
+   * Constraints: body omitted; observer exceptions cannot alter native output semantics. */
+  notify(phase, reason = null) {
+    for (const listener of this.listeners) {
+      try { listener({channel: "speech", phase, request_id: this.lastRequest?.id ?? null,
+        reason, at: performance.now()}); }
+      catch (error) { this.win.console.error("Speech observer failed", {error_type: error.name}); }
+    }
+  }
+  /** Functionality: Cancel only the caller's current utterance. Inputs: requestId. Outputs: acknowledgement.
+   * Logic: compare current request identity before delegating to the existing shared stop.
+   * Constraints: never cancel a later manual/scene utterance or retry a failed cancellation. */
+  stopOwned(requestId) {
+    if (!this.current || this.lastRequest?.id !== requestId) return this.result("stop", false, "not_owned");
+    return this.stop();
   }
 
   /** Functionality: 发布可翻译的语音提示。
@@ -207,7 +231,7 @@ export class SpeechOutput {
    * Logic: 校验Unicode长度和参数，再检查前提/繁忙状态；指定声音必须唯一存在且主语言匹配。
    * 保留utterance强引用后绑定start/end/error并只调用一次speak。
    * Constraints: 不排队或自动中断旧请求；原生异常/事件错误不重试，不改写或记录正文；
-   * 默认声音由浏览器按明确language选择，指定声音失效不会替换成默认。
+   * 原页面默认声音由浏览器按明确language选择；本地MVP只接受显式localService声音；失效不替换。
    */
   speak(text, {language = "zh-CN", voice_id = null, rate = 1, volume = 1} = {}) {
     const length = typeof text === "string" ? [...text].length : 0;
@@ -252,6 +276,10 @@ export class SpeechOutput {
         return this.result("speak", false, "voice_language_mismatch");
       }
     }
+    if (this.localOnly && (!voice || voice.localService !== true)) {
+      this.feedback("指定语音不可用或不唯一，请重新选择。", "error");
+      return this.result("speak", false, "local_voice_required");
+    }
     const requestId = ++this.sequence;
     this.lastRequest = {id: requestId, text_length: length, language, voice_id: voice_id || null,
       rate, volume, local_service: voice ? voice.localService : null};
@@ -269,6 +297,7 @@ export class SpeechOutput {
       this.lastError = null;
       this.feedback("请求已提交，等待语音引擎开始；请确认设备实际声音。");
       this.render();
+      this.notify("submitted");
       this.engine.speak(utterance);
       this.win.console.info("[PRS speech] Request submitted", {request_id: requestId,
         text_length: length, language, rate, volume, local_service: this.lastRequest.local_service});
@@ -281,6 +310,7 @@ export class SpeechOutput {
         text_length: length, language, rate, volume, error_name: error?.name});
       this.feedback("语音调用异常，请检查浏览器后手动再试。", "error");
       this.render();
+      this.notify("error", "native_error");
       return this.result("speak", false, "native_error");
     }
   }
@@ -303,12 +333,14 @@ export class SpeechOutput {
       this.feedback("已提交停止请求；请确认设备实际声音。");
       this.render();
       this.win.console.info("[PRS speech] Cancel submitted", {request_id: this.lastRequest?.id ?? null});
+      this.notify("cancel");
       return this.result("stop", true);
     } catch (error) {
       this.lastError = "cancel_failed";
       this.win.console.error("[PRS speech] Cancel failed", {request_id: this.lastRequest?.id ?? null,
         state: this.phase, error_name: error?.name});
       this.feedback("停止请求异常，输出状态尚未确认，请手动检查。", "error");
+      this.notify("error", "cancel_failed");
       return this.result("stop", false, "cancel_failed");
     } finally { this.canceling = false; }
   }
@@ -356,6 +388,7 @@ export class SpeechOutput {
     this.feedback("语音引擎已开始朗读；请确认设备实际声音。", "live");
     this.render();
     this.win.console.info("[PRS speech] Engine started", {request_id: this.lastRequest.id});
+    this.notify("start");
   }
 
   /** Functionality: 记录语音引擎的结束事件并释放当前引用。
@@ -369,6 +402,7 @@ export class SpeechOutput {
     this.feedback("语音引擎报告完成；实际声音仍需在设备上确认。", "live");
     this.render();
     this.win.console.info("[PRS speech] Engine ended", {request_id: this.lastRequest.id});
+    this.notify("end");
   }
 
   /** Functionality: 明确报告当前请求的异步原生错误。
@@ -384,6 +418,7 @@ export class SpeechOutput {
     this.feedback("语音引擎报告错误（{0}），请检查设备后手动再试。".replace("{0}", this.lastError), "error");
     this.render();
     this.win.console.error("[PRS speech] Engine failed", {request_id: this.lastRequest.id, code: this.lastError});
+    this.notify("error", this.lastError);
   }
 
   /** Functionality: 页面转入后台时取消本模块的当前输出。

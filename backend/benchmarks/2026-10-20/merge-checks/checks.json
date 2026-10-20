@@ -1,0 +1,18 @@
+[
+  {
+    "exit_code": 0,
+    "name": "django_check"
+  },
+  {
+    "exit_code": 0,
+    "name": "migrations"
+  },
+  {
+    "exit_code": 0,
+    "name": "backend_tests"
+  },
+  {
+    "exit_code": 0,
+    "name": "ruff"
+  }
+]

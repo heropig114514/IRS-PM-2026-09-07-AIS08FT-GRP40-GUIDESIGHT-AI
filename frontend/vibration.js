@@ -1,16 +1,17 @@
 /** Responsibilities: 手动UI与显式MCP调用共享的手机震动测试和浏览器能力/拒绝反馈。
  * Implementation: 统一入口保留用户启用、前台和激活要求，发送固定节奏并返回结构化结果；
  * 关闭、隐藏或离页时请求取消，不自动恢复。
- * Related Modules: index.html, camera.css, translations.js, ai-control.js；core.camera 提供白名单资源。
+ * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js；core.camera提供资源。
  * Declaration Index: VibrationTester; VibrationTester.constructor; VibrationTester.render;
  * VibrationTester.feedback; VibrationTester.callNative; VibrationTester.handleEnable;
  * VibrationTester.describe; VibrationTester.testResult; VibrationTester.testPattern;
  * VibrationTester.handleTest; VibrationTester.stop; VibrationTester.handleStop;
- * VibrationTester.handleVisibility; VibrationTester.handlePageHide。
+ * VibrationTester.handleVisibility; VibrationTester.handlePageHide; VibrationTester.subscribe;
+ * VibrationTester.notify; VibrationTester.stopOwned。
  * Variable Index: PATTERNS — 固定毫秒节奏；tester — 当前页面测试控制器。
  * 实例 doc/win 为浏览器依赖；enabled/buttons/stopButton/status/message 为独立控件；
  * supported 仅说明接口存在，requested 记录尚未成功取消的已接受请求，不证明马达仍在震动；
- * nativeOutcome 记录最近一次原生接受/拒绝/异常，供 MCP 返回机器可读结果。
+ * nativeOutcome记录最近一次原生结果；sequence/requestId及listeners给引导模块明确所有权与API生命周期。
  */
 const PATTERNS = {short: [200], long: [800], double: [150, 100, 150]};
 
@@ -36,6 +37,9 @@ export class VibrationTester {
     this.supported = typeof win.navigator.vibrate === "function";
     this.requested = false;
     this.nativeOutcome = null;
+    this.sequence = 0;
+    this.requestId = null;
+    this.listeners = new Set();
     this.enabled.checked = false;
     this.handleEnable = this.handleEnable.bind(this);
     this.handleTest = this.handleTest.bind(this);
@@ -54,6 +58,25 @@ export class VibrationTester {
     this.supported ? "idle" : "error");
     this.render();
     win.console.info("[PRS vibration] Initialized", {supported: this.supported});
+  }
+  /** Functionality: Subscribe to vibration API lifecycle. Inputs: listener. Outputs: unsubscribe callback.
+   * Logic: Set retains listeners. Constraints: API acknowledgement is not observed motor start/end. */
+  subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
+  /** Functionality: Publish non-sensitive request events. Inputs: phase/reason. Outputs: callbacks.
+   * Logic: each accepted pattern has an identity; cancel/error refer to the current request.
+   * Constraints: no hardware verification, retries or synthetic activation; observer failures are diagnosed. */
+  notify(phase, reason = null) {
+    for (const listener of this.listeners) {
+      try { listener({channel: "vibration", phase, request_id: this.requestId, reason,
+        at: performance.now(), hardware_verified: false}); }
+      catch (error) { this.win.console.error("Vibration observer failed", {error_type: error.name}); }
+    }
+  }
+  /** Functionality: Cancel only the caller's accepted pattern. Inputs: requestId. Outputs: boolean.
+   * Logic: verify identity and requested flag before existing cancellation.
+   * Constraints: cannot cancel a newer manual pattern or infer actual motor completion. */
+  stopOwned(requestId) {
+    return this.requested && requestId === this.requestId ? this.stop("guidance") : false;
   }
 
   /** Functionality: 根据能力和用户开关刷新操作边界。
@@ -116,14 +139,14 @@ export class VibrationTester {
   /** Functionality: 读取震动调用前提与请求记录。
    * Inputs: supported、开关、doc.visibilityState、navigator.userActivation和requested。
    * Outputs: JSON兼容状态；user_activated在浏览器不提供该信息时为null。
-   * Logic: 读取同一个控制器，供手动UI和MCP共享，不调用原生震动或申请权限。
+   * Logic: 读取同一控制器与当前request_id，供UI/MCP/引导共享，不调用原生震动或申请权限。
    * Constraints: request_pending仅指已接受且未成功取消的记录；hardware_verified始终为false。
    */
   describe() {
     return {available: true, supported: this.supported, enabled: this.enabled.checked,
       visible: this.doc.visibilityState === "visible",
       user_activated: this.win.navigator.userActivation?.hasBeenActive ?? null,
-      request_pending: this.requested, hardware_verified: false};
+      request_pending: this.requested, request_id: this.requestId, hardware_verified: false};
   }
 
   /** Functionality: 构造一次测试的机器可读结果并记录拒绝边界。
@@ -164,9 +187,12 @@ export class VibrationTester {
     }
     if (this.callNative([...PATTERNS[name]], name)) {
       this.requested = true;
+      this.requestId = ++this.sequence;
+      this.notify("start");
       this.feedback("震动请求已接受，请在手机上确认实际震动；接口返回值不能验证硬件。", "live");
       return this.testResult(name, true, null);
     }
+    this.notify("error", this.nativeOutcome);
     return this.testResult(name, false, this.nativeOutcome);
   }
 
@@ -190,8 +216,9 @@ export class VibrationTester {
       this.nativeOutcome = "unsupported";
       return false;
     }
-    if (!this.callNative(0, reason)) return false;
+    if (!this.callNative(0, reason)) { this.notify("error", this.nativeOutcome); return false; }
     this.requested = false;
+    this.notify("cancel");
     const text = reason === "disabled" ? "震动测试已关闭，已发送停止请求。" :
       reason === "hidden" || reason === "pagehide" ?
         "页面已隐藏或离开，已发送停止请求。返回后需手动测试。" : "已发送停止震动请求。";

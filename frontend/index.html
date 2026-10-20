@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Responsibilities: 手机摄像头原样/HF/常驻 GPU 标注回传工作台的语义结构。
-Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认；加载 AI DOM 控制桥接及独立震动/语音输出测试。
+Implementation: 本地 video 与返回 img 分开；四种模式以原样为默认，local 仅由 integration 入口启用；加载 AI DOM 控制桥及独立震动/语音输出测试。
 Related Modules: i18n.js, translations.js, camera.css, camera.js, echo-client.js,
 live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js, scene-client.js；检测用同源持久连接。
 Declaration Index: None。
@@ -79,6 +79,7 @@ speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或�
                 <option value="echo">原样回传</option>
                 <option value="resident">常驻 GPU · 80 类</option>
                 <option value="hf">Hugging Face ZeroGPU · 80 类</option>
+                <option value="local" disabled>本地 CUDA · 80 类</option>
               </select></label
             >
             <label class="camera-select"

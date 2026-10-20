@@ -1,0 +1,31 @@
+{
+  "status": "integrated_and_code_checks_passed",
+  "original_base": "5c70f3b",
+  "pushed_snapshot": "75b07ae",
+  "upstream_main": "c124cb8",
+  "branch": "codex/resident-inference-optimization",
+  "resolution": [
+    "Preserved local PRF2 source timestamps, capabilities and video/navigation interfaces",
+    "Retained resident-v1 PRF1 native FP32 modes and HF COCO admission independently",
+    "Preserved A/B/C distance strategies; host-only depth timings reset on skipped frames",
+    "Reorganized optimization documents by current contract and operation per updated AGENTS.md",
+    "MOT17 video fixtures now available; no metric depth/distance ground truth supplied"
+  ],
+  "backend_tests": 245,
+  "backend_skipped": 0,
+  "frontend_tests": 254,
+  "frontend_skipped": 0,
+  "checks": [
+    "Django check",
+    "makemigrations --check --dry-run",
+    "manage.py test",
+    "ruff check .",
+    "node --test ../frontend/tests/*.test.mjs"
+  ],
+  "manual_review": "Reviewed merge resolutions, actual qualified declaration indexes, protocol gates, timing semantics and documentation; no check_docs.py present.",
+  "unverified": [
+    "Actual browser after merge",
+    "Real moving-video and metric depth accuracy",
+    "Remote deployment and external services"
+  ]
+}
