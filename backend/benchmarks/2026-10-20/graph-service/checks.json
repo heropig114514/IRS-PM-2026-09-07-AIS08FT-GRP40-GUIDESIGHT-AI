@@ -1,0 +1,54 @@
+{
+  "status": "passed_code_checks",
+  "checks": [
+    {
+      "name": "django_check",
+      "exit_code": 0,
+      "log": "django-check.log"
+    },
+    {
+      "name": "makemigrations_check",
+      "exit_code": 0,
+      "log": "migrations-check.log"
+    },
+    {
+      "name": "backend_tests",
+      "exit_code": 0,
+      "log": "backend-tests.log"
+    },
+    {
+      "name": "ruff",
+      "exit_code": 0,
+      "log": "ruff.log"
+    },
+    {
+      "name": "pip_check",
+      "exit_code": 0,
+      "log": "pip-check.log"
+    },
+    {
+      "name": "node_syntax",
+      "exit_code": 0,
+      "log": "node-check.log"
+    },
+    {
+      "name": "git_diff_check",
+      "exit_code": 0,
+      "log": "diff-check.log"
+    }
+  ],
+  "backend_tests": 177,
+  "skipped": 0,
+  "browser_functional": "All three runs completed: six sessions, 1086 frames displayed, busy rejection and user stop passed",
+  "browser_performance": "All three runs exit2: unchanged max500ms gate unmet",
+  "frontend_unit_tests": "Not rerun: frontend unchanged; actual browser exercised original page",
+  "manual_review": "Four changed/new code files reviewed for headers, actual qualified declarations, timing semantics, defaults and failure policy; Python AST assisted checks passed; experimental reconnect screenshot visually inspected. No check_docs.py added.",
+  "unverified": [
+    "Real moving video and depth/distance ground truth",
+    "Physical camera/public network/multi-user/remote deployment",
+    "Graceful shutdown of experimental browser child on Windows"
+  ],
+  "committed": false,
+  "pushed": false,
+  "deployed": false
+}

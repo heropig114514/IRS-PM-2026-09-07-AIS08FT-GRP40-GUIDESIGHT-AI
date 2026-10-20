@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "mode": "depth",
+  "scope": "Native FP32 static-image probe; not production FP16 or video validation",
+  "requested_frames": 31,
+  "completed_frames": 31,
+  "identities": {
+    "input": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "detection": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "manifest": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6",
+    "depth": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+  },
+  "implementation_sha256": {
+    "core/detector.py": "255511e15c08bcf63a166c53d44eddfaa6ef7da879dfad2fcb4d5f0a349e5cba",
+    "realtime/detector.py": "55720c01e5717b937320e12f8d8e4abbbc273cd16987d0076fb7019c508a3295",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "af5034c9925e8e92add7a184c7e080717e98cd7e833c0df0af661cb65316b09c",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "zerogpu/runtime.py": "a2d49af2c0b17f71483731fcd62f889ca3fe6a915559a663381f35a548dc51d8",
+    "tools/fixtures.py": "998caefb7c075442f0e849550681145eef822040e5b848358a325a41c562ae66",
+    "tools/benchmark_inference.py": "8b6df7cd42a42aa16da540cc79fd635b505f6f88b935d2e1f91369fb0d3245db"
+  },
+  "settings": {
+    "detection_config": {},
+    "batch": 1,
+    "detection_edge": 640,
+    "confidence_threshold": 0.25,
+    "jpeg_quality": 80,
+    "depth_edge": 768,
+    "depth_precision": "FP32"
+  },
+  "timing_notes": [
+    "Only first frame excluded from steady summaries",
+    "inference_ms includes transfers; forward_event_ms is CUDA replay",
+    "depth_ms includes box decoding and depth inference/fusion",
+    "depth_sdk timings come from the existing synchronized SDK profiler",
+    "Stage durations overlap with server_ms and predict_wall_ms",
+    "Tracking uses actual worker timestamps; static image repeated"
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "ultralytics": "8.4.171",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "prepared_input": {
+    "sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+    "size": [
+      480,
+      640
+    ],
+    "bytes": 78850
+  },
+  "model_initialization_ms": 566.5993000002345,
+  "gpu_peak_allocated_bytes": 222011392,
+  "gpu_peak_reserved_bytes": 306184192,
+  "first_frame": {
+    "forward_event_ms": 5.051392078399658,
+    "inference_ms": 0.0,
+    "prepare_ms": 4.947600000377861,
+    "gpu_stage_ms": 670.8663999997952,
+    "depth_ms": 3191.101099999287,
+    "render_ms": 3.5514999999577412,
+    "server_ms": 3870.468400000391,
+    "graph_setup_ms": 671.9999999986612,
+    "index": 0,
+    "predict_wall_ms": 3870.6194999995205,
+    "depth_sdk_preprocess_ms": 23.55390000047919,
+    "depth_sdk_inference_ms": 15.580100000079256,
+    "depth_sdk_postprocess_ms": 0.25889999960782006
+  },
+  "steady": {
+    "predict_wall_ms": {
+      "count": 30,
+      "mean_ms": 38.0471899999975,
+      "min_ms": 33.36939999826427,
+      "max_ms": 48.72360000081244,
+      "p50_ms": 36.42149999996036,
+      "p95_ms": 47.0353000000614,
+      "p99_ms": 48.43913900072948
+    },
+    "forward_event_ms": {
+      "count": 30,
+      "mean_ms": 4.201762135823568,
+      "min_ms": 3.5658559799194336,
+      "max_ms": 5.148191928863525,
+      "p50_ms": 4.15009617805481,
+      "p95_ms": 4.935441637039185,
+      "p99_ms": 5.091843771934509
+    },
+    "inference_ms": {
+      "count": 30,
+      "mean_ms": 5.666666666608459,
+      "min_ms": 0.0,
+      "max_ms": 16.00000000144064,
+      "p50_ms": 0.0,
+      "p95_ms": 15.99999999962165,
+      "p99_ms": 16.000000000913133
+    },
+    "prepare_ms": {
+      "count": 30,
+      "mean_ms": 4.3228533331785,
+      "min_ms": 3.5642000002553686,
+      "max_ms": 6.370899998728419,
+      "p50_ms": 4.255050000210758,
+      "p95_ms": 5.410994999783725,
+      "p99_ms": 6.140929998946376
+    },
+    "gpu_stage_ms": {
+      "count": 30,
+      "mean_ms": 5.509366666895706,
+      "min_ms": 4.907000000457629,
+      "max_ms": 6.3795999994908925,
+      "p50_ms": 5.453900000247813,
+      "p95_ms": 6.140644999322831,
+      "p99_ms": 6.315770999299275
+    },
+    "depth_ms": {
+      "count": 30,
+      "mean_ms": 25.26794999982182,
+      "min_ms": 21.735100001023966,
+      "max_ms": 34.350399999311776,
+      "p50_ms": 23.81450000029872,
+      "p95_ms": 33.2489200011878,
+      "p99_ms": 34.165959999645565
+    },
+    "depth_sdk_preprocess_ms": {
+      "count": 30,
+      "mean_ms": 2.5070899999870258,
+      "min_ms": 1.9849000000249362,
+      "max_ms": 4.204099999697064,
+      "p50_ms": 2.3792999991201214,
+      "p95_ms": 3.358024999124609,
+      "p99_ms": 4.003042999574973
+    },
+    "depth_sdk_inference_ms": {
+      "count": 30,
+      "mean_ms": 16.84017666672541,
+      "min_ms": 14.510799999698065,
+      "max_ms": 23.15929999895161,
+      "p50_ms": 15.87409999956435,
+      "p95_ms": 22.623980000571464,
+      "p99_ms": 23.06220799973744
+    },
+    "depth_sdk_postprocess_ms": {
+      "count": 30,
+      "mean_ms": 0.2606566666751557,
+      "min_ms": 0.15019999955256935,
+      "max_ms": 0.633699999525561,
+      "p50_ms": 0.2416500001345412,
+      "p95_ms": 0.42968499947164673,
+      "p99_ms": 0.5863719994340499
+    },
+    "tracking_ms": null,
+    "risk_ms": null,
+    "render_ms": {
+      "count": 30,
+      "mean_ms": 2.773439999994783,
+      "min_ms": 2.4883000005502254,
+      "max_ms": 4.079599999386119,
+      "p50_ms": 2.6419999994686805,
+      "p95_ms": 3.3705799994095287,
+      "p99_ms": 3.8948119991800922
+    },
+    "server_ms": {
+      "count": 30,
+      "mean_ms": 37.87439333336806,
+      "min_ms": 33.218299999134615,
+      "max_ms": 48.531200000070385,
+      "p50_ms": 36.24894999938988,
+      "p95_ms": 46.779454999523296,
+      "p99_ms": 48.235400000157824
+    },
+    "graph_setup_ms": {
+      "count": 30,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    }
+  }
+}

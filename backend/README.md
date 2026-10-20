@@ -1,5 +1,9 @@
 # Backend 开发入口
 
+当前服务推理优化计划、本机基线、独立 Graph 对照及后续条件见 [推理优化计划与执行记录](INFERENCE_OPTIMIZATION_PLAN.md)。
+
+后续部署目标已选择本机／自有服务器常驻 GPU。服务入口、仓库结构与推理调用链、启动命令及协议见 [常驻 GPU 服务](RESIDENT.md)。仓库页面现已支持显式选择「常驻 GPU」；现有远程部署本轮未更新。
+
 > 当前手机优化入口为 https://47.239.50.129/prs/live/ 。真实部署达到10FPS以上；55秒长测仍出现1.10秒延迟，尚不能保证每帧≤500ms。最新原图对照、浏览器测试与边界见 [手机视频优化记录](PHONE-LIVE.md)。旧模式实现已删除；原版本快照和基准报告保留。
 
 
@@ -78,10 +82,12 @@ API 默认要求登录，仅健康检查显式允许匿名。新业务应用放�
 
 `core/camera.py` 从根目录 frontend 的固定白名单读取页面/资源，不暴露任意文件。匿名诊断入口不保存媒体，也不依赖管理后台账号。协议、默认图像参数及客户端测试见 [前端说明](../frontend/README.md)。当前没有业务表、文件存储、队列或产品账号接口。
 
-摄像头仅保留 Echo 和最新 HF ZeroGPU 视频检测。`config/asgi.py` 仅分派 `/ws/echo/`
-和 `/ws/detect/hf/`；旧 HTTP 检测和其他视频 WS 均拒绝。`core/detector.py` 只提供共享
+摄像头支持 Echo、HF ZeroGPU 和常驻 GPU 三个显式模式。原 `config/asgi.py` 媒体路径为
+`/ws/echo/` 和 `/ws/detect/hf/`；选择 `config.resident_asgi:application` 启动才增加
+`/ws/detect/resident/`。旧 HTTP 检测和旧视频 WS 仍拒绝。`core/detector.py` 只提供共享
 JPEG/预处理/框/标注函数，不含CPU推理会话。原模型、640、0.25、JPEG80保持；计算精度和
-后端从必需的COCO合格 `models/inference-plan.json` 读取，输出数组保持FP32。完整GPU逐项
+HF 后端从必需的COCO合格 `models/inference-plan.json` 读取；本机常驻路径保持原 FP32，
+采用独立 `resident-v1` 契约，不借用 HF 的精度验证结果。输出数组保持FP32。完整GPU逐项
 实验与失败诊断见 [ACCELERATION.md](ACCELERATION.md)，同一个Notebook用版本管理复测。
 HF 身份私有配置，开始前检查每日免费秒数和调用次数；一次视频最多55秒，不自动重新分配。
 

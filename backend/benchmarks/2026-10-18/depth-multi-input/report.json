@@ -1,0 +1,359 @@
+{
+  "status": "completed",
+  "scope": "Multi-input FP32 numerical diagnostic; no truth data",
+  "requested_comparisons": 10,
+  "completed_comparisons": 10,
+  "frames": [
+    {
+      "index": 0,
+      "input": "model_tests\\samples\\bus.jpg",
+      "frame_size": [
+        480,
+        640
+      ],
+      "prepared_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+      "graph_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "candidate_depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 5,
+      "depth_shape": [
+        640,
+        480
+      ]
+    },
+    {
+      "index": 1,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "frame_size": [
+        481,
+        640
+      ],
+      "prepared_sha256": "f6c98eaee3baf861390069be00e088253576b0268071d5a3acc38122e76c46b0",
+      "graph_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "candidate_depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 2,
+      "depth_shape": [
+        640,
+        481
+      ]
+    },
+    {
+      "index": 2,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "frame_size": [
+        640,
+        478
+      ],
+      "prepared_sha256": "179c7297ca1ce042235f6dc4ce6206b0a27a7a3a741e785b7c912c244a5d0be1",
+      "graph_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "candidate_depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 2,
+      "depth_shape": [
+        478,
+        640
+      ]
+    },
+    {
+      "index": 3,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "frame_size": [
+        381,
+        500
+      ],
+      "prepared_sha256": "477b08b447093b31750796796fceb4175b0796e8d65fc2b640277353635b398a",
+      "graph_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "candidate_depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 6,
+      "depth_shape": [
+        500,
+        381
+      ]
+    },
+    {
+      "index": 4,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "frame_size": [
+        640,
+        488
+      ],
+      "prepared_sha256": "a36beb47cc51f575fb906c1e00458c6fd83419c1b8f99d7a16bbbe1d573db0a7",
+      "graph_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "candidate_depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 3,
+      "depth_shape": [
+        488,
+        640
+      ]
+    },
+    {
+      "index": 5,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "frame_size": [
+        640,
+        488
+      ],
+      "prepared_sha256": "a36beb47cc51f575fb906c1e00458c6fd83419c1b8f99d7a16bbbe1d573db0a7",
+      "graph_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "candidate_depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 3,
+      "depth_shape": [
+        488,
+        640
+      ]
+    },
+    {
+      "index": 6,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "frame_size": [
+        381,
+        500
+      ],
+      "prepared_sha256": "477b08b447093b31750796796fceb4175b0796e8d65fc2b640277353635b398a",
+      "graph_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "candidate_depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 6,
+      "depth_shape": [
+        500,
+        381
+      ]
+    },
+    {
+      "index": 7,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "frame_size": [
+        640,
+        478
+      ],
+      "prepared_sha256": "179c7297ca1ce042235f6dc4ce6206b0a27a7a3a741e785b7c912c244a5d0be1",
+      "graph_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "candidate_depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 2,
+      "depth_shape": [
+        478,
+        640
+      ]
+    },
+    {
+      "index": 8,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "frame_size": [
+        481,
+        640
+      ],
+      "prepared_sha256": "f6c98eaee3baf861390069be00e088253576b0268071d5a3acc38122e76c46b0",
+      "graph_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "candidate_depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 2,
+      "depth_shape": [
+        640,
+        481
+      ]
+    },
+    {
+      "index": 9,
+      "input": "model_tests\\samples\\bus.jpg",
+      "frame_size": [
+        480,
+        640
+      ],
+      "prepared_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+      "graph_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "candidate_depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "count": 5,
+      "depth_shape": [
+        640,
+        480
+      ]
+    }
+  ],
+  "graphs": {
+    "(1, 3, 768, 576)": {
+      "adapter": "experimental_native_fp32_depth_graph",
+      "shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "dtype": "torch.float32",
+      "setup_ms": 251.98509999995622,
+      "preparation_output_equal": true,
+      "scope": "One fixture raw-output equality; no dataset quality claim"
+    },
+    "(1, 3, 768, 608)": {
+      "adapter": "experimental_native_fp32_depth_graph",
+      "shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "dtype": "torch.float32",
+      "setup_ms": 246.1507000000438,
+      "preparation_output_equal": true,
+      "scope": "One fixture raw-output equality; no dataset quality claim"
+    },
+    "(1, 3, 576, 768)": {
+      "adapter": "experimental_native_fp32_depth_graph",
+      "shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "dtype": "torch.float32",
+      "setup_ms": 254.52040000004672,
+      "preparation_output_equal": true,
+      "scope": "One fixture raw-output equality; no dataset quality claim"
+    },
+    "(1, 3, 608, 768)": {
+      "adapter": "experimental_native_fp32_depth_graph",
+      "shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "dtype": "torch.float32",
+      "setup_ms": 245.45390000002953,
+      "preparation_output_equal": true,
+      "scope": "One fixture raw-output equality; no dataset quality claim"
+    }
+  },
+  "input_sha256": {
+    "model_tests\\samples\\bus.jpg": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "models\\experiments\\coco8\\images\\val\\000000000036.jpg": "4c28394898302bef227834d63498a0fc54e4295f11c590c8a8ebcba51347bc03",
+    "models\\experiments\\coco8\\images\\val\\000000000042.jpg": "c87afb6dfe55db1cada52479ed939a231e030d64f5e3c3eaf7eb1544591f853a",
+    "models\\experiments\\coco8\\images\\val\\000000000049.jpg": "86b46022d382f67b0934147fe515e1c3c3f5c04db45045516214b5e3092148e3",
+    "models\\experiments\\coco8\\images\\val\\000000000061.jpg": "6460e4a7cc80e34815aba8910a23152a16a24a416fa598138bd9231cccd413e2"
+  },
+  "implementation_sha256": {
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/detector.py": "55720c01e5717b937320e12f8d8e4abbbc273cd16987d0076fb7019c508a3295",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+    "tools/validate_depth_graph.py": "efe5292f123dc19cf0ecc07c572f864fa2d2e116dad489e4c0b0e2f9b850df25"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "assets_sha256": {
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.json": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6"
+  },
+  "graph_count": 4,
+  "peak_allocated_mib": 371.8037109375
+}

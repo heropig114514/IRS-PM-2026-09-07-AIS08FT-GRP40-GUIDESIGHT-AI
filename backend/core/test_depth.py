@@ -121,7 +121,7 @@ class DepthTests(SimpleTestCase):
     def test_resident_integration(self):
         """Functionality: Fuse the actual shared predict path while keeping detection output fixed.
         Inputs: deterministic graph, actual JPEG codec and depth substitute. Outputs:2 fused frames,
-        same legacy boxes/raw hash, one graph construction, and propagated inference failure.
+        same legacy boxes/raw hash, additive depth subtimers, one graph construction and failure.
         Logic: compare enabled/disabled on identical predictions. Constraints: no CUDA model proof.
         """
         rows = np.zeros((1, 300, 6), dtype=np.float32)
@@ -141,6 +141,9 @@ class DepthTests(SimpleTestCase):
             second, _ = resident.predict(jpeg())
             self.assertAlmostEqual(first["boxes"][0]["distance_m"], 2.4, places=6)
             self.assertEqual(first["depth_units"], "m")
+            self.assertAlmostEqual(first["depth_ms"], first["decode_boxes_ms"]
+                                   + first["depth_predict_ms"] + first["depth_fusion_ms"])
+            self.assertGreaterEqual(first["depth_fusion_ms"], 0)
             self.assertEqual(first["jpeg_sha256"], hashlib.sha256(rendered).hexdigest())
             self.assertEqual(second["graph_setup_ms"], 0)
             factory.assert_called_once()
@@ -150,6 +153,7 @@ class DepthTests(SimpleTestCase):
             original, _ = resident.predict(jpeg())
             self.assertEqual(original["raw_sha256"], first["raw_sha256"])
             self.assertNotIn("depth_model", original)
+            self.assertNotIn("depth_fusion_ms", original)
             self.assertEqual(original["boxes"][0], {key: first["boxes"][0][key]
                              for key in ("xyxy", "score", "class_id", "label")})
             resident.depth_estimator = depth

@@ -1,0 +1,147 @@
+{
+  "scope": "Native RTX3060 Laptop, FP32, static public fixture; no HF or real-phone acceptance",
+  "baseline": {
+    "detection": {
+      "frames": 31,
+      "first_predict_ms": 704.0090999998938,
+      "steady_predict_ms": {
+        "count": 30,
+        "mean_ms": 12.642453333379914,
+        "min_ms": 11.766699999498087,
+        "max_ms": 13.782500000161235,
+        "p50_ms": 12.532350000583392,
+        "p95_ms": 13.514385000326001,
+        "p99_ms": 13.737202000229445
+      },
+      "peak_allocated_bytes": 100259328
+    },
+    "depth": {
+      "frames": 31,
+      "first_predict_ms": 3870.6194999995205,
+      "steady_predict_ms": {
+        "count": 30,
+        "mean_ms": 38.0471899999975,
+        "min_ms": 33.36939999826427,
+        "max_ms": 48.72360000081244,
+        "p50_ms": 36.42149999996036,
+        "p95_ms": 47.0353000000614,
+        "p99_ms": 48.43913900072948
+      },
+      "peak_allocated_bytes": 222011392
+    },
+    "full": {
+      "frames": 31,
+      "first_predict_ms": 3296.5430000003835,
+      "steady_predict_ms": {
+        "count": 30,
+        "mean_ms": 43.49834999987555,
+        "min_ms": 40.42649999973946,
+        "max_ms": 51.821999999447144,
+        "p50_ms": 42.35694999988482,
+        "p95_ms": 50.3014400003849,
+        "p99_ms": 51.69825699986177
+      },
+      "peak_allocated_bytes": 222011392
+    }
+  },
+  "depth_graph_comparisons": {
+    "depth": {
+      "runs": [
+        "depth-control-before",
+        "depth-graph-probe",
+        "depth-control-after"
+      ],
+      "p50_predict_ms": {
+        "depth-control-before": 37.01134999937494,
+        "depth-graph-probe": 30.22060000057536,
+        "depth-control-after": 37.75795000001381
+      },
+      "latency_reduction_vs_before_pct": 18.347750079135906,
+      "latency_reduction_vs_after_pct": 19.962286086600812,
+      "graph": {
+        "adapter": "experimental_native_fp32_depth_graph",
+        "shape": [
+          1,
+          3,
+          768,
+          576
+        ],
+        "dtype": "torch.float32",
+        "setup_ms": 250.15609999900335,
+        "preparation_output_equal": true,
+        "scope": "One fixture raw-output equality; no dataset quality claim"
+      }
+    },
+    "full": {
+      "runs": [
+        "full-control-before",
+        "full-graph-probe",
+        "full-control-after"
+      ],
+      "p50_predict_ms": {
+        "full-control-before": 43.28185000031226,
+        "full-graph-probe": 34.575699999550125,
+        "full-control-after": 43.202349999774015
+      },
+      "latency_reduction_vs_before_pct": 20.1150135696587,
+      "latency_reduction_vs_after_pct": 19.968011000024344,
+      "graph": {
+        "adapter": "experimental_native_fp32_depth_graph",
+        "shape": [
+          1,
+          3,
+          768,
+          576
+        ],
+        "dtype": "torch.float32",
+        "setup_ms": 245.52270000094722,
+        "preparation_output_equal": true,
+        "scope": "One fixture raw-output equality; no dataset quality claim"
+      }
+    }
+  },
+  "transport": {
+    "complete": true,
+    "worker_frames": 364,
+    "runs": [
+      {
+        "input_fps": 12.0,
+        "received_frames": 120,
+        "delivered_fps": 11.998506054919902,
+        "p95_latency_ms": 53.22537999954875,
+        "max_latency_ms": 67.8702000004705,
+        "meets_local_target": true
+      },
+      {
+        "input_fps": 24.0,
+        "received_frames": 240,
+        "delivered_fps": 22.74040987676426,
+        "p95_latency_ms": 538.4689549999166,
+        "max_latency_ms": 638.4776000013517,
+        "meets_local_target": false
+      }
+    ],
+    "tracking_note": "Four independent fixture sizes triggered explicit BoT-SORT unavailable state; not a valid continuous tracking video benchmark"
+  },
+  "clock_validation": {
+    "before_zero_count": 21,
+    "after_zero_count": 0,
+    "frames": 31,
+    "same_raw_outputs": true,
+    "same_jpegs": true,
+    "clocks": {
+      "monotonic": {
+        "implementation": "GetTickCount64()",
+        "monotonic": true,
+        "adjustable": false,
+        "resolution": 0.015625
+      },
+      "perf_counter": {
+        "implementation": "QueryPerformanceCounter()",
+        "monotonic": true,
+        "adjustable": false,
+        "resolution": 1e-07
+      }
+    }
+  }
+}

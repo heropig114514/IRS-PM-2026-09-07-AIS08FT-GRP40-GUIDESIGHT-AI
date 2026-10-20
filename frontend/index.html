@@ -1,8 +1,8 @@
 <!doctype html>
-<!-- Responsibilities: 手机摄像头原样/ZeroGPU 标注回传工作台的语义结构。
+<!-- Responsibilities: 手机摄像头原样/HF/常驻 GPU 标注回传工作台的语义结构。
 Implementation: 本地 video 与返回 img 分开；明确选择处理模式；原样模式仍为默认；加载 AI DOM 控制桥接及独立震动/语音输出测试。
 Related Modules: i18n.js, translations.js, camera.css, camera.js, echo-client.js,
-live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js, scene-client.js；HF视频用同源持久连接。
+live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js, scene-client.js；检测用同源持久连接。
 Declaration Index: None。
 Variable Index: None；区域 id 分别由 CameraApp、VibrationTester、SpeechOutput 和 SceneClient 引用；scene-result 带 data-language-original，模型输出不经界面词典翻译。
 speech-text maxlength=2000容纳1000个双码元字符，实际1000个Unicode码点上限由SpeechOutput校验；
@@ -77,6 +77,7 @@ speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或�
             <label class="camera-select"
               >处理模式<select id="processing">
                 <option value="echo">原样回传</option>
+                <option value="resident">常驻 GPU · 80 类</option>
                 <option value="hf">Hugging Face ZeroGPU · 80 类</option>
               </select></label
             >
@@ -91,6 +92,7 @@ speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或�
             ><button id="ping" class="button text-button">测试连接</button>
           </div>
           <p id="hf-note" class="message" hidden>ZeroGPU 将图像发送给 Hugging Face。视频首帧可能等待，启动后连续检测；每次会话最多55秒，结束后需再次点击开始。免费配额不足或失败会停止。</p>
+          <p id="resident-note" class="message" hidden>图像由本机或自有服务器的常驻 GPU 处理。首帧可能等待初始化；每次只接收一个视频会话，持续运行直到停止或出错。不会自动切换至其他服务。</p>
           <p id="message" class="message" aria-live="polite">
             仅申请摄像头权限。图像只在内存中回传，不录制、不保存。
           </p>

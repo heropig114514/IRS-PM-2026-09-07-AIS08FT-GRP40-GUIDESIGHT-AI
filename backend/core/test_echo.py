@@ -12,7 +12,7 @@ Declaration Index:
 - EchoTests.test_capacity_and_release — 第五个连接拒绝，已占连接在结束后释放。
 - CameraPageTests — HTTP 页面及文件白名单。
 - CameraPageTests.test_page_and_script — 页面、摄像头、震动/语音及语言模块可获取且权限头明确。
-- CameraPageTests.test_retired_routes_and_modes — 两模式和旧HTTP拒绝。
+- CameraPageTests.test_retired_routes_and_modes — 三个显式模式和旧HTTP拒绝。
 - CameraPageTests.test_retired_websockets — 旧WS拒绝。
 - CameraPageTests.test_unknown_asset_is_not_exposed — 未列入资源的文件无法读取。
 Variable Index: None。
@@ -182,7 +182,7 @@ class CameraPageTests(SimpleTestCase):
                 response.close()
 
     def test_retired_routes_and_modes(self):
-        """Functionality: Verify canonical redirect, exactly two modes and retired HTTP/WS
+        """Functionality: Verify canonical redirect, three explicit modes and retired HTTP/WS
         rejection.
         Inputs: actual URL/ASGI dispatch and frontend bytes; Outputs: redirect/options/404/1008.
         Logic: no GPU dependencies reached for an obsolete path.
@@ -191,7 +191,7 @@ class CameraPageTests(SimpleTestCase):
         self.assertRedirects(self.client.get("/"), "/live/", fetch_redirect_response=False)
         page = self.client.get("/live/").content.decode()
         modes = re.search(r'<select id="processing"[^>]*>(.*?)</select>', page, re.S).group(1)
-        self.assertEqual(re.findall(r'value="([^"]+)"', modes), ["echo", "hf"])
+        self.assertEqual(re.findall(r'value="([^"]+)"', modes), ["echo", "resident", "hf"])
         for path in (
             "/vision/config/",
             "/vision/frame/",

@@ -1,0 +1,561 @@
+{
+  "scope": "Same static input; timestamps and timing-dependent states are not required byte equal",
+  "comparisons": [
+    {
+      "run": "full-cached",
+      "index": 0,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 1,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 2,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 3,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 4,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 5,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 6,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 7,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 8,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 9,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 10,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 11,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 12,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 13,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 14,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 15,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 16,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 17,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 18,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 19,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 20,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 21,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 22,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 23,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 24,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 25,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 26,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 27,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 28,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 29,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-cached",
+      "index": 30,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 0,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 1,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 2,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 3,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 4,
+      "raw_exact": true,
+      "jpeg_exact": false,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 5,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 6,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 7,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 8,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 9,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 10,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 11,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 12,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 13,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 14,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 15,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 16,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 17,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 18,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 19,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 20,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 21,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 22,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 23,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 24,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 25,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 26,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 27,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 28,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 29,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 30,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    }
+  ],
+  "all_raw_exact": true,
+  "all_jpeg_exact": false,
+  "all_identity_distance_exact": true,
+  "jpeg_difference_diagnosis": {
+    "original_before_vs_cached_mismatches": 0,
+    "original_before_vs_original_after": [
+      {
+        "index": 4,
+        "control_before_elapsed_since_frame1_s": 0.25333519999549026,
+        "control_after_elapsed_since_frame1_s": 0.14394149999861838,
+        "box_differences": [
+          {
+            "motion_state": [
+              "stationary",
+              "unknown"
+            ],
+            "risk_reasons": [
+              [
+                "distance_m_le_5",
+                "stationary",
+                "direction_front_left",
+                "class_person"
+              ],
+              [
+                "distance_m_le_5",
+                "unknown",
+                "direction_front_left",
+                "class_person"
+              ]
+            ]
+          },
+          {
+            "motion_state": [
+              "stationary",
+              "unknown"
+            ],
+            "risk_reasons": [
+              [
+                "distance_m_le_10",
+                "stationary",
+                "direction_front",
+                "class_bus"
+              ],
+              [
+                "distance_m_le_10",
+                "unknown",
+                "direction_front",
+                "class_bus"
+              ]
+            ]
+          },
+          {
+            "motion_state": [
+              "stationary",
+              "unknown"
+            ],
+            "risk_reasons": [
+              [
+                "distance_m_le_5",
+                "stationary",
+                "direction_front",
+                "class_person"
+              ],
+              [
+                "distance_m_le_5",
+                "unknown",
+                "direction_front",
+                "class_person"
+              ]
+            ]
+          },
+          {
+            "motion_state": [
+              "stationary",
+              "unknown"
+            ],
+            "risk_reasons": [
+              [
+                "distance_m_le_5",
+                "stationary",
+                "direction_front_right",
+                "class_person"
+              ],
+              [
+                "distance_m_le_5",
+                "unknown",
+                "direction_front_right",
+                "class_person"
+              ]
+            ]
+          },
+          {
+            "motion_state": [
+              "stationary",
+              "unknown"
+            ],
+            "risk_reasons": [
+              [
+                "distance_m_le_5",
+                "stationary",
+                "direction_front_left",
+                "class_person"
+              ],
+              [
+                "distance_m_le_5",
+                "unknown",
+                "direction_front_left",
+                "class_person"
+              ]
+            ]
+          }
+        ]
+      }
+    ],
+    "reason": "Both original implementations use real worker timestamps; the minimum motion-history time span can be reached on different frames. No timestamp/threshold changed to force equality.",
+    "previous_confirmation_frame3_span_s": {
+      "before": 0.1753406999996514,
+      "after": 0.09733720000076573,
+      "minimum_span_s": 0.1,
+      "required_confirmations": 2
+    }
+  }
+}

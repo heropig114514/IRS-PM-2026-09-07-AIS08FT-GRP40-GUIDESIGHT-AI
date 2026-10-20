@@ -1,0 +1,48 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "name": "django_check",
+      "exit_code": 0,
+      "log": "django-check.log"
+    },
+    {
+      "name": "makemigrations_check",
+      "exit_code": 0,
+      "log": "migrations-check.log"
+    },
+    {
+      "name": "backend_tests",
+      "exit_code": 0,
+      "log": "backend-tests.log"
+    },
+    {
+      "name": "ruff",
+      "exit_code": 0,
+      "log": "ruff.log"
+    },
+    {
+      "name": "pip_check",
+      "exit_code": 0,
+      "log": "pip-check.log"
+    },
+    {
+      "name": "git_diff_check",
+      "exit_code": 0,
+      "log": "diff-check.log"
+    }
+  ],
+  "backend_tests": 173,
+  "skipped": 0,
+  "frontend_tests": "Not rerun: no frontend or production service changes this turn",
+  "manual_comment_index_review": "All five changed/new code files reviewed; auxiliary AST declaration/header checks passed. No check_docs.py added.",
+  "unverified": [
+    "Real video and depth/distance ground truth",
+    "New browser performance",
+    "Remote services/deployment and physical camera",
+    "Stable full-pipeline benefit from this candidate"
+  ],
+  "committed": false,
+  "pushed": false,
+  "deployed": false
+}

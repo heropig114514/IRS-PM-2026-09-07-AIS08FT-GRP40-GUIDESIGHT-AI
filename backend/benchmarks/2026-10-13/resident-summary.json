@@ -1,0 +1,41 @@
+{
+  "scope": "Resident FP32 full pipeline on one local RTX 3060 Laptop GPU; static images, one active session",
+  "primary_evidence": "resident-full-60s/report.json",
+  "checks": "resident-checks.json",
+  "runs": [
+    {
+      "path": "resident-full/report.json",
+      "frames": 724,
+      "exit_code": 1,
+      "limitations": [
+        "ASGI cleanup was acknowledged too early; fixed in subsequent source",
+        "bus at 24 FPS failed unchanged 500ms maximum latency gate"
+      ]
+    },
+    {
+      "path": "resident-full-fixed/report.json",
+      "frames": 724,
+      "exit_code": 1,
+      "limitations": [
+        "Service stopped cleanly, but benchmark post-shutdown attribute typo caused tool failure; corrected subsequently",
+        "bus at 24 FPS failed unchanged 500ms maximum latency gate"
+      ]
+    },
+    {
+      "path": "resident-full-60s/report.json",
+      "frames": 721,
+      "exit_code": 0,
+      "limitations": [
+        "Only 12 FPS and static bus image; no moving-video accuracy or multi-user proof"
+      ]
+    }
+  ],
+  "not_validated": [
+    "moving video/depth ground-truth accuracy",
+    "resident frontend UI",
+    "public network or owned server deployment",
+    "multi-user throughput",
+    "external HF/DashScope calls"
+  ],
+  "committed": false
+}

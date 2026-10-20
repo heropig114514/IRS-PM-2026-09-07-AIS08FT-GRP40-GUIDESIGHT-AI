@@ -1,0 +1,201 @@
+{
+  "status": "completed_experiment_performance_gate_unmet",
+  "scope": "Actual Chrome, static canvas input, local single resident GPU",
+  "conditions": {
+    "input_fps": 30,
+    "max_inflight": 12,
+    "frames_per_session": 181,
+    "mode": "full",
+    "depth_graph_experiment": true,
+    "asgi_entry": "tools.resident_graph_asgi:application"
+  },
+  "runs": {
+    "browser-before": {
+      "functional_status": "completed",
+      "browser": "155.0.8059.80",
+      "performance_gate": false,
+      "sessions": [
+        {
+          "first_decoded_ms": 4509.39999999851,
+          "steady_frames": 180,
+          "steady_fps": 17.40071922973067,
+          "decoded_p50_ms": 672.2500000037253,
+          "decoded_p95_ms": 718.3449999973178,
+          "decoded_max_ms": 748.8999999985099,
+          "queue_p50_ms": 603.448349997052,
+          "server_p50_ms": 54.9889499998244,
+          "depth_p50_ms": 22.821100003056927,
+          "meets_existing_10fps_500ms_gate": false
+        },
+        {
+          "first_decoded_ms": 59.900000005960464,
+          "steady_frames": 180,
+          "steady_fps": 17.79183552436493,
+          "decoded_p50_ms": 663.1000000052154,
+          "decoded_p95_ms": 723.0149999983608,
+          "decoded_max_ms": 738.1999999955297,
+          "queue_p50_ms": 596.5051000021049,
+          "server_p50_ms": 55.17495000094641,
+          "depth_p50_ms": 22.45875000153319,
+          "meets_existing_10fps_500ms_gate": false
+        }
+      ],
+      "busy_rejection": [
+        "常驻 GPU 服务正在处理另一个视频，请稍后手动开始。"
+      ],
+      "user_stop": {
+        "mode": "idle",
+        "tracks_ended": true
+      },
+      "page_errors": [],
+      "tracking_all_active": true
+    },
+    "browser-graph": {
+      "functional_status": "completed",
+      "browser": "155.0.8059.80",
+      "performance_gate": false,
+      "sessions": [
+        {
+          "first_decoded_ms": 4923.4000000059605,
+          "steady_frames": 180,
+          "steady_fps": 22.81715850318147,
+          "decoded_p50_ms": 528.3499999977648,
+          "decoded_p95_ms": 545.114999994263,
+          "decoded_max_ms": 555,
+          "queue_p50_ms": 470.0817500015546,
+          "server_p50_ms": 42.606099999829894,
+          "depth_p50_ms": 13.84314999813796,
+          "meets_existing_10fps_500ms_gate": false
+        },
+        {
+          "first_decoded_ms": 59.29999999701977,
+          "steady_frames": 180,
+          "steady_fps": 21.277350260640045,
+          "decoded_p50_ms": 549.1000000014901,
+          "decoded_p95_ms": 590.3500000044703,
+          "decoded_max_ms": 601.3999999985099,
+          "queue_p50_ms": 490.54270000124234,
+          "server_p50_ms": 45.75035000016214,
+          "depth_p50_ms": 14.768700002605328,
+          "meets_existing_10fps_500ms_gate": false
+        }
+      ],
+      "busy_rejection": [
+        "常驻 GPU 服务正在处理另一个视频，请稍后手动开始。"
+      ],
+      "user_stop": {
+        "mode": "idle",
+        "tracks_ended": true
+      },
+      "page_errors": [],
+      "tracking_all_active": true
+    },
+    "browser-after": {
+      "functional_status": "completed",
+      "browser": "155.0.8059.80",
+      "performance_gate": false,
+      "sessions": [
+        {
+          "first_decoded_ms": 4494.60000000149,
+          "steady_frames": 180,
+          "steady_fps": 17.518418670743863,
+          "decoded_p50_ms": 666.1499999985099,
+          "decoded_p95_ms": 709.9349999986589,
+          "decoded_max_ms": 723.1000000014901,
+          "queue_p50_ms": 597.917499999312,
+          "server_p50_ms": 55.125749997387175,
+          "depth_p50_ms": 23.46910000051139,
+          "meets_existing_10fps_500ms_gate": false
+        },
+        {
+          "first_decoded_ms": 60.69999999552965,
+          "steady_frames": 180,
+          "steady_fps": 17.80204130074369,
+          "decoded_p50_ms": 667,
+          "decoded_p95_ms": 702.1150000017136,
+          "decoded_max_ms": 717.6000000014901,
+          "queue_p50_ms": 598.8651500010747,
+          "server_p50_ms": 54.752949996327516,
+          "depth_p50_ms": 22.94140000230982,
+          "meets_existing_10fps_500ms_gate": false
+        }
+      ],
+      "busy_rejection": [
+        "常驻 GPU 服务正在处理另一个视频，请稍后手动开始。"
+      ],
+      "user_stop": {
+        "mode": "idle",
+        "tracks_ended": true
+      },
+      "page_errors": [],
+      "tracking_all_active": true
+    }
+  },
+  "full_sessions_delivered": 1086,
+  "post_run_asset_sha256": {
+    "models/yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "models/yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "models/yolo26n.json": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6"
+  },
+  "numerical": {
+    "report": "output-comparison.json",
+    "mismatches": {
+      "dimensions_match": 0,
+      "input_byte_count_matches": 0,
+      "raw_exact": 0,
+      "identity_distance_exact": 0,
+      "jpeg_exact": 3
+    },
+    "wire_input_hashes_recorded": false
+  },
+  "decision": "Measured end-to-end improvement, but max500ms gate failed. Keep experiment isolated; do not enable in default service.",
+  "unverified": [
+    "Real video and depth/distance ground truth",
+    "Physical camera/public network/remote deployment/multi-user scheduling",
+    "Browser child termination is not graceful ASGI shutdown evidence"
+  ],
+  "committed": false,
+  "deployed": false,
+  "graph_capture": {
+    "preparations": 1,
+    "first": {
+      "replayed": false,
+      "capture_count": 1,
+      "prepare_ms": 466.2518000041018,
+      "evidence": {
+        "adapter": "experimental_native_fp32_depth_graph",
+        "shape": [
+          1,
+          3,
+          768,
+          576
+        ],
+        "dtype": "torch.float32",
+        "setup_ms": 456.03790000313893,
+        "preparation_output_equal": true,
+        "scope": "One fixture raw-output equality; no dataset quality claim"
+      }
+    },
+    "replayed_frames": 361,
+    "second_session_first": {
+      "replayed": true,
+      "capture_count": 1,
+      "prepare_ms": 0,
+      "evidence": {
+        "adapter": "experimental_native_fp32_depth_graph",
+        "shape": [
+          1,
+          3,
+          768,
+          576
+        ],
+        "dtype": "torch.float32",
+        "setup_ms": 456.03790000313893,
+        "preparation_output_equal": true,
+        "scope": "One fixture raw-output equality; no dataset quality claim"
+      }
+    }
+  },
+  "checks": "checks.json",
+  "backend_tests": 177
+}

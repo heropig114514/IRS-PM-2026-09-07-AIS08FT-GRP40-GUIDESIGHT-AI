@@ -1,0 +1,22 @@
+{
+  "source": "https://github.com/ultralytics/assets/releases/download/v0.0.0/coco8.zip",
+  "archive_sha256": "54c67fe9ef88313e021ec0e92b73c200167bb0a86633e8df8658d832cca828c9",
+  "files": [
+    {
+      "name": "000000000036.jpg",
+      "sha256": "4c28394898302bef227834d63498a0fc54e4295f11c590c8a8ebcba51347bc03"
+    },
+    {
+      "name": "000000000042.jpg",
+      "sha256": "c87afb6dfe55db1cada52479ed939a231e030d64f5e3c3eaf7eb1544591f853a"
+    },
+    {
+      "name": "000000000049.jpg",
+      "sha256": "86b46022d382f67b0934147fe515e1c3c3f5c04db45045516214b5e3092148e3"
+    },
+    {
+      "name": "000000000061.jpg",
+      "sha256": "6460e4a7cc80e34815aba8910a23152a16a24a416fa598138bd9231cccd413e2"
+    }
+  ]
+}

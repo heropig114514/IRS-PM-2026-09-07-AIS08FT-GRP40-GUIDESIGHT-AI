@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "mode": "depth",
+  "scope": "Native FP32 static-image probe; not production FP16 or video validation",
+  "requested_frames": 31,
+  "completed_frames": 31,
+  "identities": {
+    "input": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "detection": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "manifest": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6",
+    "depth": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+  },
+  "implementation_sha256": {
+    "core/detector.py": "255511e15c08bcf63a166c53d44eddfaa6ef7da879dfad2fcb4d5f0a349e5cba",
+    "realtime/detector.py": "55720c01e5717b937320e12f8d8e4abbbc273cd16987d0076fb7019c508a3295",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "af5034c9925e8e92add7a184c7e080717e98cd7e833c0df0af661cb65316b09c",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "zerogpu/runtime.py": "a2d49af2c0b17f71483731fcd62f889ca3fe6a915559a663381f35a548dc51d8",
+    "tools/fixtures.py": "998caefb7c075442f0e849550681145eef822040e5b848358a325a41c562ae66",
+    "tools/benchmark_inference.py": "1d6aea249428d911fb4bd5ee0c6255743178ab7119b306d52214236b2fa770e8",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df"
+  },
+  "settings": {
+    "detection_config": {},
+    "depth_graph_probe": true,
+    "batch": 1,
+    "detection_edge": 640,
+    "confidence_threshold": 0.25,
+    "jpeg_quality": 80,
+    "depth_edge": 768,
+    "depth_precision": "FP32"
+  },
+  "timing_notes": [
+    "Only first frame excluded from steady summaries",
+    "inference_ms includes transfers; forward_event_ms is CUDA replay",
+    "depth_ms includes box decoding and depth inference/fusion",
+    "depth_sdk timings come from the existing synchronized SDK profiler",
+    "Stage durations overlap with server_ms and predict_wall_ms",
+    "Tracking uses actual worker timestamps; static image repeated"
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "ultralytics": "8.4.171",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "prepared_input": {
+    "sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+    "size": [
+      480,
+      640
+    ],
+    "bytes": 78850
+  },
+  "model_initialization_ms": 564.0315000000555,
+  "depth_graph": {
+    "adapter": "experimental_native_fp32_depth_graph",
+    "shape": [
+      1,
+      3,
+      768,
+      576
+    ],
+    "dtype": "torch.float32",
+    "setup_ms": 250.15609999900335,
+    "preparation_output_equal": true,
+    "scope": "One fixture raw-output equality; no dataset quality claim"
+  },
+  "gpu_peak_allocated_bytes": 260067328,
+  "gpu_peak_reserved_bytes": 411041792,
+  "first_frame": {
+    "forward_event_ms": 5.225024223327637,
+    "inference_ms": 14.999999999417923,
+    "prepare_ms": 4.745300000649877,
+    "gpu_stage_ms": 674.0556999993714,
+    "depth_ms": 2889.7661000009975,
+    "render_ms": 3.4279000010428717,
+    "server_ms": 3571.9961000013427,
+    "graph_setup_ms": 656.9999999992433,
+    "index": 0,
+    "predict_wall_ms": 3572.1537999997963,
+    "depth_sdk_preprocess_ms": 17.75660000021162,
+    "depth_sdk_inference_ms": 16.187200000786106,
+    "depth_sdk_postprocess_ms": 0.23569999939354602
+  },
+  "steady": {
+    "predict_wall_ms": {
+      "count": 30,
+      "mean_ms": 30.235736666569817,
+      "min_ms": 27.968799999143812,
+      "max_ms": 32.910299998548,
+      "p50_ms": 30.22060000057536,
+      "p95_ms": 32.51670499921602,
+      "p99_ms": 32.82918699862421
+    },
+    "forward_event_ms": {
+      "count": 30,
+      "mean_ms": 4.7024117310841875,
+      "min_ms": 4.0398077964782715,
+      "max_ms": 5.622208118438721,
+      "p50_ms": 4.6484479904174805,
+      "p95_ms": 5.248369789123535,
+      "p99_ms": 5.523654537200928
+    },
+    "inference_ms": {
+      "count": 30,
+      "mean_ms": 2.633333333324117,
+      "min_ms": 0.0,
+      "max_ms": 16.00000000144064,
+      "p50_ms": 0.0,
+      "p95_ms": 15.99999999962165,
+      "p99_ms": 16.000000000913133
+    },
+    "prepare_ms": {
+      "count": 30,
+      "mean_ms": 4.126296666557512,
+      "min_ms": 3.7283000001480104,
+      "max_ms": 4.883199999312637,
+      "p50_ms": 4.111299999749463,
+      "p95_ms": 4.641999999239488,
+      "p99_ms": 4.8137739992307615
+    },
+    "gpu_stage_ms": {
+      "count": 30,
+      "mean_ms": 5.888739999985167,
+      "min_ms": 5.189199999222183,
+      "max_ms": 6.856100000732113,
+      "p50_ms": 5.82840000060969,
+      "p95_ms": 6.451194999408472,
+      "p99_ms": 6.756282000278588
+    },
+    "depth_ms": {
+      "count": 30,
+      "mean_ms": 17.335173333534232,
+      "min_ms": 15.1798000006238,
+      "max_ms": 19.73779999934777,
+      "p50_ms": 17.459949999647506,
+      "p95_ms": 19.039235000582266,
+      "p99_ms": 19.62287299989839
+    },
+    "depth_sdk_preprocess_ms": {
+      "count": 30,
+      "mean_ms": 2.391330000015538,
+      "min_ms": 2.103700000589015,
+      "max_ms": 3.204399999958696,
+      "p50_ms": 2.346450000004552,
+      "p95_ms": 2.755300000717398,
+      "p99_ms": 3.08825500020248
+    },
+    "depth_sdk_inference_ms": {
+      "count": 30,
+      "mean_ms": 8.75021666658237,
+      "min_ms": 7.703400000536931,
+      "max_ms": 10.221500000625383,
+      "p50_ms": 8.837849999508762,
+      "p95_ms": 10.093580000375368,
+      "p99_ms": 10.212539000440302
+    },
+    "depth_sdk_postprocess_ms": {
+      "count": 30,
+      "mean_ms": 0.26357000018227456,
+      "min_ms": 0.15580000035697594,
+      "max_ms": 0.5290999997669132,
+      "p50_ms": 0.2355999995415914,
+      "p95_ms": 0.4384750001008797,
+      "p99_ms": 0.5096700000467536
+    },
+    "tracking_ms": null,
+    "risk_ms": null,
+    "render_ms": {
+      "count": 30,
+      "mean_ms": 2.6935366666293703,
+      "min_ms": 2.5519999999232823,
+      "max_ms": 3.331899999466259,
+      "p50_ms": 2.6547500001470326,
+      "p95_ms": 2.94716000007611,
+      "p99_ms": 3.2210039995879924
+    },
+    "server_ms": {
+      "count": 30,
+      "mean_ms": 30.044396666744433,
+      "min_ms": 27.774400001362665,
+      "max_ms": 32.726700001148856,
+      "p50_ms": 30.044250000173633,
+      "p95_ms": 32.33171499987293,
+      "p99_ms": 32.644427000832366
+    },
+    "graph_setup_ms": {
+      "count": 30,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    }
+  }
+}

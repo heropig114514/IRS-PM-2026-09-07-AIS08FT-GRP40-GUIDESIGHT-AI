@@ -1,0 +1,12 @@
+[
+  {
+    "name": "frontend_tests",
+    "exit_code": 0,
+    "log": "frontend-tests.log"
+  },
+  {
+    "name": "git_diff_check",
+    "exit_code": 0,
+    "log": "diff-check.log"
+  }
+]

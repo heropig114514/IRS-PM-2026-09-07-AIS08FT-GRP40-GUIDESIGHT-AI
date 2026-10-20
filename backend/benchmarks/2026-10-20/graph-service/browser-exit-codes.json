@@ -1,0 +1,14 @@
+[
+  {
+    "run": "browser-before",
+    "exit_code": 2
+  },
+  {
+    "run": "browser-graph",
+    "exit_code": 2
+  },
+  {
+    "run": "browser-after",
+    "exit_code": 2
+  }
+]

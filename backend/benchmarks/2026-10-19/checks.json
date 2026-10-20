@@ -1,0 +1,47 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "name": "django_check",
+      "exit_code": 0,
+      "log": "django-check.log"
+    },
+    {
+      "name": "makemigrations_check",
+      "exit_code": 0,
+      "log": "migrations-check.log"
+    },
+    {
+      "name": "backend_tests",
+      "exit_code": 0,
+      "log": "backend-tests.log"
+    },
+    {
+      "name": "ruff",
+      "exit_code": 0,
+      "log": "ruff.log"
+    },
+    {
+      "name": "pip_check",
+      "exit_code": 0,
+      "log": "pip-check.log"
+    },
+    {
+      "name": "frontend_tests",
+      "exit_code": 0,
+      "log": "frontend-tests.log"
+    },
+    {
+      "name": "git_diff_check",
+      "exit_code": 0,
+      "log": "diff-check.log"
+    }
+  ],
+  "backend_tests": 170,
+  "frontend_tests": 85,
+  "skipped": 0,
+  "manual_comment_index_review": "Completed for all seven changed/new code files; headers, actual qualified declarations, numerical constraints and measurement definitions checked. Auxiliary AST field checks also passed; no check_docs.py introduced.",
+  "validation_scope": "Actual local CUDA sample experiments plus contract tests; no real video/ground truth, remote service, physical camera or new browser run",
+  "committed": false,
+  "deployed": false
+}

@@ -46,16 +46,18 @@ MCP提供 `vibration_status`、`vibration_test`、`vibration_stop`，通过当�
 在真实Chrome验证支持/缺失/拒绝/异常、默认关闭及停止、零媒体授权调用、中英切换和320/390/1280px布局。
 输出JSON和手机宽度区域PNG；原生震动和媒体API在测试中明确替换，不能据此声称真机马达已验证。
 
-入口 https://47.239.50.129/prs/live/ ，原 `/prs/` 转到同页。Processing mode 只保留：
+原远程入口 https://47.239.50.129/prs/live/ ，原 `/prs/` 转到同页；本轮未发布远程更新。仓库页面支持以下显式模式：
 
 - **Echo／原样回传**：`/ws/echo/`，用于检查摄像头与网络，返回输入原始字节，不进行检测。
+- **常驻 GPU**：`/ws/detect/resident/`，需使用常驻 ASGI 入口；默认完整 FP32 检测/深度/跟踪/风险，不依赖 HF。启动、协议与本机浏览器实测见 [常驻 GPU 文档](../backend/RESIDENT.md)。
 - **Hugging Face ZeroGPU**：`/ws/detect/hf/`，最新视频检测，返回 YOLO26n 标注 JPEG。
 
 `camera.js` 管理媒体、停止状态和计时；`echo-client.js` 校验原样回传；
 `live-detection-client.js` 校验二进制序号、模型/80类/原权重 SHA、框和 JPEG SHA，
-并要求每帧计算精度、后端与服务端公布的 COCO 合格方案一致；FP32 输出与计算精度分别标记。
-服务端读取显式方案文件，至少三个独立完整5000图 COCO验证的 mAP下降均不得超过0.5个百分点；
+并要求每帧计算精度、后端与所选会话契约一致；FP32 输出与计算精度分别标记。
+HF 服务端读取显式方案文件，至少三个独立完整5000图 COCO验证的 mAP下降均不得超过0.5个百分点；
 客户端验证其公开证据字段，不能据此声称自己重新测量了mAP。
+常驻使用独立 `resident-v1` 准入：原生 FP32、明确 detection/depth/full 工作负载、无分配时长上限；不得附带 HF 质量声明或跨模式准入。每帧必须包含该工作负载对应阶段；正常结束须确认所有请求和返回计数一致。
 `frame-pipeline.js` 管理采集及顺序解码显示。摄像头最大边640、JPEG质量0.8。
 公开页面在首帧独立完成后使用30FPS输入上限，最多12个采集/传输/等待显示作业，
 先取得空位再采集。2026-10-07真实HF的601帧独立短测完整交付，稳态29.54FPS、
@@ -130,7 +132,7 @@ node tools/check_maps_browser.mjs https://47.239.50.129/prs/maps/ ../backend/ben
 浏览器向同源 `POST scene/describe/`（沿用 `data-api-base`，`/live/` 页即 `/scene/describe/`）发送
 `{image_jpeg_base64, language, question?, objects?}`，显示返回的 `text`；接口契约见后端 `core/scene.py` / `backend/VLM.md`。
 - 取帧：`CameraApp.latestJpeg()` 复用推流中最近一帧已编码 JPEG（640 最大边/质量0.8，≤1秒）；过期或未推流但摄像头已开启时按同一参数重新抓取一帧；摄像头未开启则提示，不申请权限。
-- objects：`CameraApp.latestBoxes()` 取最近（≤1秒）一次 HF 检测结果的 boxes（Echo 模式无检测则不带 objects），
+- objects：`CameraApp.latestBoxes()` 取最近（≤1秒）一次 HF 或常驻检测结果的 boxes（Echo 模式无检测则不带 objects），
   映射 `score→confidence`，携带 `distance_m/direction/risk_level/motion_state/track_id`（缺失即省略，不编造），
   按 alert_priority 降序、距离升序、置信度降序排序后截断到50。
 - 语音：仅当页面“启用语音输出”已勾选时调用共享 `SpeechOutput.speak`（语言随页面语言）；否则只显示文字。

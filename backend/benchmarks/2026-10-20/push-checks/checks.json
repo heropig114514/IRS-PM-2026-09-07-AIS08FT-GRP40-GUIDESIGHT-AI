@@ -1,0 +1,30 @@
+[
+  {
+    "name": "django_check",
+    "exit_code": 0
+  },
+  {
+    "name": "migrations",
+    "exit_code": 0
+  },
+  {
+    "name": "backend_tests",
+    "exit_code": 0
+  },
+  {
+    "name": "ruff",
+    "exit_code": 0
+  },
+  {
+    "name": "pip",
+    "exit_code": 0
+  },
+  {
+    "name": "frontend_tests",
+    "exit_code": 0
+  },
+  {
+    "name": "diff",
+    "exit_code": 0
+  }
+]

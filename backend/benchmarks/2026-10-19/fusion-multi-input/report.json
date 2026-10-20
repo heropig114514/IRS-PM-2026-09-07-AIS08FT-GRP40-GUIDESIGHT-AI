@@ -1,0 +1,5377 @@
+{
+  "status": "completed",
+  "scope": "Exact static ROI-fusion diagnostic; no truth data",
+  "requested_comparisons": 10,
+  "completed_comparisons": 10,
+  "frames": [
+    {
+      "index": 0,
+      "input": "model_tests\\samples\\bus.jpg",
+      "frame_size": [
+        480,
+        640
+      ],
+      "prepared_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 5.985399999190122,
+        "graph_setup_ms": 592.2763999988092,
+        "prepare_ms": 4.615000005287584,
+        "gpu_stage_ms": 598.3759000009741,
+        "render_ms": 3.398599998035934,
+        "server_ms": 3983.4814999994705,
+        "forward_event_ms": 4.7718400955200195,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.22259999968810007,
+        "depth_predict_ms": 3273.4009999985574,
+        "depth_fusion_ms": 103.46739999658894,
+        "depth_ms": 3377.0909999948344
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 5.671500002790708,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.122799997276161,
+        "gpu_stage_ms": 5.734300000767689,
+        "render_ms": 2.7513999957591295,
+        "server_ms": 56.60789999819826,
+        "forward_event_ms": 4.5938239097595215,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.19800000154646114,
+        "depth_predict_ms": 19.925100001273677,
+        "depth_fusion_ms": 23.874999998952262,
+        "depth_ms": 43.9981000017724
+      }
+    },
+    {
+      "index": 1,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "frame_size": [
+        481,
+        640
+      ],
+      "prepared_sha256": "f6c98eaee3baf861390069be00e088253576b0268071d5a3acc38122e76c46b0",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.440400000428781,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.622300002665725,
+        "gpu_stage_ms": 6.495699999504723,
+        "render_ms": 1.8283999961568043,
+        "server_ms": 98.25719999935245,
+        "forward_event_ms": 5.056672096252441,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.17220000154338777,
+        "depth_predict_ms": 81.19630000146572,
+        "depth_fusion_ms": 3.9417000007233582,
+        "depth_ms": 85.31020000373246
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.136299998615868,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.6422999983187765,
+        "gpu_stage_ms": 6.174299996928312,
+        "render_ms": 1.8632999999681488,
+        "server_ms": 37.6512000002549,
+        "forward_event_ms": 5.101471900939941,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15870000061113387,
+        "depth_predict_ms": 23.71540000604,
+        "depth_fusion_ms": 2.0963999995728955,
+        "depth_ms": 25.97050000622403
+      }
+    },
+    {
+      "index": 2,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "frame_size": [
+        640,
+        478
+      ],
+      "prepared_sha256": "179c7297ca1ce042235f6dc4ce6206b0a27a7a3a741e785b7c912c244a5d0be1",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 5.142000001796987,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.8055000040913,
+        "gpu_stage_ms": 5.182100001547951,
+        "render_ms": 1.986299997952301,
+        "server_ms": 86.41570000327192,
+        "forward_event_ms": 4.0543999671936035,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.16179999511223286,
+        "depth_predict_ms": 73.62779999675695,
+        "depth_fusion_ms": 1.6515000024810433,
+        "depth_ms": 75.44109999435022
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 4.7231999997165985,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.48620000295341,
+        "gpu_stage_ms": 4.783600001246668,
+        "render_ms": 1.8918999994639307,
+        "server_ms": 31.272500003979076,
+        "forward_event_ms": 3.594655990600586,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.14229999942472205,
+        "depth_predict_ms": 18.78700000088429,
+        "depth_fusion_ms": 2.180800001951866,
+        "depth_ms": 21.11010000226088
+      }
+    },
+    {
+      "index": 3,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "frame_size": [
+        381,
+        500
+      ],
+      "prepared_sha256": "477b08b447093b31750796796fceb4175b0796e8d65fc2b640277353635b398a",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 4.77110000065295,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 5.344700002751779,
+        "gpu_stage_ms": 4.843299997446593,
+        "render_ms": 2.444699995976407,
+        "server_ms": 35.4799999986426,
+        "forward_event_ms": 3.5960960388183594,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.16840000171214342,
+        "depth_predict_ms": 19.547500000044238,
+        "depth_fusion_ms": 3.1306000018958002,
+        "depth_ms": 22.84650000365218
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 5.069200000434648,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 5.66120000439696,
+        "gpu_stage_ms": 5.12489999528043,
+        "render_ms": 2.2565000035683624,
+        "server_ms": 38.654900003166404,
+        "forward_event_ms": 3.854304075241089,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1717000050120987,
+        "depth_predict_ms": 19.3169999984093,
+        "depth_fusion_ms": 6.122699996922165,
+        "depth_ms": 25.611400000343565
+      }
+    },
+    {
+      "index": 4,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "frame_size": [
+        640,
+        488
+      ],
+      "prepared_sha256": "a36beb47cc51f575fb906c1e00458c6fd83419c1b8f99d7a16bbbe1d573db0a7",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 5.594100002781488,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.2352999953436665,
+        "gpu_stage_ms": 5.633200002193917,
+        "render_ms": 2.3272000034921803,
+        "server_ms": 84.71039999858476,
+        "forward_event_ms": 4.5089921951293945,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1556999995955266,
+        "depth_predict_ms": 70.85110000480199,
+        "depth_fusion_ms": 1.5071999951032922,
+        "depth_ms": 72.51399999950081
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 5.597199997282587,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.142799996770918,
+        "gpu_stage_ms": 5.636800000502262,
+        "render_ms": 2.421599994704593,
+        "server_ms": 35.098499996820465,
+        "forward_event_ms": 4.3433918952941895,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15430000348715112,
+        "depth_predict_ms": 19.053900003200397,
+        "depth_fusion_ms": 3.6881999985780567,
+        "depth_ms": 22.896400005265605
+      }
+    },
+    {
+      "index": 5,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "frame_size": [
+        640,
+        488
+      ],
+      "prepared_sha256": "a36beb47cc51f575fb906c1e00458c6fd83419c1b8f99d7a16bbbe1d573db0a7",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 4.904000001261011,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.605699999956414,
+        "gpu_stage_ms": 4.945799999404699,
+        "render_ms": 2.403400001639966,
+        "server_ms": 33.52560000348603,
+        "forward_event_ms": 3.794624090194702,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15830000484129414,
+        "depth_predict_ms": 19.66089999768883,
+        "depth_fusion_ms": 1.7507000011391938,
+        "depth_ms": 21.569900003669318
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 4.951499999151565,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.308299998228904,
+        "gpu_stage_ms": 5.012499997974373,
+        "render_ms": 2.469099999871105,
+        "server_ms": 38.115499999548774,
+        "forward_event_ms": 3.8384640216827393,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15900000289548188,
+        "depth_predict_ms": 19.86179999948945,
+        "depth_fusion_ms": 6.304200003796723,
+        "depth_ms": 26.325000006181654
+      }
+    },
+    {
+      "index": 6,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "frame_size": [
+        381,
+        500
+      ],
+      "prepared_sha256": "477b08b447093b31750796796fceb4175b0796e8d65fc2b640277353635b398a",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 5.062099997303449,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.843299997446593,
+        "gpu_stage_ms": 5.118900000525173,
+        "render_ms": 2.162199998565484,
+        "server_ms": 33.639499997661915,
+        "forward_event_ms": 3.9212799072265625,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1871999993454665,
+        "depth_predict_ms": 17.842599998402875,
+        "depth_fusion_ms": 3.4845999980461784,
+        "depth_ms": 21.51439999579452
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 4.807199999049772,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 5.314000001817476,
+        "gpu_stage_ms": 4.870600001595449,
+        "render_ms": 2.2956999964662828,
+        "server_ms": 39.14190000068629,
+        "forward_event_ms": 3.597536087036133,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15069999790284783,
+        "depth_predict_ms": 20.788300003914628,
+        "depth_fusion_ms": 5.72190000093542,
+        "depth_ms": 26.660900002752896
+      }
+    },
+    {
+      "index": 7,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "frame_size": [
+        640,
+        478
+      ],
+      "prepared_sha256": "179c7297ca1ce042235f6dc4ce6206b0a27a7a3a741e785b7c912c244a5d0be1",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 7.53180000174325,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.759799998078961,
+        "gpu_stage_ms": 7.600600001751445,
+        "render_ms": 1.848499996413011,
+        "server_ms": 36.16419999889331,
+        "forward_event_ms": 6.281311988830566,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.18490000366000459,
+        "depth_predict_ms": 20.527300002868287,
+        "depth_fusion_ms": 2.241700000013225,
+        "depth_ms": 22.953900006541517
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 6.9807999971089885,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.8457000046037138,
+        "gpu_stage_ms": 7.045599995763041,
+        "render_ms": 1.9178999937139452,
+        "server_ms": 37.04899999866029,
+        "forward_event_ms": 5.791168212890625,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.17360000492772087,
+        "depth_predict_ms": 21.54599999630591,
+        "depth_fusion_ms": 2.519500005291775,
+        "depth_ms": 24.239100006525405
+      }
+    },
+    {
+      "index": 8,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "frame_size": [
+        481,
+        640
+      ],
+      "prepared_sha256": "f6c98eaee3baf861390069be00e088253576b0268071d5a3acc38122e76c46b0",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.868399999802932,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.136600000492763,
+        "gpu_stage_ms": 6.9149999981164,
+        "render_ms": 1.894900000479538,
+        "server_ms": 40.93830000056187,
+        "forward_event_ms": 5.661248207092285,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.18840000120690092,
+        "depth_predict_ms": 22.33880000130739,
+        "depth_fusion_ms": 5.463699999381788,
+        "depth_ms": 27.99090000189608
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.713100003253203,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.969199999119155,
+        "gpu_stage_ms": 6.754000001819804,
+        "render_ms": 1.9935999953304417,
+        "server_ms": 36.59889999835286,
+        "forward_event_ms": 5.686079978942871,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15140000323299319,
+        "depth_predict_ms": 21.28670000092825,
+        "depth_fusion_ms": 2.443400000629481,
+        "depth_ms": 23.881500004790723
+      }
+    },
+    {
+      "index": 9,
+      "input": "model_tests\\samples\\bus.jpg",
+      "frame_size": [
+        480,
+        640
+      ],
+      "prepared_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 8.331600001838524,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.194599998299964,
+        "gpu_stage_ms": 8.405000000493601,
+        "render_ms": 2.682400001503993,
+        "server_ms": 42.85140000138199,
+        "forward_event_ms": 7.090559959411621,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.16190000314963982,
+        "depth_predict_ms": 21.742800003266893,
+        "depth_fusion_ms": 5.663999996613711,
+        "depth_ms": 27.568700003030244
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 7.0911000002524815,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.213200001686346,
+        "gpu_stage_ms": 7.140100002288818,
+        "render_ms": 2.6272000031895004,
+        "server_ms": 55.14370000310009,
+        "forward_event_ms": 5.810463905334473,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.16649999452056363,
+        "depth_predict_ms": 35.66080000018701,
+        "depth_fusion_ms": 5.33529999665916,
+        "depth_ms": 41.16259999136673
+      }
+    }
+  ],
+  "isolated_samples_per_phase": 31,
+  "isolated_fusion": [
+    {
+      "input": "model_tests\\samples\\bus.jpg",
+      "count": 5,
+      "phases": [
+        {
+          "phase": "control_before",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 4.482599993934855,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 4.497599999012891,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 4.909399998723529,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 3.9294000016525388,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 4.261800000676885,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 4.34809999569552,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 4.116199997952208,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 3.981599998951424,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 4.222999996272847,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 4.700600002252031,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 4.326700000092387,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 4.579200001899153,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 4.11549999989802,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 4.369400005089119,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 4.419700002472382,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 4.069900001923088,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 3.9397000000462867,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 5.001300000003539,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 4.240800000843592,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 4.472199994779658,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 4.19300000066869,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 3.9686000018264167,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 4.639899998437613,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 4.4866000025649555,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 4.4034000020474195,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 4.525799995462876,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 4.682799997681286,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 4.004599999461789,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 4.794300002686214,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 4.394300005515106,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 4.060899998876266,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 4.482599993934855,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 4.355210000115524,
+            "min_ms": 3.9294000016525388,
+            "max_ms": 5.001300000003539,
+            "p50_ms": 4.35875000039232,
+            "p95_ms": 4.857605000506737,
+            "p99_ms": 4.974648999632336
+          },
+          "operator_counts": {
+            "aten::nonzero": 5,
+            "aten::kthvalue": 20
+          }
+        },
+        {
+          "phase": "sort",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 5.498899998201523,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 4.755400004796684,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 4.833300001337193,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 4.611900003510527,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 4.704699997091666,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 4.660600003262516,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 4.635299999790732,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 4.730099994048942,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 4.668099994887598,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 4.971599999407772,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 4.862199995841365,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 6.419100005587097,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 12.667700000747573,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 11.949199993978254,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 4.865499999141321,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 4.379999998491257,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 4.67709999793442,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 4.634700002497993,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 4.655600001569837,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 6.017699997755699,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 8.831799998006318,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 4.631700001482386,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 4.88490000134334,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 4.649200003768783,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 4.508199999690987,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 4.990699999325443,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 4.793599997356068,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 4.953800002112985,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 4.696799995144829,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 5.299099997500889,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 6.726400002662558,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 5.498899998201523,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 5.555533333002434,
+            "min_ms": 4.379999998491257,
+            "max_ms": 12.667700000747573,
+            "p50_ms": 4.774500001076376,
+            "p95_ms": 10.546369995790883,
+            "p99_ms": 12.45933499878447
+          },
+          "operator_counts": {
+            "aten::sort": 5
+          }
+        },
+        {
+          "phase": "control_after",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 4.666999993787613,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 4.274999999324791,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 4.003699999884702,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 4.718400006822776,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 5.385800002841279,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 4.461700002138969,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 4.445500002475455,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 4.056199999467935,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 4.036499994981568,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 4.3846000044140965,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 4.717499999969732,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 4.6098000020720065,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 4.017800005385652,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 4.075999997439794,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 4.397699995024595,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 4.148199994233437,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 4.49109999317443,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 3.9692999998806044,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 4.994700000679586,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 4.3880000011995435,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 4.175100002612453,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 4.018999999971129,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 4.351600000518374,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 4.518000001553446,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 4.65260000055423,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 4.230100006680004,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 5.282099999021739,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 4.120099998544902,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 4.405200001201592,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 4.40780000644736,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 4.452000001037959,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 4.666999993787613,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 4.406370000651805,
+            "min_ms": 3.9692999998806044,
+            "max_ms": 5.385800002841279,
+            "p50_ms": 4.392849998112069,
+            "p95_ms": 5.15276999976777,
+            "p99_ms": 5.355727001733612
+          },
+          "operator_counts": {
+            "aten::nonzero": 5,
+            "aten::kthvalue": 20
+          }
+        }
+      ],
+      "all_exact": true
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "count": 2,
+      "phases": [
+        {
+          "phase": "control_before",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 4.208300000755116,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 4.32110000110697,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 4.365900000266265,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 4.376199998660013,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 4.397200005769264,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 5.000299999665003,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 4.161700002441648,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 3.8662000006297603,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 4.181000003882218,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 4.495900000620168,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 4.764900004374795,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 3.9135999977588654,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 4.1698999993968755,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 4.168700004811399,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 4.266800002369564,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 3.93919999623904,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 3.9345999975921586,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 4.820299996936228,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 4.294800004572608,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 4.315300000598654,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 3.951800004870165,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 4.3017999996664,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 4.201199997623917,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 4.3297000011079945,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 3.981599998951424,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 5.387099998188205,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 4.44959999731509,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 4.518100002314895,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 4.760999996506143,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 4.762999997183215,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 4.056300000229385,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 4.208300000755116,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 4.348493333721611,
+            "min_ms": 3.8662000006297603,
+            "max_ms": 5.387099998188205,
+            "p50_ms": 4.308550000132527,
+            "p95_ms": 4.9192999984370545,
+            "p99_ms": 5.2749279986164765
+          },
+          "operator_counts": {
+            "aten::nonzero": 2,
+            "aten::kthvalue": 6
+          }
+        },
+        {
+          "phase": "sort",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 2.4934000030043535,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 1.9188000005669892,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 2.024099994741846,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 2.0224999971105717,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 1.8782999977702275,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 2.0696999999927357,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 2.0249999943189323,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 1.8995999998878688,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 2.091199996357318,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 1.963999995496124,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 1.9224999996367842,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 2.766800003882963,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 1.9562000015866943,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 2.0670000012614764,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 2.259499997308012,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 2.865699992980808,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 2.111699999659322,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 1.9202000039513223,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 2.465700003085658,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 2.6233000025968067,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 2.569800002675038,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 2.4224000007961877,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 2.14830000186339,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 1.972600002773106,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 1.879199997347314,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 1.9160000010742806,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 1.9742000004043803,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 1.9614000048022717,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 2.2017000010237098,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 1.9554000027710572,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 1.8702000015764497,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 2.4934000030043535,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 2.124099999976655,
+            "min_ms": 1.8702000015764497,
+            "max_ms": 2.865699992980808,
+            "p50_ms": 2.023299995926209,
+            "p95_ms": 2.702225003304193,
+            "p99_ms": 2.837018996142433
+          },
+          "operator_counts": {
+            "aten::sort": 2
+          }
+        },
+        {
+          "phase": "control_after",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 3.7945000003674068,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 3.2957000003079884,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 3.971300000557676,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 3.6881999985780567,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 3.278099997260142,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 3.3194999996339902,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 3.3034000007319264,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 3.337000001920387,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 3.5993999990751036,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 3.4684999991441146,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 3.8237999979173765,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 3.868200001306832,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 3.3240999982808717,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 3.6480000053416006,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 3.682399998069741,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 3.281100005551707,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 3.423800000746269,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 3.261199999542441,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 3.6232999991625547,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 3.5510000016074628,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 3.4557999970274977,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 3.9042000062181614,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 3.6744000026374124,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 3.316199996334035,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 3.5703000030480325,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 3.6213999992469326,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 3.2341999976779334,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 3.5623000003397465,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 3.4993000008398667,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 3.5113000049022958,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 3.8422999932663515,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 3.7945000003674068,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 3.5313233335424834,
+            "min_ms": 3.2341999976779334,
+            "max_ms": 3.971300000557676,
+            "p50_ms": 3.5311500032548793,
+            "p95_ms": 3.888000004008063,
+            "p99_ms": 3.9518410021992167
+          },
+          "operator_counts": {
+            "aten::nonzero": 2,
+            "aten::kthvalue": 6
+          }
+        }
+      ],
+      "all_exact": true
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "count": 2,
+      "phases": [
+        {
+          "phase": "control_before",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 1.461899999412708,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 1.4462999970419332,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 1.473600001190789,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 1.8052000013994984,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 1.741800006129779,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 1.6763999956310727,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 2.0825999963562936,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 1.7245999988517724,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 1.676300002145581,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 2.095300005748868,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 1.7136000024038367,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 1.7585000023245811,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 1.963300004717894,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 1.4927000011084601,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 1.408700001775287,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 1.4393000019481406,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 1.5286999987438321,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 1.5277999991667457,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 1.4486999934888445,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 1.7245999988517724,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 1.8505000043660402,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 1.4537000024574809,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 1.5241000000969507,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 1.5521000022999942,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 1.4609999998356216,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 1.4324000003398396,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 1.4496000003418885,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 1.5146000005188398,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 1.4613000021199696,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 1.447599999664817,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 1.6017000016290694,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 1.461899999412708,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 1.615886667423183,
+            "min_ms": 1.408700001775287,
+            "max_ms": 2.095300005748868,
+            "p50_ms": 1.528249998955289,
+            "p95_ms": 2.0289150001190137,
+            "p99_ms": 2.0916170030250214
+          },
+          "operator_counts": {
+            "aten::nonzero": 2,
+            "aten::kthvalue": 6
+          }
+        },
+        {
+          "phase": "sort",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 2.2871999972267076,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 1.9232999984524213,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 1.79049999860581,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 1.8415000013192184,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 2.193999993323814,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 2.113499998813495,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 1.7950000037671998,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 2.5549999991199,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 1.9061999992118217,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 2.0454000041354448,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 1.820000004954636,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 1.7948000022443011,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 1.9828000004054047,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 1.916400004120078,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 1.923999996506609,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 2.0175999961793423,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 1.9261999987065792,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 1.8486999979359098,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 2.023500004725065,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 1.8532000030972995,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 1.8669999990379438,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 1.8811999980243854,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 1.782900006219279,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 1.8237999975099228,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 1.923199997690972,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 1.9836999999824911,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 1.8283999961568043,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 2.0073999985470437,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 1.949199999216944,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 1.8205000014859252,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 1.9796999986283481,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 2.2871999972267076,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 1.937286666604147,
+            "min_ms": 1.782900006219279,
+            "max_ms": 2.5549999991199,
+            "p50_ms": 1.919800000905525,
+            "p95_ms": 2.1577749957941705,
+            "p99_ms": 2.450309997439035
+          },
+          "operator_counts": {
+            "aten::sort": 2
+          }
+        },
+        {
+          "phase": "control_after",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 1.7771000057109632,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 1.5266999980667606,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 1.4279000024544075,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 1.7087000014726073,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 1.4862000025459565,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 1.461899999412708,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 1.4482999977190048,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 1.6571999949519522,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 2.062899999145884,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 1.4431999952648766,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 1.7267000002902932,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 1.4910000027157366,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 1.4969999974709935,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 1.5048999994178303,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 1.7907000001287088,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 1.4231000022846274,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 1.4464000050793402,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 1.8320000017411076,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 1.4865999983157963,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 1.4602000010199845,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 1.4987000031396747,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 1.5746999997645617,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 1.4462000035564415,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 1.4551999993273057,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 1.5291999952751212,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 1.5002000000094995,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 1.459300001442898,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 1.4489000022877008,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 1.8558000010671094,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 2.038699996774085,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 1.4862000025459565,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 1.7771000057109632,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 1.5724900001562976,
+            "min_ms": 1.4231000022846274,
+            "max_ms": 2.062899999145884,
+            "p50_ms": 1.494000000093365,
+            "p95_ms": 1.956394998705946,
+            "p99_ms": 2.0558819984580623
+          },
+          "operator_counts": {
+            "aten::nonzero": 2,
+            "aten::kthvalue": 6
+          }
+        }
+      ],
+      "all_exact": true
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "count": 6,
+      "phases": [
+        {
+          "phase": "control_before",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 2.839499997207895,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 3.072999999858439,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 3.058700000110548,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 3.1572000007145107,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 3.186099995218683,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 3.559000004315749,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 3.192199998011347,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 3.0012999995960854,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 3.1413999968208373,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 2.970200002891943,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 2.8483999994932674,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 3.1464999992749654,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 2.884599998651538,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 3.0631000045104884,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 2.8993000014452264,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 3.5972999976365827,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 3.166100002999883,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 2.987899999425281,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 3.2850999996298924,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 2.875100006349385,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 3.291900000476744,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 2.874900004826486,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 2.9598000037367456,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 2.9348000025493093,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 3.254800001741387,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 2.90580000000773,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 3.2653000016580336,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 3.1780999997863546,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 2.96169999637641,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 3.0757999993511476,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 2.8617000061785802,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 2.839499997207895,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 3.088570000788119,
+            "min_ms": 2.8483999994932674,
+            "max_ms": 3.5972999976365827,
+            "p50_ms": 3.0680500021844637,
+            "p95_ms": 3.4388050025881967,
+            "p99_ms": 3.586192999573541
+          },
+          "operator_counts": {
+            "aten::nonzero": 6,
+            "aten::kthvalue": 24
+          }
+        },
+        {
+          "phase": "sort",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 5.513999996765051,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 5.115099993417971,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 5.7553000006009825,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 5.686199998308439,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 5.496000005223323,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 5.593900001258589,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 5.538499994145241,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 5.300099997839425,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 6.1706000051344745,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 5.451700002595317,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 5.880199998500757,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 5.784899993159343,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 5.565799998294096,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 5.72969999484485,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 6.040599997504614,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 6.032799996319227,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 5.8869999993476085,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 5.3447999962372705,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 5.238300000200979,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 5.347199999960139,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 5.289700005960185,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 5.684100004145876,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 5.600600001343992,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 5.359599999792408,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 5.2424999958020635,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 5.593499998212792,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 5.446200004371349,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 5.989099998259917,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 5.391000006056856,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 5.063000004156493,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 5.3346000058809295,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 5.513999996765051,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 5.565086666562517,
+            "min_ms": 5.063000004156493,
+            "max_ms": 6.1706000051344745,
+            "p50_ms": 5.5521499962196685,
+            "p95_ms": 6.03708999697119,
+            "p99_ms": 6.132900002921815
+          },
+          "operator_counts": {
+            "aten::sort": 6
+          }
+        },
+        {
+          "phase": "control_after",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 3.771999996388331,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 2.935300006356556,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 3.0104000034043565,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 2.8941999989910983,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 2.9815000016242266,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 2.971999994770158,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 3.0425999939325266,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 2.8846999994129874,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 3.2775999934528954,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 3.0820000029052608,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 3.0703000011271797,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 3.011000000697095,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 2.9894000035710633,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 3.091799997491762,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 2.8944999939994887,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 3.0867000023135915,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 2.8871000031358562,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 2.9718999940087087,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 2.9126000008545816,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 3.0945999969844706,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 2.9858999987482093,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 4.041699998197146,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 3.723400004673749,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 3.548400003637653,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 3.275099996244535,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 3.2580999977653846,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 2.895999998145271,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 3.3814999987953342,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 2.948699999251403,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 3.437899998971261,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 2.894400000513997,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 3.771999996388331,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 3.11604333279926,
+            "min_ms": 2.8846999994129874,
+            "max_ms": 4.041699998197146,
+            "p50_ms": 3.0107000020507257,
+            "p95_ms": 3.644650004207506,
+            "p99_ms": 3.9493930000753608
+          },
+          "operator_counts": {
+            "aten::nonzero": 6,
+            "aten::kthvalue": 24
+          }
+        }
+      ],
+      "all_exact": true
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "count": 3,
+      "phases": [
+        {
+          "phase": "control_before",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 2.0583000004990026,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 1.902799995150417,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 1.8627000026754104,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 2.119900003890507,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 1.549599997815676,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 1.2745999993057922,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 1.8675999963306822,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 1.6269000043394044,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 1.3204999995650724,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 1.2872000006609596,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 1.7447999998694286,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 1.4918000015313737,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 1.27749999955995,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 1.2929000004078262,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 1.4269000021158718,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 1.334399996267166,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 1.2846000026911497,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 1.2685999972745776,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 1.7953999995370395,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 1.313499997195322,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 1.2870999998995103,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 1.3583000036305748,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 1.5278000064427033,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 1.5130000028875656,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 1.294500005315058,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 1.297900002100505,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 1.552800000354182,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 1.4632000020355918,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 1.3031000053160824,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 1.6455000004498288,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 1.5404000005219132,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 2.0583000004990026,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 1.4941933341712381,
+            "min_ms": 1.2685999972745776,
+            "max_ms": 2.119900003890507,
+            "p50_ms": 1.4450500020757318,
+            "p95_ms": 1.8869599956815364,
+            "p99_ms": 2.056941001355881
+          },
+          "operator_counts": {
+            "aten::nonzero": 3,
+            "aten::kthvalue": 10
+          }
+        },
+        {
+          "phase": "sort",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 3.5397999963606708,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 2.6613000009092502,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 2.7755999981309287,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 2.759000002697576,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 2.966199994261842,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 2.7009000041289255,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 2.8764999951818027,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 2.6081000032718293,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 3.136299994366709,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 2.6588000037008896,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 2.8873999981442466,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 2.685900006326847,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 2.671100002771709,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 2.5621999957365915,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 3.2992000051308423,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 2.58390000090003,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 2.8047000014339574,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 2.618100006657187,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 3.1196999989333563,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 2.6066999998874962,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 3.0210999975679442,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 2.617699996335432,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 3.0419000031542964,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 2.583400004368741,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 2.6236000048811547,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 2.568899995821994,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 2.72170000243932,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 2.5726000021677464,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 3.0694000015500933,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 2.6574000003165565,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 2.757500005827751,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 3.5397999963606708,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 2.773893334233435,
+            "min_ms": 2.5621999957365915,
+            "max_ms": 3.2992000051308423,
+            "p50_ms": 2.693400005227886,
+            "p95_ms": 3.1288299964217003,
+            "p99_ms": 3.2519590020092437
+          },
+          "operator_counts": {
+            "aten::sort": 3
+          }
+        },
+        {
+          "phase": "control_after",
+          "samples": [
+            {
+              "index": 0,
+              "fusion_ms": 1.6765999971539713,
+              "exact": true
+            },
+            {
+              "index": 1,
+              "fusion_ms": 1.7272999975830317,
+              "exact": true
+            },
+            {
+              "index": 2,
+              "fusion_ms": 1.2721999955829233,
+              "exact": true
+            },
+            {
+              "index": 3,
+              "fusion_ms": 1.251000001502689,
+              "exact": true
+            },
+            {
+              "index": 4,
+              "fusion_ms": 1.2702000021818094,
+              "exact": true
+            },
+            {
+              "index": 5,
+              "fusion_ms": 1.6476000018883497,
+              "exact": true
+            },
+            {
+              "index": 6,
+              "fusion_ms": 1.2687999987974763,
+              "exact": true
+            },
+            {
+              "index": 7,
+              "fusion_ms": 1.2777000010828488,
+              "exact": true
+            },
+            {
+              "index": 8,
+              "fusion_ms": 1.2705999979516491,
+              "exact": true
+            },
+            {
+              "index": 9,
+              "fusion_ms": 1.6150000010384247,
+              "exact": true
+            },
+            {
+              "index": 10,
+              "fusion_ms": 1.9412000037846155,
+              "exact": true
+            },
+            {
+              "index": 11,
+              "fusion_ms": 1.295800000661984,
+              "exact": true
+            },
+            {
+              "index": 12,
+              "fusion_ms": 1.6267999963019975,
+              "exact": true
+            },
+            {
+              "index": 13,
+              "fusion_ms": 1.3369000007514842,
+              "exact": true
+            },
+            {
+              "index": 14,
+              "fusion_ms": 1.2915999977849424,
+              "exact": true
+            },
+            {
+              "index": 15,
+              "fusion_ms": 1.3366999992285855,
+              "exact": true
+            },
+            {
+              "index": 16,
+              "fusion_ms": 1.4136999961920083,
+              "exact": true
+            },
+            {
+              "index": 17,
+              "fusion_ms": 1.463300002797041,
+              "exact": true
+            },
+            {
+              "index": 18,
+              "fusion_ms": 1.2744999985443428,
+              "exact": true
+            },
+            {
+              "index": 19,
+              "fusion_ms": 1.3337999989744276,
+              "exact": true
+            },
+            {
+              "index": 20,
+              "fusion_ms": 1.8436000027577393,
+              "exact": true
+            },
+            {
+              "index": 21,
+              "fusion_ms": 1.3677000024472363,
+              "exact": true
+            },
+            {
+              "index": 22,
+              "fusion_ms": 1.3039000041317195,
+              "exact": true
+            },
+            {
+              "index": 23,
+              "fusion_ms": 1.3711999999941327,
+              "exact": true
+            },
+            {
+              "index": 24,
+              "fusion_ms": 1.4162000006763265,
+              "exact": true
+            },
+            {
+              "index": 25,
+              "fusion_ms": 1.3206000003265217,
+              "exact": true
+            },
+            {
+              "index": 26,
+              "fusion_ms": 1.3429000027826987,
+              "exact": true
+            },
+            {
+              "index": 27,
+              "fusion_ms": 1.269000000320375,
+              "exact": true
+            },
+            {
+              "index": 28,
+              "fusion_ms": 1.5003000007709488,
+              "exact": true
+            },
+            {
+              "index": 29,
+              "fusion_ms": 1.394099999743048,
+              "exact": true
+            },
+            {
+              "index": 30,
+              "fusion_ms": 1.299499999731779,
+              "exact": true
+            }
+          ],
+          "first": {
+            "index": 0,
+            "fusion_ms": 1.6765999971539713,
+            "exact": true
+          },
+          "steady": {
+            "count": 30,
+            "mean_ms": 1.4114566668771051,
+            "min_ms": 1.251000001502689,
+            "max_ms": 1.9412000037846155,
+            "p50_ms": 1.3367999999900348,
+            "p95_ms": 1.7912650004291208,
+            "p99_ms": 1.9128960034868214
+          },
+          "operator_counts": {
+            "aten::nonzero": 3,
+            "aten::kthvalue": 10
+          }
+        }
+      ],
+      "all_exact": true
+    }
+  ],
+  "input_sha256": {
+    "model_tests\\samples\\bus.jpg": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "models\\experiments\\coco8\\images\\val\\000000000036.jpg": "4c28394898302bef227834d63498a0fc54e4295f11c590c8a8ebcba51347bc03",
+    "models\\experiments\\coco8\\images\\val\\000000000042.jpg": "c87afb6dfe55db1cada52479ed939a231e030d64f5e3c3eaf7eb1544591f853a",
+    "models\\experiments\\coco8\\images\\val\\000000000049.jpg": "86b46022d382f67b0934147fe515e1c3c3f5c04db45045516214b5e3092148e3",
+    "models\\experiments\\coco8\\images\\val\\000000000061.jpg": "6460e4a7cc80e34815aba8910a23152a16a24a416fa598138bd9231cccd413e2"
+  },
+  "implementation_sha256": {
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/detector.py": "844a3b65aac597bf511fac55e04ed268ad01e9ee659b3525b61828cfb8e6cf97",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/depth_fusion_probe.py": "2d1aac834e44322813fb5de42764e630311eb1ee52cd5b536448dbc9dfad1cb4",
+    "tools/validate_depth_fusion.py": "b88512bdc9638c406ed994b1461a88fe55fa25a26a7f20d57f0f2e80a5bd8286"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "assets_sha256": {
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.json": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6"
+  },
+  "peak_allocated_mib": 216.3046875
+}

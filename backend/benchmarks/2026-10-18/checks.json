@@ -1,0 +1,32 @@
+[
+  {
+    "Name": "django-check",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-18/django-check.txt"
+  },
+  {
+    "Name": "migration-check",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-18/migration-check.txt"
+  },
+  {
+    "Name": "backend-tests",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-18/backend-tests.txt"
+  },
+  {
+    "Name": "ruff",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-18/ruff.txt"
+  },
+  {
+    "Name": "pip-check",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-18/pip-check.txt"
+  },
+  {
+    "Name": "frontend-tests",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-18/frontend-tests.txt"
+  }
+]

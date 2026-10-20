@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "mode": "detection",
+  "scope": "Native FP32 static-image probe; not production FP16 or video validation",
+  "requested_frames": 31,
+  "completed_frames": 31,
+  "identities": {
+    "input": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "detection": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "manifest": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6"
+  },
+  "implementation_sha256": {
+    "core/detector.py": "255511e15c08bcf63a166c53d44eddfaa6ef7da879dfad2fcb4d5f0a349e5cba",
+    "realtime/detector.py": "55720c01e5717b937320e12f8d8e4abbbc273cd16987d0076fb7019c508a3295",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "af5034c9925e8e92add7a184c7e080717e98cd7e833c0df0af661cb65316b09c",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "zerogpu/runtime.py": "a2d49af2c0b17f71483731fcd62f889ca3fe6a915559a663381f35a548dc51d8",
+    "tools/fixtures.py": "998caefb7c075442f0e849550681145eef822040e5b848358a325a41c562ae66",
+    "tools/benchmark_inference.py": "8b6df7cd42a42aa16da540cc79fd635b505f6f88b935d2e1f91369fb0d3245db"
+  },
+  "settings": {
+    "detection_config": {},
+    "batch": 1,
+    "detection_edge": 640,
+    "confidence_threshold": 0.25,
+    "jpeg_quality": 80,
+    "depth_edge": null,
+    "depth_precision": null
+  },
+  "timing_notes": [
+    "Only first frame excluded from steady summaries",
+    "inference_ms includes transfers; forward_event_ms is CUDA replay",
+    "depth_ms includes box decoding and depth inference/fusion",
+    "depth_sdk timings come from the existing synchronized SDK profiler",
+    "Stage durations overlap with server_ms and predict_wall_ms",
+    "Tracking uses actual worker timestamps; static image repeated"
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "ultralytics": "8.4.171",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "prepared_input": {
+    "sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+    "size": [
+      480,
+      640
+    ],
+    "bytes": 78850
+  },
+  "model_initialization_ms": 463.94510000027367,
+  "gpu_peak_allocated_bytes": 100259328,
+  "gpu_peak_reserved_bytes": 150994944,
+  "first_frame": {
+    "forward_event_ms": 4.933504104614258,
+    "inference_ms": 0.0,
+    "prepare_ms": 4.973499999323394,
+    "gpu_stage_ms": 695.2856999996584,
+    "render_ms": 3.5659000004670816,
+    "server_ms": 703.8250999994489,
+    "graph_setup_ms": 702.9999999995198,
+    "index": 0,
+    "predict_wall_ms": 704.0090999998938
+  },
+  "steady": {
+    "predict_wall_ms": {
+      "count": 30,
+      "mean_ms": 12.642453333379914,
+      "min_ms": 11.766699999498087,
+      "max_ms": 13.782500000161235,
+      "p50_ms": 12.532350000583392,
+      "p95_ms": 13.514385000326001,
+      "p99_ms": 13.737202000229445
+    },
+    "forward_event_ms": {
+      "count": 30,
+      "mean_ms": 4.532238960266113,
+      "min_ms": 4.2325758934021,
+      "max_ms": 5.388959884643555,
+      "p50_ms": 4.311183929443359,
+      "p95_ms": 5.341238498687744,
+      "p99_ms": 5.378269381523133
+    },
+    "inference_ms": {
+      "count": 30,
+      "mean_ms": 5.233333333368743,
+      "min_ms": 0.0,
+      "max_ms": 16.00000000144064,
+      "p50_ms": 0.0,
+      "p95_ms": 16.000000000622094,
+      "p99_ms": 16.00000000144064
+    },
+    "prepare_ms": {
+      "count": 30,
+      "mean_ms": 4.160086666706775,
+      "min_ms": 3.8177999995241407,
+      "max_ms": 4.840400000830414,
+      "p50_ms": 4.1246000000683125,
+      "p95_ms": 4.471930000181601,
+      "p99_ms": 4.735971000609425
+    },
+    "gpu_stage_ms": {
+      "count": 30,
+      "mean_ms": 5.794969999927464,
+      "min_ms": 5.399499999839463,
+      "max_ms": 6.717500000377186,
+      "p50_ms": 5.571050000071409,
+      "p95_ms": 6.641540000055102,
+      "p99_ms": 6.716195000462903
+    },
+    "depth_ms": null,
+    "depth_sdk_preprocess_ms": null,
+    "depth_sdk_inference_ms": null,
+    "depth_sdk_postprocess_ms": null,
+    "tracking_ms": null,
+    "risk_ms": null,
+    "render_ms": {
+      "count": 30,
+      "mean_ms": 2.508520000083081,
+      "min_ms": 2.369699999690056,
+      "max_ms": 2.93240000064543,
+      "p50_ms": 2.4636500002088724,
+      "p95_ms": 2.8598000001693435,
+      "p99_ms": 2.9230910004480393
+    },
+    "server_ms": {
+      "count": 30,
+      "mean_ms": 12.463576666717321,
+      "min_ms": 11.58699999905366,
+      "max_ms": 13.606799999251962,
+      "p50_ms": 12.356850000287523,
+      "p95_ms": 13.344844999664929,
+      "p99_ms": 13.565271999541437
+    },
+    "graph_setup_ms": {
+      "count": 30,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    }
+  }
+}

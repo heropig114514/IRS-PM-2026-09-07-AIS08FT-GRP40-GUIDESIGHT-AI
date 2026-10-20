@@ -124,13 +124,21 @@ globalThis.window = {
 };
 const { CameraApp, processingPath } = await import("../camera.js");
 
-/** Functionality: Verify only Echo and the current GPU session can be selected.
+/** Functionality: Verify explicit Echo, HF and resident modes and their explanatory notes.
  * Inputs: actual mode mapping and retired/unknown enums. Outputs: fixed paths or explicit errors.
  * Logic: reject every former mode, rather than silently substituting a new provider.
  * Constraints: no external camera, socket, CPU detector or GPU request. */
-test("仅保留Echo和最新HF视频模式", function testProcessingPath() {
+test("Echo、HF与常驻GPU模式使用明确路径和提示", function testProcessingPath() {
   assert.equal(processingPath("echo"), "./ws/echo/");
   assert.equal(processingPath("hf"), "./ws/detect/hf/");
+  assert.equal(processingPath("resident"), "./ws/detect/resident/");
+  const app = new CameraApp();
+  for (const mode of ["echo", "hf", "resident"]) {
+    app.processing.value = mode;
+    app.handleProcessingChange();
+    assert.equal(document.getElementById("hf-note").hidden, mode !== "hf");
+    assert.equal(document.getElementById("resident-note").hidden, mode !== "resident");
+  }
   for (const mode of ["detect", "stream", "hf_stream", "hf_boxes", "hf_boxes_fast", "hf_live", "unknown"])
     assert.throws(() => processingPath(mode), /未知/);
 });

@@ -7,9 +7,11 @@
  * admitted; testBinary; testInvalid; testOrder; testStop; testBudgets; testFinal; testHello;
  * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
  * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
- * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity.
+ * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity;
+ * testResidentAdmission; testResidentIdentity; testResidentWorkload; testResidentEnd; testResidentErrors.
  * Variable Index: manifest/contract — original public model identity; plan — current deployment's
- * compute/quality contract for integration regression; JPEG — synthetic markers.
+ * compute/quality contract for integration regression; residentContract — independent native identity;
+ * JPEG — synthetic markers.
  */
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
@@ -26,6 +28,9 @@ const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes:
   source_sha256: manifest.source_sha256, names: manifest.names, confidence_threshold: 0.25,
   max_edge: 640, jpeg_quality: 0.8, max_inflight: 12, session_seconds: 55, cold_seconds: 55, steady_seconds: 10};
 const JPEG = Uint8Array.from([255, 216, 1, 255, 217]);
+const residentContract = {...contract, protocol: "resident-v1", mode: "detection",
+  session_seconds: null, idle_seconds: 15, model_load_ms: 100};
+for (const key of ["validation", "cold_seconds", "steady_seconds"]) delete residentContract[key];
 
 /** Functionality: Accept additive depth fields with finite meters or explicitly unavailable null.
  * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged legacy box.
@@ -107,9 +112,9 @@ function packet(index, overrides = {}, jpeg = JPEG) {
 }
 
 /** Functionality: Bind actual client to explicit socket/lifecycle fixtures.
- * Inputs: None. Outputs: client/socket/state. Logic: callbacks collect diagnostics.
+ * Inputs: explicit protocol, HF by default. Outputs: client/socket/state. Logic: collect diagnostics.
  * Constraints: never fetches HF quota or requests a GPU. */
-function fixture() {
+function fixture(protocol = "hf") {
   const socket = new FakeSocket(), state = {errors: [], ends: 0};
   /** Functionality: Return injected socket. Inputs: ignored url. Outputs: fixture.
    * Logic: no new socket. Constraints: explicitly synthetic. */
@@ -120,8 +125,94 @@ function fixture() {
   /** Functionality: Record bounded end. Inputs: None. Outputs: end count.
    * Logic: no auto-start. Constraints: no actual resource-release proof. */
   function ended() { state.ends += 1; }
-  return {client: new LiveDetectionClient("wss://test.invalid/ws/detect/hf/", failed, ended, {socketFactory}), socket, state};
+  return {client: new LiveDetectionClient("wss://test.invalid/ws/detect/fixture/", failed, ended,
+    {socketFactory, protocol}), socket, state};
 }
+
+/** Functionality: Admit all explicit native workloads and verify an actual envelope response.
+ * Inputs: resident hello and appropriate synthetic metadata. Outputs: no quality-plan dependency.
+ * Logic: actual client/hash validation; full workload retains risk/track/depth checks.
+ * Constraints: no GPU/accuracy claim; all frame parameters remain unchanged. */
+test("resident admission is explicit and supports its three workloads", async function testResidentAdmission() {
+  for (const mode of ["detection", "depth", "full"]) {
+    const selected = {...residentContract, mode};
+    const {client, socket, state} = await admitted(fixture("resident-v1"), selected);
+    try {
+      const result = client.sendFrame(JPEG.slice().buffer);
+      const extra = mode === "full" ? riskMetadata() : mode === "depth" ?
+        {depth_model: "yolo26n-depth", depth_units: "m", depth_ms: 2} : {};
+      socket.message(packet(0, {...extra, resident_queue_ms: 0.1}));
+      assert.equal((await result).metadata.precision, "FP32");
+      assert.equal(client.contract.session_seconds, null);
+      assert.deepEqual(state.errors, []);
+    } finally { client.stop(); }
+  }
+});
+
+/** Functionality: Reject cross-provider hello and unapproved native configurations.
+ * Inputs: HF/resident substitutions and mutated native contract. Outputs: pre-frame failures.
+ * Logic: protocol is selected by caller, never inferred from provider data.
+ * Constraints: no weakening of existing HF COCO/precision checks. */
+test("resident cannot bypass HF admission or accept a changed native plan", async function testResidentIdentity() {
+  const cases = [["hf", residentContract], ["resident-v1", contract]];
+  for (const change of [{precision: "FP16"}, {mode: "unknown"}, {session_seconds: 55},
+    {idle_seconds: 0}, {model_load_ms: -1}, {validation: contract.validation},
+    {cold_seconds: 55}, {max_inflight: 8}, {token: "synthetic"}, {protocol: undefined}])
+    cases.push(["resident-v1", {...residentContract, ...change}]);
+  for (const [protocol, selected] of cases) {
+    const {client, socket, state} = fixture(protocol);
+    const rejected = assert.rejects(client.connect());
+    socket.message(JSON.stringify(selected));
+    await rejected;
+    assert.equal(state.errors.length, 1);
+    assert.equal(socket.sent.length, 0);
+  }
+});
+
+/** Functionality: Reject omitted or added stages and invalid resident queue timings.
+ * Inputs: synthetic full metadata and staged removals. Outputs: validation failures.
+ * Logic: declared workload must match every frame, including no-detection frames.
+ * Constraints: does not infer successful depth/tracking from labels alone. */
+test("resident per-frame stages must match the admitted workload", async function testResidentWorkload() {
+  const selected = {...residentContract, mode: "full"};
+  const full = {...riskMetadata(), resident_queue_ms: 0};
+  for (const field of ["depth_model", "tracking_model", "risk_model", "resident_queue_ms"]) {
+    const changed = {...full}; delete changed[field];
+    await assert.rejects(decodeResult(packet(0, changed), 0, selected));
+  }
+  await assert.rejects(decodeResult(packet(0, {...full, resident_queue_ms: -1}), 0, selected));
+  await assert.rejects(decodeResult(packet(0, full), 0, residentContract));
+});
+
+/** Functionality: Verify resident final counts after asynchronous JPEG hashing finishes.
+ * Inputs: final result followed by correct/incorrect drain summaries. Outputs: end or failure.
+ * Logic: match sent/verified counts on the message chain. Constraints: partial success is not ended. */
+test("resident end preserves final JPEG and checks complete delivery", async function testResidentEnd() {
+  for (const count of [1, 0, 2]) {
+    const {client, socket, state} = await admitted(fixture("resident-v1"), residentContract);
+    const result = client.sendFrame(JPEG.slice().buffer);
+    socket.message(packet(0, {resident_queue_ms: 0}));
+    socket.message(JSON.stringify({kind: "ended", received: count, delivered: count}));
+    socket.onclose({code: 1000});
+    await result; await client.messageChain;
+    assert.equal(state.ends, count === 1 ? 1 : 0);
+    assert.equal(state.errors.length, count === 1 ? 0 : 1);
+  }
+});
+
+/** Functionality: Show actionable resident busy/unavailable diagnostics without auto-reconnect.
+ * Inputs: safe server error codes. Outputs: rejected hello and one user-facing error.
+ * Logic: use fixed client text, retain one socket. Constraints: no provider substitution or retries. */
+test("resident errors identify busy and unavailable service", async function testResidentErrors() {
+  for (const code of ["resident_busy", "resident_unavailable", "resident_stream_failed"]) {
+    const {client, socket, state} = fixture("resident-v1");
+    const rejected = assert.rejects(client.connect(), /常驻 GPU/);
+    socket.message(JSON.stringify({kind: "error", code}));
+    await rejected;
+    assert.equal(state.errors.length, 1);
+    assert.equal(socket.sent.length, 0);
+  }
+});
 
 /** Functionality: Resolve explicit public hello. Inputs: fixture and explicit contract.
  * Outputs: admitted fixture.

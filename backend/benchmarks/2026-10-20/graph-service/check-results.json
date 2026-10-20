@@ -1,0 +1,37 @@
+[
+  {
+    "name": "django_check",
+    "exit_code": 0,
+    "log": "django-check.log"
+  },
+  {
+    "name": "makemigrations_check",
+    "exit_code": 0,
+    "log": "migrations-check.log"
+  },
+  {
+    "name": "backend_tests",
+    "exit_code": 0,
+    "log": "backend-tests.log"
+  },
+  {
+    "name": "ruff",
+    "exit_code": 0,
+    "log": "ruff.log"
+  },
+  {
+    "name": "pip_check",
+    "exit_code": 0,
+    "log": "pip-check.log"
+  },
+  {
+    "name": "node_syntax",
+    "exit_code": 0,
+    "log": "node-check.log"
+  },
+  {
+    "name": "git_diff_check",
+    "exit_code": 0,
+    "log": "diff-check.log"
+  }
+]

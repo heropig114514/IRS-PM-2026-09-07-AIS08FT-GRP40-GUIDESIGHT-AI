@@ -1,0 +1,26 @@
+{
+  "status": "failed",
+  "scope": "Actual browser with static canvas source and local GPU",
+  "conditions": {
+    "input_fps": 30,
+    "max_inflight": 12,
+    "frames_per_session": 181,
+    "mode": "full"
+  },
+  "sessions": [],
+  "source_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+  "source_code_sha256": {
+    "../frontend/camera.js": "6423f8282a7ddb2d85243ba111d3674107440c6ca637a4f444bf7cdd8ea35379",
+    "../frontend/live-detection-client.js": "6e6291abb3b2711f545b41409e22a7b701568e83f1092d83ca2f858cde9858b8",
+    "../frontend/frame-pipeline.js": "20cf1b5e6b4f8061dcec569dcfb2972de532d7687e3f80b81b139d09267dce70",
+    "realtime/services.py": "8296ad650141161f5a65cecf8453091acd8cae146817f1975d21dec33b38e2c1",
+    "realtime/resident_asgi.py": "2d85f88110457da0b08f0e944490c5ca93351da0b69a88ba3a2c584b4f7f36da",
+    "tools/benchmark_resident_browser.mjs": "813119d73006e0dacd5cb5d0084f34210e2d7324a082c48dbe3e511909b9f844"
+  },
+  "browser": "155.0.8059.80",
+  "resident_note_visible": true,
+  "failure": {
+    "type": "TimeoutError",
+    "detail": "page.waitForFunction: Timeout 60000ms exceeded."
+  }
+}

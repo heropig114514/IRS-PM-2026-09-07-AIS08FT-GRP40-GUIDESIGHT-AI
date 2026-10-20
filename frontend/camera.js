@@ -1,8 +1,8 @@
 /**
- * Responsibilities: 摄像头授权、原样串行与ZeroGPU有界视频流水线、阶段计时和生命周期。
- * Implementation: 最大边640、JPEG0.8；HF首帧单独完成后30FPS采集、12帧上限、顺序显示；任何错误停止。
+ * Responsibilities: 摄像头授权、Echo/HF/常驻 GPU 流水线、阶段计时和生命周期。
+ * Implementation: 最大边640、JPEG0.8；检测首帧单独完成后30FPS采集、12帧上限、顺序显示；错误停止。
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
- * frame-pipeline.js, scene-client.js(只读 latestJpeg/latestBoxes)；core.echo/hf_video_relay；
+ * frame-pipeline.js, scene-client.js(只读 latestJpeg/latestBoxes)；core.echo/hf_video_relay、realtime.resident_asgi；
  * tools/benchmark_phone_browser.mjs 验证真实页面；测试图流不代表手机实拍。
  * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
@@ -15,11 +15,11 @@
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide。
  * Variable Index: MAX_EDGE/JPEG_QUALITY 为采集参数；METRICS_LOG_INTERVAL_MS 为汇总日志间隔；
- * PROCESSING_PATHS 为唯一两个WS模式与固定路径；app 为页面控制器；实例 frameTimings 保存首帧和有限聚合统计，
+ * PROCESSING_PATHS 为三个显式WS模式与固定路径；app 为页面控制器；实例 frameTimings 保存首帧和有限聚合统计，
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs及creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
  * 仅聚合带有流水线调度观测的稳态帧，不把串行Echo缺失的观测计为零；
  * SCENE_MAX_AGE_MS 为场景描述复用最近帧/检测结果的最大年龄；实例 lastFrame/lastDetection 仅在内存保存最近一次
- * 已编码JPEG与HF检测元数据供 scene-client.js 读取，停止即清空，不持久化；
+ * 已编码JPEG与检测元数据供 scene-client.js 读取，停止即清空，不持久化；
  * cameraApp 为页面控制器的导出引用；
  * cameraPhase 定位操作阶段，pipeline持有有界作业/取消信号；apiBase为同源API挂载点。
  */
@@ -31,9 +31,9 @@ const MAX_EDGE = 640;
 const JPEG_QUALITY = 0.8;
 const METRICS_LOG_INTERVAL_MS = 5000;
 export const SCENE_MAX_AGE_MS = 1000;
-const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/"};
+const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/", resident: "./ws/detect/resident/"};
 
-/** Functionality: Resolve one of the two supported processing modes.
+/** Functionality: Resolve one of the three explicitly supported processing modes.
  * Inputs: processing enum. Outputs: fixed relative WS path; unknown values throw.
  * Logic: explicit allowlist rejects retired modes before camera authorization.
  * Constraints: no HTTP detector, alternate provider or automatic mode substitution. */
@@ -116,10 +116,11 @@ export class CameraApp {
       throw new Error("检测接口必须与页面同源。");
     return url;
   }
-  /** Functionality: 显示第三方图像处理及等待预算。Inputs: processing 当前值。
-   * Outputs: 提示可见性；Logic: 仅 hf 选择显示；Constraints: 不联网或申请权限。 */
+  /** Functionality: 显示所选服务的处理与会话边界。Inputs: processing 当前值。
+   * Outputs: 提示可见性；Logic: HF/常驻提示分开；Constraints: 不联网或申请权限。 */
   handleProcessingChange() {
     document.getElementById("hf-note").hidden = this.processing.value !== "hf";
+    document.getElementById("resident-note").hidden = this.processing.value !== "resident";
   }
   /** Functionality: 更新状态与操作边界。Inputs: text、kind。Outputs: DOM 修改。
    * Logic: mode 决定控件可操作性；Constraints: text 仅用 textContent，不插入 HTML。 */
@@ -147,7 +148,7 @@ export class CameraApp {
   }
   /** Functionality: 授权摄像头并使用显式所选模式。Inputs: facingMode、processing、浏览器媒体 API。
    * Outputs: 本地 video、返回 img、往返时间及首帧后的完成速率。
-   * Logic: 原样保持单在途；HF使用同源持久WS与当前默认采样/8作业流水线；首帧单列。
+   * Logic: 原样保持单在途；检测使用同源持久WS与默认30FPS/12作业流水线；首帧单列。
    * Constraints: exact镜头；检测失败停止，不切换模式或自动重新授权；不丢弃已发送帧来制造速率；
    * 没有固定等待不保证达到10FPS；计时从 drawImage 前开始，不等于传感器曝光或屏幕实际绘制时间。 */
   async start() {
@@ -188,8 +189,9 @@ export class CameraApp {
       this.setStatus("正在连接服务端");
       const url = this.apiUrl(path);
       url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
-      const client = processing === "hf"
-        ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd)
+      const client = processing !== "echo"
+        ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd,
+          {protocol: processing === "resident" ? "resident-v1" : "hf"})
         : new EchoClient(url.href, this.handleDisconnect);
       this.client = client;
       this.cameraPhase = "connect";
@@ -204,14 +206,15 @@ export class CameraApp {
         processing !== "echo" ? "YOLO26 标注" : "字节一致 ✓";
       this.message.textContent =
         processing !== "echo"
-          ? "YOLO26n 检测 80 类；Hugging Face ZeroGPU 返回标注图像。"
+          ? (processing === "resident" ? "YOLO26n 检测 80 类；常驻 GPU 服务返回标注图像。"
+            : "YOLO26n 检测 80 类；Hugging Face ZeroGPU 返回标注图像。")
           : "每帧均经过服务端原样回传，字节校验通过后显示。";
       let sent = 0;
       let received = 0;
       this.frameTimings = null;
       document.getElementById("frames").textContent = "0 / 0";
       document.getElementById("fps").textContent = "—";
-      if (processing === "hf") {
+      if (processing !== "echo") {
         this.setStatus("等待首帧检测");
         await this.runPipeline(client, processing, token);
         return;
@@ -248,7 +251,7 @@ export class CameraApp {
       if (token === this.generation) this.handleDisconnect(error);
     }
   }
-  /** Functionality: Run the selected HF session without serial capture/response/display waits.
+  /** Functionality: Run the selected detection session with overlapped capture/response/display.
    * Inputs: client, processing snapshot, generation token. Outputs: pipeline completion/exception.
    * Logic: sender admits before capture; display and HUD callbacks have generation guards;
    * controller stop cancels the instance, and LiveDetectionClient owns provider end/error semantics.
@@ -299,7 +302,7 @@ export class CameraApp {
     document.getElementById("size").textContent = (inputBytes / 1024).toFixed(1);
     document.getElementById("fps").textContent = steadyFps === null ? "—" : steadyFps.toFixed(1);
   }
-  /** Functionality: Release camera after an explicit bounded HF session end.
+  /** Functionality: Release camera after an explicit detection session end.
    * Inputs: active controller/client state. Outputs: stopped media and visible completed-session state.
    * Logic: stop admission, drain already-validated display, then release; user starts another session.
    * Constraints: forced stop/error still cancels promptly; no automatic GPU allocation. */
@@ -313,7 +316,7 @@ export class CameraApp {
     if (token !== this.generation) return;
     this.stop();
     this.setStatus("本次视频会话已结束");
-    this.message.textContent = "ZeroGPU 视频会话已结束并释放资源。再次点击开始可开启新会话。";
+    this.message.textContent = "视频会话已结束并释放资源。再次点击开始可开启新会话。";
   }
   /** Functionality: 按原长宽比采集 JPEG。Inputs: video 当前帧。Outputs: ArrayBuffer。
    * Logic: 限制最大边 640；仅尺寸改变时重置画布，随后编码当前帧。
@@ -348,7 +351,7 @@ export class CameraApp {
     if (frame && performance.now() - frame.at <= maxAgeMs) return frame.bytes;
     return this.capture();
   }
-  /** Functionality: 为场景描述提供最近一次HF检测框。Inputs: maxAgeMs，lastDetection。
+  /** Functionality: 为场景描述提供最近一次检测框。Inputs: maxAgeMs，lastDetection。
    * Outputs: boxes数组（可为空）。Logic: 仅返回不超过 maxAgeMs 的结果，避免过期距离误导。
    * Constraints: 只读返回，不修改元数据；metadata/boxes 缺失或非数组返回空数组；Echo 模式或无检测时返回空数组，不伪造。 */
   latestBoxes(maxAgeMs = SCENE_MAX_AGE_MS) {
@@ -358,7 +361,7 @@ export class CameraApp {
     return Array.isArray(boxes) ? boxes : [];
   }
   /** Functionality: 显示当前模式校验后的服务端JPEG。Inputs: bytes、token、可选dimensions元数据。
-   * Outputs: img解码及URL生命周期。Logic: HF还校验实际naturalWidth/Height；finally释放旧帧。
+   * Outputs: img解码及URL生命周期。Logic: 检测还校验实际naturalWidth/Height；finally释放旧帧。
    * Constraints: 解码/尺寸失败终止；代际变化后不显示旧帧；不代表屏幕实际绘制已完成。 */
   async showFrame(bytes, token, dimensions = null) {
     const previous = this.objectUrl;

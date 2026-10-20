@@ -1,0 +1,3413 @@
+{
+  "status": "completed",
+  "scope": "Static exact diagnostic, no video/accuracy claim",
+  "requested_comparisons": 10,
+  "completed_comparisons": 10,
+  "frames": [
+    {
+      "index": 0,
+      "input": "model_tests\\samples\\bus.jpg",
+      "frame_size": [
+        480,
+        640
+      ],
+      "prepared_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "candidate_depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 6.296799998381175,
+        "graph_setup_ms": 433.55390000215266,
+        "prepare_ms": 4.961999999068212,
+        "gpu_stage_ms": 439.99150000308873,
+        "render_ms": 3.6638000019593164,
+        "server_ms": 504.4396000012057,
+        "forward_event_ms": 5.050367832183838,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.225499999942258,
+        "depth_predict_ms": 22.02499999839347,
+        "depth_fusion_ms": 33.57099999993807,
+        "depth_ms": 55.821499998273794
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 6.215499997779261,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.167899998719804,
+        "gpu_stage_ms": 6.29530000151135,
+        "render_ms": 2.579400003014598,
+        "server_ms": 39.77070000109961,
+        "forward_event_ms": 5.124800205230713,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1733999961288646,
+        "depth_predict_ms": 21.198499998718034,
+        "depth_fusion_ms": 5.355400004191324,
+        "depth_ms": 26.727299999038223
+      }
+    },
+    {
+      "index": 1,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "frame_size": [
+        481,
+        640
+      ],
+      "prepared_sha256": "f6c98eaee3baf861390069be00e088253576b0268071d5a3acc38122e76c46b0",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "candidate_depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.587100004253443,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.838500000711065,
+        "gpu_stage_ms": 6.643799999437761,
+        "render_ms": 2.224900003056973,
+        "server_ms": 40.76960000384133,
+        "forward_event_ms": 5.39631986618042,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15949999942677096,
+        "depth_predict_ms": 22.587399995245505,
+        "depth_fusion_ms": 5.314900001394562,
+        "depth_ms": 28.06179999606684
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.342799999401905,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.8490000006277114,
+        "gpu_stage_ms": 6.43570000102045,
+        "render_ms": 1.9259000036981888,
+        "server_ms": 36.445600002480205,
+        "forward_event_ms": 5.167712211608887,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1553999973111786,
+        "depth_predict_ms": 19.062399995164014,
+        "depth_fusion_ms": 5.016399998567067,
+        "depth_ms": 24.23419999104226
+      }
+    },
+    {
+      "index": 2,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "frame_size": [
+        640,
+        478
+      ],
+      "prepared_sha256": "179c7297ca1ce042235f6dc4ce6206b0a27a7a3a741e785b7c912c244a5d0be1",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "candidate_depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 6.512499996460974,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.449199997703545,
+        "gpu_stage_ms": 6.557900000188965,
+        "render_ms": 1.8614000000525266,
+        "server_ms": 35.02199999638833,
+        "forward_event_ms": 5.172863960266113,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.17469999875174835,
+        "depth_predict_ms": 20.329900005890522,
+        "depth_fusion_ms": 2.6482999965082854,
+        "depth_ms": 23.152900001150556
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 6.167899999127258,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.3624999996391125,
+        "gpu_stage_ms": 6.207899998116773,
+        "render_ms": 1.765100001648534,
+        "server_ms": 33.79819999827305,
+        "forward_event_ms": 5.038112163543701,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15179999900283292,
+        "depth_predict_ms": 20.43670000421116,
+        "depth_fusion_ms": 1.8735999983618967,
+        "depth_ms": 22.46210000157589
+      }
+    },
+    {
+      "index": 3,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "frame_size": [
+        381,
+        500
+      ],
+      "prepared_sha256": "477b08b447093b31750796796fceb4175b0796e8d65fc2b640277353635b398a",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "candidate_depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 6.161800003610551,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 5.213199998252094,
+        "gpu_stage_ms": 6.2067999970167875,
+        "render_ms": 2.1919999999227002,
+        "server_ms": 37.471899995580316,
+        "forward_event_ms": 5.096320152282715,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.17690000095171854,
+        "depth_predict_ms": 20.32380000309786,
+        "depth_fusion_ms": 3.3584999982849695,
+        "depth_ms": 23.859200002334546
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 6.282000002101995,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 5.812400006107055,
+        "gpu_stage_ms": 6.3267999939853325,
+        "render_ms": 2.3159999982453883,
+        "server_ms": 35.523500002454966,
+        "forward_event_ms": 5.007711887359619,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.18620000628288835,
+        "depth_predict_ms": 17.913399999088142,
+        "depth_fusion_ms": 2.9678999999305233,
+        "depth_ms": 21.067500005301554
+      }
+    },
+    {
+      "index": 4,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "frame_size": [
+        640,
+        488
+      ],
+      "prepared_sha256": "a36beb47cc51f575fb906c1e00458c6fd83419c1b8f99d7a16bbbe1d573db0a7",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "candidate_depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 6.347200003801845,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.497900001297239,
+        "gpu_stage_ms": 6.391000002622604,
+        "render_ms": 2.3755000001983717,
+        "server_ms": 37.97050000139279,
+        "forward_event_ms": 5.1972479820251465,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15779999375808984,
+        "depth_predict_ms": 22.033000001101755,
+        "depth_fusion_ms": 2.5144000028376468,
+        "depth_ms": 24.70519999769749
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 6.183899997267872,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.534400002739858,
+        "gpu_stage_ms": 6.233499996596947,
+        "render_ms": 2.5594000035198405,
+        "server_ms": 35.877200003596954,
+        "forward_event_ms": 5.047232151031494,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.16060000052675605,
+        "depth_predict_ms": 20.381399997859262,
+        "depth_fusion_ms": 2.0070999962626956,
+        "depth_ms": 22.549099994648714
+      }
+    },
+    {
+      "index": 5,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "frame_size": [
+        640,
+        488
+      ],
+      "prepared_sha256": "a36beb47cc51f575fb906c1e00458c6fd83419c1b8f99d7a16bbbe1d573db0a7",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "candidate_depth_sha256": "5e41404c574cc319d77cd53078ccd76aef02fb4cfc93f79586ca05087bbb51e6",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 6.3372000004164875,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.308600000513252,
+        "gpu_stage_ms": 6.402999999409076,
+        "render_ms": 2.6056999995489605,
+        "server_ms": 34.31629999977304,
+        "forward_event_ms": 5.168255805969238,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1564999984111637,
+        "depth_predict_ms": 19.182399999408517,
+        "depth_fusion_ms": 1.659299996390473,
+        "depth_ms": 20.998199994210154
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 488,
+        "count": 3,
+        "boxes": [
+          {
+            "xyxy": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "score": 0.7144298553466797,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.7144298553466797,
+            "bbox": [
+              221.09280395507812,
+              244.77569580078125,
+              366.6810607910156,
+              325.292724609375
+            ],
+            "distance_m": 3.8156607151031494
+          },
+          {
+            "xyxy": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "score": 0.6372613906860352,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.6372613906860352,
+            "bbox": [
+              261.7026062011719,
+              197.11944580078125,
+              309.9884033203125,
+              265.63958740234375
+            ],
+            "distance_m": 4.414400100708008
+          },
+          {
+            "xyxy": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "score": 0.40626007318496704,
+            "class_id": 20,
+            "label": "elephant",
+            "class_name": "elephant",
+            "confidence": 0.40626007318496704,
+            "bbox": [
+              372.3168640136719,
+              250.32070922851562,
+              415.5528869628906,
+              294.3319091796875
+            ],
+            "distance_m": 4.1598920822143555
+          }
+        ],
+        "raw_sha256": "551c8d04a070d944bb51b71889c8016a1cb2abe1838e69e83b822a14a58b9e1e",
+        "jpeg_sha256": "c0749b4fdb39728eb43a06b8ad0a6a7aa12aad49349714d714f99057ccf8b9ec",
+        "inference_ms": 6.482400000095367,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.97900000482332,
+        "gpu_stage_ms": 6.558399996720254,
+        "render_ms": 2.4333000037586316,
+        "server_ms": 35.99120000581024,
+        "forward_event_ms": 5.130080223083496,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1793000046745874,
+        "depth_predict_ms": 20.37929999642074,
+        "depth_fusion_ms": 1.4612000013585202,
+        "depth_ms": 22.01980000245385
+      }
+    },
+    {
+      "index": 6,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "frame_size": [
+        381,
+        500
+      ],
+      "prepared_sha256": "477b08b447093b31750796796fceb4175b0796e8d65fc2b640277353635b398a",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "candidate_depth_sha256": "9eb66bd14db00c0e012c99728a8e5f02ca6e211d1c658eb9905b1dd9797a01d2",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 6.3598000051570125,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 5.351799998607021,
+        "gpu_stage_ms": 6.407000000763219,
+        "render_ms": 2.477900001395028,
+        "server_ms": 40.22869999607792,
+        "forward_event_ms": 4.961056232452393,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.17890000162879005,
+        "depth_predict_ms": 21.718299998610746,
+        "depth_fusion_ms": 4.09409999701893,
+        "depth_ms": 25.991299997258466
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 381,
+        "height": 500,
+        "count": 6,
+        "boxes": [
+          {
+            "xyxy": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "score": 0.8223896622657776,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.8223896622657776,
+            "bbox": [
+              167.14110374450684,
+              226.48401260375977,
+              291.6172504425049,
+              411.8893623352051
+            ],
+            "distance_m": 6.048327445983887
+          },
+          {
+            "xyxy": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "score": 0.6473470330238342,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.6473470330238342,
+            "bbox": [
+              79.45960760116577,
+              243.7042474746704,
+              193.0842399597168,
+              404.4003963470459
+            ],
+            "distance_m": 5.7968902587890625
+          },
+          {
+            "xyxy": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "score": 0.44301074743270874,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.44301074743270874,
+            "bbox": [
+              209.42978858947754,
+              267.9072856903076,
+              268.0594205856323,
+              342.3405170440674
+            ],
+            "distance_m": 4.928010940551758
+          },
+          {
+            "xyxy": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "score": 0.3828580677509308,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3828580677509308,
+            "bbox": [
+              279.7031879425049,
+              327.8893709182739,
+              297.29583263397217,
+              360.0242853164673
+            ],
+            "distance_m": 13.05106258392334
+          },
+          {
+            "xyxy": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "score": 0.3251144587993622,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.3251144587993622,
+            "bbox": [
+              118.58463287353516,
+              337.23318576812744,
+              130.59555292129517,
+              368.3180332183838
+            ],
+            "distance_m": 7.912819862365723
+          },
+          {
+            "xyxy": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "score": 0.28067684173583984,
+            "class_id": 17,
+            "label": "horse",
+            "class_name": "horse",
+            "confidence": 0.28067684173583984,
+            "bbox": [
+              79.33225631713867,
+              233.80980491638184,
+              290.48304557800293,
+              409.74998474121094
+            ],
+            "distance_m": 5.782087326049805
+          }
+        ],
+        "raw_sha256": "b482813f5868dd67f07b91781477d1d630074c29c25d632e410eacea574facee",
+        "jpeg_sha256": "5672bfcab042f4433cf489cabf2cf7a39630df7736e65c12ad5b23da026875ad",
+        "inference_ms": 6.51790000119945,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 5.274500006635208,
+        "gpu_stage_ms": 6.597799998417031,
+        "render_ms": 2.2430000026361085,
+        "server_ms": 37.76280000602128,
+        "forward_event_ms": 5.363903999328613,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.1660999987507239,
+        "depth_predict_ms": 20.24150000215741,
+        "depth_fusion_ms": 3.2393000001320615,
+        "depth_ms": 23.646900001040194
+      }
+    },
+    {
+      "index": 7,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "frame_size": [
+        640,
+        478
+      ],
+      "prepared_sha256": "179c7297ca1ce042235f6dc4ce6206b0a27a7a3a741e785b7c912c244a5d0be1",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "candidate_depth_sha256": "512d166bcd6c4a15ae634e7b272642893d5be81187e1eef03163baea597ab0b5",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 7.484400004614145,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.5105999995721504,
+        "gpu_stage_ms": 7.555500000307802,
+        "render_ms": 2.0271999965189025,
+        "server_ms": 34.8286999942502,
+        "forward_event_ms": 6.084991931915283,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15889999485807493,
+        "depth_predict_ms": 18.865599995478988,
+        "depth_fusion_ms": 2.7101000014226884,
+        "depth_ms": 21.73459999175975
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 640,
+        "height": 478,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "score": 0.6213403344154358,
+            "class_id": 16,
+            "label": "dog",
+            "class_name": "dog",
+            "confidence": 0.6213403344154358,
+            "bbox": [
+              209.07127380371094,
+              45.480621337890625,
+              595.5819091796875,
+              313.1366271972656
+            ],
+            "distance_m": 0.7966261506080627
+          },
+          {
+            "xyxy": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "score": 0.25521546602249146,
+            "class_id": 24,
+            "label": "backpack",
+            "class_name": "backpack",
+            "confidence": 0.25521546602249146,
+            "bbox": [
+              77.94430541992188,
+              303.9615173339844,
+              296.83758544921875,
+              474.64605712890625
+            ],
+            "distance_m": 0.5783072710037231
+          }
+        ],
+        "raw_sha256": "de515dbbb3b1a947e918e54dd3858c3877b77ff5db4df009f92402e5df13307a",
+        "jpeg_sha256": "0a169454e26e6344ac1c3c4c972acdf7907a676d84ffb3bcd6e5e6f35150a101",
+        "inference_ms": 6.1777000009897165,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.6620999962906353,
+        "gpu_stage_ms": 6.223800002771895,
+        "render_ms": 1.7927000008057803,
+        "server_ms": 32.53179999592248,
+        "forward_event_ms": 5.028672218322754,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15549999807262793,
+        "depth_predict_ms": 18.265599996084347,
+        "depth_fusion_ms": 2.431499997328501,
+        "depth_ms": 20.852599991485476
+      }
+    },
+    {
+      "index": 8,
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "frame_size": [
+        481,
+        640
+      ],
+      "prepared_sha256": "f6c98eaee3baf861390069be00e088253576b0268071d5a3acc38122e76c46b0",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "candidate_depth_sha256": "699493687955b4da6d5fdc956a11c6d679f45edaedf3a7674abe767f4985b8c4",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.652299998677336,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.7327000027289614,
+        "gpu_stage_ms": 6.712899994454347,
+        "render_ms": 1.973799997358583,
+        "server_ms": 36.16619999957038,
+        "forward_event_ms": 5.5008320808410645,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15530000382568687,
+        "depth_predict_ms": 19.536699997843243,
+        "depth_fusion_ms": 4.0542000060668215,
+        "depth_ms": 23.74620000773575
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 481,
+        "height": 640,
+        "count": 2,
+        "boxes": [
+          {
+            "xyxy": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "score": 0.9158405065536499,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9158405065536499,
+            "bbox": [
+              172.87344360351562,
+              154.98605346679688,
+              481.0,
+              638.145263671875
+            ],
+            "distance_m": 0.9626384377479553
+          },
+          {
+            "xyxy": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "score": 0.8609440922737122,
+            "class_id": 25,
+            "label": "umbrella",
+            "class_name": "umbrella",
+            "confidence": 0.8609440922737122,
+            "bbox": [
+              0.0,
+              54.448638916015625,
+              452.4986572265625,
+              471.542236328125
+            ],
+            "distance_m": 1.3334264755249023
+          }
+        ],
+        "raw_sha256": "a7687ad3cc45e0697d75873f817e28e2f5a7c277dcca02f27d2d4ece882cc09c",
+        "jpeg_sha256": "8178c58406c50eb8ca1df65b06934542f48d78eb6423003c9b60eca475858031",
+        "inference_ms": 6.097299999964889,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.7067000012029894,
+        "gpu_stage_ms": 6.159899996418972,
+        "render_ms": 2.0048000005772337,
+        "server_ms": 36.307900001702365,
+        "forward_event_ms": 4.999423980712891,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.15490000077988952,
+        "depth_predict_ms": 19.867499999236315,
+        "depth_fusion_ms": 4.413599999679718,
+        "depth_ms": 24.435999999695923
+      }
+    },
+    {
+      "index": 9,
+      "input": "model_tests\\samples\\bus.jpg",
+      "frame_size": [
+        480,
+        640
+      ],
+      "prepared_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+      "depth_exact": true,
+      "max_depth_difference_m": 0.0,
+      "depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "candidate_depth_sha256": "f5647365bebb42a5b292c58ac52a618c1c5c01759eb32d148fdda4a991259a39",
+      "detection_exact": true,
+      "boxes_and_distances_exact": true,
+      "jpeg_exact": true,
+      "control": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 6.972499999392312,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.086700006155297,
+        "gpu_stage_ms": 7.050099993648473,
+        "render_ms": 6.704799998260569,
+        "server_ms": 55.78550000063842,
+        "forward_event_ms": 5.760287761688232,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.16260000120382756,
+        "depth_predict_ms": 26.06230000674259,
+        "depth_fusion_ms": 11.718199995812029,
+        "depth_ms": 37.943100003758445
+      },
+      "candidate": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.692904472351074
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.89475679397583
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949302196502686
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "f28df28dc008ad480ad779e2ffabd78e5d5d88451a8f475ed53b15286e413024",
+        "inference_ms": 7.814999997208361,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.9700999986962415,
+        "gpu_stage_ms": 7.8914000041550025,
+        "render_ms": 3.9681000052951276,
+        "server_ms": 46.67580000386806,
+        "forward_event_ms": 6.336480140686035,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "decode_boxes_ms": 0.17120000120485201,
+        "depth_predict_ms": 24.7181999948225,
+        "depth_fusion_ms": 5.9559000001172535,
+        "depth_ms": 30.845299996144604
+      }
+    }
+  ],
+  "dispatch_samples_per_phase": 31,
+  "input_sha256": {
+    "model_tests\\samples\\bus.jpg": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "models\\experiments\\coco8\\images\\val\\000000000036.jpg": "4c28394898302bef227834d63498a0fc54e4295f11c590c8a8ebcba51347bc03",
+    "models\\experiments\\coco8\\images\\val\\000000000042.jpg": "c87afb6dfe55db1cada52479ed939a231e030d64f5e3c3eaf7eb1544591f853a",
+    "models\\experiments\\coco8\\images\\val\\000000000049.jpg": "86b46022d382f67b0934147fe515e1c3c3f5c04db45045516214b5e3092148e3",
+    "models\\experiments\\coco8\\images\\val\\000000000061.jpg": "6460e4a7cc80e34815aba8910a23152a16a24a416fa598138bd9231cccd413e2"
+  },
+  "implementation_sha256": {
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/detector.py": "844a3b65aac597bf511fac55e04ed268ad01e9ee659b3525b61828cfb8e6cf97",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/depth_predictor_probe.py": "7bf24a8ba06a5fd48911894181e3a4b58f8abfff53846cf816d6440e39e31c3e",
+    "tools/validate_depth_predictor.py": "e02243c8a87c2223bf53c517de873cbc8a05f15b8f65934239a4edb45cd1fe67"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "torch": "2.8.0+cu126",
+    "ultralytics": "8.4.171",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "assets_sha256": {
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.json": "85116ec84ec70600391a877aa947299e1ae7e5b0aad78192fb56efc0c227a3b6"
+  },
+  "sdk_source_sha256": {
+    "engine/model.py": "844f7d6be1221ab617533a6685674a9f5221d58eec4ee559c1d849f2cf8718a5",
+    "engine/predictor.py": "d3de9cc0aa0c1f2c0b17c28ea35d1ae971ae7b56f1b7a5c2e3513e5b45e5efaa",
+    "cfg/__init__.py": "2029d8aa2bd152f4c0a54f756d89bd0fb87dbd9f0358223b6a67c7f60e4814dd"
+  },
+  "setup": {
+    "adapter": "experimental_cached_depth_predictor",
+    "setup_ms": 0.14930000179447234,
+    "scope": "Skip repeated configuration only; full official predictor retained"
+  },
+  "dispatch": {
+    "setup": {
+      "adapter": "experimental_cached_depth_predictor",
+      "setup_ms": 0.22419999731937423,
+      "scope": "Skip repeated configuration only; full official predictor retained"
+    },
+    "phases": [
+      {
+        "phase": "original_before",
+        "samples": [
+          {
+            "index": 0,
+            "outer_ms": 24.497700003848877,
+            "inner_ms": 24.21469999535475,
+            "dispatch_ms": 0.28300000849412754
+          },
+          {
+            "index": 1,
+            "outer_ms": 28.682100004516542,
+            "inner_ms": 28.33140000439016,
+            "dispatch_ms": 0.3507000001263805
+          },
+          {
+            "index": 2,
+            "outer_ms": 21.603700006380677,
+            "inner_ms": 21.22659999440657,
+            "dispatch_ms": 0.3771000119741075
+          },
+          {
+            "index": 3,
+            "outer_ms": 20.583099998475518,
+            "inner_ms": 20.342699994216673,
+            "dispatch_ms": 0.240400004258845
+          },
+          {
+            "index": 4,
+            "outer_ms": 19.061300001339987,
+            "inner_ms": 18.829799999366514,
+            "dispatch_ms": 0.23150000197347254
+          },
+          {
+            "index": 5,
+            "outer_ms": 20.62339999974938,
+            "inner_ms": 20.167100003163796,
+            "dispatch_ms": 0.4562999965855852
+          },
+          {
+            "index": 6,
+            "outer_ms": 21.075399999972433,
+            "inner_ms": 20.842799996898975,
+            "dispatch_ms": 0.23260000307345763
+          },
+          {
+            "index": 7,
+            "outer_ms": 21.069100002932828,
+            "inner_ms": 20.812900002056267,
+            "dispatch_ms": 0.2562000008765608
+          },
+          {
+            "index": 8,
+            "outer_ms": 20.699399996374268,
+            "inner_ms": 20.467499998630956,
+            "dispatch_ms": 0.23189999774331227
+          },
+          {
+            "index": 9,
+            "outer_ms": 21.011999997426756,
+            "inner_ms": 20.774600001459476,
+            "dispatch_ms": 0.23739999596728012
+          },
+          {
+            "index": 10,
+            "outer_ms": 20.404599999892525,
+            "inner_ms": 20.174199999019038,
+            "dispatch_ms": 0.23040000087348744
+          },
+          {
+            "index": 11,
+            "outer_ms": 21.21679999982007,
+            "inner_ms": 20.978099993953947,
+            "dispatch_ms": 0.2387000058661215
+          },
+          {
+            "index": 12,
+            "outer_ms": 19.89089999551652,
+            "inner_ms": 19.649200003186706,
+            "dispatch_ms": 0.24169999232981354
+          },
+          {
+            "index": 13,
+            "outer_ms": 20.316800000728108,
+            "inner_ms": 20.075899999937974,
+            "dispatch_ms": 0.24090000079013407
+          },
+          {
+            "index": 14,
+            "outer_ms": 21.999799995683134,
+            "inner_ms": 21.76750000216998,
+            "dispatch_ms": 0.232299993513152
+          },
+          {
+            "index": 15,
+            "outer_ms": 20.966600000974722,
+            "inner_ms": 20.72790000238456,
+            "dispatch_ms": 0.2386999985901639
+          },
+          {
+            "index": 16,
+            "outer_ms": 20.366500000818633,
+            "inner_ms": 20.067500001459848,
+            "dispatch_ms": 0.2989999993587844
+          },
+          {
+            "index": 17,
+            "outer_ms": 21.08790000056615,
+            "inner_ms": 20.861000004515518,
+            "dispatch_ms": 0.2268999960506335
+          },
+          {
+            "index": 18,
+            "outer_ms": 20.641700000851415,
+            "inner_ms": 20.41800000006333,
+            "dispatch_ms": 0.22370000078808516
+          },
+          {
+            "index": 19,
+            "outer_ms": 20.453199998883065,
+            "inner_ms": 20.213599993439857,
+            "dispatch_ms": 0.23960000544320792
+          },
+          {
+            "index": 20,
+            "outer_ms": 20.102499998756684,
+            "inner_ms": 19.8344000018551,
+            "dispatch_ms": 0.2680999969015829
+          },
+          {
+            "index": 21,
+            "outer_ms": 19.78629999939585,
+            "inner_ms": 19.55660000385251,
+            "dispatch_ms": 0.22969999554334208
+          },
+          {
+            "index": 22,
+            "outer_ms": 20.41530000133207,
+            "inner_ms": 20.165299996733665,
+            "dispatch_ms": 0.2500000045984052
+          },
+          {
+            "index": 23,
+            "outer_ms": 20.4611000008299,
+            "inner_ms": 20.18810000299709,
+            "dispatch_ms": 0.27299999783281237
+          },
+          {
+            "index": 24,
+            "outer_ms": 21.589700001641177,
+            "inner_ms": 21.356099998229183,
+            "dispatch_ms": 0.23360000341199338
+          },
+          {
+            "index": 25,
+            "outer_ms": 22.08559999417048,
+            "inner_ms": 21.810300000652205,
+            "dispatch_ms": 0.2752999935182743
+          },
+          {
+            "index": 26,
+            "outer_ms": 21.57240000087768,
+            "inner_ms": 21.34189999924274,
+            "dispatch_ms": 0.23050000163493678
+          },
+          {
+            "index": 27,
+            "outer_ms": 19.771299994317815,
+            "inner_ms": 19.54259999911301,
+            "dispatch_ms": 0.22869999520480633
+          },
+          {
+            "index": 28,
+            "outer_ms": 19.492100000206847,
+            "inner_ms": 19.219599998905323,
+            "dispatch_ms": 0.2725000013015233
+          },
+          {
+            "index": 29,
+            "outer_ms": 19.086100001004525,
+            "inner_ms": 18.861299999116454,
+            "dispatch_ms": 0.22480000188807026
+          },
+          {
+            "index": 30,
+            "outer_ms": 19.69719999760855,
+            "inner_ms": 19.475000000966247,
+            "dispatch_ms": 0.22219999664230272
+          }
+        ],
+        "first": {
+          "index": 0,
+          "outer_ms": 24.497700003848877,
+          "inner_ms": 24.21469999535475,
+          "dispatch_ms": 0.28300000849412754
+        },
+        "steady": {
+          "outer_ms": {
+            "count": 30,
+            "mean_ms": 20.86046333303481,
+            "min_ms": 19.061300001339987,
+            "max_ms": 28.682100004516542,
+            "p50_ms": 20.60324999911245,
+            "p95_ms": 22.046989994851174,
+            "p99_ms": 26.769115001516184
+          },
+          "inner_ms": {
+            "count": 30,
+            "mean_ms": 20.602649999879457,
+            "min_ms": 18.829799999366514,
+            "max_ms": 28.33140000439016,
+            "p50_ms": 20.278149993828265,
+            "p95_ms": 21.791040001335205,
+            "p99_ms": 26.440281003306154
+          },
+          "dispatch_ms": {
+            "count": 30,
+            "mean_ms": 0.2578133331553545,
+            "min_ms": 0.22219999664230272,
+            "max_ms": 0.4562999965855852,
+            "p50_ms": 0.2387000022281427,
+            "p95_ms": 0.3652200066426303,
+            "p99_ms": 0.43333200104825664
+          }
+        }
+      },
+      {
+        "phase": "cached",
+        "samples": [
+          {
+            "index": 0,
+            "outer_ms": 19.588999995903578,
+            "inner_ms": 19.55640000232961,
+            "dispatch_ms": 0.03259999357396737
+          },
+          {
+            "index": 1,
+            "outer_ms": 19.381499994779006,
+            "inner_ms": 19.342499996128026,
+            "dispatch_ms": 0.03899999865097925
+          },
+          {
+            "index": 2,
+            "outer_ms": 18.441899999743327,
+            "inner_ms": 18.39769999787677,
+            "dispatch_ms": 0.044200001866556704
+          },
+          {
+            "index": 3,
+            "outer_ms": 19.15539999754401,
+            "inner_ms": 19.1216999955941,
+            "dispatch_ms": 0.033700001949910074
+          },
+          {
+            "index": 4,
+            "outer_ms": 18.659599998500198,
+            "inner_ms": 18.626400000357535,
+            "dispatch_ms": 0.03319999814266339
+          },
+          {
+            "index": 5,
+            "outer_ms": 18.38539999880595,
+            "inner_ms": 18.35160000337055,
+            "dispatch_ms": 0.0337999954354018
+          },
+          {
+            "index": 6,
+            "outer_ms": 17.758399997546803,
+            "inner_ms": 17.724099998304155,
+            "dispatch_ms": 0.03429999924264848
+          },
+          {
+            "index": 7,
+            "outer_ms": 18.64719999866793,
+            "inner_ms": 18.61250000365544,
+            "dispatch_ms": 0.034699995012488216
+          },
+          {
+            "index": 8,
+            "outer_ms": 18.58920000086073,
+            "inner_ms": 18.55510000314098,
+            "dispatch_ms": 0.03409999771974981
+          },
+          {
+            "index": 9,
+            "outer_ms": 20.200999999360647,
+            "inner_ms": 20.16699999512639,
+            "dispatch_ms": 0.034000004234258085
+          },
+          {
+            "index": 10,
+            "outer_ms": 18.933100000140257,
+            "inner_ms": 18.899299997428898,
+            "dispatch_ms": 0.03380000271135941
+          },
+          {
+            "index": 11,
+            "outer_ms": 25.976900004025083,
+            "inner_ms": 25.89990000706166,
+            "dispatch_ms": 0.07699999696342275
+          },
+          {
+            "index": 12,
+            "outer_ms": 18.10939999995753,
+            "inner_ms": 18.076599997584708,
+            "dispatch_ms": 0.032800002372823656
+          },
+          {
+            "index": 13,
+            "outer_ms": 17.748400001437403,
+            "inner_ms": 17.714200002956204,
+            "dispatch_ms": 0.034199998481199145
+          },
+          {
+            "index": 14,
+            "outer_ms": 17.42720000038389,
+            "inner_ms": 17.390000000887085,
+            "dispatch_ms": 0.03719999949680641
+          },
+          {
+            "index": 15,
+            "outer_ms": 18.686900002649054,
+            "inner_ms": 18.65130000078352,
+            "dispatch_ms": 0.03560000186553225
+          },
+          {
+            "index": 16,
+            "outer_ms": 18.972300000314135,
+            "inner_ms": 18.938100001832936,
+            "dispatch_ms": 0.034199998481199145
+          },
+          {
+            "index": 17,
+            "outer_ms": 21.88439999736147,
+            "inner_ms": 21.846700001333375,
+            "dispatch_ms": 0.037699996028095484
+          },
+          {
+            "index": 18,
+            "outer_ms": 19.617200006905477,
+            "inner_ms": 19.57879999827128,
+            "dispatch_ms": 0.03840000863419846
+          },
+          {
+            "index": 19,
+            "outer_ms": 20.05819999612868,
+            "inner_ms": 20.024400000693277,
+            "dispatch_ms": 0.0337999954354018
+          },
+          {
+            "index": 20,
+            "outer_ms": 19.50100000249222,
+            "inner_ms": 19.459199997072574,
+            "dispatch_ms": 0.04180000541964546
+          },
+          {
+            "index": 21,
+            "outer_ms": 19.424700003582984,
+            "inner_ms": 19.376399999600835,
+            "dispatch_ms": 0.048300003982149065
+          },
+          {
+            "index": 22,
+            "outer_ms": 19.421999997575767,
+            "inner_ms": 19.383499995456077,
+            "dispatch_ms": 0.03850000211969018
+          },
+          {
+            "index": 23,
+            "outer_ms": 19.209499994758517,
+            "inner_ms": 19.173599997884594,
+            "dispatch_ms": 0.035899996873922646
+          },
+          {
+            "index": 24,
+            "outer_ms": 19.614099997852463,
+            "inner_ms": 19.57919999404112,
+            "dispatch_ms": 0.034900003811344504
+          },
+          {
+            "index": 25,
+            "outer_ms": 18.64470000145957,
+            "inner_ms": 18.610399994940963,
+            "dispatch_ms": 0.034300006518606097
+          },
+          {
+            "index": 26,
+            "outer_ms": 21.830099998624064,
+            "inner_ms": 21.794499996758532,
+            "dispatch_ms": 0.03560000186553225
+          },
+          {
+            "index": 27,
+            "outer_ms": 18.444200002704747,
+            "inner_ms": 18.40789999550907,
+            "dispatch_ms": 0.03630000719567761
+          },
+          {
+            "index": 28,
+            "outer_ms": 18.61790000111796,
+            "inner_ms": 18.580400006612763,
+            "dispatch_ms": 0.03749999450519681
+          },
+          {
+            "index": 29,
+            "outer_ms": 19.14309999847319,
+            "inner_ms": 19.10889999999199,
+            "dispatch_ms": 0.034199998481199145
+          },
+          {
+            "index": 30,
+            "outer_ms": 19.713499998033512,
+            "inner_ms": 19.67780000268249,
+            "dispatch_ms": 0.03569999535102397
+          }
+        ],
+        "first": {
+          "index": 0,
+          "outer_ms": 19.588999995903578,
+          "inner_ms": 19.55640000232961,
+          "dispatch_ms": 0.03259999357396737
+        },
+        "steady": {
+          "outer_ms": {
+            "count": 30,
+            "mean_ms": 19.339946666392887,
+            "min_ms": 17.42720000038389,
+            "max_ms": 25.976900004025083,
+            "p50_ms": 19.057699999393662,
+            "p95_ms": 21.859964997929637,
+            "p99_ms": 24.790075002092635
+          },
+          "inner_ms": {
+            "count": 30,
+            "mean_ms": 19.302323332764598,
+            "min_ms": 17.390000000887085,
+            "max_ms": 25.89990000706166,
+            "p50_ms": 19.023500000912463,
+            "p95_ms": 21.823209999274695,
+            "p99_ms": 24.724472005400457
+          },
+          "dispatch_ms": {
+            "count": 30,
+            "mean_ms": 0.0376233336282894,
+            "min_ms": 0.032800002372823656,
+            "max_ms": 0.07699999696342275,
+            "p50_ms": 0.03525000283843838,
+            "p95_ms": 0.0464550030301325,
+            "p99_ms": 0.06867699899885338
+          }
+        }
+      },
+      {
+        "phase": "original_after",
+        "samples": [
+          {
+            "index": 0,
+            "outer_ms": 18.61280000593979,
+            "inner_ms": 18.367800003034063,
+            "dispatch_ms": 0.24500000290572643
+          },
+          {
+            "index": 1,
+            "outer_ms": 22.63729999685893,
+            "inner_ms": 22.41389999835519,
+            "dispatch_ms": 0.22339999850373715
+          },
+          {
+            "index": 2,
+            "outer_ms": 20.552000001771376,
+            "inner_ms": 20.320999996329192,
+            "dispatch_ms": 0.23100000544218346
+          },
+          {
+            "index": 3,
+            "outer_ms": 20.32850000250619,
+            "inner_ms": 20.097900000109803,
+            "dispatch_ms": 0.23060000239638612
+          },
+          {
+            "index": 4,
+            "outer_ms": 26.832499999727588,
+            "inner_ms": 26.593900001898874,
+            "dispatch_ms": 0.23859999782871455
+          },
+          {
+            "index": 5,
+            "outer_ms": 18.33949999854667,
+            "inner_ms": 18.09019999927841,
+            "dispatch_ms": 0.24929999926825985
+          },
+          {
+            "index": 6,
+            "outer_ms": 20.396700005221646,
+            "inner_ms": 20.16620000358671,
+            "dispatch_ms": 0.23050000163493678
+          },
+          {
+            "index": 7,
+            "outer_ms": 19.27100000466453,
+            "inner_ms": 19.003100002009887,
+            "dispatch_ms": 0.26790000265464187
+          },
+          {
+            "index": 8,
+            "outer_ms": 19.763800002692733,
+            "inner_ms": 19.535600004019216,
+            "dispatch_ms": 0.22819999867351726
+          },
+          {
+            "index": 9,
+            "outer_ms": 19.48209999682149,
+            "inner_ms": 19.23240000178339,
+            "dispatch_ms": 0.2496999950380996
+          },
+          {
+            "index": 10,
+            "outer_ms": 19.277500003227033,
+            "inner_ms": 19.04590000049211,
+            "dispatch_ms": 0.23160000273492187
+          },
+          {
+            "index": 11,
+            "outer_ms": 19.470500003080815,
+            "inner_ms": 19.21050000237301,
+            "dispatch_ms": 0.26000000070780516
+          },
+          {
+            "index": 12,
+            "outer_ms": 19.354899995960295,
+            "inner_ms": 19.125000006170012,
+            "dispatch_ms": 0.22989998979028314
+          },
+          {
+            "index": 13,
+            "outer_ms": 20.861299999523908,
+            "inner_ms": 20.565099999657832,
+            "dispatch_ms": 0.2961999998660758
+          },
+          {
+            "index": 14,
+            "outer_ms": 19.572500001231674,
+            "inner_ms": 19.34320000145817,
+            "dispatch_ms": 0.22929999977350235
+          },
+          {
+            "index": 15,
+            "outer_ms": 19.893700002285186,
+            "inner_ms": 19.66530000208877,
+            "dispatch_ms": 0.22840000019641593
+          },
+          {
+            "index": 16,
+            "outer_ms": 20.259600001736544,
+            "inner_ms": 20.032299995364156,
+            "dispatch_ms": 0.22730000637238845
+          },
+          {
+            "index": 17,
+            "outer_ms": 19.05560000159312,
+            "inner_ms": 18.822499994712416,
+            "dispatch_ms": 0.2331000068807043
+          },
+          {
+            "index": 18,
+            "outer_ms": 19.544299997505732,
+            "inner_ms": 19.293600002129097,
+            "dispatch_ms": 0.25069999537663534
+          },
+          {
+            "index": 19,
+            "outer_ms": 19.032200005312916,
+            "inner_ms": 18.80239999445621,
+            "dispatch_ms": 0.22980001085670665
+          },
+          {
+            "index": 20,
+            "outer_ms": 20.366099997772835,
+            "inner_ms": 20.05289999942761,
+            "dispatch_ms": 0.31319999834522605
+          },
+          {
+            "index": 21,
+            "outer_ms": 20.060899994859938,
+            "inner_ms": 19.83279999694787,
+            "dispatch_ms": 0.22809999791206792
+          },
+          {
+            "index": 22,
+            "outer_ms": 21.197900001425296,
+            "inner_ms": 20.951499995135237,
+            "dispatch_ms": 0.24640000629005954
+          },
+          {
+            "index": 23,
+            "outer_ms": 24.130899997544475,
+            "inner_ms": 23.832300001231488,
+            "dispatch_ms": 0.29859999631298706
+          },
+          {
+            "index": 24,
+            "outer_ms": 22.23309999681078,
+            "inner_ms": 22.00029999949038,
+            "dispatch_ms": 0.2327999973203987
+          },
+          {
+            "index": 25,
+            "outer_ms": 21.323400003893767,
+            "inner_ms": 21.0908999943058,
+            "dispatch_ms": 0.2325000095879659
+          },
+          {
+            "index": 26,
+            "outer_ms": 20.089000005100388,
+            "inner_ms": 19.83299999847077,
+            "dispatch_ms": 0.25600000662961975
+          },
+          {
+            "index": 27,
+            "outer_ms": 20.30179999565007,
+            "inner_ms": 20.077200002560858,
+            "dispatch_ms": 0.22459999308921397
+          },
+          {
+            "index": 28,
+            "outer_ms": 19.542699999874458,
+            "inner_ms": 19.313700002385303,
+            "dispatch_ms": 0.22899999748915434
+          },
+          {
+            "index": 29,
+            "outer_ms": 19.27370000339579,
+            "inner_ms": 18.989999996847473,
+            "dispatch_ms": 0.2837000065483153
+          },
+          {
+            "index": 30,
+            "outer_ms": 19.11360000667628,
+            "inner_ms": 18.883299999288283,
+            "dispatch_ms": 0.23030000738799572
+          }
+        ],
+        "first": {
+          "index": 0,
+          "outer_ms": 18.61280000593979,
+          "inner_ms": 18.367800003034063,
+          "dispatch_ms": 0.24500000290572643
+        },
+        "steady": {
+          "outer_ms": {
+            "count": 30,
+            "mean_ms": 20.385286667442415,
+            "min_ms": 18.33949999854667,
+            "max_ms": 26.832499999727588,
+            "p50_ms": 19.977299998572562,
+            "p95_ms": 23.45877999723598,
+            "p99_ms": 26.049035999094485
+          },
+          "inner_ms": {
+            "count": 30,
+            "mean_ms": 20.14059666641212,
+            "min_ms": 18.09019999927841,
+            "max_ms": 26.593900001898874,
+            "p50_ms": 19.74904999951832,
+            "p95_ms": 23.194019999937154,
+            "p99_ms": 25.79303600170533
+          },
+          "dispatch_ms": {
+            "count": 30,
+            "mean_ms": 0.24469000103029734,
+            "min_ms": 0.22339999850373715,
+            "max_ms": 0.31319999834522605,
+            "p50_ms": 0.2320500061614439,
+            "p95_ms": 0.297519997911877,
+            "p99_ms": 0.30896599775587674
+          }
+        }
+      }
+    ]
+  },
+  "peak_allocated_mib": 217.5
+}

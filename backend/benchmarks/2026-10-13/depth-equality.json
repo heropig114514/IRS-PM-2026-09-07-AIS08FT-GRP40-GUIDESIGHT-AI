@@ -1,0 +1,13 @@
+{
+  "runs": [
+    "depth-control-before",
+    "depth-graph-probe",
+    "depth-control-after"
+  ],
+  "frames": 93,
+  "exact_equality": {
+    "raw_sha256": true,
+    "jpeg_sha256": true,
+    "boxes": true
+  }
+}

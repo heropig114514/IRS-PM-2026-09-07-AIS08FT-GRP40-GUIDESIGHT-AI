@@ -1,0 +1,329 @@
+{
+  "date": "2026-10-19",
+  "status": "completed_experiment",
+  "decision": "Do not adopt sort-based ROI median; 4/5 isolated inputs slower and no full-pipeline improvement",
+  "production_change": "Additional host elapsed depth_predict_ms/depth_fusion_ms/decode_boxes_ms; no added CUDA synchronization or changed model/median algorithm",
+  "browser_evidence": "Existing 2026-10-18 recordings reanalyzed; browser not rerun in this experiment",
+  "full_pipeline": {
+    "full-before": {
+      "frames": 31,
+      "first_frame_ms": 4389.592899999116,
+      "steady": {
+        "predict_wall_ms": {
+          "count": 30,
+          "mean_ms": 48.234556667739525,
+          "min_ms": 43.384600001445506,
+          "max_ms": 61.652000003959984,
+          "p50_ms": 47.726250002597226,
+          "p95_ms": 53.436794998197,
+          "p99_ms": 59.41143100273621
+        },
+        "depth_predict_ms": {
+          "count": 30,
+          "mean_ms": 21.12379999962286,
+          "min_ms": 18.51350000652019,
+          "max_ms": 30.605799998738803,
+          "p50_ms": 20.384149996971246,
+          "p95_ms": 24.889020001137396,
+          "p99_ms": 29.144779999987804
+        },
+        "depth_fusion_ms": {
+          "count": 30,
+          "mean_ms": 4.914236666324238,
+          "min_ms": 4.28999999712687,
+          "max_ms": 6.057499995222315,
+          "p50_ms": 4.757699996844167,
+          "p95_ms": 5.696805002662586,
+          "p99_ms": 5.971572997150361
+        },
+        "decode_boxes_ms": {
+          "count": 30,
+          "mean_ms": 0.1684966659619628,
+          "min_ms": 0.15169999824138358,
+          "max_ms": 0.24149999808287248,
+          "p50_ms": 0.16259999756584875,
+          "p95_ms": 0.200494999444345,
+          "p99_ms": 0.2344239990634378
+        },
+        "depth_sdk_inference_ms": {
+          "count": 30,
+          "mean_ms": 17.365626667742617,
+          "min_ms": 15.26190000004135,
+          "max_ms": 25.966499997593928,
+          "p50_ms": 16.652400001476053,
+          "p95_ms": 20.65781000019342,
+          "p99_ms": 24.592740998632507
+        },
+        "tracking_ms": {
+          "count": 30,
+          "mean_ms": 7.178180001210421,
+          "min_ms": 6.53940000483999,
+          "max_ms": 9.436300002562348,
+          "p50_ms": 6.921450003574137,
+          "p95_ms": 8.58503500239749,
+          "p99_ms": 9.190960001797066
+        }
+      }
+    },
+    "full-sort": {
+      "frames": 31,
+      "first_frame_ms": 4291.116300002614,
+      "steady": {
+        "predict_wall_ms": {
+          "count": 30,
+          "mean_ms": 49.96593999967445,
+          "min_ms": 43.822700004966464,
+          "max_ms": 62.97859999904176,
+          "p50_ms": 48.63005000152043,
+          "p95_ms": 59.887354997044895,
+          "p99_ms": 62.50653799790598
+        },
+        "depth_predict_ms": {
+          "count": 30,
+          "mean_ms": 22.155940000326762,
+          "min_ms": 18.79929999995511,
+          "max_ms": 34.324199994443916,
+          "p50_ms": 20.11915000184672,
+          "p95_ms": 30.237845002193353,
+          "p99_ms": 33.48575199714105
+        },
+        "depth_fusion_ms": {
+          "count": 30,
+          "mean_ms": 5.748126666730968,
+          "min_ms": 4.524600000877399,
+          "max_ms": 14.14650000515394,
+          "p50_ms": 4.91005000367295,
+          "p95_ms": 10.22233000221604,
+          "p99_ms": 13.709615003899671
+        },
+        "decode_boxes_ms": {
+          "count": 30,
+          "mean_ms": 0.18163333321960332,
+          "min_ms": 0.15499999426538125,
+          "max_ms": 0.2699000033317134,
+          "p50_ms": 0.16740000137360767,
+          "p95_ms": 0.24624999896332156,
+          "p99_ms": 0.26395500237413216
+        },
+        "depth_sdk_inference_ms": {
+          "count": 30,
+          "mean_ms": 18.25134333363773,
+          "min_ms": 15.333199997257907,
+          "max_ms": 30.571000002964865,
+          "p50_ms": 16.45174999794108,
+          "p95_ms": 25.702204999834066,
+          "p99_ms": 29.603154001524672
+        },
+        "tracking_ms": {
+          "count": 30,
+          "mean_ms": 7.117873333724371,
+          "min_ms": 6.293799997365568,
+          "max_ms": 9.109199992963113,
+          "p50_ms": 6.899299998622155,
+          "p95_ms": 8.392525001181639,
+          "p99_ms": 9.032059996388853
+        }
+      }
+    },
+    "full-after": {
+      "frames": 31,
+      "first_frame_ms": 4304.039199996623,
+      "steady": {
+        "predict_wall_ms": {
+          "count": 30,
+          "mean_ms": 45.63378666716744,
+          "min_ms": 42.41660000116099,
+          "max_ms": 57.064799999352545,
+          "p50_ms": 44.42190000190749,
+          "p95_ms": 54.381240001748665,
+          "p99_ms": 56.55524099965987
+        },
+        "depth_predict_ms": {
+          "count": 30,
+          "mean_ms": 20.17884333326947,
+          "min_ms": 18.116299994289875,
+          "max_ms": 31.705900000815745,
+          "p50_ms": 18.6613000005309,
+          "p95_ms": 28.255864997117897,
+          "p99_ms": 30.96094800013816
+        },
+        "depth_fusion_ms": {
+          "count": 30,
+          "mean_ms": 4.546950000076322,
+          "min_ms": 4.121500001929235,
+          "max_ms": 5.531499999051448,
+          "p50_ms": 4.432899997482309,
+          "p95_ms": 5.346705002375529,
+          "p99_ms": 5.486926999365096
+        },
+        "decode_boxes_ms": {
+          "count": 30,
+          "mean_ms": 0.15700666723811688,
+          "min_ms": 0.14569999621016905,
+          "max_ms": 0.18680000357562676,
+          "p50_ms": 0.15549999443464912,
+          "p95_ms": 0.17274999772780575,
+          "p99_ms": 0.18285600097442511
+        },
+        "depth_sdk_inference_ms": {
+          "count": 30,
+          "mean_ms": 16.693003332572214,
+          "min_ms": 14.70320000225911,
+          "max_ms": 27.924799993343186,
+          "p50_ms": 15.235850001772633,
+          "p95_ms": 24.553534999358817,
+          "p99_ms": 27.202873994974652
+        },
+        "tracking_ms": {
+          "count": 30,
+          "mean_ms": 6.681236667160799,
+          "min_ms": 6.198499999300111,
+          "max_ms": 8.020299996132962,
+          "p50_ms": 6.502750002255198,
+          "p95_ms": 7.66398500163632,
+          "p99_ms": 7.946552997964318
+        }
+      }
+    }
+  },
+  "numerical": {
+    "scope": "Same static fixture; independent worker timestamps, no time-field equality claim",
+    "all_raw_exact": true,
+    "all_jpeg_exact": true,
+    "all_identity_distance_exact": true
+  },
+  "multi_input": {
+    "comparisons": 10,
+    "status": "completed",
+    "isolated_completed_calls": 465,
+    "all_exact": true
+  },
+  "isolated_fusion": [
+    {
+      "input": "model_tests\\samples\\bus.jpg",
+      "boxes": 5,
+      "all_exact": true,
+      "p50_ms": {
+        "control_before": 4.35875000039232,
+        "sort": 4.774500001076376,
+        "control_after": 4.392849998112069
+      },
+      "operator_counts": {
+        "control_before": {
+          "aten::nonzero": 5,
+          "aten::kthvalue": 20
+        },
+        "sort": {
+          "aten::sort": 5
+        },
+        "control_after": {
+          "aten::nonzero": 5,
+          "aten::kthvalue": 20
+        }
+      }
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "boxes": 2,
+      "all_exact": true,
+      "p50_ms": {
+        "control_before": 4.308550000132527,
+        "sort": 2.023299995926209,
+        "control_after": 3.5311500032548793
+      },
+      "operator_counts": {
+        "control_before": {
+          "aten::nonzero": 2,
+          "aten::kthvalue": 6
+        },
+        "sort": {
+          "aten::sort": 2
+        },
+        "control_after": {
+          "aten::nonzero": 2,
+          "aten::kthvalue": 6
+        }
+      }
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "boxes": 2,
+      "all_exact": true,
+      "p50_ms": {
+        "control_before": 1.528249998955289,
+        "sort": 1.919800000905525,
+        "control_after": 1.494000000093365
+      },
+      "operator_counts": {
+        "control_before": {
+          "aten::nonzero": 2,
+          "aten::kthvalue": 6
+        },
+        "sort": {
+          "aten::sort": 2
+        },
+        "control_after": {
+          "aten::nonzero": 2,
+          "aten::kthvalue": 6
+        }
+      }
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "boxes": 6,
+      "all_exact": true,
+      "p50_ms": {
+        "control_before": 3.0680500021844637,
+        "sort": 5.5521499962196685,
+        "control_after": 3.0107000020507257
+      },
+      "operator_counts": {
+        "control_before": {
+          "aten::nonzero": 6,
+          "aten::kthvalue": 24
+        },
+        "sort": {
+          "aten::sort": 6
+        },
+        "control_after": {
+          "aten::nonzero": 6,
+          "aten::kthvalue": 24
+        }
+      }
+    },
+    {
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "boxes": 3,
+      "all_exact": true,
+      "p50_ms": {
+        "control_before": 1.4450500020757318,
+        "sort": 2.693400005227886,
+        "control_after": 1.3367999999900348
+      },
+      "operator_counts": {
+        "control_before": {
+          "aten::nonzero": 3,
+          "aten::kthvalue": 10
+        },
+        "sort": {
+          "aten::sort": 3
+        },
+        "control_after": {
+          "aten::nonzero": 3,
+          "aten::kthvalue": 10
+        }
+      }
+    }
+  ],
+  "scope_limits": [
+    "Public still images, not real video or ground truth",
+    "Depth graph remains experiment only",
+    "No claim of 30 FPS / max 500 ms acceptance",
+    "No remote deployment, physical camera or multi-user verification"
+  ],
+  "committed": false,
+  "deployed": false,
+  "checks": "checks.json",
+  "backend_tests": 170,
+  "frontend_tests": 85
+}

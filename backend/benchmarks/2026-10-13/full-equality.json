@@ -1,0 +1,28 @@
+{
+  "runs": [
+    "full-control-before",
+    "full-graph-probe",
+    "full-control-after"
+  ],
+  "comparisons": {
+    "full-control-before": {
+      "raw_detection_equal": true,
+      "box_identity_depth_equal": true,
+      "jpeg_mismatch_indices": [],
+      "motion_state_mismatch_indices": []
+    },
+    "full-graph-probe": {
+      "raw_detection_equal": true,
+      "box_identity_depth_equal": true,
+      "jpeg_mismatch_indices": [],
+      "motion_state_mismatch_indices": []
+    },
+    "full-control-after": {
+      "raw_detection_equal": true,
+      "box_identity_depth_equal": true,
+      "jpeg_mismatch_indices": [],
+      "motion_state_mismatch_indices": []
+    }
+  },
+  "scope": "Same static fixture; timestamps are actual processing times, so transition indices need not match"
+}

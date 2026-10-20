@@ -1,8 +1,8 @@
 /** Responsibilities: Same-origin bounded binary video-session transport and result validation.
  * Implementation: PRF1/PRS1 packets, twelve pending requests, serialized SHA256 validation;
- * resident/AOT/compiled Torch admission, one cold response budget, explicit stop/errors/end,
+ * explicit HF or resident-v1 admission, one cold response budget, explicit stop/errors/end,
  * no reconnect or HTTP per frame.
- * Related Modules: frame-pipeline.js, camera.js; backend core.hf_video_relay/realtime.protocol/risk.
+ * Related Modules: frame-pipeline.js, camera.js; backend core.hf_video_relay/realtime.resident_asgi/protocol/risk.
  * Declaration Index: browserSocket; sha256; validateSession; decodeResult; LiveDetectionClient;
  * LiveDetectionClient.constructor; LiveDetectionClient.connect; LiveDetectionClient.connect.register;
  * LiveDetectionClient.sendFrame; LiveDetectionClient.sendFrame.register; LiveDetectionClient.sendFrame.deadline;
@@ -16,6 +16,7 @@
  * Metadata limit is256KiB for300 fused/tracked objects retaining the existing box fields.
  * MOTION_STATES — accepted relative-motion labels; optional tracking fields remain additive.
  * RISK_LEVELS/DIRECTIONS — additive rule-result vocabularies; rule weights stay on the server.
+ * RESIDENT_ERRORS — safe local diagnostics; protocol — explicitly selected admission contract.
  * Valid unexpired motion may persist while the current raw depth is null; server owns timeout.
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery.
@@ -31,6 +32,11 @@ const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const MOTION_STATES = new Set(["unknown", "approaching", "moving_away", "stationary"]);
 const RISK_LEVELS = new Set(["unknown", "low", "medium", "high", "critical"]);
 const DIRECTIONS = new Set(["front", "front_left", "front_right", "left", "right", "behind", "unknown"]);
+const RESIDENT_ERRORS = {
+  resident_busy: "常驻 GPU 服务正在处理另一个视频，请稍后手动开始。",
+  resident_unavailable: "常驻 GPU 服务未就绪，请检查服务端启动和推理日志。",
+  resident_stream_failed: "常驻 GPU 视频处理失败，请检查服务端日志后重新开始。",
+};
 
 /** Functionality: Construct a native same-origin socket. Inputs: url. Outputs: WebSocket.
  * Logic: caller validates destination. Constraints: browser only; tests inject a factory. */
@@ -46,21 +52,31 @@ async function sha256(buffer) {
   return result;
 }
 
-/** Functionality: Validate the public PRS session contract. Inputs: parsed hello. Outputs: same object.
- * Logic: original model/settings/budgets; explicit resident/AOT/compiled Torch backend/precision
- * and three complete COCO quality records admitted by the server; no capability/token accepted.
+/** Functionality: Validate the selected session contract. Inputs: parsed hello, explicit protocol.
+ * Outputs: same object. Logic: shared model/settings; HF requires its original budgets/COCO records;
+ * resident-v1 requires native FP32, explicit workload and no allocation deadline.
  * Constraints: public provenance metadata does not independently prove COCO accuracy, GPU quota
- * or steady-state performance; per-frame compute identity must match the admitted session. */
-function validateSession(message) {
+ * or steady-state performance; the selected mode cannot silently admit a different provider. */
+function validateSession(message, protocol) {
   const validation = message?.validation;
   if (!message || message.kind !== "session" || message.model !== "yolo26n" ||
       !["FP32", "FP16", "BF16"].includes(message.precision) || message.output_precision !== "FP32" ||
       !["PyTorch resident CUDA", "PyTorch AOT CUDA", "PyTorch compiled CUDA"].includes(message.backend) ||
       message.classes !== 80 || message.confidence_threshold !== 0.25 ||
       message.max_edge !== 640 || message.jpeg_quality !== 0.8 || message.max_inflight !== MAX_INFLIGHT ||
-      message.session_seconds !== 55 || message.cold_seconds !== 55 || message.steady_seconds !== 10 ||
       !HASH_PATTERN.test(message.source_sha256) || !Array.isArray(message.names) || message.names.length !== 80 ||
-      Object.hasOwn(message, "capability") || Object.hasOwn(message, "token") ||
+      Object.hasOwn(message, "capability") || Object.hasOwn(message, "token"))
+    throw new Error("视频会话配置无效，请检查服务端。");
+  if (protocol === "resident-v1") {
+    if (message.protocol !== "resident-v1" || message.precision !== "FP32" ||
+        message.backend !== "PyTorch resident CUDA" || !["detection", "depth", "full"].includes(message.mode) ||
+        message.session_seconds !== null || message.idle_seconds !== 15 ||
+        !Number.isFinite(message.model_load_ms) || message.model_load_ms < 0 ||
+        Object.hasOwn(message, "validation") || Object.hasOwn(message, "cold_seconds") ||
+        Object.hasOwn(message, "steady_seconds"))
+      throw new Error("常驻 GPU 会话配置无效，请检查服务端。");
+  } else if (Object.hasOwn(message, "protocol") || message.session_seconds !== 55 ||
+      message.cold_seconds !== 55 || message.steady_seconds !== 10 ||
       !validation || validation.images !== 5000 || !Number.isInteger(validation.replicates) ||
       validation.replicates < 3 || validation.maximum_ap_drop !== 0.005 ||
       !Number.isInteger(validation.notebook_version) || validation.notebook_version < 1 ||
@@ -107,6 +123,12 @@ export async function decodeResult(packet, expected, contract) {
   for (const field of ["inference_ms", "graph_setup_ms", "prepare_ms", "gpu_stage_ms", "render_ms", "server_ms"])
     if (!Number.isFinite(metadata[field]) || metadata[field] < 0)
       throw new Error("视频结果耗时无效。");
+  if (contract.protocol === "resident-v1" &&
+      (!Number.isFinite(metadata.resident_queue_ms) || metadata.resident_queue_ms < 0 ||
+       (Object.hasOwn(metadata, "depth_model") !== (contract.mode !== "detection")) ||
+       (Object.hasOwn(metadata, "tracking_model") !== (contract.mode === "full")) ||
+       (Object.hasOwn(metadata, "risk_model") !== (contract.mode === "full"))))
+    throw new Error("常驻 GPU 返回的工作负载与会话不匹配。");
   if (Object.hasOwn(metadata, "depth_model") &&
       (typeof metadata.depth_model !== "string" || !metadata.depth_model || metadata.depth_units !== "m" ||
        !Number.isFinite(metadata.depth_ms) || metadata.depth_ms < 0))
@@ -204,11 +226,13 @@ export async function decodeResult(packet, expected, contract) {
  * Constraints: caller holds additional admission through display, no automatic reconnect/retry. */
 export class LiveDetectionClient {
   /** Functionality: Initialize transport and lifecycle callbacks.
-   * Inputs: fixed same-origin url, onDisconnect, onEnd, optional socketFactory.
+   * Inputs: same-origin url, onDisconnect, onEnd, optional socketFactory and explicit protocol.
    * Outputs: instance. Logic: bind events and bounded counters; no immediate network or camera.
    * Constraints: callbacks do not receive credentials; no arbitrary destination from query parameters. */
-  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket} = {}) {
+  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, protocol = "hf"} = {}) {
+    if (!["hf", "resident-v1"].includes(protocol)) throw new Error("未知视频会话协议。");
     this.url = url;
+    this.protocol = protocol;
     this.onDisconnect = onDisconnect;
     this.onEnd = onEnd;
     this.socketFactory = socketFactory;
@@ -286,20 +310,26 @@ export class LiveDetectionClient {
         let message;
         try { message = JSON.parse(event.data); }
         catch { throw new Error("视频控制消息无效。"); }
-        if (message.kind === "error")
-          throw new Error(typeof message.detail === "string" && message.detail.length <= 500
+        if (message?.kind === "error")
+          throw new Error(this.protocol === "resident-v1" && Object.hasOwn(RESIDENT_ERRORS, message.code)
+            ? RESIDENT_ERRORS[message.code] : typeof message.detail === "string" && message.detail.length <= 500
             ? message.detail : "视频会话失败，请检查服务端日志后重新开始。");
-        if (message.kind === "ended" && this.contract) {
+        if (message?.kind === "ended" && this.contract) {
           const client = this;
           /** Functionality: End only after earlier binary digests resolve. Inputs: ordered chain.
-           * Outputs: end callback. Logic: preserve wire order across async verification.
+           * Outputs: end callback. Logic: preserve wire order; resident drain must match all requests.
            * Constraints: close/end cannot discard a valid result merely because hashing is pending. */
-          function ended() { client.end(); }
-          this.messageChain = this.messageChain.then(ended);
+          function ended() {
+            if (client.protocol === "resident-v1" && (message.received !== client.sequence ||
+                message.delivered !== client.expected || message.received !== message.delivered ||
+                client.pending.size !== 0)) throw new Error("常驻 GPU 会话结束计数不完整。");
+            client.end();
+          }
+          this.messageChain = this.messageChain.then(ended).catch(this.fail.bind(this));
           return;
         }
         if (!this.connectWait || this.contract) throw new Error("非预期视频控制消息。");
-        this.contract = validateSession(message);
+        this.contract = validateSession(message, this.protocol);
         const waiting = this.connectWait;
         this.connectWait = null;
         clearTimeout(waiting.timer);

@@ -1,0 +1,442 @@
+{
+  "scope": "Same static fixture; independent worker timestamps, no time-field equality claim",
+  "comparisons": [
+    {
+      "run": "full-sort",
+      "index": 0,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 1,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 2,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 3,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 4,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 5,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 6,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 7,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 8,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 9,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 10,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 11,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 12,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 13,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 14,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 15,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 16,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 17,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 18,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 19,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 20,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 21,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 22,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 23,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 24,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 25,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 26,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 27,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 28,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 29,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-sort",
+      "index": 30,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 0,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 1,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 2,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 3,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 4,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 5,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 6,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 7,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 8,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 9,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 10,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 11,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 12,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 13,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 14,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 15,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 16,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 17,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 18,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 19,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 20,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 21,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 22,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 23,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 24,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 25,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 26,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 27,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 28,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 29,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    },
+    {
+      "run": "full-after",
+      "index": 30,
+      "raw_exact": true,
+      "jpeg_exact": true,
+      "identity_distance_exact": true
+    }
+  ],
+  "all_raw_exact": true,
+  "all_jpeg_exact": true,
+  "all_identity_distance_exact": true
+}

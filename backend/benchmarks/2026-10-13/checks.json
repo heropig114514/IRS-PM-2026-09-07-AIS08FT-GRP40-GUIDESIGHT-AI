@@ -1,0 +1,27 @@
+[
+  {
+    "Name": "django-check",
+    "ExitCode": 0,
+    "Log": "benchmarks\\2026-10-13\\django-check.txt"
+  },
+  {
+    "Name": "migration-check",
+    "ExitCode": 0,
+    "Log": "benchmarks\\2026-10-13\\migration-check.txt"
+  },
+  {
+    "Name": "backend-tests",
+    "ExitCode": 0,
+    "Log": "benchmarks\\2026-10-13\\backend-tests.txt"
+  },
+  {
+    "Name": "ruff",
+    "ExitCode": 0,
+    "Log": "benchmarks\\2026-10-13\\ruff.txt"
+  },
+  {
+    "Name": "pip-check",
+    "ExitCode": 0,
+    "Log": "benchmarks\\2026-10-13\\pip-check.txt"
+  }
+]

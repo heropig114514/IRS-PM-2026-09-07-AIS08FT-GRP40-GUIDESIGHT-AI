@@ -1,0 +1,27 @@
+[
+  {
+    "Name": "django-check",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-13/resident-django-check.txt"
+  },
+  {
+    "Name": "migration-check",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-13/resident-migration-check.txt"
+  },
+  {
+    "Name": "backend-tests",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-13/resident-backend-tests.txt"
+  },
+  {
+    "Name": "ruff",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-13/resident-ruff.txt"
+  },
+  {
+    "Name": "pip-check",
+    "ExitCode": 0,
+    "Log": "benchmarks/2026-10-13/resident-pip-check.txt"
+  }
+]

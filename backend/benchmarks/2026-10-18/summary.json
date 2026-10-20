@@ -1,0 +1,139 @@
+{
+  "date": "2026-10-18",
+  "frontend": {
+    "protocol": "resident-v1",
+    "mode_added": "resident",
+    "default_mode": "echo",
+    "capture_fps_ceiling": 30,
+    "max_inflight": 12
+  },
+  "browser": {
+    "scope": "Actual browser with static canvas source and local GPU",
+    "status": "completed",
+    "browser": "155.0.8059.80",
+    "busy_rejection": [
+      "常驻 GPU 服务正在处理另一个视频，请稍后手动开始。"
+    ],
+    "user_stop": {
+      "mode": "idle",
+      "tracks_ended": true
+    },
+    "page_errors": [],
+    "sessions": [
+      {
+        "session": 0,
+        "sent": 181,
+        "displayed": 181,
+        "tracks_ended": true,
+        "max_inflight": 12,
+        "dimensions": [
+          480,
+          640
+        ],
+        "first_decoded_ms": 6007,
+        "steady_fps": 19.255455712451862,
+        "steady_decoded": {
+          "count": 180,
+          "mean_ms": 576.7083333333385,
+          "min_ms": 77.19999999995343,
+          "max_ms": 787.8000000000466,
+          "p50_ms": 572.6500000000233,
+          "p95_ms": 761.6400000000897,
+          "p99_ms": 777.7419999999914
+        },
+        "tracking_status": [
+          "active"
+        ],
+        "graph_setups": 1,
+        "meets_existing_10fps_500ms_gate": false
+      },
+      {
+        "session": 1,
+        "sent": 181,
+        "displayed": 181,
+        "tracks_ended": true,
+        "max_inflight": 12,
+        "dimensions": [
+          480,
+          640
+        ],
+        "first_decoded_ms": 57.09999999997672,
+        "steady_fps": 21.010855608731177,
+        "steady_decoded": {
+          "count": 180,
+          "mean_ms": 515.7777777777719,
+          "min_ms": 60.79999999993015,
+          "max_ms": 636.3999999999069,
+          "p50_ms": 563.5,
+          "p95_ms": 617.3450000000012,
+          "p99_ms": 631.4260000000417
+        },
+        "tracking_status": [
+          "active"
+        ],
+        "graph_setups": 0,
+        "meets_existing_10fps_500ms_gate": false
+      }
+    ]
+  },
+  "depth": {
+    "status": "completed",
+    "source_images": 5,
+    "comparisons": 10,
+    "graph_shapes": [
+      "(1, 3, 768, 576)",
+      "(1, 3, 768, 608)",
+      "(1, 3, 576, 768)",
+      "(1, 3, 608, 768)"
+    ],
+    "all_exact": true,
+    "scope": "Numerical consistency only, no ground truth or moving video"
+  },
+  "checks": [
+    {
+      "Name": "django-check",
+      "ExitCode": 0,
+      "Log": "benchmarks/2026-10-18/django-check.txt"
+    },
+    {
+      "Name": "migration-check",
+      "ExitCode": 0,
+      "Log": "benchmarks/2026-10-18/migration-check.txt"
+    },
+    {
+      "Name": "backend-tests",
+      "ExitCode": 0,
+      "Log": "benchmarks/2026-10-18/backend-tests.txt"
+    },
+    {
+      "Name": "ruff",
+      "ExitCode": 0,
+      "Log": "benchmarks/2026-10-18/ruff.txt"
+    },
+    {
+      "Name": "pip-check",
+      "ExitCode": 0,
+      "Log": "benchmarks/2026-10-18/pip-check.txt"
+    },
+    {
+      "Name": "frontend-tests",
+      "ExitCode": 0,
+      "Log": "benchmarks/2026-10-18/frontend-tests.txt"
+    }
+  ],
+  "pending": {
+    "owner": "User colleague",
+    "data": "Target continuous video and aligned metric depth/distance ground truth",
+    "graph_candidate": "Not enabled in production/default service"
+  },
+  "not_verified": [
+    "physical camera",
+    "moving-video quality",
+    "ground-truth accuracy",
+    "public network",
+    "multi-user throughput",
+    "remote deployment"
+  ],
+  "committed": false,
+  "deployed": false
+}

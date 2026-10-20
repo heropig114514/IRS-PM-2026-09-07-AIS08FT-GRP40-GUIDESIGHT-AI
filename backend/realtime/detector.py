@@ -4,7 +4,8 @@ Related Modules: core.detector; realtime.depth/tracking/risk; zerogpu.runtime; z
 Declaration Index: ResidentDetector; ResidentDetector.__init__; ResidentDetector.predict.
 Variable Index: logger — count/timing diagnostics; model/manifest/tensor/runner/load_ms;
 execution_config/precision/backend — explicit execution identity, original FP32 control by default.
-depth_estimator — optional independent metric model; depth_ms includes inference/fusion.
+depth_estimator — optional independent metric model; depth_ms includes decoding/inference/fusion.
+depth_predict_ms/depth_fusion_ms/decode_boxes_ms — host elapsed substage durations, not CUDA events.
 object_tracker — instance-owned BoT-SORT/history; tracking_ms covers association/history only.
 risk_config — immutable TTC/rule profile; risk_ms — separate stateless scalar scoring timer.
 Metadata forward_event_ms is detection CUDA replay timing; inference_ms is transfer-inclusive.
@@ -87,6 +88,8 @@ class ResidentDetector:
         production callers must supply a qualified plan before selecting lower precision.
         Failures propagate.
         Timings include server processing; graph_setup_ms is nonzero only on the first real frame.
+        Depth substages use host clocks without extra CUDA synchronization; pending device work
+        can be charged to a later stage. Their sum retains the existing depth_ms definition.
         """
         started = time.perf_counter()
         image = decode_frame(jpeg)
@@ -108,6 +111,7 @@ class ResidentDetector:
         depth_estimator = getattr(self, "depth_estimator", None)
         if depth_estimator is not None:
             depth_map = depth_estimator.predict(image)
+            depth_predicted_at = time.perf_counter()
             boxes = fuse_object_depth(depth_map, boxes, image.size)
         fused_at = time.perf_counter()
         if object_tracker is not None:
@@ -139,6 +143,9 @@ class ResidentDetector:
                                      if getattr(self, "cache_evidence", None) else {})}}
         if depth_estimator is not None:
             metadata.update(depth_model=depth_estimator.model_name, depth_units="m",
+                            decode_boxes_ms=(decoded_at - inferred_at) * 1000,
+                            depth_predict_ms=(depth_predicted_at - tracked_at) * 1000,
+                            depth_fusion_ms=(fused_at - depth_predicted_at) * 1000,
                             depth_ms=((fused_at - tracked_at) + (decoded_at - inferred_at)) * 1000)
         if object_tracker is not None:
             metadata.update(object_tracker.metadata(),

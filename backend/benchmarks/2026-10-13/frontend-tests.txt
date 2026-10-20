@@ -1,0 +1,520 @@
+TAP version 13
+# Camera processing failed: {
+#   message: 'permission denied',
+#   mode: 'camera',
+#   cameraPhase: 'permission',
+#   completedFrames: 0
+# }
+# Camera frame timings {
+#   reason: 'first_frame',
+#   processing: 'hf',
+#   completedFrames: 1,
+#   firstFrameMs: {
+#     capture: 10,
+#     transport: 1055,
+#     renderQueue: 0,
+#     decode: 15,
+#     captureToResult: 1065,
+#     captureToDecoded: 1080
+#   },
+#   steadyFrames: 0,
+#   steadyFps: null,
+#   steadyMeanMs: null,
+#   steadyMaxMs: null,
+#   steadyScheduling: null
+# }
+# Subtest: 仅保留Echo和最新HF视频模式
+ok 1 - 仅保留Echo和最新HF视频模式
+  ---
+  duration_ms: 2.1764
+  type: 'test'
+  ...
+# Subtest: 独立视频入口沿用同源API挂载点
+ok 2 - 独立视频入口沿用同源API挂载点
+  ---
+  duration_ms: 0.7688
+  type: 'test'
+  ...
+# Subtest: 权限拒绝后释放状态并显示错误
+ok 3 - 权限拒绝后释放状态并显示错误
+  ---
+  duration_ms: 2.1504
+  type: 'test'
+  ...
+# Subtest: 停止后的延迟授权不会打开连接并立即释放轨道
+ok 4 - 停止后的延迟授权不会打开连接并立即释放轨道
+  ---
+  duration_ms: 1.4534
+  type: 'test'
+  ...
+# Subtest: 停止后的延迟解码不会重新显示旧帧
+ok 5 - 停止后的延迟解码不会重新显示旧帧
+  ---
+  duration_ms: 2.5556
+  type: 'test'
+  ...
+# Subtest: 相同尺寸复用画布且保持640/JPEG0.8
+ok 6 - 相同尺寸复用画布且保持640/JPEG0.8
+  ---
+  duration_ms: 3.6527
+  type: 'test'
+  ...
+# Subtest: latestJpeg复用新鲜帧，过期重采，未开启返回null
+ok 7 - latestJpeg复用新鲜帧，过期重采，未开启返回null
+  ---
+  duration_ms: 0.9312
+  type: 'test'
+  ...
+# Subtest: 慢首帧与稳态分开，停顿不被排除
+ok 8 - 慢首帧与稳态分开，停顿不被排除
+  ---
+  duration_ms: 0.8898
+  type: 'test'
+  ...
+# Subtest: 二进制回传逐字节一致
+ok 9 - 二进制回传逐字节一致
+  ---
+  duration_ms: 8.1374
+  type: 'test'
+  ...
+# Subtest: 不同内容失败且只通知一次
+ok 10 - 不同内容失败且只通知一次
+  ---
+  duration_ms: 1.1744
+  type: 'test'
+  ...
+# Subtest: pong 标识不匹配明确失败
+ok 11 - pong 标识不匹配明确失败
+  ---
+  duration_ms: 1.3132
+  type: 'test'
+  ...
+# Subtest: 禁止并发在途请求
+ok 12 - 禁止并发在途请求
+  ---
+  duration_ms: 0.5364
+  type: 'test'
+  ...
+# Subtest: 停止取消请求并关闭连接
+ok 13 - 停止取消请求并关闭连接
+  ---
+  duration_ms: 0.9365
+  type: 'test'
+  ...
+# Subtest: 超时处理器停止而不重试
+ok 14 - 超时处理器停止而不重试
+  ---
+  duration_ms: 0.5556
+  type: 'test'
+  ...
+# Subtest: twelve-credit ceiling includes all queued display work
+ok 15 - twelve-credit ceiling includes all queued display work
+  ---
+  duration_ms: 13.3704
+  type: 'test'
+  ...
+# Subtest: 30FPS cadence absorbs ordinary timer oversleep
+ok 16 - 30FPS cadence absorbs ordinary timer oversleep
+  ---
+  duration_ms: 6.9748
+  type: 'test'
+  ...
+# Subtest: ordinary timer oversleep does not accumulate across steady captures
+ok 17 - ordinary timer oversleep does not accumulate across steady captures
+  ---
+  duration_ms: 8.3198
+  type: 'test'
+  ...
+# Subtest: a full-interval timer stall resets cadence without a catch-up burst
+ok 18 - a full-interval timer stall resets cadence without a catch-up burst
+  ---
+  duration_ms: 4.2002
+  type: 'test'
+  ...
+# Subtest: credit stalls reset cadence even below one interval
+ok 19 - credit stalls reset cadence even below one interval
+  ---
+  duration_ms: 3.0152
+  type: 'test'
+  ...
+# Subtest: cold first frame and five credits include queued display
+ok 20 - cold first frame and five credits include queued display
+  ---
+  duration_ms: 1.6606
+  type: 'test'
+  ...
+# Subtest: steady stalls and render queue are included in latency
+ok 21 - steady stalls and render queue are included in latency
+  ---
+  duration_ms: 2.6096
+  type: 'test'
+  ...
+# Subtest: transport failure stops admission and is reported once
+ok 22 - transport failure stops admission and is reported once
+  ---
+  duration_ms: 1.4594
+  type: 'test'
+  ...
+# Subtest: normal end drains valid frames without counting unresolved input
+ok 23 - normal end drains valid frames without counting unresolved input
+  ---
+  duration_ms: 2.5577
+  type: 'test'
+  ...
+# Subtest: stop during capture never submits the late frame
+ok 24 - stop during capture never submits the late frame
+  ---
+  duration_ms: 1.8695
+  type: 'test'
+  ...
+# [PRS language] Preference changed: zh-CN
+# [PRS language] Preference changed: en
+# [PRS language] Preference changed: zh-CN
+# [PRS language] Preference changed: system
+# Subtest: language resolution uses browser preference and honors explicit choices
+ok 25 - language resolution uses browser preference and honors explicit choices
+  ---
+  duration_ms: 1.4799
+  type: 'test'
+  ...
+# Subtest: catalog translates all entries and preserves diagnostic identifiers
+ok 26 - catalog translates all entries and preserves diagnostic identifiers
+  ---
+  duration_ms: 29.3267
+  type: 'test'
+  ...
+# Subtest: DOM switching retains source strings and follows system and storage events
+ok 27 - DOM switching retains source strings and follows system and storage events
+  ---
+  duration_ms: 3.4994
+  type: 'test'
+  ...
+# Subtest: depth metadata accepts meters and null while preserving the existing box fields
+ok 28 - depth metadata accepts meters and null while preserving the existing box fields
+  ---
+  duration_ms: 13.8079
+  type: 'test'
+  ...
+# Subtest: depth metadata rejects invalid distances and mismatched box aliases
+ok 29 - depth metadata rejects invalid distances and mismatched box aliases
+  ---
+  duration_ms: 3.1259
+  type: 'test'
+  ...
+# Subtest: depth packets carry 300 objects retaining legacy fields
+ok 30 - depth packets carry 300 objects retaining legacy fields
+  ---
+  duration_ms: 5.3183
+  type: 'test'
+  ...
+# Subtest: binary packets preserve JPEG and bound twelve pending requests
+ok 31 - binary packets preserve JPEG and bound twelve pending requests
+  ---
+  duration_ms: 8.578
+  type: 'test'
+  ...
+# (node:34196) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: corruption and changed model conditions fail without fallback
+ok 32 - corruption and changed model conditions fail without fallback
+  ---
+  duration_ms: 3.236
+  type: 'test'
+  ...
+# Subtest: out-of-order result stops the whole session
+ok 33 - out-of-order result stops the whole session
+  ---
+  duration_ms: 0.7808
+  type: 'test'
+  ...
+# Subtest: stop and provider end never auto-restart
+ok 34 - stop and provider end never auto-restart
+  ---
+  duration_ms: 1.0659
+  type: 'test'
+  ...
+# Subtest: first response uses55s and steady response10s
+ok 35 - first response uses55s and steady response10s
+  ---
+  duration_ms: 3.9722
+  type: 'test'
+  ...
+# Subtest: final binary is verified before end and close
+ok 36 - final binary is verified before end and close
+  ---
+  duration_ms: 1.783
+  type: 'test'
+  ...
+# Subtest: invalid hello or private capability rejects before input
+ok 37 - invalid hello or private capability rejects before input
+  ---
+  duration_ms: 1.1492
+  type: 'test'
+  ...
+# Subtest: selected precision and backend must match every returned frame
+ok 38 - selected precision and backend must match every returned frame
+  ---
+  duration_ms: 1.4137
+  type: 'test'
+  ...
+# Subtest: risk fields preserve deterministic scores and unavailable TTC
+ok 39 - risk fields preserve deterministic scores and unavailable TTC
+  ---
+  duration_ms: 3.4169
+  type: 'test'
+  ...
+# Subtest: risk rejects invalid or incomplete rule output
+ok 40 - risk rejects invalid or incomplete rule output
+  ---
+  duration_ms: 3.6777
+  type: 'test'
+  ...
+# Subtest: risk supports 300 complete objects
+ok 41 - risk supports 300 complete objects
+  ---
+  duration_ms: 7.3852
+  type: 'test'
+  ...
+# Subtest: tracking fields accept motion and unavailable depth or IDs
+ok 42 - tracking fields accept motion and unavailable depth or IDs
+  ---
+  duration_ms: 3.1985
+  type: 'test'
+  ...
+# Subtest: tracking rejects malformed or incomplete motion data
+ok 43 - tracking rejects malformed or incomplete motion data
+  ---
+  duration_ms: 3.0207
+  type: 'test'
+  ...
+# Subtest: tracking supports 300 objects with complete motion fields
+ok 44 - tracking supports 300 objects with complete motion fields
+  ---
+  duration_ms: 5.3193
+  type: 'test'
+  ...
+# Subtest: location preserves device coordinates and constraints
+ok 45 - location preserves device coordinates and constraints
+  ---
+  duration_ms: 4.1014
+  type: 'test'
+  ...
+# Subtest: location errors preserve failure semantics
+ok 46 - location errors preserve failure semantics
+  ---
+  duration_ms: 1.2117
+  type: 'test'
+  ...
+# Subtest: coordinates preserve longitude first and reject missing values
+ok 47 - coordinates preserve longitude first and reject missing values
+  ---
+  duration_ms: 0.7279
+  type: 'test'
+  ...
+# Subtest: walking route uses same-origin POST without a browser key
+ok 48 - walking route uses same-origin POST without a browser key
+  ---
+  duration_ms: 1.281
+  type: 'test'
+  ...
+# Subtest: HTTP errors expose safe code and request id without retry
+ok 49 - HTTP errors expose safe code and request id without retry
+  ---
+  duration_ms: 0.9049
+  type: 'test'
+  ...
+# Subtest: abort and malformed response fail explicitly
+ok 50 - abort and malformed response fail explicitly
+  ---
+  duration_ms: 10.5669
+  type: 'test'
+  ...
+# Subtest: route validation rejects invalid geometry and instructions
+ok 51 - route validation rejects invalid geometry and instructions
+  ---
+  duration_ms: 1.2171
+  type: 'test'
+  ...
+# Subtest: identical endpoints never call the backend
+ok 52 - identical endpoints never call the backend
+  ---
+  duration_ms: 0.5867
+  type: 'test'
+  ...
+# Subtest: objects 映射字段、过滤缺失值、排序并截断到50
+ok 53 - objects 映射字段、过滤缺失值、排序并截断到50
+  ---
+  duration_ms: 3.6574
+  type: 'test'
+  ...
+# Subtest: 请求体形状符合契约并显示结果
+ok 54 - 请求体形状符合契约并显示结果
+  ---
+  duration_ms: 8.8306
+  type: 'test'
+  ...
+# Subtest: 未开启摄像头或问题过长时不发请求
+ok 55 - 未开启摄像头或问题过长时不发请求
+  ---
+  duration_ms: 0.6795
+  type: 'test'
+  ...
+# Subtest: 每个后端错误码显示本地化提示与 request_id，不显示 detail
+ok 56 - 每个后端错误码显示本地化提示与 request_id，不显示 detail
+  ---
+  duration_ms: 11.613
+  type: 'test'
+  ...
+# Subtest: 网络失败/超时显示错误，进行中忽略重复点击，无自动重试
+ok 57 - 网络失败/超时显示错误，进行中忽略重复点击，无自动重试
+  ---
+  duration_ms: 5.1404
+  type: 'test'
+  ...
+# Subtest: 仅在语音输出启用时朗读，并使用响应语言
+ok 58 - 仅在语音输出启用时朗读，并使用响应语言
+  ---
+  duration_ms: 0.6213
+  type: 'test'
+  ...
+# Subtest: 未预期异常只显示通用本地化文案，不泄露原始文本
+ok 59 - 未预期异常只显示通用本地化文案，不泄露原始文本
+  ---
+  duration_ms: 0.6036
+  type: 'test'
+  ...
+# Subtest: API 地址遵循 data-api-base 且必须同源
+ok 60 - API 地址遵循 data-api-base 且必须同源
+  ---
+  duration_ms: 0.746
+  type: 'test'
+  ...
+# Subtest: 页面、白名单提示与翻译覆盖场景区块
+ok 61 - 页面、白名单提示与翻译覆盖场景区块
+  ---
+  duration_ms: 3.8576
+  type: 'test'
+  ...
+# Subtest: 默认关闭、后台和未激活请求不会提交语音
+ok 62 - 默认关闭、后台和未激活请求不会提交语音
+  ---
+  duration_ms: 3.6713
+  type: 'test'
+  ...
+# Subtest: 提交不等于开始/完成且不会自动排队
+ok 63 - 提交不等于开始/完成且不会自动排队
+  ---
+  duration_ms: 0.9141
+  type: 'test'
+  ...
+# Subtest: 文本和数值边界明确拒绝且Unicode计数一致
+ok 64 - 文本和数值边界明确拒绝且Unicode计数一致
+  ---
+  duration_ms: 0.4619
+  type: 'test'
+  ...
+# Subtest: 指定声音失效或歧义不会替换为默认声音
+ok 65 - 指定声音失效或歧义不会替换为默认声音
+  ---
+  duration_ms: 0.7538
+  type: 'test'
+  ...
+# Subtest: 语音列表查询失败保持可诊断且不替换声音
+ok 66 - 语音列表查询失败保持可诊断且不替换声音
+  ---
+  duration_ms: 1.0758
+  type: 'test'
+  ...
+# Subtest: 取消失败保留状态，迟到旧事件不能结束新请求
+ok 67 - 取消失败保留状态，迟到旧事件不能结束新请求
+  ---
+  duration_ms: 0.7317
+  type: 'test'
+  ...
+# Subtest: 同步及异步语音错误不会静默重试或泄露正文
+ok 68 - 同步及异步语音错误不会静默重试或泄露正文
+  ---
+  duration_ms: 0.6231
+  type: 'test'
+  ...
+# Subtest: 关闭、隐藏或离页停止，返回前台不自动继续
+ok 69 - 关闭、隐藏或离页停止，返回前台不自动继续
+  ---
+  duration_ms: 0.853
+  type: 'test'
+  ...
+# Subtest: MCP语音接口不自动启用且与UI共享执行路径
+ok 70 - MCP语音接口不自动启用且与UI共享执行路径
+  ---
+  duration_ms: 1.4307
+  type: 'test'
+  ...
+# Subtest: 语音UI和动态状态完整翻译，朗读正文不属于UI词典
+ok 71 - 语音UI和动态状态完整翻译，朗读正文不属于UI词典
+  ---
+  duration_ms: 18.2362
+  type: 'test'
+  ...
+# Subtest: 默认关闭且每次仅手动发出所选节奏
+ok 72 - 默认关闭且每次仅手动发出所选节奏
+  ---
+  duration_ms: 2.6289
+  type: 'test'
+  ...
+# Subtest: 接口缺失时禁用测试和停止并说明原因
+ok 73 - 接口缺失时禁用测试和停止并说明原因
+  ---
+  duration_ms: 0.5087
+  type: 'test'
+  ...
+# Subtest: 开关、可见性和用户激活阻止非主动请求
+ok 74 - 开关、可见性和用户激活阻止非主动请求
+  ---
+  duration_ms: 0.4226
+  type: 'test'
+  ...
+# Subtest: 拒绝与异常不会宣称接受、重试或触发替代提醒
+ok 75 - 拒绝与异常不会宣称接受、重试或触发替代提醒
+  ---
+  duration_ms: 0.4235
+  type: 'test'
+  ...
+# Subtest: 关闭、隐藏或离页取消请求，回到前台不自动震动
+ok 76 - 关闭、隐藏或离页取消请求，回到前台不自动震动
+  ---
+  duration_ms: 0.6197
+  type: 'test'
+  ...
+# Subtest: 取消被拒绝时保留诊断并允许手动停止
+ok 77 - 取消被拒绝时保留诊断并允许手动停止
+  ---
+  duration_ms: 0.2836
+  type: 'test'
+  ...
+# Subtest: 震动控件及所有动态提示均有英文翻译
+ok 78 - 震动控件及所有动态提示均有英文翻译
+  ---
+  duration_ms: 10.2342
+  type: 'test'
+  ...
+# Subtest: MCP查询和测试复用控制器且不自动启用或伪造激活
+ok 79 - MCP查询和测试复用控制器且不自动启用或伪造激活
+  ---
+  duration_ms: 0.5264
+  type: 'test'
+  ...
+# Subtest: MCP明确返回设备拒绝和异常并保留取消失败状态
+ok 80 - MCP明确返回设备拒绝和异常并保留取消失败状态
+  ---
+  duration_ms: 0.8431
+  type: 'test'
+  ...
+1..80
+# tests 80
+# suites 0
+# pass 80
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 280.9109

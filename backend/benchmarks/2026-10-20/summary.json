@@ -1,0 +1,397 @@
+{
+  "date": "2026-10-20",
+  "status": "completed_experiment",
+  "decision": "Keep predictor reuse experimental: approximately 0.2 ms less wrapper overhead, no demonstrated stable full-pipeline gain",
+  "production_change": null,
+  "full_pipeline": {
+    "full-before": {
+      "frames": 31,
+      "first_frame_ms": 5793.318299998646,
+      "setup": null,
+      "steady": {
+        "predict_wall_ms": {
+          "count": 30,
+          "mean_ms": 66.84790000072098,
+          "min_ms": 54.497500001161825,
+          "max_ms": 88.32300000358373,
+          "p50_ms": 62.82954999915091,
+          "p95_ms": 85.11146000200824,
+          "p99_ms": 87.77260900315014
+        },
+        "depth_predict_ms": {
+          "count": 30,
+          "mean_ms": 28.274536666140193,
+          "min_ms": 22.411499994632322,
+          "max_ms": 36.152799999399576,
+          "p50_ms": 26.831099999981234,
+          "p95_ms": 35.97192000306677,
+          "p99_ms": 36.100919001037255
+        },
+        "depth_sdk_inference_ms": {
+          "count": 30,
+          "mean_ms": 23.409339999974083,
+          "min_ms": 17.97840000654105,
+          "max_ms": 30.083199999353383,
+          "p50_ms": 22.422599999117665,
+          "p95_ms": 29.978314998515998,
+          "p99_ms": 30.07983599905856
+        },
+        "depth_fusion_ms": {
+          "count": 30,
+          "mean_ms": 7.80582333439573,
+          "min_ms": 6.2902999998186715,
+          "max_ms": 10.076200000185054,
+          "p50_ms": 7.764900001347996,
+          "p95_ms": 9.686365004381514,
+          "p99_ms": 9.997900001108064
+        },
+        "tracking_ms": {
+          "count": 30,
+          "mean_ms": 9.31454999857427,
+          "min_ms": 6.564700001035817,
+          "max_ms": 17.291799995291512,
+          "p50_ms": 8.154199997079559,
+          "p95_ms": 14.851514998008497,
+          "p99_ms": 16.700953996987664
+        }
+      }
+    },
+    "full-cached": {
+      "frames": 31,
+      "first_frame_ms": 4491.38739999762,
+      "setup": {
+        "adapter": "experimental_cached_depth_predictor",
+        "setup_ms": 0.18790000467561185,
+        "scope": "Skip repeated configuration only; full official predictor retained"
+      },
+      "steady": {
+        "predict_wall_ms": {
+          "count": 30,
+          "mean_ms": 50.370046666406175,
+          "min_ms": 45.28790000040317,
+          "max_ms": 62.5718000010238,
+          "p50_ms": 49.05640000288258,
+          "p95_ms": 58.071239997661905,
+          "p99_ms": 61.582029999335646
+        },
+        "depth_predict_ms": {
+          "count": 30,
+          "mean_ms": 21.956353332886163,
+          "min_ms": 19.133900001179427,
+          "max_ms": 30.116499998257495,
+          "p50_ms": 20.76054999997723,
+          "p95_ms": 28.769434999776422,
+          "p99_ms": 29.85187499834865
+        },
+        "depth_sdk_inference_ms": {
+          "count": 30,
+          "mean_ms": 18.322229999951862,
+          "min_ms": 15.908099994703662,
+          "max_ms": 26.228499998978805,
+          "p50_ms": 17.0225500005472,
+          "p95_ms": 24.351055000079214,
+          "p99_ms": 25.690317998669343
+        },
+        "depth_fusion_ms": {
+          "count": 30,
+          "mean_ms": 5.296089999562052,
+          "min_ms": 4.323900000599679,
+          "max_ms": 7.025200000498444,
+          "p50_ms": 5.263249997369712,
+          "p95_ms": 6.613290001769201,
+          "p99_ms": 6.986108000346576
+        },
+        "tracking_ms": {
+          "count": 30,
+          "mean_ms": 7.101010001982407,
+          "min_ms": 6.380700004228856,
+          "max_ms": 8.419699996011332,
+          "p50_ms": 6.858299999294104,
+          "p95_ms": 8.271289994081599,
+          "p99_ms": 8.390206995100016
+        }
+      }
+    },
+    "full-after": {
+      "frames": 31,
+      "first_frame_ms": 4597.0868000003975,
+      "setup": null,
+      "steady": {
+        "predict_wall_ms": {
+          "count": 30,
+          "mean_ms": 48.02159666602771,
+          "min_ms": 44.722899998305365,
+          "max_ms": 57.502600000589155,
+          "p50_ms": 46.30600000018603,
+          "p95_ms": 55.93594500023755,
+          "p99_ms": 57.1766690001823
+        },
+        "depth_predict_ms": {
+          "count": 30,
+          "mean_ms": 21.18203999925754,
+          "min_ms": 18.72410000214586,
+          "max_ms": 28.113899999880232,
+          "p50_ms": 19.54584999839426,
+          "p95_ms": 27.90202999858593,
+          "p99_ms": 28.082289999729255
+        },
+        "depth_sdk_inference_ms": {
+          "count": 30,
+          "mean_ms": 17.492886666877894,
+          "min_ms": 15.065400002640672,
+          "max_ms": 24.360700001125224,
+          "p50_ms": 16.070400004537078,
+          "p95_ms": 23.812600002565887,
+          "p99_ms": 24.21219100127928
+        },
+        "depth_fusion_ms": {
+          "count": 30,
+          "mean_ms": 5.1116800008458085,
+          "min_ms": 4.185000005236361,
+          "max_ms": 6.112700000812765,
+          "p50_ms": 5.09415000124136,
+          "p95_ms": 5.859715001861332,
+          "p99_ms": 6.087006001398549
+        },
+        "tracking_ms": {
+          "count": 30,
+          "mean_ms": 6.978559999940141,
+          "min_ms": 6.339099993056152,
+          "max_ms": 8.82179999462096,
+          "p50_ms": 6.700549998640781,
+          "p95_ms": 8.236465002482873,
+          "p99_ms": 8.681845998726203
+        }
+      }
+    }
+  },
+  "multi_input": {
+    "comparisons": 10,
+    "all_depth_exact": true,
+    "max_depth_difference_m": 0.0
+  },
+  "numerical": {
+    "scope": "Same static input; timestamps and timing-dependent states are not required byte equal",
+    "all_raw_exact": true,
+    "all_jpeg_exact": false,
+    "all_identity_distance_exact": true,
+    "jpeg_difference_diagnosis": {
+      "original_before_vs_cached_mismatches": 0,
+      "original_before_vs_original_after": [
+        {
+          "index": 4,
+          "control_before_elapsed_since_frame1_s": 0.25333519999549026,
+          "control_after_elapsed_since_frame1_s": 0.14394149999861838,
+          "box_differences": [
+            {
+              "motion_state": [
+                "stationary",
+                "unknown"
+              ],
+              "risk_reasons": [
+                [
+                  "distance_m_le_5",
+                  "stationary",
+                  "direction_front_left",
+                  "class_person"
+                ],
+                [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front_left",
+                  "class_person"
+                ]
+              ]
+            },
+            {
+              "motion_state": [
+                "stationary",
+                "unknown"
+              ],
+              "risk_reasons": [
+                [
+                  "distance_m_le_10",
+                  "stationary",
+                  "direction_front",
+                  "class_bus"
+                ],
+                [
+                  "distance_m_le_10",
+                  "unknown",
+                  "direction_front",
+                  "class_bus"
+                ]
+              ]
+            },
+            {
+              "motion_state": [
+                "stationary",
+                "unknown"
+              ],
+              "risk_reasons": [
+                [
+                  "distance_m_le_5",
+                  "stationary",
+                  "direction_front",
+                  "class_person"
+                ],
+                [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front",
+                  "class_person"
+                ]
+              ]
+            },
+            {
+              "motion_state": [
+                "stationary",
+                "unknown"
+              ],
+              "risk_reasons": [
+                [
+                  "distance_m_le_5",
+                  "stationary",
+                  "direction_front_right",
+                  "class_person"
+                ],
+                [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front_right",
+                  "class_person"
+                ]
+              ]
+            },
+            {
+              "motion_state": [
+                "stationary",
+                "unknown"
+              ],
+              "risk_reasons": [
+                [
+                  "distance_m_le_5",
+                  "stationary",
+                  "direction_front_left",
+                  "class_person"
+                ],
+                [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front_left",
+                  "class_person"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "reason": "Both original implementations use real worker timestamps; the minimum motion-history time span can be reached on different frames. No timestamp/threshold changed to force equality.",
+      "previous_confirmation_frame3_span_s": {
+        "before": 0.1753406999996514,
+        "after": 0.09733720000076573,
+        "minimum_span_s": 0.1,
+        "required_confirmations": 2
+      }
+    }
+  },
+  "dispatch": {
+    "original_before": {
+      "outer_ms": {
+        "count": 30,
+        "mean_ms": 20.86046333303481,
+        "min_ms": 19.061300001339987,
+        "max_ms": 28.682100004516542,
+        "p50_ms": 20.60324999911245,
+        "p95_ms": 22.046989994851174,
+        "p99_ms": 26.769115001516184
+      },
+      "inner_ms": {
+        "count": 30,
+        "mean_ms": 20.602649999879457,
+        "min_ms": 18.829799999366514,
+        "max_ms": 28.33140000439016,
+        "p50_ms": 20.278149993828265,
+        "p95_ms": 21.791040001335205,
+        "p99_ms": 26.440281003306154
+      },
+      "dispatch_ms": {
+        "count": 30,
+        "mean_ms": 0.2578133331553545,
+        "min_ms": 0.22219999664230272,
+        "max_ms": 0.4562999965855852,
+        "p50_ms": 0.2387000022281427,
+        "p95_ms": 0.3652200066426303,
+        "p99_ms": 0.43333200104825664
+      }
+    },
+    "cached": {
+      "outer_ms": {
+        "count": 30,
+        "mean_ms": 19.339946666392887,
+        "min_ms": 17.42720000038389,
+        "max_ms": 25.976900004025083,
+        "p50_ms": 19.057699999393662,
+        "p95_ms": 21.859964997929637,
+        "p99_ms": 24.790075002092635
+      },
+      "inner_ms": {
+        "count": 30,
+        "mean_ms": 19.302323332764598,
+        "min_ms": 17.390000000887085,
+        "max_ms": 25.89990000706166,
+        "p50_ms": 19.023500000912463,
+        "p95_ms": 21.823209999274695,
+        "p99_ms": 24.724472005400457
+      },
+      "dispatch_ms": {
+        "count": 30,
+        "mean_ms": 0.0376233336282894,
+        "min_ms": 0.032800002372823656,
+        "max_ms": 0.07699999696342275,
+        "p50_ms": 0.03525000283843838,
+        "p95_ms": 0.0464550030301325,
+        "p99_ms": 0.06867699899885338
+      }
+    },
+    "original_after": {
+      "outer_ms": {
+        "count": 30,
+        "mean_ms": 20.385286667442415,
+        "min_ms": 18.33949999854667,
+        "max_ms": 26.832499999727588,
+        "p50_ms": 19.977299998572562,
+        "p95_ms": 23.45877999723598,
+        "p99_ms": 26.049035999094485
+      },
+      "inner_ms": {
+        "count": 30,
+        "mean_ms": 20.14059666641212,
+        "min_ms": 18.09019999927841,
+        "max_ms": 26.593900001898874,
+        "p50_ms": 19.74904999951832,
+        "p95_ms": 23.194019999937154,
+        "p99_ms": 25.79303600170533
+      },
+      "dispatch_ms": {
+        "count": 30,
+        "mean_ms": 0.24469000103029734,
+        "min_ms": 0.22339999850373715,
+        "max_ms": 0.31319999834522605,
+        "p50_ms": 0.2320500061614439,
+        "p95_ms": 0.297519997911877,
+        "p99_ms": 0.30896599775587674
+      }
+    }
+  },
+  "scope_limits": [
+    "Static local CUDA samples; no real video/ground truth",
+    "No new browser/remote/physical camera/multi-user experiment",
+    "30 FPS / maximum 500 ms target remains unproven; earlier browser runs failed",
+    "Depth Graph and other candidates not combined or enabled in service"
+  ],
+  "committed": false,
+  "deployed": false,
+  "checks": "checks.json",
+  "backend_tests": 173
+}
