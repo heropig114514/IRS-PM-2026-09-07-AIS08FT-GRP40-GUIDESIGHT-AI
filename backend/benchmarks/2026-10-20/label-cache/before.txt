@@ -1,0 +1,47 @@
+INFO:realtime.depth:YOLO26 depth model loaded task=depth input_edge=768
+INFO:zerogpu.runtime:Verified model initialized device=cuda dtype=float32 channels_last=False fused=True
+INFO:realtime.depth:Depth model activated device=cuda precision=FP32
+INFO:realtime.tracking:BoT-SORT initialized CMC=sparseOptFlow ReID=False history=8
+INFO:realtime.detector:Resident model initialized load_ms=268.9 precision=FP32 edge=640 config={}
+INFO:zerogpu.runtime:Graph warmup start dtype=torch.float32 stride=[1228800, 409600, 640, 1] calls=10 GPU=NVIDIA GeForce RTX 3060 Laptop GPU
+INFO:zerogpu.runtime:Graph warmup completed; capture start forward_dtype=torch.float32
+INFO:zerogpu.runtime:Graph initialized setup_ms=577.26 evidence={'compute_dtype': 'torch.float32', 'forward_dtype': 'torch.float32', 'input_stride': [1228800, 409600, 640, 1], 'pinned_input': True, 'graph_captured': True, 'gpu': 'NVIDIA GeForce RTX 3060 Laptop GPU', 'capability': [8, 6], 'torch': '2.8.0+cu126', 'cuda': '12.6', 'cpu_threads': 1, 'cpu_interop_threads': 1, 'tf32_matmul': False, 'tf32_cudnn': False, 'cudnn_benchmark': False}
+INFO:realtime.detector:Resident graph initialized setup_ms=577.3
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Stale track histories removed count=5
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:realtime.tracking:Motion state changed id=1 state=stationary
+INFO:realtime.tracking:Motion state changed id=2 state=stationary
+INFO:realtime.tracking:Motion state changed id=3 state=stationary
+INFO:realtime.tracking:Motion state changed id=4 state=stationary
+INFO:realtime.tracking:Motion state changed id=5 state=stationary
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+{"status": "complete", "frames": 31, "report": "benchmarks\\2026-10-20\\label-cache\\before\\report.json"}

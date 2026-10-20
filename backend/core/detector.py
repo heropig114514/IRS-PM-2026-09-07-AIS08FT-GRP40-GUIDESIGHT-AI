@@ -1,5 +1,6 @@
 """Responsibilities: Bounded JPEG decoding and unchanged YOLO26 FP32 image transforms/rendering.
-Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels.
+Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels;
+optional explicit diagnostic text renderer, with direct Pillow drawing as the default.
 Related Modules: realtime.detector/depth/tracking/risk; zerogpu.live_worker; realtime.protocol.
 Declaration Index: DetectionError; DetectionError.__init__; decode_frame; letterbox; decode_boxes;
 label_font; annotate.
@@ -133,14 +134,16 @@ def label_font():
     return ImageFont.load_default(size=14)
 
 
-def annotate(image, boxes):
+def annotate(image, boxes, *, text_renderer=None):
     """Functionality: Draw boxes, optional depth/motion and meaningful risk into JPEG.
-    Inputs: RGB image and validated boxes; Outputs: encoded JPEG bytes or 502 size error.
+    Inputs: RGB image, validated boxes and optional explicit diagnostic text renderer.
+    Outputs: encoded JPEG bytes or 502 size error.
     Logic: preserve previous labels when ID/depth unavailable; otherwise add ID/motion and
     finite signed m/s for a known motion state (unknown omits speed);
     high/critical labels replace confidence/speed with concise TTC/level; other labels stay normal;
     draw two-pixel outlines and readable backed labels, encode at explicit quality 80.
     Constraints: input remains in memory; English font is Pillow bundled, no external font download.
+    Default calls Pillow directly; experimental renderers must preserve text/coordinates and errors.
     """
     from PIL import ImageDraw
 
@@ -171,7 +174,11 @@ def annotate(image, boxes):
         draw.rectangle(
             (label_x, label_y, label_x + text_width, label_y + text_height), fill=(15, 40, 35)
         )
-        draw.text((label_x + 3, label_y + 3 - bounds[1]), label, font=font, fill="white")
+        if text_renderer is None:
+            draw.text((label_x + 3, label_y + 3 - bounds[1]), label, font=font, fill="white")
+        else:
+            text_renderer(draw, (label_x + 3, label_y + 3 - bounds[1]), label,
+                          font=font, fill="white")
     output = io.BytesIO()
     image.save(output, format="JPEG", quality=JPEG_QUALITY)
     payload = output.getvalue()

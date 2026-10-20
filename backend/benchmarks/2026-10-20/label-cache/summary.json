@@ -1,0 +1,394 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "candidate": "bounded exact full-label glyph raster cache",
+  "decision": "retain independent probe; do not enable in service or proceed to browser admission",
+  "reason": "moving-video cache misses erase static reuse and increase rendering latency",
+  "static": {
+    "before": {
+      "frames": 31,
+      "first_frame_ms": 4123.026499999469,
+      "render_ms": {
+        "count": 30,
+        "mean_ms": 4.987030000059652,
+        "min_ms": 3.4463000010873657,
+        "max_ms": 8.087500000328873,
+        "p50_ms": 4.617250000592321,
+        "p95_ms": 6.832930000109627,
+        "p99_ms": 7.897579000600672
+      },
+      "predict_wall_ms": {
+        "count": 30,
+        "mean_ms": 51.90330666688775,
+        "min_ms": 44.57370000091032,
+        "max_ms": 66.80869999945571,
+        "p50_ms": 48.836300000402844,
+        "p95_ms": 61.98487000056048,
+        "p99_ms": 65.48357399997258
+      },
+      "cache": null
+    },
+    "cached": {
+      "frames": 31,
+      "first_frame_ms": 4113.818200001333,
+      "render_ms": {
+        "count": 30,
+        "mean_ms": 2.628433333363015,
+        "min_ms": 2.3338999999396037,
+        "max_ms": 5.840100000568782,
+        "p50_ms": 2.46419999984937,
+        "p95_ms": 2.9299549996721908,
+        "p99_ms": 5.025664000422694
+      },
+      "predict_wall_ms": {
+        "count": 30,
+        "mean_ms": 45.68531333364566,
+        "min_ms": 42.286199999580276,
+        "max_ms": 58.01009999959206,
+        "p50_ms": 44.54799999984971,
+        "p95_ms": 53.171725000174774,
+        "p99_ms": 57.42853399968226
+      },
+      "cache": {
+        "hits": 145,
+        "misses": 10,
+        "evictions": 0,
+        "hit_ratio": 0.9354838709677419,
+        "entries": 10,
+        "raster_bytes": 41184,
+        "peak_raster_bytes": 41184,
+        "hit_ms": 4.71780000225408,
+        "miss_ms": 5.7341999981872505,
+        "max_entries": 256,
+        "max_raster_bytes": 4194304,
+        "max_key_utf8_bytes": 4096
+      }
+    },
+    "after": {
+      "frames": 31,
+      "first_frame_ms": 4054.5242999996844,
+      "render_ms": {
+        "count": 30,
+        "mean_ms": 4.216806666772754,
+        "min_ms": 3.3803000005718786,
+        "max_ms": 4.900300000372226,
+        "p50_ms": 4.202150000310212,
+        "p95_ms": 4.767535000337375,
+        "p99_ms": 4.864108000147098
+      },
+      "predict_wall_ms": {
+        "count": 30,
+        "mean_ms": 46.13235333345074,
+        "min_ms": 43.682700001227204,
+        "max_ms": 59.57970000054047,
+        "p50_ms": 45.24140000012267,
+        "p95_ms": 51.9527499994183,
+        "p99_ms": 57.49747100016975
+      },
+      "cache": null
+    }
+  },
+  "videos": {
+    "mot17-07": {
+      "frames": 500,
+      "source_fps": 30.0,
+      "all_rgb_exact": true,
+      "all_jpeg_exact": true,
+      "labels": 6543,
+      "cache": {
+        "hits": 0,
+        "misses": 6543,
+        "evictions": 6287,
+        "hit_ratio": 0.0,
+        "entries": 256,
+        "raster_bytes": 1263280,
+        "peak_raster_bytes": 1377600,
+        "hit_ms": 0.0,
+        "miss_ms": 4010.462999893207,
+        "max_entries": 256,
+        "max_raster_bytes": 4194304,
+        "max_key_utf8_bytes": 4096
+      },
+      "first_render_ms": {
+        "before": 8.180900000297697,
+        "cached": 8.482800001729629,
+        "after": 6.472299999586539
+      },
+      "steady_render_ms": {
+        "before": {
+          "count": 499,
+          "mean_ms": 8.107392785555321,
+          "min_ms": 4.083300000274903,
+          "max_ms": 13.372199999139411,
+          "p50_ms": 8.101499999611406,
+          "p95_ms": 10.667730000022857,
+          "p99_ms": 11.671964000088337
+        },
+        "cached": {
+          "count": 499,
+          "mean_ms": 11.247445691326707,
+          "min_ms": 5.3377000003820285,
+          "max_ms": 17.221299998709583,
+          "p50_ms": 11.434900001404458,
+          "p95_ms": 14.493879999645287,
+          "p99_ms": 16.23820600056206
+        },
+        "after": {
+          "count": 499,
+          "mean_ms": 8.013302404820909,
+          "min_ms": 4.031499998745858,
+          "max_ms": 13.688299999557785,
+          "p50_ms": 7.988399998794193,
+          "p95_ms": 10.322079999787093,
+          "p99_ms": 11.621090000699041
+        }
+      },
+      "signed_delta_summary": {
+        "mean_ms": 3.1400529057713857,
+        "median_ms": 3.0946999995649094,
+        "candidate_faster_frames": 2
+      },
+      "risk_labels": {
+        "medium": 648,
+        "low": 3259,
+        "unknown": 960,
+        "critical": 614,
+        "high": 1062
+      },
+      "motion_labels": {
+        "unknown": 1491,
+        "approaching": 2659,
+        "moving_away": 2377,
+        "stationary": 16
+      },
+      "diagnostic_pipeline_stage_ms": {
+        "prepare_ms": {
+          "count": 499,
+          "mean_ms": 2.766714829631237,
+          "min_ms": 2.3754999983793823,
+          "max_ms": 3.7343000003602356,
+          "p50_ms": 2.717800000027637,
+          "p95_ms": 3.2563900012974045,
+          "p99_ms": 3.383179999909771
+        },
+        "inference_ms": {
+          "count": 499,
+          "mean_ms": 18.368306813623597,
+          "min_ms": 5.597699999270844,
+          "max_ms": 24.789000000964734,
+          "p50_ms": 19.824099999823375,
+          "p95_ms": 21.361849999448168,
+          "p99_ms": 23.097032000987383
+        },
+        "depth_predict_ms": {
+          "count": 499,
+          "mean_ms": 31.79923386772121,
+          "min_ms": 16.022800000428106,
+          "max_ms": 44.23080000015034,
+          "p50_ms": 33.77179999915825,
+          "p95_ms": 36.123920001227816,
+          "p99_ms": 39.01766399889311
+        },
+        "depth_fusion_ms": {
+          "count": 499,
+          "mean_ms": 7.1019523045812045,
+          "min_ms": 2.9091999986121664,
+          "max_ms": 16.63669999834383,
+          "p50_ms": 6.842099999630591,
+          "p95_ms": 10.389809998923738,
+          "p99_ms": 14.23120400046173
+        },
+        "tracking_ms": {
+          "count": 499,
+          "mean_ms": 9.033308216427478,
+          "min_ms": 7.199400000899914,
+          "max_ms": 11.11000000128115,
+          "p50_ms": 8.989900001324713,
+          "p95_ms": 10.050769998088072,
+          "p99_ms": 10.429323999633198
+        },
+        "risk_ms": {
+          "count": 499,
+          "mean_ms": 0.22433086172702657,
+          "min_ms": 0.10269999984302558,
+          "max_ms": 0.6050000010873191,
+          "p50_ms": 0.2182000007451279,
+          "p95_ms": 0.32515999919269234,
+          "p99_ms": 0.4384080003364943
+        }
+      },
+      "source_timestamp_start_s": 0.0,
+      "source_timestamp_end_s": 16.633333333333333
+    },
+    "mot17-10": {
+      "frames": 654,
+      "source_fps": 30.0,
+      "all_rgb_exact": true,
+      "all_jpeg_exact": true,
+      "labels": 6551,
+      "cache": {
+        "hits": 0,
+        "misses": 6551,
+        "evictions": 6295,
+        "hit_ratio": 0.0,
+        "entries": 256,
+        "raster_bytes": 1260064,
+        "peak_raster_bytes": 1359072,
+        "hit_ms": 0.0,
+        "miss_ms": 3961.1893999172025,
+        "max_entries": 256,
+        "max_raster_bytes": 4194304,
+        "max_key_utf8_bytes": 4096
+      },
+      "first_render_ms": {
+        "before": 6.961799999771756,
+        "cached": 7.404900001347414,
+        "after": 5.87210000048799
+      },
+      "steady_render_ms": {
+        "before": {
+          "count": 653,
+          "mean_ms": 6.354630168457257,
+          "min_ms": 2.6495000001887092,
+          "max_ms": 10.963400000036927,
+          "p50_ms": 6.323499999780324,
+          "p95_ms": 8.462520000102813,
+          "p99_ms": 9.792048000308569
+        },
+        "cached": {
+          "count": 653,
+          "mean_ms": 8.68306401223397,
+          "min_ms": 3.3997999998973683,
+          "max_ms": 16.497299999173265,
+          "p50_ms": 8.702400000402122,
+          "p95_ms": 11.717219999263762,
+          "p99_ms": 13.602767999109346
+        },
+        "after": {
+          "count": 653,
+          "mean_ms": 6.250386370577065,
+          "min_ms": 2.569000000221422,
+          "max_ms": 11.427899999034707,
+          "p50_ms": 6.239000000277883,
+          "p95_ms": 8.392660000026808,
+          "p99_ms": 9.958947999766679
+        }
+      },
+      "signed_delta_summary": {
+        "mean_ms": 2.328433843776714,
+        "median_ms": 2.272800000355346,
+        "candidate_faster_frames": 3
+      },
+      "risk_labels": {
+        "low": 3222,
+        "medium": 570,
+        "unknown": 887,
+        "high": 1109,
+        "critical": 763
+      },
+      "motion_labels": {
+        "unknown": 1475,
+        "moving_away": 2316,
+        "approaching": 2728,
+        "stationary": 32
+      },
+      "diagnostic_pipeline_stage_ms": {
+        "prepare_ms": {
+          "count": 653,
+          "mean_ms": 2.7158179173321484,
+          "min_ms": 2.2785000001022127,
+          "max_ms": 4.141900000831811,
+          "p50_ms": 2.6748000000225147,
+          "p95_ms": 3.206099999806611,
+          "p99_ms": 3.4898240000620717
+        },
+        "inference_ms": {
+          "count": 653,
+          "mean_ms": 17.581488820802186,
+          "min_ms": 5.4698999992979225,
+          "max_ms": 22.65819999956875,
+          "p50_ms": 18.703899999309215,
+          "p95_ms": 20.758139999816194,
+          "p99_ms": 21.217716000173823
+        },
+        "depth_predict_ms": {
+          "count": 653,
+          "mean_ms": 30.588578560456344,
+          "min_ms": 15.840000000025611,
+          "max_ms": 41.59280000021681,
+          "p50_ms": 31.754499999806285,
+          "p95_ms": 35.428260000480805,
+          "p99_ms": 37.14542400011851
+        },
+        "depth_fusion_ms": {
+          "count": 653,
+          "mean_ms": 6.0712921899129615,
+          "min_ms": 1.7902999989019008,
+          "max_ms": 13.625599998704274,
+          "p50_ms": 5.7968000019172905,
+          "p95_ms": 9.666340000694618,
+          "p99_ms": 12.022396000684239
+        },
+        "tracking_ms": {
+          "count": 653,
+          "mean_ms": 8.462183460954948,
+          "min_ms": 6.837299999460811,
+          "max_ms": 10.65520000156539,
+          "p50_ms": 8.452500000203145,
+          "p95_ms": 9.454180000830092,
+          "p99_ms": 9.948168000992155
+        },
+        "risk_ms": {
+          "count": 653,
+          "mean_ms": 0.18727396627652132,
+          "min_ms": 0.08620000153314322,
+          "max_ms": 0.51059999896097,
+          "p50_ms": 0.18279999858350493,
+          "p95_ms": 0.2627799993206281,
+          "p99_ms": 0.3599880000547273
+        }
+      },
+      "source_timestamp_start_s": 0.0,
+      "source_timestamp_end_s": 21.766666666666666
+    }
+  },
+  "limitations": [
+    "No metric depth/distance ground truth or quality evaluation",
+    "Video comparison repeats rendering within one model pass; not browser or end-to-end performance",
+    "Retained raster bound excludes transient allocation and Python/font overhead",
+    "No remote service, physical camera or public network validation"
+  ],
+  "next_task": "Profile moving-video tracking/depth stages and compare the separate depth Graph candidate with unchanged controls; keep label cache disabled",
+  "static_output_comparison": {
+    "before": {
+      "comparisons": 31,
+      "raw_detection_equal": 31,
+      "boxes_distances_ids_equal": 31,
+      "jpeg_equal": 30,
+      "jpeg_difference": {
+        "index": 4,
+        "difference": "motion_state stationary in before, unknown in cached for all five boxes; corresponding risk_reasons differ",
+        "cause": "actual worker timestamps differ across independent runs; unchanged history confirmation crosses its threshold at different samples",
+        "same_boxes_legacy_current_and_cache_exact": true
+      }
+    },
+    "after": {
+      "comparisons": 31,
+      "raw_detection_equal": 31,
+      "boxes_distances_ids_equal": 31,
+      "jpeg_equal": 31
+    }
+  },
+  "total_video_frames": 1154,
+  "pillow_source_sha256": {
+    "ImageDraw.py": "98aa4388d2629866aad9dd734bec67ad3f9981ab1ed4390281b4c17be9027cf6",
+    "ImageFont.py": "e9601111f8817e8387fd792b3643e709a5a11febea43cb49de1732e776ba5f60",
+    "_imagingft.cp312-win_amd64.pyd": "77c6d37de41733df40fb36d9af47644989ac17da036515e759303969edb22c48"
+  },
+  "legacy_render_compatibility": {
+    "comparisons": 93,
+    "all_exact": true,
+    "report": "legacy-render-compatibility.json"
+  },
+  "evidence_source_note": "Video validator header Variable Index corrected from imported ROOT to None after measurement; executable body unchanged. Reports retain measured source identities."
+}

@@ -41,9 +41,22 @@
 | 深度 CUDA Graph | 静态多输入原始深度与距离一致；浏览器吞吐提高，但原最大 500ms 延迟门槛未通过 | 独立实验，优先剖析剩余完整帧开销 |
 | GPU ROI 完整排序中位数 | 样例一致，但多数 ROI 及整帧未加速 | 不接入默认服务 |
 | 复用已初始化 SDK predictor | 每帧配置分派仅节约约 0.20ms，未证实稳定整帧收益 | 不作为当前主要优化方向 |
-| 有界完整标签图像缓存 | 显式阶段计时中，标注扣除 JPEG 编码约占 3ms；可在不改模型/跟踪的前提下实验复用重复文字图像 | 下一独立候选；尚未实现或宣称加速 |
+| 有界完整标签栅格缓存 | 静态重复图可减少绘制耗时；两个完整 MOT17 视频中命中率为 0，反而增加标注耗时，逐帧 RGB/JPEG 一致 | 保留独立诊断工具，不接入默认服务，不进入浏览器准入 |
 
 标签缓存候选须将字体、字号、完整文字、颜色等渲染身份纳入键，限制内存并验证命中/未命中、边缘裁剪、中文、空距离、运动与风险文字的逐像素/JPEG一致性。移动视频可能使文字频繁变化，必须记录命中率和额外开销，不能将静态重复标签收益外推为视频收益。
+
+### 标签缓存实验步骤
+
+1. 保留原标签格式、背景、布局及 JPEG80，仅为显式工具增加文字绘制注入点。缓存完整文字的抗锯齿栅格掩码，包含字体对象/字号、文字、颜色、模式及绘制坐标小数部分；不取整或合并近似位置。
+2. 使用最多 256 项、4 MiB 驻留栅格的 LRU，文字键限制 4096 UTF-8 字节；限额不包含临时栅格化和 Python/字体对象开销。单项超过容量或不支持的多行/字体模式显式失败，不降级。记录命中、未命中、驱逐、驻留/峰值栅格字节。
+3. 比较实际 Pillow 编码前 RGB 与 JPEG 字节，覆盖连续命中、未命中、不同背景/画幅、四边裁剪、浮点位置、中文、空距离、运动、风险、字体身份及驱逐后重绘。
+4. 原始/仅标签缓存/原始分别执行固定公交图 31 帧完整 GPU 链路；保持深度 SDK 原调用，避免叠加候选。首帧单列，保留所有稳态样本。
+5. 对仓库两个原始 MOT17 预览按原顺序处理全部 500/654 帧，用源时间戳驱动跟踪，不抽帧；每帧将同一图像及同一实际检测/距离/运动结果交给原始、缓存、原始渲染，比较 RGB/JPEG 并记录绘制耗时和命中率。该额外绘制诊断不作为浏览器吞吐或深度准确率成绩。
+6. 仅在静态整帧及移动场景均有收益时继续浏览器准入；否则保留负结果、默认关闭并根据证据选择下一任务。
+
+### 后续执行入口
+
+标签缓存未满足移动场景收益条件。下一任务转为完整视频上的深度与跟踪阶段剖析，以及独立深度 Graph 的原始/候选/原始对照。保持缓存关闭、源帧顺序和时间戳、模型/距离/跟踪参数不变；先确认稠密场景瓶颈和逐值/逐帧输出，再决定是否进入原 30FPS/12 在途浏览器门槛。不将降低深度频率、坐标取整、修改跟踪阈值或隐藏慢帧作为该任务的默认动作。
 
 显式阶段诊断显示 SDK 推理结束后的同步在等待必要 GPU 工作，不能把全部等待算作可删除开销。当前环境的一份 cProfile 记录出现自耗时大于累计耗时等内部矛盾，保留原始记录但不用于归因；工具报告基础一致性异常，不自动修正数据或更换诊断方式。具体对照与阶段记录见下方报告。
 
@@ -64,12 +77,17 @@
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-graph --output benchmarks/NEW_RUN/graph
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-fusion-sort --output benchmarks/NEW_RUN/fusion
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-cached-predictor --output benchmarks/NEW_RUN/predictor
+.\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --label-cache --output benchmarks/NEW_RUN/labels
+.\.venv\Scripts\python.exe -m tools.validate_label_cache --video model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4 --output benchmarks/NEW_RUN/labels-video07
+.\.venv\Scripts\python.exe -m tools.validate_label_cache --video model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-raw.mp4 --output benchmarks/NEW_RUN/labels-video10
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-graph --trace-steady --output benchmarks/NEW_RUN/trace
 .\.venv\Scripts\python.exe -m tools.benchmark_inference --mode full --frames 31 --depth-graph --profile-steady --output benchmarks/NEW_RUN/profile
 node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --depth-graph
 ```
 
 数值检查工具为 `validate_depth_graph`、`validate_depth_fusion`、`validate_depth_predictor`，须显式提供原输入与样本数；完整命令可用 `python -m tools.TOOL --help` 查看。
+
+`--label-cache` 与深度候选互斥。`validate_label_cache` 读取完整视频，不抽帧；同一次真实推理的图像及结果依次交给原始/候选/原始渲染器，直接比较 JPEG 编码前 RGB 和 JPEG 字节。计时包含轻量编码引用捕获；额外三次绘制会扰动完整帧耗时，不能拿此工具的整帧或阶段诊断替代无诊断服务对照。静态分进程运行采用实际工作时间，运动确认可能在不同帧出现，须将这类标签差异与同输入渲染一致性分开核对。
 
 `--trace-steady` 仅用于 full 模式，以临时包装测量原始阶段及 SDK 原有同步时钟；退出时恢复，输出 `stage-trace.json`。`--profile-steady` 输出完整 `profile.json` 与 `profile.pstats`。两者互斥，不计首帧、捕获和报告写入；都需要前后无诊断对照，不能把诊断扰动当作加速。
 
@@ -84,6 +102,7 @@ node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --dep
 | [Graph 服务诊断](benchmarks/2026-10-20/graph-service/summary.json) | 浏览器对照、捕获/复用及性能门槛 |
 | [Graph 输出比较](benchmarks/2026-10-20/graph-service/output-comparison.json) | 检测/距离与真实时间导致的标注差异 |
 | [Graph 剩余阶段诊断](benchmarks/2026-10-20/graph-profile/summary.json) | 显式阶段计时、前后对照、cProfile异常和下个候选依据 |
+| [标签栅格缓存诊断](benchmarks/2026-10-20/label-cache/summary.json) | 静态对照、两个完整视频的像素/JPEG一致性、缓存边界与移动场景负结果 |
 
 运行详情保留在结构化报告及逐帧 JSONL，历史报告描述其采集时的代码与状态，不能当作当前部署状态。
 

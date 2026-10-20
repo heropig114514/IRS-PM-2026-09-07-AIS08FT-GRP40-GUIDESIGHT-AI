@@ -94,6 +94,8 @@ node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --dep
 
 显式 `--depth-graph` 选择独立 `tools.resident_graph_asgi`。首张真实帧完成后捕获一次，准备时间计入首帧响应；重连复用。形状/类型/设备变化报错，不自动重捕获或回退，默认入口不导入该候选。
 
+完整文字栅格缓存仅通过离线 `benchmark_inference --label-cache` 与 `validate_label_cache --video ...` 实验。移动视频显示命中不足且绘制变慢，因此默认服务未启用；工具及原始/候选/原始证据入口见推理优化计划。
+
 ## 性能与质量限制
 
 性能门槛保持至少 10FPS 且最大稳态延迟不超过 500ms。Graph 服务报告中吞吐提高，但最大延迟仍超标；完整链路能运行不代表通过性能或质量验收。计时语义、候选依据与全部结构化证据见 [推理优化计划](INFERENCE_OPTIMIZATION_PLAN.md)。

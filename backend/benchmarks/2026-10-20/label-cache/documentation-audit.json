@@ -1,0 +1,78 @@
+{
+  "files": [
+    {
+      "path": "core/detector.py",
+      "qualified_declarations": [
+        "DetectionError",
+        "DetectionError.__init__",
+        "decode_frame",
+        "letterbox",
+        "decode_boxes",
+        "label_font",
+        "annotate"
+      ],
+      "complete_doc_fields": true,
+      "index_exact": true
+    },
+    {
+      "path": "core/test_label_cache.py",
+      "qualified_declarations": [
+        "LabelCacheTests",
+        "LabelCacheTests.test_pixels_and_labels",
+        "LabelCacheTests.test_fractional_text",
+        "LabelCacheTests.test_identity_and_background",
+        "LabelCacheTests.test_lru_limits",
+        "LabelCacheTests.test_explicit_rejection",
+        "LabelCacheTests.test_failure_propagates",
+        "LabelCacheTests.test_failure_propagates.failed",
+        "LabelCacheTests.test_probe_exclusion"
+      ],
+      "complete_doc_fields": true,
+      "index_exact": true
+    },
+    {
+      "path": "tools/benchmark_inference.py",
+      "qualified_declarations": [
+        "distribution",
+        "summarize_frames",
+        "build_detector",
+        "run",
+        "main"
+      ],
+      "complete_doc_fields": true,
+      "index_exact": true
+    },
+    {
+      "path": "tools/label_cache_probe.py",
+      "qualified_declarations": [
+        "LabelRasterCache",
+        "LabelRasterCache.__init__",
+        "LabelRasterCache.__call__",
+        "LabelRasterCache.annotate",
+        "LabelRasterCache.snapshot"
+      ],
+      "complete_doc_fields": true,
+      "index_exact": true
+    },
+    {
+      "path": "tools/validate_label_cache.py",
+      "qualified_declarations": [
+        "capture_render",
+        "capture_render.save",
+        "compare_render",
+        "run",
+        "run.paired",
+        "main"
+      ],
+      "complete_doc_fields": true,
+      "index_exact": true
+    }
+  ],
+  "check_docs_tool_exists": false,
+  "manual_review": "Checked responsibilities, executable declarations, callback constraints, retained-memory bounds, experimental-only imports and current-role docs. AST scan assists rather than replaces review.",
+  "validator_post_measurement_change": {
+    "module_docstring_only": true,
+    "executable_ast_identical": true,
+    "final_sha256": "efdec85a78563c1ab7163a4159e5094b742e997e28f1d53f540e23844f40766d"
+  }
+}

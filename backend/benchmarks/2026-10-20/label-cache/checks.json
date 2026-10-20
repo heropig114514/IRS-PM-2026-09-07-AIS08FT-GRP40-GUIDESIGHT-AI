@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "working_directory": "backend",
+  "commands": [
+    {
+      "command": "python manage.py check",
+      "exit_code": 0,
+      "log": "check.txt"
+    },
+    {
+      "command": "python manage.py makemigrations --check --dry-run",
+      "exit_code": 0,
+      "log": "migrations.txt"
+    },
+    {
+      "command": "python manage.py test --noinput",
+      "exit_code": 0,
+      "tests": 255,
+      "skips": 0,
+      "log": "tests.txt"
+    },
+    {
+      "command": "ruff check .",
+      "exit_code": 0,
+      "log": "ruff.txt"
+    },
+    {
+      "command": "python -m pip check",
+      "exit_code": 0,
+      "log": "pip.txt"
+    }
+  ],
+  "focused_regression": {
+    "tests": 24,
+    "passed": true
+  },
+  "earlier_local_checks": {
+    "first_attempt": "Missing DJANGO_SECRET_KEY; corrected by ephemeral explicit environment value",
+    "sandbox_attempt": "24 tests; 2 existing temporary-directory permission errors; authorized run passed",
+    "initial_ruff": "9 line-length findings fixed before measurements",
+    "initial_staged_whitespace": "Duplicated CR from log encoding normalization; corrected before commit"
+  },
+  "frontend_tests": "Not rerun: no frontend changes; backend work does not change client contracts",
+  "manual_annotation_index_review": true,
+  "documentation_audit": "documentation-audit.json",
+  "legacy_render_exact_comparisons": 93,
+  "video_frames_exact": 1154,
+  "logs_normalized": "UTF-8; CRLF/duplicate-CR line endings normalized and one final newline; log content retained",
+  "unverified": [
+    "Browser admission of cache deliberately not performed after moving-scene regression",
+    "Metric depth/distance ground truth and quality gates",
+    "Physical camera, public network, remote services and deployment"
+  ]
+}

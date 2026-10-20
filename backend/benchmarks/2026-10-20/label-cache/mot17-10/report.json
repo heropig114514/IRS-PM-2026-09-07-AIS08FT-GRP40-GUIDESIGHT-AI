@@ -1,0 +1,96 @@
+{
+  "status": "completed",
+  "completed_frames": 654,
+  "scope": "Paired renderer diagnostic on every source frame; no accuracy/FPS claim",
+  "video": "model_tests\\datasets\\street-video\\mot17\\MOT17-10-FRCNN-raw.mp4",
+  "video_sha256": "0780ec0d648cfbca71a92cf0e45811e591b0f014307e3291a5f970112d855d01",
+  "settings": {
+    "detection_edge": 640,
+    "confidence": 0.25,
+    "jpeg_quality": 80,
+    "depth_edge": 768,
+    "precision": "FP32",
+    "depth_graph": false,
+    "timestamp": "decoded source presentation milliseconds / 1000"
+  },
+  "implementation_sha256": {
+    "core/detector.py": "ad976da9873b3109901955a6eb91f101602f43f918b0a00d99cb6a70c1296cf5",
+    "tools/label_cache_probe.py": "6ed43cffb33add4fdd9b09d7a7637eb4ae8dbc79906e0e2c08f4e6132061f5d7",
+    "tools/validate_label_cache.py": "371f12f0abd59e79c4e1aa71e728235723ed4b0634f677a6e2f289d6af24a441",
+    "tools/benchmark_inference.py": "8d70018d05b051073f740bf0a2a8bb3f327b2b553734a57a9386dfe6f5f6ee17",
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "realtime/distance.py": "f5e65e2d873f57f8d1f621cdd8aec569c803616885f9ae3feee7c909f239536f",
+    "realtime/distance_config.py": "45b1d0e1cfcea67bf5ee150be532394e92d57f94d587e505b4e86045cebe2940",
+    "realtime/performance.py": "50936879aad1c4bcd9829a9649b3b5c4d2e7c782dd6c690f7fa9cdc404d3a246",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "pillow": "12.3.0",
+    "opencv": "4.11.0",
+    "torch": "2.8.0+cu126",
+    "ultralytics": "8.4.171",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "assets_sha256": {
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+  },
+  "declared_frames": 654,
+  "source_fps": 30.0,
+  "all_rgb_exact": true,
+  "all_jpeg_exact": true,
+  "first_render_ms": {
+    "before": 6.961799999771756,
+    "cached": 7.404900001347414,
+    "after": 5.87210000048799
+  },
+  "steady_render_ms": {
+    "before": {
+      "count": 653,
+      "mean_ms": 6.354630168457257,
+      "min_ms": 2.6495000001887092,
+      "max_ms": 10.963400000036927,
+      "p50_ms": 6.323499999780324,
+      "p95_ms": 8.462520000102813,
+      "p99_ms": 9.792048000308569
+    },
+    "cached": {
+      "count": 653,
+      "mean_ms": 8.68306401223397,
+      "min_ms": 3.3997999998973683,
+      "max_ms": 16.497299999173265,
+      "p50_ms": 8.702400000402122,
+      "p95_ms": 11.717219999263762,
+      "p99_ms": 13.602767999109346
+    },
+    "after": {
+      "count": 653,
+      "mean_ms": 6.250386370577065,
+      "min_ms": 2.569000000221422,
+      "max_ms": 11.427899999034707,
+      "p50_ms": 6.239000000277883,
+      "p95_ms": 8.392660000026808,
+      "p99_ms": 9.958947999766679
+    }
+  },
+  "cache": {
+    "hits": 0,
+    "misses": 6551,
+    "evictions": 6295,
+    "hit_ratio": 0.0,
+    "entries": 256,
+    "raster_bytes": 1260064,
+    "peak_raster_bytes": 1359072,
+    "hit_ms": 0.0,
+    "miss_ms": 3961.1893999172025,
+    "max_entries": 256,
+    "max_raster_bytes": 4194304,
+    "max_key_utf8_bytes": 4096
+  }
+}
