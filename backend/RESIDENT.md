@@ -102,6 +102,8 @@ node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-video-graph
 
 `benchmark_video --video ... --output ...` 在独立进程处理完整视频；`--depth-graph` 显式选择候选，`--trace-steady` 记录 SDK 和跟踪阶段，`--reference` 比较原始对照。该离线入口使用解码器源时间戳驱动跟踪，并在预测计时外校验完整深度图；不改变 resident-v1 的工作线程时间契约。操作顺序和计时边界见推理优化计划。
 
+`python -m tools.analyze_browser_queue --input-root benchmarks/2026-10-21/moving-browser --output benchmarks/NEW_RUN/queue-attribution` 只读取已保存的浏览器矩阵，输出目录必须不存在且父目录已存在。它核对报告散列、时钟/FIFO 源码和完整计数，以前序管线终点限制未知的出队至工作线程偏移，报告排队中前序处理所占时间的上下界；不假造精确入队时刻，不把失败样本或首帧并入稳态分布。只给确定完整覆盖的前序帧分配阶段耗时，边界帧保留不确定性。该工具不启动浏览器/GPU，结果不代表新压测或纯 kernel 占用；重叠执行等改变计时语义的实验不能直接沿用此互斥阶段模型。
+
 ## 性能与质量限制
 
 性能门槛保持至少 10FPS 且最大稳态延迟不超过 500ms。Graph 服务报告中吞吐提高，但最大延迟仍超标；完整链路能运行不代表通过性能或质量验收。计时语义、候选依据与全部结构化证据见 [推理优化计划](INFERENCE_OPTIMIZATION_PLAN.md)。

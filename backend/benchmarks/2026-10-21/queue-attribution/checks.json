@@ -1,0 +1,54 @@
+{
+  "checks": [
+    {
+      "name": "django-check",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "check"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 1.8739612999997917,
+      "log": "django-check.txt"
+    },
+    {
+      "name": "migration-check",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "makemigrations",
+        "--check",
+        "--dry-run"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 1.928204399999231,
+      "log": "migration-check.txt"
+    },
+    {
+      "name": "backend-tests",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "test"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 33.706336200000806,
+      "log": "backend-tests.txt"
+    },
+    {
+      "name": "ruff",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+        "check",
+        "."
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 0.07902019999892218,
+      "log": "ruff.txt"
+    }
+  ]
+}

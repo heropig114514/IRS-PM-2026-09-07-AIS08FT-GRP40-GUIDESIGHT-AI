@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "scope": "Offline attribution of existing actual-browser reports; no new GPU/browser measurement or implementation speedup claim.",
+  "source_report": "report.json",
+  "source_report_sha256": "3b7e08213694d9d929a0f9567827f3f9296a9451d0ee09a6167ea9666e549652",
+  "original_matrix": "../moving-browser/summary.json",
+  "original_matrix_sha256": "d896b2d28ee51c35b402e1bef931b75b9df931bf058ab8dfb87eed09417ea4c3",
+  "complete_sessions": 10,
+  "frames_retained": 1810,
+  "steady_frames": 1800,
+  "slow_steady_frames": 1609,
+  "excluded_failed_runs": [
+    {
+      "report": "E:\\AI_map\\backend\\benchmarks\\2026-10-21\\moving-browser\\mot17-07-before\\report.json",
+      "sha256": "c0f24cb14a9be1acd215039474fd4ac755acf880ed54dc69a5d372a2c1284351",
+      "status": "failed",
+      "included": false,
+      "failure": {
+        "type": "Error",
+        "detail": "page.evaluate: TypeError: Cannot read properties of null (reading 'contract')\n    at captureSession (eval at evaluate (:311:30), <anonymous>:3:38)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+      },
+      "source_failure": "Video ended, paused or failed before all requested captures"
+    }
+  ],
+  "minimum_prior_pipeline_fraction_of_slow_queue_wait": 0.9815138037679951,
+  "groups": {
+    "original": {
+      "sessions": 6,
+      "frames": 1086,
+      "steady_frames": 1080,
+      "slow_steady_frames": 997,
+      "slow_queue_busy_lower_fraction": {
+        "count": 997,
+        "min": 0.9848968458274218,
+        "max": 0.988923767481049,
+        "mean": 0.9869832207167629,
+        "p50": 0.9869654539330913,
+        "p95": 0.9881067365229148
+      },
+      "slow_dispatch_offset_upper_ms": {
+        "count": 997,
+        "min": 0.5573999997068313,
+        "max": 1.4257999996516446,
+        "mean": 0.7984617853448657,
+        "p50": 0.7822000002306595,
+        "p95": 1.000179999937245
+      },
+      "slow_certain_full_predecessor_count": {
+        "count": 997,
+        "min": 5,
+        "max": 10,
+        "mean": 9.908726178535607,
+        "p50": 10.0,
+        "p95": 10.0
+      },
+      "unique_steady_stage_ms": {
+        "prepare_ms": {
+          "count": 1080,
+          "min": 2.401000000190834,
+          "max": 5.0305999998272455,
+          "mean": 3.295332129639266,
+          "p50": 3.2697500000722357,
+          "p95": 4.018139999789127
+        },
+        "gpu_stage_ms": {
+          "count": 1080,
+          "min": 10.20699999980934,
+          "max": 23.161000000072818,
+          "mean": 13.273311296288487,
+          "p50": 13.297099999817874,
+          "p95": 15.106444999696578
+        },
+        "decode_boxes_ms": {
+          "count": 1080,
+          "min": 0.15930000017760904,
+          "max": 0.4853999998886138,
+          "mean": 0.1928381481527005,
+          "p50": 0.1767000001109409,
+          "p95": 0.2794900001617861
+        },
+        "tracking_ms": {
+          "count": 1080,
+          "min": 6.586399999832793,
+          "max": 17.39110000016808,
+          "mean": 8.97483324073981,
+          "p50": 8.888899999647037,
+          "p95": 10.26158499973917
+        },
+        "depth_predict_ms": {
+          "count": 1080,
+          "min": 18.959600000016508,
+          "max": 38.52310000002035,
+          "mean": 22.683794907403286,
+          "p50": 22.1096000000216,
+          "p95": 27.72986500006027
+        },
+        "depth_fusion_ms": {
+          "count": 1080,
+          "min": 1.8230999999104824,
+          "max": 19.212500000321597,
+          "mean": 6.099688055562806,
+          "p50": 5.885099999886734,
+          "p95": 9.199284999886004
+        },
+        "risk_ms": {
+          "count": 1080,
+          "min": 0.07860000005166512,
+          "max": 0.934400000005553,
+          "mean": 0.20616148147180663,
+          "p50": 0.19940000015594705,
+          "p95": 0.2985150000768044
+        },
+        "render_ms": {
+          "count": 1080,
+          "min": 3.063900000142894,
+          "max": 13.95090000005439,
+          "mean": 7.068234351864972,
+          "p50": 6.987100000060309,
+          "p95": 9.527769999954215
+        }
+      },
+      "unique_steady_stage_totals_ms": {
+        "prepare_ms": 3558.9587000104075,
+        "gpu_stage_ms": 14335.176199991565,
+        "decode_boxes_ms": 208.26520000491655,
+        "tracking_ms": 9692.819899998995,
+        "depth_predict_ms": 24498.49849999555,
+        "depth_fusion_ms": 6587.6631000078305,
+        "risk_ms": 222.65439998955117,
+        "render_ms": 7633.69310001417
+      },
+      "unique_steady_stage_fraction": {
+        "prepare_ms": 0.0533275367322877,
+        "gpu_stage_ms": 0.2147986812453404,
+        "decode_boxes_ms": 0.0031206515836463495,
+        "tracking_ms": 0.14523748456399171,
+        "depth_predict_ms": 0.3670861869345624,
+        "depth_fusion_ms": 0.09870972819790702,
+        "risk_ms": 0.0033362597587922403,
+        "render_ms": 0.11438347098347232
+      }
+    },
+    "depth_graph": {
+      "sessions": 4,
+      "frames": 724,
+      "steady_frames": 720,
+      "slow_steady_frames": 612,
+      "slow_queue_busy_lower_fraction": {
+        "count": 612,
+        "min": 0.9815138037679951,
+        "max": 0.9871640574540294,
+        "mean": 0.9850461188584305,
+        "p50": 0.9851345547122312,
+        "p95": 0.9865148302849018
+      },
+      "slow_dispatch_offset_upper_ms": {
+        "count": 612,
+        "min": 0.6121999999777472,
+        "max": 1.373900000089634,
+        "mean": 0.8107501633950805,
+        "p50": 0.7818500000666972,
+        "p95": 1.0404850002032617
+      },
+      "slow_certain_full_predecessor_count": {
+        "count": 612,
+        "min": 7,
+        "max": 10,
+        "mean": 9.950980392156863,
+        "p50": 10.0,
+        "p95": 10.0
+      },
+      "unique_steady_stage_ms": {
+        "prepare_ms": {
+          "count": 720,
+          "min": 2.5859000002128596,
+          "max": 6.169400000089809,
+          "mean": 3.2920587500048746,
+          "p50": 3.2492000000274857,
+          "p95": 3.954534999979842
+        },
+        "gpu_stage_ms": {
+          "count": 720,
+          "min": 5.7523000000401225,
+          "max": 17.124999999850843,
+          "mean": 11.519027222208756,
+          "p50": 11.666699999977936,
+          "p95": 14.359840000111035
+        },
+        "decode_boxes_ms": {
+          "count": 720,
+          "min": 0.15489999987039482,
+          "max": 0.39790000028006034,
+          "mean": 0.18643125001176486,
+          "p50": 0.17490000004727335,
+          "p95": 0.2508500002250002
+        },
+        "tracking_ms": {
+          "count": 720,
+          "min": 6.847099999959028,
+          "max": 17.554099999870232,
+          "mean": 8.986567500004917,
+          "p50": 8.847450000075696,
+          "p95": 10.469620000299074
+        },
+        "depth_predict_ms": {
+          "count": 720,
+          "min": 8.850400000028458,
+          "max": 26.15220000006957,
+          "mean": 16.22432444445331,
+          "p50": 16.621499999928346,
+          "p95": 19.918064999819762
+        },
+        "depth_fusion_ms": {
+          "count": 720,
+          "min": 2.2455000002992165,
+          "max": 16.321199999765668,
+          "mean": 6.178842361095525,
+          "p50": 5.905049999910261,
+          "p95": 9.391040000059547
+        },
+        "risk_ms": {
+          "count": 720,
+          "min": 0.08270000034826808,
+          "max": 0.5578999998760992,
+          "mean": 0.21033513890024047,
+          "p50": 0.2017000001615088,
+          "p95": 0.3019700002141688
+        },
+        "render_ms": {
+          "count": 720,
+          "min": 3.0844000002616667,
+          "max": 17.37200000025041,
+          "mean": 7.2601529166623395,
+          "p50": 7.146749999719759,
+          "p95": 9.74912500012124
+        }
+      },
+      "unique_steady_stage_totals_ms": {
+        "prepare_ms": 2370.2823000035096,
+        "gpu_stage_ms": 8293.699599990305,
+        "decode_boxes_ms": 134.2305000084707,
+        "tracking_ms": 6470.3286000035405,
+        "depth_predict_ms": 11681.513600006383,
+        "depth_fusion_ms": 4448.766499988778,
+        "risk_ms": 151.44130000817313,
+        "render_ms": 5227.310099996885
+      },
+      "unique_steady_stage_fraction": {
+        "prepare_ms": 0.06112508203042209,
+        "gpu_stage_ms": 0.21387877232359018,
+        "decode_boxes_ms": 0.003461549843236055,
+        "tracking_ms": 0.16685749475428177,
+        "depth_predict_ms": 0.30124406575487833,
+        "depth_fusion_ms": 0.1147252448561107,
+        "risk_ms": 0.0039053837113746485,
+        "render_ms": 0.13480240672610616
+      }
+    }
+  },
+  "conclusion": "For every >500ms steady frame, at least 98.15% of its observed queue wait overlaps prior host pipeline intervals even under the allowed dequeue-offset uncertainty. The queue mainly waits for serial preceding frame processing; this is not a measurement of pure GPU occupancy.",
+  "method": {
+    "worker_start": "S_i = (tracking_timestamp_s_i - first_session_tracking_timestamp_s) * 1000",
+    "pipeline_end": "E_i = S_i + pipeline_server_ms (Graph wrapper), otherwise S_i + server_ms",
+    "unknown_offset": "d_i = S_i - D_i, with D_i the recorded queue-end timing point. Single FIFO writer gives 0 <= d_i <= S_i - E_(i-1) = G_i.",
+    "queue_window": "[S_i - d_i - Q_i, S_i - d_i], Q_i = resident_queue_ms",
+    "extrema": "Intersect each candidate window with all prior original-pipeline intervals; evaluate both offset endpoints and all start/end alignment breakpoints of this piecewise-linear sum.",
+    "certain_full_frames": "Only prior intervals with start >= S_i-Q_i and end <= S_i-G_i receive complete exclusive-stage attribution; no proportional allocation for partial boundary intervals.",
+    "cold": "First frame retained but no predecessor-offset reconstruction; excluded from steady distributions.",
+    "exclusive_stages": [
+      "prepare_ms",
+      "gpu_stage_ms",
+      "decode_boxes_ms",
+      "tracking_ms",
+      "depth_predict_ms",
+      "depth_fusion_ms",
+      "risk_ms",
+      "render_ms"
+    ],
+    "float_identity_tolerance_ms": 1e-05,
+    "performance_gate_tolerance_ms": 0
+  },
+  "additional_live_profile": {
+    "performed": false,
+    "reason": "Existing worker timestamps, FIFO implementation and stage identities already explain the queue-dominant tails conservatively. No extra measured workload is needed for this attribution."
+  },
+  "inspected_source_sha256": {
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/resident_asgi.py": "2d85f88110457da0b08f0e944490c5ca93351da0b69a88ba3a2c584b4f7f36da",
+    "realtime/services.py": "33c1d9b6cff4567fe6fd6d915261ce1461bac0a026e58ed09593e03eb6aee73c",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+    "tools/resident_graph_probe.py": "6f265f8645b92691d78bff7729986f7b26ee3270931f83c083276a8d9a181ae0",
+    ".venv/Lib/site-packages/ultralytics/engine/predictor.py": "d3de9cc0aa0c1f2c0b17c28ea35d1ae971ae7b56f1b7a5c2e3513e5b45e5efaa",
+    ".venv/Lib/site-packages/ultralytics/models/yolo/depth/predict.py": "f0f5c1dbf588579be44ec2ebb4692e576a83aa281d2d13845f818c85830b8397",
+    ".venv/Lib/site-packages/ultralytics/utils/ops.py": "400c4b1572bc074757440603bf4ea5b931a4a529fdaba3f6a4aeadf8c292c497"
+  },
+  "next_candidate": {
+    "name": "Overlap same-frame CPU BoT-SORT association with outstanding depth Graph device work",
+    "status": "hypothesis_selected_not_implemented_or_benchmarked",
+    "rationale": "Current association runs on CPU before depth prediction. Association needs image/detections; depth forward needs only image. Graph steady tracking median is ~8.85ms and depth-call median ~16.62ms. These host durations are not an overlap-benefit estimate.",
+    "constraints": [
+      "Use an explicit independent experimental entry; preserve the serial Graph pipeline as control.",
+      "One GPU-owning worker and one frame at a time; preserve FP32, models, source sequence/time, thresholds and every-frame depth.",
+      "Keep original depth preprocessing/postprocessing and owned output buffers; preserve cold preparation and all required completion dependencies.",
+      "SDK Profile.time currently synchronizes device. Mere call reordering does not establish overlap; do not delete required waits or claim all wait duration is removable.",
+      "Only CPU associate can move into the overlap. Distance fusion, motion history and risk must wait for both results. tracking_ms also includes history enrichment and is an upper bound, not eligible overlap time.",
+      "Require failure/cancellation cleanup and fixed-input full-depth/boxes/IDs/motion/risk/JPEG equality before speed claims.",
+      "Overlapping stage durations require explicit new timing semantics; do not sum them or apply the current exclusive-stage validator.",
+      "Only if equality and full-frame improvement hold, run original 30FPS/12-job/181-frame browser acceptance; default Graph remains disabled until performance and quality gates pass."
+    ]
+  },
+  "unverified": [
+    "No implementation overlap or new speedup tested.",
+    "No metric depth/distance ground truth, physical-camera, external HF/DashScope, remote deployment or multi-user validation."
+  ]
+}

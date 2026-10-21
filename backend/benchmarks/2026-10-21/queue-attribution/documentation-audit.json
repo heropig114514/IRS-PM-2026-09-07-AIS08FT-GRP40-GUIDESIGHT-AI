@@ -1,0 +1,55 @@
+{
+  "mode": "Manual implementation/contract/doc review supported by a temporary AST declaration/field scan. No repository docs checker introduced.",
+  "files": [
+    {
+      "file": "tools/analyze_browser_queue.py",
+      "sha256": "99289690f6f044745165818c77134e3ee9af0d0ef9e114d0b6b5ad2747466681",
+      "actual_declarations": [
+        "number",
+        "distribution",
+        "overlap",
+        "queue_bounds",
+        "validate_session",
+        "analyze_session",
+        "file_hash",
+        "run",
+        "main"
+      ],
+      "index_exact": true,
+      "required_doc_fields_present": true
+    },
+    {
+      "file": "core/test_browser_queue.py",
+      "sha256": "c38bb2a1627ade7f07d2db7284c2d0bfb5fb6e5d8239c2247d024ee752ec6899",
+      "actual_declarations": [
+        "make_session",
+        "write_matrix",
+        "BrowserQueueTests",
+        "BrowserQueueTests.test_interior_extrema",
+        "BrowserQueueTests.test_uncertain_offset",
+        "BrowserQueueTests.test_certain_predecessors",
+        "BrowserQueueTests.test_cold_wrapper_gap",
+        "BrowserQueueTests.test_invalid_evidence",
+        "BrowserQueueTests.test_gate_has_no_clock_tolerance",
+        "BrowserQueueTests.test_report_retention",
+        "BrowserQueueTests.test_matrix_identity_rejection"
+      ],
+      "index_exact": true,
+      "required_doc_fields_present": true
+    }
+  ],
+  "reviewed": [
+    "FIFO queue-end measurement precedes worker-start measurement; prior pipeline end precedes the next queue-end measurement. This bounds the unknown offset without mixing browser/worker clocks.",
+    "Original pipeline duration is used for graph runs; wrapper preparation is retained in gaps/cold costs, not assigned false pipeline timestamps.",
+    "Overlap extrema include interior breakpoints; tests cover interior maxima, zero queues, uncertain shifts, full-frame stage sums and no gate tolerance.",
+    "Every valid complete-session row is retained, including cold and slow frames. Failed source report stays identified and excluded from complete-session analysis.",
+    "Mutually exclusive pipeline stages are checked against original pipeline duration; boundary-frame stages are never apportioned proportionally.",
+    "Source/report SHA checks, path containment, duplicate/empty manifest rejection, malformed counters/clocks and failed-analysis artifacts were reviewed.",
+    "New candidate is a hypothesis only; no production inference behavior, precision, sampling, concurrency, model, metric or data split changed.",
+    "Markdown describes current method, interface, constraints and next candidate; measurements/checks remain structured artifacts."
+  ],
+  "limitations": [
+    "No new live GPU/browser experiment; actual-browser evidence comes from the identified prior matrix.",
+    "No overlap implementation or performance gain verified; metric depth truth and external environments remain unverified."
+  ]
+}
