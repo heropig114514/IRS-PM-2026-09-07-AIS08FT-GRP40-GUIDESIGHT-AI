@@ -1,5 +1,6 @@
 """Responsibilities: Guard private phone access configuration and additive relay configuration.
-Implementation: Temporary dotenv files, real bcrypt limits and mock remote boundary; no server/GPU.
+Implementation: Fresh temporary backend roots, real bcrypt limits and mock remote boundary;
+no existing virtualenv directories, private configuration, server or GPU required.
 Related Modules: integration.phone_deploy; tools.run_phone_mvp; deploy/phone-relay.locations.conf.
 Declaration Index: PhoneDeployTests; PhoneDeployTests.test_access_creation_preserves_existing;
 PhoneDeployTests.test_access_rejects_ambiguity_without_secret_errors;
@@ -25,7 +26,7 @@ from unittest.mock import Mock, patch
 import bcrypt
 from django.test import SimpleTestCase
 
-from tools.run_local_mvp import ROOT, StartupError
+from tools.run_local_mvp import StartupError
 from tools.run_phone_mvp import check_remote_binding, public_ready, supervise
 
 from .phone_deploy import (
@@ -68,25 +69,33 @@ class PhoneDeployTests(SimpleTestCase):
 
     def test_access_creation_preserves_existing(self):
         """Functionality: Verify exclusive creation, stable credentials and the bcrypt boundary.
-        Inputs: Temporary backend path and a synthetic 72-byte password. Outputs: Preserved identity
-        and a usable hash at the accepted upper limit. Logic: Real file operations and bcrypt.
-        Constraints: No external files or credential changes; fast hash cost is test-only.
+        Inputs: Fresh temporary backend root and a synthetic 72-byte password. Outputs: Preserved
+        identity, a usable boundary hash and rejection of creation outside the allowed root.
+        Logic: Patch only the configured root; use real filesystem operations and bcrypt.
+        Constraints: No existing virtualenv or private files; fast hash cost is test-only.
         """
-        with tempfile.TemporaryDirectory(dir=ROOT / ".venv/tmp") as directory:
-            path = Path(directory) / "phone.env"
-            first = private_access(path, create=True)
-            original = path.read_bytes()
-            self.assertEqual(first[0], "phone")
-            self.assertGreaterEqual(len(first[1]), 20)
-            self.assertEqual(private_access(path, create=True), first)
-            self.assertEqual(path.read_bytes(), original)
-            boundary = "x" * 72
-            path.write_text(
-                f"PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD={boundary}\n", encoding="utf-8"
-            )
-            self.assertEqual(private_access(path), ("phone", boundary))
-            digest = bcrypt.hashpw(boundary.encode(), bcrypt.gensalt(rounds=4))
-            self.assertTrue(bcrypt.checkpw(boundary.encode(), digest))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve() / "backend"
+            root.mkdir()
+            with patch("integration.phone_deploy.ROOT", root):
+                path = root / "phone.env"
+                first = private_access(path, create=True)
+                original = path.read_bytes()
+                self.assertEqual(first[0], "phone")
+                self.assertGreaterEqual(len(first[1]), 20)
+                self.assertEqual(private_access(path, create=True), first)
+                self.assertEqual(path.read_bytes(), original)
+                boundary = "x" * 72
+                path.write_text(
+                    f"PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD={boundary}\n", encoding="utf-8"
+                )
+                self.assertEqual(private_access(path), ("phone", boundary))
+                digest = bcrypt.hashpw(boundary.encode(), bcrypt.gensalt(rounds=4))
+                self.assertTrue(bcrypt.checkpw(boundary.encode(), digest))
+                outside = root.parent / "outside.env"
+                with self.assertRaises(PhoneDeploymentError):
+                    private_access(outside, create=True)
+                self.assertFalse(outside.exists())
 
     def test_access_rejects_ambiguity_without_secret_errors(self):
         """Functionality: Refuse duplicate/unsafe credentials without echoing contents.
