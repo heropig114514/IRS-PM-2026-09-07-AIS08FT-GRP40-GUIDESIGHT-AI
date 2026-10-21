@@ -88,9 +88,13 @@ New-Item -ItemType Directory -Force $env:YOLO_CONFIG_DIR, $env:MPLCONFIGDIR | Ou
 .\.venv\Scripts\python.exe -m tools.benchmark_resident --mode full --fps 12 24 --seconds 10 --reconnect-input models/experiments/coco8/images/val/000000000036.jpg --output benchmarks/NEW_RUN/resident-full
 node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-resident
 node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-graph --depth-graph
+node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-video --video model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4
+node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-video-graph --video model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4 --depth-graph
 ```
 
-浏览器工具需要 `PRS_PLAYWRIGHT_PATH` 指向已有 Playwright 包，使用实际 Chrome、页面、JPEG 编解码和 GPU，但图源是公开公交图的 canvas MediaStream。每会话 181 帧、采样上限 30FPS、窗口 12；首帧单列。忙碌拒绝、重连和手动停止同样记录。退出 0 表示功能及性能门槛通过，2 表示功能完成但性能门槛未满足，1 表示功能错误。Windows 工具终止自身子进程不能作为 ASGI 优雅关闭证明。
+浏览器工具需要 `PRS_PLAYWRIGHT_PATH` 指向已有 Playwright 包，使用实际 Chrome、页面、JPEG 编解码和 GPU。默认图源是公开公交图的 canvas MediaStream；显式 `--video PATH` 使用本地 MP4 的原速播放画面，通过诊断路由预加载 Blob 后再计时。每会话 181 帧、采样上限 30FPS、窗口 12；首帧单列。忙碌拒绝、重连和手动停止同样记录。退出 0 表示功能及性能门槛通过，2 表示功能完成但性能门槛未满足，1 表示功能错误。Windows 工具终止自身子进程不能作为 ASGI 优雅关闭证明。
+
+移动图源每次会话从头播放且不循环；首次 GPU 就绪期间视频继续前进。素材在第 181 次采集前结束会明确失败，保留已采集/已显示记录，不能减少帧数、冻结尾帧或重复播放来通过门槛。源视频帧回调负责更新 canvas，实际页面仍自行采集和编码。报告记录采集入口的媒体进度、最近绘制回调及 MediaStream 时间观测，不承诺精确像素 PTS；resident-v1 仍使用工作线程时间跟踪。不同运行受背压影响会采到不同源帧，不能据浏览器报告声称逐帧数值等价。
 
 显式 `--depth-graph` 选择独立 `tools.resident_graph_asgi`。首张真实帧完成后捕获一次，准备时间计入首帧响应；重连复用。形状/类型/设备变化报错，不自动重捕获或回退，默认入口不导入该候选。
 

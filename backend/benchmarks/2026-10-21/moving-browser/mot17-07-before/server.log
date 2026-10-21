@@ -1,0 +1,201 @@
+INFO:     Started server process [31028]
+INFO:     Waiting for application startup.
+2026-10-21 12:28:35,956 INFO core.resident.services Resident ready mode=full load_ms=11580.3
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8766 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54427 - "GET /live/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58203 - "GET /live/assets/camera.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50666 - "GET /live/assets/camera.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57181 - "GET /live/assets/vibration.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51538 - "GET /live/assets/i18n.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53776 - "GET /live/assets/speech-output.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53766 - "GET /live/assets/ai-control.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58203 - "GET /live/assets/scene-client.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53766 - "GET /live/assets/live-detection-client.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53776 - "GET /live/assets/frame-pipeline.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51538 - "GET /live/assets/translations.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58203 - "GET /live/assets/echo-client.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57181 - "GET /live/assets/navigation-ui.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58203 - "GET /live/assets/maps-client.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57181 - "GET /live/assets/navigation.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52339 - "WebSocket /ws/control/" [accepted]
+INFO:     connection open
+2026-10-21 12:28:38,560 INFO core.ai_bridge browser connected session=6d627d16-8e3c-4166-9869-8968ab95213e
+INFO:     127.0.0.1:59459 - "WebSocket /ws/detect/resident/" [accepted]
+INFO:     connection open
+2026-10-21 12:28:39,456 INFO core.resident.asgi Resident admitted id=3ed4f11ce63e mode=full
+2026-10-21 12:28:39,459 INFO core.resident.services Resident session state reset mode=full
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:     127.0.0.1:52427 - "WebSocket /ws/detect/resident/" [accepted]
+INFO:     connection open
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+2026-10-21 12:28:56,130 ERROR core.resident.asgi Resident released id=3ed4f11ce63e received=179 delivered=168 failure=ClientDisconnected
+2026-10-21 12:28:56,130 INFO core.resident.asgi Resident peer unavailable id=3ed4f11ce63e
+2026-10-21 12:28:57,018 INFO core.ai_bridge browser disconnected session=6d627d16-8e3c-4166-9869-8968ab95213e pending=0

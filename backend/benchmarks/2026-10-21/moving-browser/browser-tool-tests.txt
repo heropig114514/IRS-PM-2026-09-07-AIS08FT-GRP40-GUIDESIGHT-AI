@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: source and experiment selection are explicit
+ok 1 - source and experiment selection are explicit
+  ---
+  duration_ms: 1.6405
+  type: 'test'
+  ...
+# Subtest: moving source must advance without rewind
+ok 2 - moving source must advance without rewind
+  ---
+  duration_ms: 1.8512
+  type: 'test'
+  ...
+# Subtest: all source observations must match submitted ordinals
+ok 3 - all source observations must match submitted ordinals
+  ---
+  duration_ms: 0.4201
+  type: 'test'
+  ...
+# Subtest: a single invalid media observation blocks acceptance
+ok 4 - a single invalid media observation blocks acceptance
+  ---
+  duration_ms: 1.7051
+  type: 'test'
+  ...
+# Subtest: one slow steady frame fails the unchanged gate
+ok 5 - one slow steady frame fails the unchanged gate
+  ---
+  duration_ms: 0.7373
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 107.4189

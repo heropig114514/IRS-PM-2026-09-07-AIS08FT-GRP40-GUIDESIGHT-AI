@@ -1,18 +1,22 @@
 /** Responsibilities: Verify the actual camera page and resident GPU path in headless Chrome.
  * Implementation: Local Uvicorn, real DOM/codec/WS/GPU, per-session counter isolation;
- * explicit canvas image replaces only camera.
+ * explicit static image or original-speed video canvas replaces only camera.
  * Related Modules: config.resident_asgi; tools.resident_graph_asgi/resident_graph_probe;
  * frontend camera/live-detection-client/frame-pipeline.
  * Declaration Index: preparePage; preparePage.drawFixture; preparePage.fakeCamera; preparePage.finiteRun;
  * preparePage.recordFrame; waitForStartup; waitForStartup.receiveLog; waitForStartup.exited;
+ * parseArguments; validateMovingSession; preparePage.drawVideo; preparePage.sourceEvent;
+ * preparePage.sourceEvent.ready; preparePage.sourceEvent.failed; preparePage.sourceEvent.expired;
+ * preparePage.releaseSource; preparePage.observeCapture; main.serveFixture;
  * waitForStartup.expired; main; main.captureLog; main.busyProbe; main.busyProbe.failed;
  * main.busyProbe.ended; main.captureSession; main.finishSession; main.pageFailure;
  * main.pageState; summarizeSession; percentile; main.stopServer;
  * main.stopServer.exited; main.stopServer.expired.
  * Variable Index: root — backend; runtime — explicit Playwright module path;
- * report — all session rows, errors and fixed diagnostic conditions; output — new evidence directory;
- * depthGraph/entry — explicit independent experiment selection, original service by default.
- * This is a static-image browser probe, never physical-camera, moving-video or accuracy evidence.
+ * main.report — all session rows, errors and fixed conditions; main.output — new evidence directory;
+ * main.depthGraph/entry/video — explicit experiment/source selection, original service by default.
+ * preparePage.probe — media observations and terminal counters retained after controller cleanup.
+ * This covers local browser transport, never physical-camera or accuracy evidence.
  */
 import {spawn} from "node:child_process";
 import {createHash, randomBytes} from "node:crypto";
@@ -23,14 +27,48 @@ import {fileURLToPath} from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const runtime = process.env.PRS_PLAYWRIGHT_PATH;
-const output = process.argv[2];
-const depthGraph = process.argv[3] === "--depth-graph";
-if (process.argv.length > 4 || (process.argv[3] && !depthGraph))
-  throw new Error("Use OUTPUT_DIR [--depth-graph]");
-const entry = depthGraph ? "tools.resident_graph_asgi:application" : "config.resident_asgi:application";
-const report = {status: "running", scope: "Actual browser with static canvas source and local GPU",
-  conditions: {input_fps: 30, max_inflight: 12, frames_per_session: 181, mode: "full",
-    depth_graph_experiment: depthGraph, asgi_entry: entry}, sessions: []};
+
+/** Functionality: Require explicit source/experiment selection without changing pipeline settings.
+ * Inputs: CLI argument array. Outputs: output, video path and Graph selection.
+ * Logic: reject missing, duplicate and unknown flags. Constraints: no implicit source fallback. */
+export function parseArguments(args) {
+  const [output, ...flags] = args;
+  if (!output || output.startsWith("--")) throw new Error("Use OUTPUT_DIR [--depth-graph] [--video PATH]");
+  let depthGraph = false, video = null;
+  for (let index = 0; index < flags.length; index++) {
+    if (flags[index] === "--depth-graph" && !depthGraph) depthGraph = true;
+    else if (flags[index] === "--video" && video === null && flags[index + 1] &&
+        !flags[index + 1].startsWith("--")) video = flags[++index];
+    else throw new Error(`Invalid or duplicate argument: ${flags[index]}`);
+  }
+  return {output, depthGraph, video};
+}
+
+/** Functionality: Reject frozen, rewound or incomplete moving-source observations.
+ * Inputs: completed session with source observations at capture. Outputs: media span summary.
+ * Logic: verify every observation, ordinal and monotonic source/draw progress, then actual advance.
+ * Constraints: observations are not exact captured-pixel PTS; no cross-run pixel-equivalence claim. */
+export function validateMovingSession(session) {
+  const observations = session.rows.map(row => row.source_observation);
+  if (observations.length !== 181 || session.source_capture_count !== 181)
+    throw new Error("Incomplete moving-source observations");
+  for (const [index, observation] of observations.entries()) {
+    if (!observation || observation.ordinal !== index + 1 || observation.ended || observation.paused ||
+        observation.playback_rate !== 1 ||
+        [observation.media_time_s, observation.drawn_media_time_s, observation.observed_at_ms,
+          observation.stream_time_s, observation.draw_count].some(value => !Number.isFinite(value) || value < 0))
+      throw new Error("Invalid moving-source observation");
+    const previous = observations[index - 1];
+    if (previous && ["media_time_s", "drawn_media_time_s", "draw_count", "observed_at_ms", "stream_time_s"]
+      .some(key => observation[key] < previous[key])) throw new Error("Moving source went backwards");
+  }
+  const first = observations[0], last = observations.at(-1);
+  if (last.drawn_media_time_s <= first.drawn_media_time_s || last.draw_count <= first.draw_count)
+    throw new Error("Moving source did not advance");
+  return {first_observed_media_s: first.media_time_s, last_observed_media_s: last.media_time_s,
+    drawn_media_span_s: last.drawn_media_time_s - first.drawn_media_time_s,
+    video_draws_during_capture: last.draw_count - first.draw_count};
+}
 
 /** Functionality: Interpolate one percentile without discarding any timing sample.
  * Inputs: finite nonnegative values and fraction in [0,1]. Outputs: sample percentile.
@@ -47,7 +85,7 @@ function percentile(values, fraction) {
  * Inputs: one completed original session. Outputs: summary of every row except separated first.
  * Logic: steady interval starts at the second capture and ends at last decode; nested stage
  * timings remain separate. Constraints: no automatic acceptance on functional success alone. */
-function summarizeSession(session) {
+export function summarizeSession(session) {
   const rows = session.rows.slice(1), last = rows.at(-1);
   const fps = rows.length * 1000 / (last.decodedAt - rows[0].capturedAt);
   const latency = rows.map(row => row.captureToDecodedMs);
@@ -61,54 +99,137 @@ function summarizeSession(session) {
 }
 
 /** Functionality: Provide a declared camera fixture and finite existing-pipeline run.
- * Inputs: public JPEG bytes. Outputs: in-page diagnostic state and wrappers.
+ * Inputs: diagnostic fixture URL and moving-source flag. Outputs: in-page state and wrappers.
  * Logic: retain actual capture, decode, client validation and HUD; bound only total run length.
  * Constraints: no fake GPU, changed rate/window/model or physical-camera permission claims. */
-async function preparePage(sourceBytes) {
+async function preparePage({sourceUrl, moving}) {
   const {cameraApp} = await import("./assets/camera.js");
   const {FramePipeline} = await import("./assets/frame-pipeline.js");
-  const source = new Image(), objectUrl = URL.createObjectURL(new Blob([new Uint8Array(sourceBytes)],
-    {type: "image/jpeg"}));
-  source.src = objectUrl;
-  await source.decode();
-  URL.revokeObjectURL(objectUrl);
+  const response = await fetch(sourceUrl);
+  if (!response.ok) throw new Error("Fixture unavailable");
+  const objectUrl = URL.createObjectURL(await response.blob());
+  const source = moving ? document.createElement("video") : new Image();
+  /** Functionality: Await one media transition or original decoder failure.
+   * Inputs: event name and transition callback. Outputs: transition Promise.
+   * Logic: register before changing media state. Constraints: no seek/play retries. */
+  async function sourceEvent(eventName, transition) {
+    await new Promise((done, reject) => {
+      /** Functionality: Release media transition listeners. Inputs: event. Outputs: resolved wait.
+       * Logic: remove both listeners and timer. Constraints: no playback or seek added. */
+      function ready() {
+        clearTimeout(timer); source.removeEventListener("error", failed);
+        source.removeEventListener(eventName, ready); done();
+      }
+      /** Functionality: Preserve media decoding failure. Inputs: error event. Outputs: rejection.
+       * Logic: release listeners. Constraints: never replaces the fixture. */
+      function failed() {
+        clearTimeout(timer); source.removeEventListener(eventName, ready);
+        source.removeEventListener("error", failed); reject(new Error("Fixture video decoder failed"));
+      }
+      /** Functionality: Bound a stalled media transition. Inputs: timer. Outputs: rejection.
+       * Logic: release listeners. Constraints: timeout is a failure, not a retry trigger. */
+      function expired() {
+        source.removeEventListener(eventName, ready); source.removeEventListener("error", failed);
+        reject(new Error(`Fixture video ${eventName} timed out`));
+      }
+      const timer = setTimeout(expired, 15000);
+      source.addEventListener(eventName, ready, {once: true});
+      source.addEventListener("error", failed, {once: true});
+      transition();
+    });
+  }
+  if (moving) {
+    source.muted = true; source.playsInline = true; source.loop = false; source.playbackRate = 1;
+    await sourceEvent("loadeddata", () => { source.src = objectUrl; });
+  } else { source.src = objectUrl; await source.decode(); URL.revokeObjectURL(objectUrl); }
   const canvas = document.createElement("canvas");
-  canvas.width = source.naturalWidth; canvas.height = source.naturalHeight;
+  canvas.width = moving ? source.videoWidth : source.naturalWidth;
+  canvas.height = moving ? source.videoHeight : source.naturalHeight;
   canvas.getContext("2d").drawImage(source, 0, 0);
-  window.residentProbe = {rows: [], app: cameraApp, stream: null, runFinished: false};
-  /** Functionality: Produce unchanged fixture pixels at the declared camera-source cadence.
-   * Inputs: same decoded public image. Outputs: canvas frame events.
-   * Logic: captureStream requires draws after subscription; an unchanged idle canvas may stall play.
+  const probe = window.residentProbe = {rows: [], captures: [], app: cameraApp, stream: null,
+    runFinished: false, source, moving, source_failure: null, draw_count: 0,
+    source_info: {width: canvas.width, height: canvas.height, duration_s: moving ? source.duration : null,
+      playback_rate: moving ? source.playbackRate : null, loop: moving ? source.loop : null}};
+  /** Functionality: Copy the current decoded fixture into the camera-source canvas.
+   * Inputs: selected image or current video frame. Outputs: canvas frame events.
+   * Logic: the image timer or video callback drives draws; an idle canvas may stall stream play.
    * Constraints: no synthetic motion or replacement source; capture pipeline remains unmodified. */
   function drawFixture() { canvas.getContext("2d").drawImage(source, 0, 0); }
-  window.residentProbe.sourceTimer = setInterval(drawFixture, 1000 / 30);
-  /** Functionality: Supply a new static-image stream per explicit UI start.
+  if (!moving) probe.sourceTimer = setInterval(drawFixture, 1000 / 30);
+  /** Functionality: Draw decoded video frames without pacing the GPU or replaying missed frames.
+   * Inputs: browser frame callback time and metadata. Outputs: canvas and latest media observation.
+   * Logic: original-speed video drives drawing; camera capture remains separately credit limited.
+   * Constraints: mediaTime describes the source callback, not exact pixels delivered by MediaStream. */
+  function drawVideo(now, metadata) {
+    drawFixture(); probe.draw_count += 1;
+    probe.drawn_media_time_s = metadata.mediaTime; probe.drawn_at_ms = now;
+    probe.videoCallback = source.requestVideoFrameCallback(drawVideo);
+  }
+  /** Functionality: Pause the fixture when the real controller stops a session.
+   * Inputs: controller lifecycle event. Outputs: paused source and cancelled draw callback.
+   * Logic: subscribe to existing stop events. Constraints: never pauses an active GPU session. */
+  function releaseSource(event) {
+    if (event.type === "stop" && moving) {
+      source.pause(); source.cancelVideoFrameCallback(probe.videoCallback);
+    }
+  }
+  cameraApp.subscribe(releaseSource);
+  /** Functionality: Supply a fresh fixture stream per explicit UI start.
    * Inputs: ignored sensor options. Outputs: canvas MediaStream.
-   * Logic: old tracks stay stopped; no camera is opened. Constraints: public fixture only. */
+   * Logic: rewind only between sessions and start normal playback; old tracks stay stopped.
+   * Constraints: no looping, slowed playback or physical-camera access. */
   async function fakeCamera() {
+    if (moving) {
+      if (source.currentTime !== 0) await sourceEvent("seeked", () => { source.currentTime = 0; });
+      probe.draw_count = 0; probe.drawn_media_time_s = source.currentTime; probe.drawn_at_ms = performance.now();
+      drawFixture();
+    }
     const stream = canvas.captureStream(30);
-    window.residentProbe.stream = stream;
+    probe.stream = stream;
+    if (moving) { probe.videoCallback = source.requestVideoFrameCallback(drawVideo); await source.play(); }
     return stream;
   }
   Object.defineProperty(navigator.mediaDevices, "getUserMedia", {value: fakeCamera});
-  const run = FramePipeline.prototype.run, publish = cameraApp.publishFrame;
+  const run = FramePipeline.prototype.run, publish = cameraApp.publishFrame, capture = cameraApp.capture;
+  /** Functionality: Observe media progress immediately before the unchanged actual JPEG capture.
+   * Inputs: original camera instance. Outputs: original JPEG Promise and ordinal observation.
+   * Logic: record clocks without seeking or waiting for a source frame. Constraints: EOF/paused/error
+   * fails explicitly; source observations do not replace original capture or GPU tracking timestamps. */
+  function observeCapture() {
+    if (source.ended || source.paused || source.error || source.playbackRate !== 1) {
+      probe.source_failure = "Video ended, paused or failed before all requested captures";
+      throw new Error(probe.source_failure);
+    }
+    probe.captures.push({ordinal: probe.captures.length + 1, observed_at_ms: performance.now(),
+      media_time_s: source.currentTime, drawn_media_time_s: probe.drawn_media_time_s,
+      drawn_at_ms: probe.drawn_at_ms, draw_count: probe.draw_count, stream_time_s: this.video.currentTime,
+      ended: source.ended, paused: source.paused, playback_rate: source.playbackRate});
+    return capture.call(this);
+  }
+  if (moving) cameraApp.capture = observeCapture;
   /** Functionality: Limit only the number of frames for a reproducible finite test.
    * Inputs: original pipeline instance. Outputs: original run counters.
-   * Logic: preserve default 30 FPS/twelve slots and first-frame isolation.
+   * Logic: preserve default 30 FPS/twelve slots and first-frame isolation; retain terminal counters
+   * even when the controller has cleared its pipeline after a source failure.
    * Constraints: no skipped frame or early cutoff to hide high latency. */
   async function finiteRun() {
     this.frameLimit = 181;
-    window.residentProbe.rows = []; window.residentProbe.runFinished = false;
-    const result = await run.call(this);
-    window.residentProbe.runFinished = true;
-    return result;
+    probe.rows = []; probe.captures = []; probe.runFinished = false;
+    probe.contract = this.client.contract;
+    try { return await run.call(this); }
+    finally {
+      probe.pipeline_result = {sent: this.sent, received: this.received, max_inflight: this.maxInFlight,
+        failure: this.failure?.message || null};
+      probe.runFinished = true;
+    }
   }
   FramePipeline.prototype.run = finiteRun;
   /** Functionality: Retain every displayed frame before updating the unchanged HUD.
    * Inputs: original publishFrame arguments. Outputs: raw timing/metadata rows and DOM updates.
    * Logic: no trimming or independent timing origin. Constraints: no JPEG body saved in report. */
   function recordFrame(processing, bytes, result, timing, sent, received) {
-    window.residentProbe.rows.push({...timing, metadata: result.metadata});
+    probe.rows.push({...timing, metadata: result.metadata,
+      ...(moving ? {source_observation: probe.captures[timing.ordinal - 1]} : {})});
     return publish.call(this, processing, bytes, result, timing, sent, received);
   }
   cameraApp.publishFrame = recordFrame;
@@ -142,15 +263,26 @@ function waitForStartup(server) {
 }
 
 /** Functionality: Exercise two complete UI sessions, busy rejection and explicit user stop.
- * Inputs: new output directory, optional --depth-graph and PRS_PLAYWRIGHT_PATH.
+ * Inputs: new output directory, optional --depth-graph/--video and PRS_PLAYWRIGHT_PATH.
  * Outputs: JSON/screenshots/server diagnostics with separate functional/performance verdicts.
  * Logic: one model process, unchanged 30 FPS/twelve-window path; counters restart per session.
  * Constraints: uses fixed local port8766 and no outside hosts; port conflicts fail, never kill others. */
 async function main() {
+  const {output, depthGraph, video} = parseArguments(process.argv.slice(2));
+  const entry = depthGraph ? "tools.resident_graph_asgi:application" : "config.resident_asgi:application";
+  const report = {status: "running", scope: "Actual browser with explicit canvas source and local GPU",
+    conditions: {input_fps: 30, max_inflight: 12, frames_per_session: 181, mode: "full",
+      depth_graph_experiment: depthGraph, asgi_entry: entry, source_kind: video ? "moving_video" : "static_image",
+      source_time_semantics: "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"},
+    sessions: []};
   if (!output || !runtime) throw new Error("Use OUTPUT_DIR and set PRS_PLAYWRIGHT_PATH");
   await mkdir(resolve(output));
-  const sourceBytes = await readFile(resolve(root, "model_tests/samples/bus.jpg"));
+  report.source_path = video ? resolve(video) : resolve(root, "model_tests/samples/bus.jpg");
+  const sourceBytes = await readFile(report.source_path);
   report.source_sha256 = createHash("sha256").update(sourceBytes).digest("hex");
+  report.model_sha256 = {};
+  for (const path of ["models/yolo26n.pt", "models/yolo26n-depth.pt", "models/yolo26n.json"])
+    report.model_sha256[path] = createHash("sha256").update(await readFile(resolve(root, path))).digest("hex");
   report.source_code_sha256 = {};
   for (const path of ["../frontend/camera.js", "../frontend/live-detection-client.js",
     "../frontend/frame-pipeline.js", "realtime/services.py", "realtime/resident_asgi.py",
@@ -183,8 +315,16 @@ async function main() {
      * Logic: store message only. Constraints: no media or network payload capture. */
     function pageFailure(error) { report.page_errors.push(error.message); }
     page.on("pageerror", pageFailure);
+    /** Functionality: Serve only the explicitly selected local diagnostic fixture.
+     * Inputs: intercepted fixture route. Outputs: source bytes and declared media type.
+     * Logic: browser preloads a Blob before timing. Constraints: no production HTTP endpoint. */
+    async function serveFixture(route) {
+      await route.fulfill({status: 200, contentType: video ? "video/mp4" : "image/jpeg", body: sourceBytes});
+    }
+    await page.route("http://127.0.0.1:8766/__resident_fixture", serveFixture);
     await page.goto("http://127.0.0.1:8766/live/", {waitUntil: "networkidle"});
-    await page.evaluate(preparePage, [...sourceBytes]);
+    await page.evaluate(preparePage, {sourceUrl: "/__resident_fixture", moving: Boolean(video)});
+    report.source_info = await page.evaluate(() => window.residentProbe.source_info);
     await page.selectOption("#processing", "resident");
     report.resident_note_visible = await page.locator("#resident-note").isVisible();
     for (let session = 0; session < 2; session++) {
@@ -217,15 +357,17 @@ async function main() {
        * Inputs: page test state. Outputs: counters/contract/rows and real decoded image shape.
        * Logic: no filtering. Constraints: snapshot only after complete finite pipeline drain. */
       function captureSession() {
-        const {app, rows} = window.residentProbe;
-        return {contract: app.client.contract, sent: app.pipeline.sent, received: app.pipeline.received,
-          max_inflight: app.pipeline.maxInFlight, rows, status: app.status.textContent,
+        const {app, rows, contract, pipeline_result} = window.residentProbe;
+        return {contract, ...pipeline_result, rows, status: app.status.textContent,
+          source_capture_count: window.residentProbe.captures.length,
           dimensions: [app.image.naturalWidth, app.image.naturalHeight]};
       }
       const evidence = await page.evaluate(captureSession);
       report.sessions.push(evidence);
+      if (evidence.failure) throw new Error(evidence.failure);
       if (evidence.sent !== 181 || evidence.received !== 181 || evidence.rows.length !== 181 ||
-          evidence.contract.protocol !== "resident-v1") throw new Error("Incomplete resident page session");
+          evidence.contract.protocol !== "resident-v1" || evidence.max_inflight > 12)
+        throw new Error("Incomplete or over-capacity resident page session");
       for (const [index, row] of evidence.rows.entries()) {
         const graph = row.metadata.depth_graph_experiment;
         if (depthGraph ? (!graph || graph.capture_count !== 1 ||
@@ -238,6 +380,7 @@ async function main() {
           throw new Error("Resident processing counters leaked across sessions");
       }
       evidence.summary = summarizeSession(evidence);
+      if (video) evidence.source_progress = validateMovingSession(evidence);
       await page.screenshot({path: resolve(output, `session-${session}.png`), fullPage: true});
       /** Functionality: Request normal drain on the actual socket after all frames display.
        * Inputs: existing client. Outputs: stop control. Logic: retain onEnd/controller lifecycle.
@@ -248,14 +391,20 @@ async function main() {
       evidence.tracks_ended = await page.evaluate(() => window.residentProbe.stream.getTracks()
         .every(track => track.readyState === "ended"));
       if (!evidence.tracks_ended) throw new Error("Camera fixture was not released");
+      if (video) {
+        evidence.source_paused = await page.evaluate(() => window.residentProbe.source.paused);
+        if (!evidence.source_paused) throw new Error("Video fixture was not paused on release");
+      }
     }
     await page.click("#start");
     await page.waitForFunction(() => window.residentProbe.app.pipeline?.received >= 2,
       null, {timeout: 15000});
     await page.click("#stop");
     report.user_stop = await page.evaluate(() => ({mode: window.residentProbe.app.mode,
+      source_paused: window.residentProbe.moving ? window.residentProbe.source.paused : null,
       tracks_ended: window.residentProbe.stream.getTracks().every(track => track.readyState === "ended") }));
     if (report.user_stop.mode !== "idle" || !report.user_stop.tracks_ended) throw new Error("Stop failed");
+    if (video && !report.user_stop.source_paused) throw new Error("Video kept playing after user stop");
     if (report.page_errors.length) throw new Error("Uncaught page errors");
     report.meets_existing_10fps_500ms_gate = report.sessions.every(session =>
       session.summary.meets_existing_10fps_500ms_gate);
@@ -272,6 +421,7 @@ async function main() {
         return {mode: app?.mode, phase: app?.cameraPhase, status: app?.status.textContent,
           message: app?.message.textContent, video_state: app?.video.readyState,
           sent: app?.pipeline?.sent, received: app?.pipeline?.received,
+          source_failure: window.residentProbe?.source_failure, captures: window.residentProbe?.captures,
           rows: window.residentProbe?.rows};
       }
       report.page_state = await page.evaluate(pageState);
@@ -304,4 +454,4 @@ async function main() {
   }
   console.log(JSON.stringify({status: report.status, sessions: report.sessions.length, failure: report.failure}));
 }
-await main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

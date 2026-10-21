@@ -1,0 +1,74 @@
+{
+  "mode": "Manual source/contract/index review supported by a temporary named-declaration and comment-field scan; no persistent docs checker introduced.",
+  "files": [
+    {
+      "path": "tools/benchmark_resident_browser.mjs",
+      "sha256": "dc4b22ece65d5847362b889491e0a31a902fbe6795987040f7db00a67c39c603",
+      "named_function_count": 33,
+      "indexed_declarations": [
+        "preparePage",
+        "preparePage.drawFixture",
+        "preparePage.fakeCamera",
+        "preparePage.finiteRun",
+        "preparePage.recordFrame",
+        "waitForStartup",
+        "waitForStartup.receiveLog",
+        "waitForStartup.exited",
+        "parseArguments",
+        "validateMovingSession",
+        "preparePage.drawVideo",
+        "preparePage.sourceEvent",
+        "preparePage.sourceEvent.ready",
+        "preparePage.sourceEvent.failed",
+        "preparePage.sourceEvent.expired",
+        "preparePage.releaseSource",
+        "preparePage.observeCapture",
+        "main.serveFixture",
+        "waitForStartup.expired",
+        "main",
+        "main.captureLog",
+        "main.busyProbe",
+        "main.busyProbe.failed",
+        "main.busyProbe.ended",
+        "main.captureSession",
+        "main.finishSession",
+        "main.pageFailure",
+        "main.pageState",
+        "summarizeSession",
+        "percentile",
+        "main.stopServer",
+        "main.stopServer.exited",
+        "main.stopServer.expired"
+      ],
+      "header_and_function_fields_present": true,
+      "manual_qualified_name_review": "All entries locate actual implemented named functions; no imports or inherited methods indexed."
+    },
+    {
+      "path": "tools/benchmark_resident_browser.test.mjs",
+      "sha256": "220f626be992c404716de673c073c64882e41e434c115e292a1314325a14d74d",
+      "named_function_count": 6,
+      "indexed_declarations": [
+        "movingSession",
+        "argumentsAreExplicit",
+        "mediaMustAdvance",
+        "observationsMustBeComplete",
+        "mediaMustStayValid",
+        "slowTailMustFail"
+      ],
+      "header_and_function_fields_present": true,
+      "manual_qualified_name_review": "All entries locate actual implemented named functions; no imports or inherited methods indexed."
+    }
+  ],
+  "reviewed_constraints": [
+    "No production frontend or inference service changes. Default Graph remains disabled.",
+    "30FPS/12 jobs/181 frames, first-frame isolation and 10FPS/max500ms rules unchanged. No loop, slowdown, fallback or retry.",
+    "Video progress observations do not claim exact pixel PTS or cross-run input equality. Source EOF failure preserved.",
+    "Stop observer pauses only fixture media at real controller stop; actual tracks/socket lifecycle remains original.",
+    "Terminal snapshot survives controller cleanup; normal two-session and explicit-stop paths exercised with real Chrome/GPU.",
+    "Plan and RESIDENT describe current interfaces/operations/constraints; detailed runs and checks remain structured artifacts."
+  ],
+  "limitations": [
+    "No depth/distance ground truth, physical sensor, external HF/DashScope, remote deployment or multi-user throughput validation.",
+    "Browser runs are local hardware observations; incomplete source run is not a passing performance sample."
+  ]
+}

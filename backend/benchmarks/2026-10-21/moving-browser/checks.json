@@ -1,0 +1,83 @@
+{
+  "checks": [
+    {
+      "name": "django-check",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "check"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 2.023246199999903,
+      "log": "django-check.txt"
+    },
+    {
+      "name": "migration-check",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "makemigrations",
+        "--check",
+        "--dry-run"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 2.3977254000001267,
+      "log": "migration-check.txt"
+    },
+    {
+      "name": "backend-tests",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "test"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 27.22156649999988,
+      "log": "backend-tests.txt"
+    },
+    {
+      "name": "ruff",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+        "check",
+        "."
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 0.6799825000002784,
+      "log": "ruff.txt"
+    },
+    {
+      "name": "browser-tool-tests",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "--test",
+        "tools/benchmark_resident_browser.test.mjs"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 0.18469039999990855,
+      "log": "browser-tool-tests.txt"
+    },
+    {
+      "name": "browser-tool-syntax",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "--check",
+        "tools/benchmark_resident_browser.mjs"
+      ],
+      "cwd": "E:\\AI_map\\backend",
+      "exit_code": 0,
+      "seconds": 0.06787890000032348,
+      "log": "browser-tool-syntax.txt"
+    }
+  ],
+  "prior_sandbox_node_attempt": {
+    "result": "spawn EPERM",
+    "tests_executed": false,
+    "resolution": "same test command executed with approved native child-process access"
+  }
+}

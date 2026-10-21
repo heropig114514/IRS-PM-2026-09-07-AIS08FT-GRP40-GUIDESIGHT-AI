@@ -1,0 +1,720 @@
+{
+  "schema_version": 1,
+  "verdict": "not_admitted",
+  "scope": "Actual local Chrome, H264-to-canvas camera fixture, resident-v1, native FP32 full GPU pipeline. No physical-camera, exact cross-run input equality, depth truth or external deployment claim.",
+  "conditions": {
+    "input_fps": 30,
+    "max_inflight": 12,
+    "frames_per_session": 181,
+    "mode": "full",
+    "depth_graph_experiment": true,
+    "asgi_entry": "tools.resident_graph_asgi:application",
+    "source_kind": "moving_video",
+    "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+  },
+  "model_sha256": {
+    "models/yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "models/yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "models/yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+  },
+  "browser": "155.0.8059.85",
+  "execution_environment": {
+    "compute_dtype": "torch.float32",
+    "forward_dtype": "torch.float32",
+    "input_stride": [
+      1228800,
+      409600,
+      640,
+      1
+    ],
+    "pinned_input": true,
+    "graph_captured": true,
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "capability": [
+      8,
+      6
+    ],
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "cpu_threads": 1,
+    "cpu_interop_threads": 1,
+    "tf32_matmul": false,
+    "tf32_cudnn": false,
+    "cudnn_benchmark": false
+  },
+  "runs": [
+    {
+      "name": "mot17-07-before",
+      "status": "failed",
+      "report": "mot17-07-before/report.json",
+      "report_sha256": "c0f24cb14a9be1acd215039474fd4ac755acf880ed54dc69a5d372a2c1284351",
+      "source_sha256": "1f2cc539f810d069b26d67e0d9025e5f72b9929f3f837b0df074705ef51e2a33",
+      "tool_sha256": "4b27890895a5f0f4713ebf6cd7d3ef2bf06f56f5e8f3c0fb3beed89191d15167",
+      "functional_complete": false,
+      "performance_gate": null,
+      "completed_sessions": 0,
+      "shell_observed_exit_code": 1,
+      "native_exit_code": null,
+      "exit_note": "First two commands did not explicitly propagate LASTEXITCODE; PowerShell reported nonzero as 1. Use report functional/performance status; native code was not separately recorded.",
+      "failure": {
+        "type": "Error",
+        "detail": "page.evaluate: TypeError: Cannot read properties of null (reading 'contract')\n    at captureSession (eval at evaluate (:311:30), <anonymous>:3:38)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+      },
+      "source_failure": "Video ended, paused or failed before all requested captures",
+      "partial_captures": 179,
+      "partial_displayed": 168,
+      "first_capture_to_decoded_ms": 6112.600000000093,
+      "last_observed_media_s": 16.618041,
+      "interpretation": "Original-speed 16.667s source ended before capture 181. Controller cleared its client on failure, then old report snapshot raised a secondary null-contract error. Original source error and 179 capture / 168 display observations remain unchanged. Not retried; excluded from complete-session performance comparison."
+    },
+    {
+      "name": "mot17-07-graph",
+      "status": "completed",
+      "report": "mot17-07-graph/report.json",
+      "report_sha256": "6086b96eb354cf12614f3b889e80c149392c4d64a7897c7d1e51f780b5ffc64d",
+      "source_sha256": "1f2cc539f810d069b26d67e0d9025e5f72b9929f3f837b0df074705ef51e2a33",
+      "tool_sha256": "a254d46477fb0214c1a9d4cc3b934c04edee6d752d21ea83502067fee0e4f90a",
+      "functional_complete": true,
+      "performance_gate": false,
+      "completed_sessions": 2,
+      "shell_observed_exit_code": 1,
+      "native_exit_code": null,
+      "exit_note": "First two commands did not explicitly propagate LASTEXITCODE; PowerShell reported nonzero as 1. Use report functional/performance status; native code was not separately recorded."
+    },
+    {
+      "name": "mot17-07-after",
+      "status": "completed",
+      "report": "mot17-07-after/report.json",
+      "report_sha256": "14e37e726227f7d35c5e0d702c18d82d6659271403dab57a5b8865ac4e34970b",
+      "source_sha256": "1f2cc539f810d069b26d67e0d9025e5f72b9929f3f837b0df074705ef51e2a33",
+      "tool_sha256": "a254d46477fb0214c1a9d4cc3b934c04edee6d752d21ea83502067fee0e4f90a",
+      "functional_complete": true,
+      "performance_gate": false,
+      "completed_sessions": 2,
+      "native_exit_code": 2
+    },
+    {
+      "name": "mot17-10-before",
+      "status": "completed",
+      "report": "mot17-10-before/report.json",
+      "report_sha256": "b575ef08299b67a68afa698c8e046d8d78e2d825f704759d4519b398c99ae8e5",
+      "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+      "tool_sha256": "a254d46477fb0214c1a9d4cc3b934c04edee6d752d21ea83502067fee0e4f90a",
+      "functional_complete": true,
+      "performance_gate": false,
+      "completed_sessions": 2,
+      "native_exit_code": 2
+    },
+    {
+      "name": "mot17-10-graph",
+      "status": "completed",
+      "report": "mot17-10-graph/report.json",
+      "report_sha256": "26af7d926389fdf9b70ed79def87c98831dba3c9b83ab8ba5c2c120f00b0cdb6",
+      "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+      "tool_sha256": "a254d46477fb0214c1a9d4cc3b934c04edee6d752d21ea83502067fee0e4f90a",
+      "functional_complete": true,
+      "performance_gate": false,
+      "completed_sessions": 2,
+      "native_exit_code": 2
+    },
+    {
+      "name": "mot17-10-after",
+      "status": "completed",
+      "report": "mot17-10-after/report.json",
+      "report_sha256": "1787e5855ea83dc53ef08e366751f85baf82885921df816f0570779b656d7c4c",
+      "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+      "tool_sha256": "a254d46477fb0214c1a9d4cc3b934c04edee6d752d21ea83502067fee0e4f90a",
+      "functional_complete": true,
+      "performance_gate": false,
+      "completed_sessions": 2,
+      "native_exit_code": 2
+    }
+  ],
+  "completed_moving_sessions": 10,
+  "complete_session_frames": 1810,
+  "steady_frames": 1800,
+  "complete_sessions_passing_gate": 0,
+  "graph_replayed_frames": 722,
+  "sessions": [
+    {
+      "run": "mot17-07-graph",
+      "session": 0,
+      "first_decoded_ms": 4905,
+      "steady_frames": 180,
+      "steady_fps": 18.011347148703347,
+      "decoded_p50_ms": 646.9499999999534,
+      "decoded_p95_ms": 745.275000000163,
+      "decoded_max_ms": 754.6000000000931,
+      "queue_p50_ms": 581.085499999972,
+      "server_p50_ms": 53.957399999944755,
+      "depth_p50_ms": 15.670350000164035,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.074904,
+        "last_observed_media_s": 14.272837,
+        "drawn_media_span_s": 14.2,
+        "video_draws_during_capture": 426
+      },
+      "frames_over_500ms": 153,
+      "stage_p50_ms": {
+        "prepare_ms": 3.189850000126171,
+        "detection_ms": 14.748199999985445,
+        "depth_predict_ms": 15.670350000164035,
+        "depth_fusion_ms": 6.591250000155924,
+        "tracking_ms": 9.11250000012842,
+        "render_ms": 8.132250000016938
+      },
+      "worst_frame": {
+        "ordinal": 170,
+        "capture_to_decoded_ms": 754.6000000000931,
+        "capture_ms": 5.600000000093132,
+        "resident_queue_ms": 677.1754000001238,
+        "server_ms": 66.94019999986267,
+        "transport_residual_ms": 2.08439999973416,
+        "render_queue_ms": 0,
+        "decode_ms": 2.8000000002793968,
+        "queue_fraction": 0.8973965014577792
+      },
+      "transport_residual_range_ms": [
+        1.512799999833078,
+        3.7798000004913774
+      ],
+      "first_depth_graph": {
+        "replayed": false,
+        "capture_count": 1,
+        "prepare_ms": 343.75980000004347,
+        "evidence": {
+          "adapter": "experimental_native_fp32_depth_graph",
+          "shape": [
+            1,
+            3,
+            448,
+            768
+          ],
+          "dtype": "torch.float32",
+          "setup_ms": 336.28079999971305,
+          "preparation_output_equal": true,
+          "scope": "One fixture raw-output equality; no dataset quality claim"
+        }
+      }
+    },
+    {
+      "run": "mot17-07-graph",
+      "session": 1,
+      "first_decoded_ms": 77.1999999997206,
+      "steady_frames": 180,
+      "steady_fps": 16.902836859452762,
+      "decoded_p50_ms": 705.3499999998603,
+      "decoded_p95_ms": 731.3149999998044,
+      "decoded_max_ms": 740.6999999997206,
+      "queue_p50_ms": 635.3215500002989,
+      "server_p50_ms": 57.88580000012189,
+      "depth_p50_ms": 18.0734499999744,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.019153,
+        "last_observed_media_s": 10.061228,
+        "drawn_media_span_s": 10.066667,
+        "video_draws_during_capture": 302
+      },
+      "frames_over_500ms": 164,
+      "stage_p50_ms": {
+        "prepare_ms": 3.3052500000394502,
+        "detection_ms": 16.211949999842545,
+        "depth_predict_ms": 18.0734499999744,
+        "depth_fusion_ms": 6.7063000001326145,
+        "tracking_ms": 9.047250000094209,
+        "render_ms": 7.594650000100955
+      },
+      "worst_frame": {
+        "ordinal": 70,
+        "capture_to_decoded_ms": 740.6999999997206,
+        "capture_ms": 6.7999999998137355,
+        "resident_queue_ms": 649.9797000001308,
+        "server_ms": 49.47069999980158,
+        "transport_residual_ms": 1.9495999999744527,
+        "render_queue_ms": 0,
+        "decode_ms": 32.5,
+        "queue_fraction": 0.8775208586477332
+      },
+      "transport_residual_range_ms": [
+        1.574700000546727,
+        23.20929999962391
+      ],
+      "first_depth_graph": {
+        "replayed": true,
+        "capture_count": 1,
+        "prepare_ms": 0,
+        "evidence": {
+          "adapter": "experimental_native_fp32_depth_graph",
+          "shape": [
+            1,
+            3,
+            448,
+            768
+          ],
+          "dtype": "torch.float32",
+          "setup_ms": 336.28079999971305,
+          "preparation_output_equal": true,
+          "scope": "One fixture raw-output equality; no dataset quality claim"
+        }
+      }
+    },
+    {
+      "run": "mot17-07-after",
+      "session": 0,
+      "first_decoded_ms": 4455.800000000279,
+      "steady_frames": 180,
+      "steady_fps": 14.955010343882039,
+      "decoded_p50_ms": 798,
+      "decoded_p95_ms": 844.8200000001583,
+      "decoded_max_ms": 865.2999999998137,
+      "queue_p50_ms": 721.9296499997654,
+      "server_p50_ms": 65.39479999992182,
+      "depth_p50_ms": 22.613549999960014,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.069281,
+        "last_observed_media_s": 15.746005,
+        "drawn_media_span_s": 15.666666999999999,
+        "video_draws_during_capture": 470
+      },
+      "frames_over_500ms": 167,
+      "stage_p50_ms": {
+        "prepare_ms": 3.341999999975087,
+        "detection_ms": 17.427150000003166,
+        "depth_predict_ms": 22.613549999960014,
+        "depth_fusion_ms": 6.939600000350765,
+        "tracking_ms": 9.251449999965189,
+        "render_ms": 8.287749999908556
+      },
+      "worst_frame": {
+        "ordinal": 147,
+        "capture_to_decoded_ms": 865.2999999998137,
+        "capture_ms": 5.2999999998137355,
+        "resident_queue_ms": 783.2676999996693,
+        "server_ms": 71.87579999981608,
+        "transport_residual_ms": 1.856500000514643,
+        "render_queue_ms": 0,
+        "decode_ms": 3,
+        "queue_fraction": 0.9051978504563017
+      },
+      "transport_residual_range_ms": [
+        1.673200000419456,
+        4.660700000349607
+      ]
+    },
+    {
+      "run": "mot17-07-after",
+      "session": 1,
+      "first_decoded_ms": 95.10000000009313,
+      "steady_frames": 180,
+      "steady_fps": 15.303519809556198,
+      "decoded_p50_ms": 769.0999999998603,
+      "decoded_p95_ms": 822.5749999999999,
+      "decoded_max_ms": 883.3999999999069,
+      "queue_p50_ms": 695.0747500000034,
+      "server_p50_ms": 63.282700000172554,
+      "depth_p50_ms": 22.394900000108464,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.018074,
+        "last_observed_media_s": 11.085126,
+        "drawn_media_span_s": 11.066667,
+        "video_draws_during_capture": 332
+      },
+      "frames_over_500ms": 170,
+      "stage_p50_ms": {
+        "prepare_ms": 3.354199999876073,
+        "detection_ms": 17.19830000024558,
+        "depth_predict_ms": 22.394900000108464,
+        "depth_fusion_ms": 6.440500000053362,
+        "tracking_ms": 9.066699999948469,
+        "render_ms": 7.562249999864434
+      },
+      "worst_frame": {
+        "ordinal": 22,
+        "capture_to_decoded_ms": 883.3999999999069,
+        "capture_ms": 5.5,
+        "resident_queue_ms": 777.540499999759,
+        "server_ms": 71.99059999993551,
+        "transport_residual_ms": 25.768900000119174,
+        "render_queue_ms": 0,
+        "decode_ms": 2.6000000000931323,
+        "queue_fraction": 0.8801681005205354
+      },
+      "transport_residual_range_ms": [
+        1.5707000007132592,
+        26.781100000011065
+      ]
+    },
+    {
+      "run": "mot17-10-before",
+      "session": 0,
+      "first_decoded_ms": 4549.800000000279,
+      "steady_frames": 180,
+      "steady_fps": 16.532569161247515,
+      "decoded_p50_ms": 719.2000000001863,
+      "decoded_p95_ms": 755.0799999999814,
+      "decoded_max_ms": 772.1999999997206,
+      "queue_p50_ms": 649.1610000000492,
+      "server_p50_ms": 59.137400000054186,
+      "depth_p50_ms": 21.4018499998474,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.071298,
+        "last_observed_media_s": 14.804471,
+        "drawn_media_span_s": 14.733334,
+        "video_draws_during_capture": 442
+      },
+      "frames_over_500ms": 164,
+      "stage_p50_ms": {
+        "prepare_ms": 3.174449999960416,
+        "detection_ms": 15.912399999933768,
+        "depth_predict_ms": 21.4018499998474,
+        "depth_fusion_ms": 5.586250000305881,
+        "tracking_ms": 8.784899999909612,
+        "render_ms": 6.8346000000474305
+      },
+      "worst_frame": {
+        "ordinal": 124,
+        "capture_to_decoded_ms": 772.1999999997206,
+        "capture_ms": 5.699999999720603,
+        "resident_queue_ms": 699.0774999999303,
+        "server_ms": 62.971899999865855,
+        "transport_residual_ms": 2.6506000003901136,
+        "render_queue_ms": 0,
+        "decode_ms": 1.7999999998137355,
+        "queue_fraction": 0.9053062678065051
+      },
+      "transport_residual_range_ms": [
+        1.5338999998930376,
+        6.067799999695126
+      ]
+    },
+    {
+      "run": "mot17-10-before",
+      "session": 1,
+      "first_decoded_ms": 79.20000000018626,
+      "steady_frames": 180,
+      "steady_fps": 16.469188892447047,
+      "decoded_p50_ms": 718.0500000000466,
+      "decoded_p95_ms": 761.5550000000046,
+      "decoded_max_ms": 778.6999999997206,
+      "queue_p50_ms": 647.8842499998336,
+      "server_p50_ms": 59.42605000018375,
+      "depth_p50_ms": 22.07054999985303,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.020307,
+        "last_observed_media_s": 10.257945,
+        "drawn_media_span_s": 10.233333,
+        "video_draws_during_capture": 307
+      },
+      "frames_over_500ms": 166,
+      "stage_p50_ms": {
+        "prepare_ms": 3.2323499999620253,
+        "detection_ms": 16.43154999987928,
+        "depth_predict_ms": 22.07054999985303,
+        "depth_fusion_ms": 5.335899999863614,
+        "tracking_ms": 8.682399999770496,
+        "render_ms": 6.315950000271187
+      },
+      "worst_frame": {
+        "ordinal": 180,
+        "capture_to_decoded_ms": 778.6999999997206,
+        "capture_ms": 9.299999999813735,
+        "resident_queue_ms": 700.5754000001616,
+        "server_ms": 63.43909999986863,
+        "transport_residual_ms": 2.6855000001560256,
+        "render_queue_ms": 0,
+        "decode_ms": 2.6999999997206032,
+        "queue_fraction": 0.8996730448188173
+      },
+      "transport_residual_range_ms": [
+        1.5028999999994994,
+        3.0698000001284527
+      ]
+    },
+    {
+      "run": "mot17-10-graph",
+      "session": 0,
+      "first_decoded_ms": 5224.799999999814,
+      "steady_frames": 180,
+      "steady_fps": 20.19522046449007,
+      "decoded_p50_ms": 590.3999999999069,
+      "decoded_p95_ms": 690.84000000027,
+      "decoded_max_ms": 715.5999999996275,
+      "queue_p50_ms": 530.9555500000442,
+      "server_p50_ms": 48.788199999989956,
+      "depth_p50_ms": 13.940799999772935,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.078875,
+        "last_observed_media_s": 13.601946,
+        "drawn_media_span_s": 13.5,
+        "video_draws_during_capture": 405
+      },
+      "frames_over_500ms": 133,
+      "stage_p50_ms": {
+        "prepare_ms": 3.172349999886137,
+        "detection_ms": 13.396450000072946,
+        "depth_predict_ms": 13.940799999772935,
+        "depth_fusion_ms": 5.431449999832694,
+        "tracking_ms": 8.771949999982098,
+        "render_ms": 6.946650000145382
+      },
+      "worst_frame": {
+        "ordinal": 149,
+        "capture_to_decoded_ms": 715.5999999996275,
+        "capture_ms": 7.5,
+        "resident_queue_ms": 636.2328000000161,
+        "server_ms": 65.50020000031509,
+        "transport_residual_ms": 3.3669999992962403,
+        "render_queue_ms": 0,
+        "decode_ms": 3,
+        "queue_fraction": 0.8890899944107705
+      },
+      "transport_residual_range_ms": [
+        1.428699999825767,
+        24.579600000004575
+      ],
+      "first_depth_graph": {
+        "replayed": false,
+        "capture_count": 1,
+        "prepare_ms": 593.2397000001401,
+        "evidence": {
+          "adapter": "experimental_native_fp32_depth_graph",
+          "shape": [
+            1,
+            3,
+            448,
+            768
+          ],
+          "dtype": "torch.float32",
+          "setup_ms": 586.691299999984,
+          "preparation_output_equal": true,
+          "scope": "One fixture raw-output equality; no dataset quality claim"
+        }
+      }
+    },
+    {
+      "run": "mot17-10-graph",
+      "session": 1,
+      "first_decoded_ms": 77.6999999997206,
+      "steady_frames": 180,
+      "steady_fps": 18.265952264978253,
+      "decoded_p50_ms": 648.9499999999534,
+      "decoded_p95_ms": 695.3699999998323,
+      "decoded_max_ms": 705.9000000003725,
+      "queue_p50_ms": 585.328349999827,
+      "server_p50_ms": 53.845949999868026,
+      "depth_p50_ms": 17.503000000033353,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.017469,
+        "last_observed_media_s": 9.289726,
+        "drawn_media_span_s": 9.266667,
+        "video_draws_during_capture": 278
+      },
+      "frames_over_500ms": 162,
+      "stage_p50_ms": {
+        "prepare_ms": 3.223150000167152,
+        "detection_ms": 15.705300000263378,
+        "depth_predict_ms": 17.503000000033353,
+        "depth_fusion_ms": 4.945099999758895,
+        "tracking_ms": 8.566900000005262,
+        "render_ms": 6.348749999915526
+      },
+      "worst_frame": {
+        "ordinal": 30,
+        "capture_to_decoded_ms": 705.9000000003725,
+        "capture_ms": 7.2000000001862645,
+        "resident_queue_ms": 631.6668999998001,
+        "server_ms": 61.47610000016357,
+        "transport_residual_ms": 2.957000000129483,
+        "render_queue_ms": 0,
+        "decode_ms": 2.6000000000931323,
+        "queue_fraction": 0.8948390706891439
+      },
+      "transport_residual_range_ms": [
+        1.385099999308295,
+        4.5038999999451335
+      ],
+      "first_depth_graph": {
+        "replayed": true,
+        "capture_count": 1,
+        "prepare_ms": 0,
+        "evidence": {
+          "adapter": "experimental_native_fp32_depth_graph",
+          "shape": [
+            1,
+            3,
+            448,
+            768
+          ],
+          "dtype": "torch.float32",
+          "setup_ms": 586.691299999984,
+          "preparation_output_equal": true,
+          "scope": "One fixture raw-output equality; no dataset quality claim"
+        }
+      }
+    },
+    {
+      "run": "mot17-10-after",
+      "session": 0,
+      "first_decoded_ms": 4473.600000000093,
+      "steady_frames": 180,
+      "steady_fps": 16.311587570570133,
+      "decoded_p50_ms": 728.2500000002328,
+      "decoded_p95_ms": 776.9549999999115,
+      "decoded_max_ms": 789.5,
+      "queue_p50_ms": 657.778849999886,
+      "server_p50_ms": 60.04914999994071,
+      "depth_p50_ms": 21.652500000072905,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.073107,
+        "last_observed_media_s": 14.882707,
+        "drawn_media_span_s": 14.799999999999999,
+        "video_draws_during_capture": 444
+      },
+      "frames_over_500ms": 165,
+      "stage_p50_ms": {
+        "prepare_ms": 3.2309499997609237,
+        "detection_ms": 16.66904999979124,
+        "depth_predict_ms": 21.652500000072905,
+        "depth_fusion_ms": 5.615200000192999,
+        "tracking_ms": 8.783749999793145,
+        "render_ms": 6.785200000194891
+      },
+      "worst_frame": {
+        "ordinal": 29,
+        "capture_to_decoded_ms": 789.5,
+        "capture_ms": 5.7999999998137355,
+        "resident_queue_ms": 710.8965000002172,
+        "server_ms": 69.37220000008892,
+        "transport_residual_ms": 1.7312999996938743,
+        "render_queue_ms": 0,
+        "decode_ms": 1.7000000001862645,
+        "queue_fraction": 0.9004388853707628
+      },
+      "transport_residual_range_ms": [
+        1.6057999997901788,
+        4.291499999977532
+      ]
+    },
+    {
+      "run": "mot17-10-after",
+      "session": 1,
+      "first_decoded_ms": 78.89999999990687,
+      "steady_frames": 180,
+      "steady_fps": 16.33067808604425,
+      "decoded_p50_ms": 727.6500000001397,
+      "decoded_p95_ms": 773.4999999999068,
+      "decoded_max_ms": 788,
+      "queue_p50_ms": 656.2438500000098,
+      "server_p50_ms": 60.466899999937596,
+      "depth_p50_ms": 22.458350000079008,
+      "meets_existing_10fps_500ms_gate": false,
+      "source_progress": {
+        "first_observed_media_s": 0.017256,
+        "last_observed_media_s": 10.351037,
+        "drawn_media_span_s": 10.333333,
+        "video_draws_during_capture": 310
+      },
+      "frames_over_500ms": 165,
+      "stage_p50_ms": {
+        "prepare_ms": 3.242900000032023,
+        "detection_ms": 16.6911500000424,
+        "depth_predict_ms": 22.458350000079008,
+        "depth_fusion_ms": 5.316700000093988,
+        "tracking_ms": 8.767050000187737,
+        "render_ms": 6.476999999904365
+      },
+      "worst_frame": {
+        "ordinal": 123,
+        "capture_to_decoded_ms": 788,
+        "capture_ms": 7.100000000093132,
+        "resident_queue_ms": 705.6761999997434,
+        "server_ms": 63.160400000015215,
+        "transport_residual_ms": 1.9634000000551168,
+        "render_queue_ms": 0,
+        "decode_ms": 10.100000000093132,
+        "queue_fraction": 0.8955281725885068
+      },
+      "transport_residual_range_ms": [
+        1.5023999995501072,
+        5.07419999992635
+      ]
+    }
+  ],
+  "graph_summary": {
+    "steady_fps_range": [
+      16.902836859452762,
+      20.19522046449007
+    ],
+    "session_max_latency_range_ms": [
+      705.9000000003725,
+      754.6000000000931
+    ],
+    "worst_frame_queue_fraction_range": [
+      0.8775208586477332,
+      0.8973965014577792
+    ],
+    "steady_frames_over_500ms": 612
+  },
+  "mot17_10_observed_comparisons": [
+    {
+      "session": 0,
+      "control": "mot17-10-before",
+      "observed_fps_change_pct": 22.15415684954667,
+      "observed_max_latency_change_pct": -7.329707329722046
+    },
+    {
+      "session": 0,
+      "control": "mot17-10-after",
+      "observed_fps_change_pct": 23.80904297094237,
+      "observed_max_latency_change_pct": -9.360354654892022
+    },
+    {
+      "session": 1,
+      "control": "mot17-10-before",
+      "observed_fps_change_pct": 10.909847377822125,
+      "observed_max_latency_change_pct": -9.348914858016466
+    },
+    {
+      "session": 1,
+      "control": "mot17-10-after",
+      "observed_fps_change_pct": 11.850543919470402,
+      "observed_max_latency_change_pct": -10.418781725841054
+    }
+  ],
+  "comparison_limits": [
+    "MOT17-07 original before run incomplete; no complete original/Graph/original triplet for this clip. Planned after run is retained, not used to replace the failure.",
+    "Real-time backpressure samples different source frames in different runs. Observed speed changes are not a fixed-input causal or numerical-equivalence experiment.",
+    "Media observations are capture-entry clocks and latest source draw metadata, not exact delivered pixel PTS. GPU tracking still uses resident-v1 worker time.",
+    "Transport residual subtracts server and queue durations from browser transport duration; it includes validation/scheduling/serialization and is not pure network time. Stages are nested; their percentiles must not be summed."
+  ],
+  "tool_revision_notes": [
+    "After the first preserved failure, terminal pipeline counters and contract were retained before controller cleanup to avoid masking source EOF with null-client snapshot errors; inference/frontend/source pacing were unchanged.",
+    "After all moving runs, only file/variable and function comments were clarified; final runtime behavior equals the five subsequent moving runs. Static compatibility used the final tool."
+  ],
+  "final_tool_sha256": "dc4b22ece65d5847362b889491e0a31a902fbe6795987040f7db00a67c39c603",
+  "static_compatibility": {
+    "report": "static-compatibility/report.json",
+    "functional_status": "completed",
+    "complete_frames": 362,
+    "performance_gate": false,
+    "included_in_moving_comparison": false
+  },
+  "next_task": {
+    "objective": "Attribute queue-tail growth under the unchanged browser workload to preceding per-frame service work, then choose one equivalent implementation optimization.",
+    "steps": [
+      "Correlate each slow frame with same-lease earlier requests, queue timestamps and existing server-stage durations; retain every submitted/displayed frame.",
+      "Where existing metadata cannot explain spikes, run one explicit browser Graph-stage diagnostic with unprofiled before/after controls, separating detection/depth GPU synchronization, BoT-SORT/GMC and annotation/JPEG work.",
+      "Keep 30FPS, 12 jobs, 181 frames, every-frame depth, FP32, source playback and >=10FPS/max500ms gates. Do not adopt default Graph or change rate/window/depth frequency."
+    ],
+    "quality_dependency": "Metric depth/distance ground truth and the established quality evaluation remain with colleague; no fabricated accuracy result."
+  }
+}

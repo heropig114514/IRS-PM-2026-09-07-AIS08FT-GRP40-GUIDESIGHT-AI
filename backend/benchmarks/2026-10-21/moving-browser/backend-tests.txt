@@ -1,0 +1,552 @@
+Creating test database for alias 'default'...
+.....2026-10-21 12:39:09,804 ERROR django.request Service Unavailable: /api/health/
+..2026-10-21 12:39:09,806 WARNING django.request Method Not Allowed: /api/health/
+.2026-10-21 12:39:09,809 INFO core.ai_bridge browser connected session=test-tab
+2026-10-21 12:39:09,809 INFO core.ai_bridge browser command sent session=test-tab id=7628cf4374bf42fba5ad52ea2fa22373 action=snapshot
+2026-10-21 12:39:09,809 INFO core.ai_bridge browser command sent session=test-tab id=0bb3c47112bc45329838656ae1168be9 action=click
+2026-10-21 12:39:09,809 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+.2026-10-21 12:39:09,811 INFO core.ai_bridge browser connected session=test-tab
+2026-10-21 12:39:09,811 INFO core.ai_bridge browser command sent session=test-tab id=ce08ed7b5d1d47e9a4854f63f4bb9304 action=click
+2026-10-21 12:39:09,811 INFO core.ai_bridge browser disconnected session=test-tab pending=1
+.2026-10-21 12:39:09,812 ERROR core.ai_bridge browser protocol failed session=new
+Traceback (most recent call last):
+  File "E:\AI_map\backend\core\ai_bridge.py", line 146, in socket
+    raise ValueError("First message must be hello")
+ValueError: First message must be hello
+.2026-10-21 12:39:09,827 INFO core.ai_bridge browser connected session=test-tab
+2026-10-21 12:39:09,827 INFO core.ai_bridge browser connected session=test-tab
+2026-10-21 12:39:09,880 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+2026-10-21 12:39:09,880 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+.2026-10-21 12:39:09,881 INFO core.ai_bridge browser connected session=test-tab
+2026-10-21 12:39:09,881 INFO core.ai_bridge browser command sent session=test-tab id=dac579c76a5c4a73a7d03c9b50fac8ef action=click
+2026-10-21 12:39:09,935 ERROR core.ai_bridge browser command timeout session=test-tab id=dac579c76a5c4a73a7d03c9b50fac8ef action=click
+2026-10-21 12:39:09,991 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+.2026-10-21 12:39:10,022 INFO core.ai_mcp MCP database operation start operation=status
+2026-10-21 12:39:10,022 INFO core.ai_mcp MCP database operation complete operation=status
+2026-10-21 12:39:10,444 INFO core.ai_mcp MCP API request method=GET path=/api/health/
+.2026-10-21 12:39:10,470 ERROR core.ai_mcp MCP browser action failed session=missing action=navigation_status error_type=ValueError
+2026-10-21 12:39:10,472 ERROR core.ai_mcp MCP browser action failed session=missing action=navigation_start error_type=ValueError
+2026-10-21 12:39:10,474 ERROR core.ai_mcp MCP browser action failed session=missing action=navigation_stop error_type=ValueError
+..2026-10-21 12:39:10,511 ERROR core.ai_mcp MCP browser action failed session=missing action=speech_status error_type=ValueError
+.2026-10-21 12:39:10,522 ERROR core.ai_mcp MCP browser action failed session=missing action=snapshot error_type=ValueError
+2026-10-21 12:39:10,522 INFO core.ai_mcp MCP database operation start operation=write
+2026-10-21 12:39:10,522 ERROR core.ai_mcp MCP database operation failed operation=write error_type=ValueError
+..2026-10-21 12:39:10,553 ERROR core.ai_mcp MCP browser action failed session=missing action=vibration_test error_type=ValueError
+...........Object depth unavailable objects=1 total=2
+...Depth model missing or invalid local weight path
+Depth model load failed type=ValueError
+Depth model load failed type=ValueError
+.Depth result rejected
+Depth result rejected
+Depth inference failed type=RuntimeError
+Depth GPU activation failed type=RuntimeError
+......Object depth unavailable objects=1 total=3
+Object depth unavailable objects=1 total=3
+Object depth unavailable objects=1 total=3
+Object depth unavailable objects=1 total=3
+......usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: Input must be an existing image or image directory
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: Input directory contains no supported images
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --interval must be a finite number >= 0
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --interval must be a finite number >= 0
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --question must be 1..200 characters
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --question must be 1..200 characters
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: argument --language: invalid choice: 'fr-FR' (choose from en-US, zh-CN)
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --output must be a new directory that does not exist yet
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: Input must be an existing image or image directory
+.2026-10-21 12:39:16,275 INFO core.vlm VLM request started id=ea47214129ba model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,276 INFO core.vlm VLM response received id=ea47214129ba status=200
+2026-10-21 12:39:16,276 INFO core.vlm VLM request completed id=ea47214129ba elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,284 INFO core.vlm VLM request started id=246ed7bafc04 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,284 INFO core.vlm VLM response received id=246ed7bafc04 status=200
+2026-10-21 12:39:16,284 INFO core.vlm VLM request completed id=246ed7bafc04 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,292 INFO core.vlm VLM request started id=f4611b4a60c0 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,292 INFO core.vlm VLM response received id=f4611b4a60c0 status=200
+2026-10-21 12:39:16,292 INFO core.vlm VLM request completed id=f4611b4a60c0 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,294 INFO core.vlm VLM request started id=86e8444782d1 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,294 INFO core.vlm VLM response received id=86e8444782d1 status=200
+2026-10-21 12:39:16,294 INFO core.vlm VLM request completed id=86e8444782d1 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,301 INFO core.vlm VLM request started id=628b3e012aec model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,301 INFO core.vlm VLM response received id=628b3e012aec status=200
+2026-10-21 12:39:16,301 INFO core.vlm VLM request completed id=628b3e012aec elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-21 12:39:16,319 INFO core.vlm VLM request started id=8763e55b8769 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,320 INFO core.vlm VLM response received id=8763e55b8769 status=200
+2026-10-21 12:39:16,320 INFO core.vlm VLM request completed id=8763e55b8769 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,453 INFO core.vlm VLM request started id=ba016705eed6 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,453 INFO core.vlm VLM response received id=ba016705eed6 status=500
+.2026-10-21 12:39:16,469 INFO core.vlm VLM request started id=c5e658a8a8e6 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,470 INFO core.vlm VLM response received id=c5e658a8a8e6 status=200
+2026-10-21 12:39:16,470 INFO core.vlm VLM request completed id=c5e658a8a8e6 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,472 INFO core.vlm VLM request started id=d49a708b8db1 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,472 INFO core.vlm VLM response received id=d49a708b8db1 status=200
+2026-10-21 12:39:16,472 INFO core.vlm VLM request completed id=d49a708b8db1 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,474 INFO core.vlm VLM request started id=63abea9ed042 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,474 INFO core.vlm VLM response received id=63abea9ed042 status=200
+2026-10-21 12:39:16,474 INFO core.vlm VLM request completed id=63abea9ed042 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,479 INFO core.vlm VLM request started id=3b645605f7d6 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,479 INFO core.vlm VLM response received id=3b645605f7d6 status=200
+2026-10-21 12:39:16,480 INFO core.vlm VLM request completed id=3b645605f7d6 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,481 INFO core.vlm VLM request started id=76f2d3062322 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,481 INFO core.vlm VLM response received id=76f2d3062322 status=200
+2026-10-21 12:39:16,481 INFO core.vlm VLM request completed id=76f2d3062322 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:16,481 INFO core.vlm VLM request started id=9ce3dfd740f8 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,481 INFO core.vlm VLM response received id=9ce3dfd740f8 status=200
+2026-10-21 12:39:16,481 INFO core.vlm VLM request completed id=9ce3dfd740f8 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-21 12:39:16,501 INFO core.vlm VLM request started id=753e6b761262 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,501 INFO core.vlm VLM response received id=753e6b761262 status=200
+2026-10-21 12:39:16,501 INFO core.vlm VLM request completed id=753e6b761262 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --output must be a new directory that does not exist yet
+.2026-10-21 12:39:16,539 INFO core.vlm VLM request started id=460cb9c5e157 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,540 INFO core.vlm VLM response received id=460cb9c5e157 status=401
+2026-10-21 12:39:16,563 INFO core.vlm VLM request started id=7a02f9eb2326 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,564 INFO core.vlm VLM response received id=7a02f9eb2326 status=429
+2026-10-21 12:39:16,585 INFO core.vlm VLM request started id=550438e03556 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,585 INFO core.vlm VLM response received id=550438e03556 status=500
+2026-10-21 12:39:16,587 INFO core.vlm VLM request started id=669ac2663224 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,587 INFO core.vlm VLM response received id=669ac2663224 status=500
+2026-10-21 12:39:16,589 INFO core.vlm VLM request started id=d3137a61dd2b model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,589 INFO core.vlm VLM response received id=d3137a61dd2b status=500
+.2026-10-21 12:39:16,679 INFO core.vlm VLM request started id=fcc33befe556 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:16,680 INFO core.vlm VLM response received id=fcc33befe556 status=200
+2026-10-21 12:39:16,680 INFO core.vlm VLM request completed id=fcc33befe556 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+....................2026-10-21 12:39:16,980 WARNING django.request Not Found: /vision/config/
+2026-10-21 12:39:16,981 WARNING django.request Not Found: /vision/frame/
+2026-10-21 12:39:16,981 WARNING django.request Not Found: /vision/hf/config/
+2026-10-21 12:39:16,982 WARNING django.request Not Found: /vision/hf/frame/
+2026-10-21 12:39:16,982 WARNING django.request Not Found: /assets/detection-client.js
+2026-10-21 12:39:16,982 WARNING django.request Not Found: /assets/detection-sample.jpg
+..2026-10-21 12:39:16,986 WARNING django.request Not Found: /assets/README.md
+2026-10-21 12:39:16,986 WARNING django.request Not Found: /assets/.env
+.2026-10-21 12:39:16,988 INFO core.echo echo admitted connection=04b9c613d86f active=1
+2026-10-21 12:39:16,988 INFO core.echo echo released connection=04b9c613d86f frames=1 bytes=131072 seconds=0.00 active=0
+.2026-10-21 12:39:16,990 INFO core.echo echo admitted connection=b4aae831c7c4 active=1
+2026-10-21 12:39:16,990 INFO core.echo echo admitted connection=4bdc679c0067 active=2
+2026-10-21 12:39:16,990 INFO core.echo echo admitted connection=58f7157ced7c active=3
+2026-10-21 12:39:16,991 INFO core.echo echo admitted connection=1b00dcbc3c79 active=4
+2026-10-21 12:39:16,991 WARNING core.echo echo rejected reason=capacity active=4
+2026-10-21 12:39:16,991 INFO core.echo echo released connection=b4aae831c7c4 frames=0 bytes=0 seconds=0.00 active=3
+2026-10-21 12:39:16,991 INFO core.echo echo released connection=4bdc679c0067 frames=0 bytes=0 seconds=0.00 active=2
+2026-10-21 12:39:16,991 INFO core.echo echo released connection=58f7157ced7c frames=0 bytes=0 seconds=0.00 active=1
+2026-10-21 12:39:16,991 INFO core.echo echo released connection=1b00dcbc3c79 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-21 12:39:16,993 INFO core.echo echo admitted connection=9ba6ac156a7b active=1
+2026-10-21 12:39:16,993 WARNING core.echo echo invalid frame connection=9ba6ac156a7b size=0
+2026-10-21 12:39:16,993 INFO core.echo echo released connection=9ba6ac156a7b frames=0 bytes=0 seconds=0.00 active=0
+2026-10-21 12:39:16,993 INFO core.echo echo admitted connection=7652e4acc538 active=1
+2026-10-21 12:39:16,993 WARNING core.echo echo invalid frame connection=7652e4acc538 size=1048577
+2026-10-21 12:39:16,993 INFO core.echo echo released connection=7652e4acc538 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-21 12:39:16,994 INFO core.echo echo admitted connection=ee8d0e9bea48 active=1
+2026-10-21 12:39:16,995 WARNING core.echo echo invalid control connection=ee8d0e9bea48
+2026-10-21 12:39:16,995 INFO core.echo echo released connection=ee8d0e9bea48 frames=0 bytes=0 seconds=0.00 active=0
+2026-10-21 12:39:16,995 INFO core.echo echo admitted connection=c47668338903 active=1
+2026-10-21 12:39:16,995 WARNING core.echo echo invalid control connection=c47668338903
+2026-10-21 12:39:16,995 INFO core.echo echo released connection=c47668338903 frames=0 bytes=0 seconds=0.00 active=0
+2026-10-21 12:39:16,995 INFO core.echo echo admitted connection=32173ee8abfd active=1
+2026-10-21 12:39:16,995 WARNING core.echo echo invalid control connection=32173ee8abfd
+2026-10-21 12:39:16,995 INFO core.echo echo released connection=32173ee8abfd frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-21 12:39:16,997 WARNING core.echo echo rejected reason=origin_or_host
+2026-10-21 12:39:16,997 WARNING core.echo echo rejected reason=origin_or_host
+.2026-10-21 12:39:16,998 INFO core.echo echo admitted connection=6f57161a6fbc active=1
+2026-10-21 12:39:16,999 INFO core.echo echo released connection=6f57161a6fbc frames=0 bytes=0 seconds=0.00 active=0
+.......2026-10-21 12:39:17,041 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+..2026-10-21 12:39:17,044 WARNING core.hf_services ZeroGPU service rejected reason=quota_exceeded requested_seconds=None remaining_seconds=None
+2026-10-21 12:39:17,044 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=DetectionError
+2026-10-21 12:39:17,044 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+2026-10-21 12:39:17,045 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=ValueError
+2026-10-21 12:39:17,045 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+2026-10-21 12:39:17,046 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=ValueError
+2026-10-21 12:39:17,046 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+2026-10-21 12:39:17,048 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=ValueError
+2026-10-21 12:39:17,048 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+.Found 263 test(s).
+System check identified no issues (0 silenced).
+2026-10-21 12:39:17,110 INFO core.hf_video_relay HF live admitted id=5f767dddf728 GPU_not_requested=true
+2026-10-21 12:39:17,111 INFO core.hf_video_relay HF live quota id=5f767dddf728 allowed=False reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-21 12:39:17,111 ERROR core.hf_video_relay HF live failed id=5f767dddf728 phase=quota received=0 forwarded=0 delivered=0 type=DetectionError
+2026-10-21 12:39:17,111 INFO core.hf_video_relay HF live released id=5f767dddf728 received=0 forwarded=0 delivered=0 send_max_ms=0.0 worker_frames=None
+2026-10-21 12:39:17,313 INFO core.hf_video_relay HF live admitted id=23dff6f24311 GPU_not_requested=true
+2026-10-21 12:39:17,313 INFO core.hf_video_relay HF live quota id=23dff6f24311 allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-21 12:39:17,315 INFO core.hf_video_relay HF live released id=23dff6f24311 received=0 forwarded=0 delivered=0 send_max_ms=0.0 worker_frames=None
+.2026-10-21 12:39:17,735 WARNING core.hf_video_relay HF live rejected origin_or_host_or_query
+2026-10-21 12:39:17,737 WARNING core.hf_video_relay HF live rejected origin_or_host_or_query
+2026-10-21 12:39:17,738 INFO core.hf_video_relay HF live admitted id=7d9e31219123 GPU_not_requested=true
+2026-10-21 12:39:17,739 INFO core.hf_video_relay HF live quota id=7d9e31219123 allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-21 12:39:17,741 ERROR core.hf_video_relay HF live failed id=7d9e31219123 phase=first_input received=0 forwarded=0 delivered=0 type=ValueError
+2026-10-21 12:39:17,741 INFO core.hf_video_relay HF live released id=7d9e31219123 received=0 forwarded=0 delivered=0 send_max_ms=0.0 worker_frames=None
+.2026-10-21 12:39:18,187 INFO core.hf_video_relay HF live admitted id=ab24ee3d433c GPU_not_requested=true
+2026-10-21 12:39:18,188 INFO core.hf_video_relay HF live quota id=ab24ee3d433c allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-21 12:39:18,191 INFO core.hf_video_relay HF live allocation requested id=ab24ee3d433c max_seconds=60 session_seconds=55
+2026-10-21 12:39:18,217 INFO core.hf_video_relay HF live delivery id=ab24ee3d433c frames=1 receive_ms=25.1 send_ms=0.1 send_max_ms=0.1 server_ms=None graph_setup_ms=None upstream_ms=25.6 prs_queue_ms=0.06 hf_queue_ms=2.0777999998244923 hf_local_cycle_ms=19.266200000402023
+2026-10-21 12:39:18,269 INFO core.hf_video_relay HF live released id=ab24ee3d433c received=6 forwarded=6 delivered=6 send_max_ms=0.1 worker_frames=6
+.2026-10-21 12:39:18,606 INFO core.hf_video_relay HF live quota id=4fe5df8087e7 allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-21 12:39:18,606 INFO core.hf_video_relay HF live allocation requested id=4fe5df8087e7 max_seconds=60 session_seconds=55
+2026-10-21 12:39:18,634 INFO core.hf_video_relay HF live delivery id=4fe5df8087e7 frames=1 receive_ms=0.2 send_ms=27.3 send_max_ms=27.3 server_ms=None graph_setup_ms=None upstream_ms=0.3 prs_queue_ms=0.62 hf_queue_ms=None hf_local_cycle_ms=None
+.2026-10-21 12:39:18,639 INFO core.hf_video_relay HF live admitted id=6fac8c04ff43 GPU_not_requested=true
+2026-10-21 12:39:18,640 INFO core.hf_video_relay HF live quota id=6fac8c04ff43 allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-21 12:39:18,642 INFO core.hf_video_relay HF live allocation requested id=6fac8c04ff43 max_seconds=60 session_seconds=55
+ZeroGPU live worker failed frames=0 type=RuntimeError
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_worker.py", line 157, in run_worker
+    detector = factory(*arguments, **options)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\core\test_hf_live.py", line 343, in broken
+    raise RuntimeError("Synthetic allocated failure")
+RuntimeError: Synthetic allocated failure
+2026-10-21 12:39:18,669 ERROR core.hf_video_relay HF live failed id=6fac8c04ff43 phase=streaming received=1 forwarded=1 delivered=0 type=RuntimeError
+2026-10-21 12:39:18,669 INFO core.hf_video_relay HF live released id=6fac8c04ff43 received=1 forwarded=1 delivered=0 send_max_ms=0.0 worker_frames=None
+........Label raster probe rejected unsupported input
+Label raster probe rejected unsupported input
+Label raster probe rejected oversized entry
+.......2026-10-21 12:39:20,352 ERROR django.request Service Unavailable: /maps/config/
+..2026-10-21 12:39:20,360 WARNING core.maps Route request failed id=f9c5e5c9d394 code=origin_rejected status=403
+2026-10-21 12:39:20,360 WARNING django.request Forbidden: /maps/route/
+2026-10-21 12:39:20,361 WARNING core.maps Route request failed id=1f7649405e32 code=origin_rejected status=403
+2026-10-21 12:39:20,361 WARNING django.request Forbidden: /maps/route/
+2026-10-21 12:39:20,361 WARNING core.maps Route request failed id=d59d7def4caa code=invalid_route_input status=400
+2026-10-21 12:39:20,361 WARNING django.request Bad Request: /maps/route/
+2026-10-21 12:39:20,361 WARNING core.maps Route request failed id=08e157362cb4 code=invalid_route_input status=400
+2026-10-21 12:39:20,361 WARNING django.request Bad Request: /maps/route/
+2026-10-21 12:39:20,361 WARNING core.maps Route request failed id=9c2228175ddc code=invalid_route_input status=400
+2026-10-21 12:39:20,363 WARNING django.request Bad Request: /maps/route/
+2026-10-21 12:39:20,363 WARNING core.maps Route request failed id=18a7f7a4e8ac code=invalid_route_input status=400
+2026-10-21 12:39:20,363 WARNING django.request Bad Request: /maps/route/
+2026-10-21 12:39:20,363 WARNING core.maps Route request failed id=312473102ea6 code=invalid_route_input status=400
+2026-10-21 12:39:20,363 WARNING django.request Bad Request: /maps/route/
+2026-10-21 12:39:20,364 WARNING core.maps Route request failed id=60c65c460cb3 code=invalid_route_input status=400
+2026-10-21 12:39:20,364 WARNING django.request Bad Request: /maps/route/
+2026-10-21 12:39:20,364 WARNING core.maps Route request failed id=4ce4465bba47 code=invalid_route_input status=400
+2026-10-21 12:39:20,364 WARNING django.request Bad Request: /maps/route/
+2026-10-21 12:39:20,365 WARNING core.maps Route request failed id=6b9402755c5f code=request_too_large status=413
+2026-10-21 12:39:20,365 WARNING django.request Request Entity Too Large: /maps/route/
+2026-10-21 12:39:20,365 WARNING core.maps Route request failed id=94f292387e54 code=invalid_content_type status=415
+2026-10-21 12:39:20,365 WARNING django.request Unsupported Media Type: /maps/route/
+2026-10-21 12:39:20,365 WARNING django.request Method Not Allowed (GET): /maps/route/
+.2026-10-21 12:39:20,366 WARNING core.maps Route request failed id=f55a4b920e3b code=ors_timeout status=504
+2026-10-21 12:39:20,366 ERROR django.request Gateway Timeout: /maps/route/
+..2026-10-21 12:39:20,368 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,369 INFO core.services ORS response received id=test status=403
+2026-10-21 12:39:20,369 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,369 INFO core.services ORS response received id=test status=429
+2026-10-21 12:39:20,369 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,369 INFO core.services ORS response received id=test status=400
+2026-10-21 12:39:20,370 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,370 INFO core.services ORS response received id=test status=500
+2026-10-21 12:39:20,370 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,370 INFO core.services ORS response received id=test status=302
+....2026-10-21 12:39:20,376 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,376 INFO core.services ORS response received id=test status=200
+2026-10-21 12:39:20,376 INFO core.services ORS request completed id=test elapsed_ms=0 points=2 steps=2
+.2026-10-21 12:39:20,379 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,379 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-21 12:39:20,379 INFO core.services ORS response received id=test status=200
+....2026-10-21 12:39:25,724 INFO core.resident.services Resident ready mode=detection load_ms=0.5
+2026-10-21 12:39:25,725 INFO core.resident.asgi Resident admitted id=98e8750bb280 mode=detection
+2026-10-21 12:39:25,725 INFO core.resident.services Resident session state reset mode=detection
+2026-10-21 12:39:25,725 ERROR core.resident.asgi Resident released id=98e8750bb280 received=0 delivered=0 failure=ValueError
+2026-10-21 12:39:25,725 INFO core.resident.asgi Resident admitted id=9061f65584b9 mode=detection
+2026-10-21 12:39:25,725 INFO core.resident.services Resident session state reset mode=detection
+2026-10-21 12:39:25,726 ERROR core.resident.asgi Resident released id=9061f65584b9 received=0 delivered=0 failure=ValueError
+2026-10-21 12:39:25,726 INFO core.resident.asgi Resident admitted id=7ef0d5c6eba2 mode=detection
+2026-10-21 12:39:25,726 INFO core.resident.services Resident session state reset mode=detection
+2026-10-21 12:39:25,727 ERROR core.resident.asgi Resident released id=7ef0d5c6eba2 received=12 delivered=0 failure=ValueError
+2026-10-21 12:39:25,727 INFO core.resident.services Resident stopped
+.2026-10-21 12:39:25,730 INFO core.resident.services Resident ready mode=detection load_ms=0.4
+2026-10-21 12:39:25,730 INFO core.resident.asgi Resident admitted id=5a689c2ea152 mode=detection
+2026-10-21 12:39:25,730 INFO core.resident.services Resident session state reset mode=detection
+2026-10-21 12:39:25,765 INFO core.resident.asgi Resident released id=5a689c2ea152 received=1 delivered=0 failure=none
+2026-10-21 12:39:25,765 INFO core.resident.services Resident stopped
+.2026-10-21 12:39:25,768 ERROR core.resident.asgi Resident startup failed type=RuntimeError
+2026-10-21 12:39:25,768 INFO core.resident.services Resident stopped
+2026-10-21 12:39:25,769 INFO core.resident.services Resident ready mode=detection load_ms=0.4
+2026-10-21 12:39:25,769 INFO core.resident.services Resident session state reset mode=detection
+2026-10-21 12:39:25,770 ERROR core.resident.services Resident inference failed id=5759fa1fa7cc type=DetectionError
+2026-10-21 12:39:25,770 ERROR core.resident.services Resident inference failed id=5759fa1fa7cc type=RuntimeError
+2026-10-21 12:39:25,771 INFO core.resident.services Resident stopped
+.2026-10-21 12:39:25,773 INFO core.resident.services Resident ready mode=detection load_ms=0.4
+2026-10-21 12:39:25,773 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-21 12:39:25,773 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-21 12:39:25,773 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-21 12:39:25,773 INFO core.resident.asgi Resident admitted id=6f66dc103224 mode=detection
+2026-10-21 12:39:25,773 INFO core.resident.services Resident session state reset mode=detection
+2026-10-21 12:39:25,774 INFO core.resident.asgi Resident released id=6f66dc103224 received=0 delivered=0 failure=none
+2026-10-21 12:39:25,774 INFO core.resident.services Resident stopped
+.2026-10-21 12:39:25,777 INFO core.resident.services Resident ready mode=detection load_ms=0.4
+2026-10-21 12:39:25,778 INFO core.resident.services Resident stopped
+.2026-10-21 12:39:25,781 INFO core.resident.services Resident ready mode=full load_ms=0.6
+2026-10-21 12:39:25,781 INFO core.resident.services Resident session state reset mode=full
+2026-10-21 12:39:25,781 INFO core.resident.services Resident session state reset mode=full
+2026-10-21 12:39:25,783 INFO core.resident.services Resident stopped
+.2026-10-21 12:39:25,785 INFO core.resident.services Resident ready mode=detection load_ms=0.4
+2026-10-21 12:39:25,785 INFO core.resident.asgi Resident admitted id=7491bce03f61 mode=detection
+2026-10-21 12:39:25,785 INFO core.resident.services Resident session state reset mode=detection
+2026-10-21 12:39:25,788 INFO core.resident.asgi Resident released id=7491bce03f61 received=12 delivered=12 failure=none
+2026-10-21 12:39:25,789 INFO core.resident.services Resident stopped
+..2026-10-21 12:39:25,801 ERROR core.resident.graph_probe Experimental graph pipeline failed type=DetectionError
+2026-10-21 12:39:25,801 ERROR core.resident.graph_probe Experimental graph pipeline failed type=ValueError
+.2026-10-21 12:39:25,801 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=500.000
+.2026-10-21 12:39:25,805 INFO core.resident.services Resident ready mode=full load_ms=0.8
+2026-10-21 12:39:25,805 INFO core.resident.services Resident session state reset mode=full
+2026-10-21 12:39:25,805 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=0.040
+2026-10-21 12:39:25,806 INFO core.resident.services Resident session state reset mode=full
+2026-10-21 12:39:25,806 ERROR core.resident.graph_probe Experimental graph pipeline failed type=ValueError
+2026-10-21 12:39:25,806 ERROR core.resident.services Resident inference failed id=562d1c48ca81 type=ValueError
+2026-10-21 12:39:25,807 INFO core.resident.services Resident stopped
+.....2026-10-21 12:39:25,816 INFO core.vlm VLM request started id=caacb6fee8bc model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,816 INFO core.vlm VLM response received id=caacb6fee8bc status=500
+.2026-10-21 12:39:25,823 INFO core.vlm VLM request started id=6956123c9c93 model=qwen3-vl-plus objects=1
+2026-10-21 12:39:25,823 INFO core.vlm VLM response received id=6956123c9c93 status=200
+2026-10-21 12:39:25,823 INFO core.vlm VLM request completed id=6956123c9c93 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=1
+2026-10-21 12:39:25,825 INFO core.vlm VLM request started id=fixed model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,825 INFO core.vlm VLM response received id=fixed status=200
+2026-10-21 12:39:25,825 INFO core.vlm VLM request completed id=fixed elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-21 12:39:25,828 INFO core.vlm VLM request started id=7485b20445ca model=qwen3-vl-plus objects=1
+2026-10-21 12:39:25,828 INFO core.vlm VLM response received id=7485b20445ca status=200
+2026-10-21 12:39:25,828 INFO core.vlm VLM request completed id=7485b20445ca elapsed_ms=0 input_tokens=321 output_tokens=18 objects=1
+.2026-10-21 12:39:25,831 ERROR django.request Service Unavailable: /scene/config/
+2026-10-21 12:39:25,832 WARNING django.request Method Not Allowed (POST): /scene/config/
+.2026-10-21 12:39:25,835 WARNING core.scene Scene request failed id=2343086b12bf code=origin_rejected status=403
+2026-10-21 12:39:25,836 WARNING django.request Forbidden: /scene/describe/
+2026-10-21 12:39:25,837 WARNING core.scene Scene request failed id=41d5f9a8a616 code=origin_rejected status=403
+2026-10-21 12:39:25,838 WARNING django.request Forbidden: /scene/describe/
+2026-10-21 12:39:25,839 WARNING core.scene Scene request failed id=9592fca1309e code=invalid_content_type status=415
+2026-10-21 12:39:25,840 WARNING django.request Unsupported Media Type: /scene/describe/
+2026-10-21 12:39:25,841 WARNING django.request Method Not Allowed (GET): /scene/describe/
+2026-10-21 12:39:25,844 WARNING core.scene Scene request failed id=a41c20e93201 code=request_too_large status=413
+2026-10-21 12:39:25,844 WARNING django.request Request Entity Too Large: /scene/describe/
+2026-10-21 12:39:25,846 WARNING core.scene Scene request failed id=5246abda061a code=invalid_scene_input status=400
+2026-10-21 12:39:25,846 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,848 WARNING core.scene Scene request failed id=d3aea0ebb3aa code=invalid_scene_input status=400
+2026-10-21 12:39:25,849 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,855 WARNING core.scene Scene request failed id=67c9562706fa code=invalid_image status=400
+2026-10-21 12:39:25,855 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,857 WARNING core.scene Scene request failed id=6f7b73f34e87 code=invalid_image status=400
+2026-10-21 12:39:25,857 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,858 WARNING core.scene Scene request failed id=edee86af3c30 code=invalid_image status=400
+2026-10-21 12:39:25,859 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,861 WARNING core.scene Scene request failed id=3309575672d4 code=invalid_image status=400
+2026-10-21 12:39:25,861 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,863 WARNING core.scene Scene request failed id=032fd6e54575 code=invalid_image status=400
+2026-10-21 12:39:25,863 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,864 WARNING core.scene Scene request failed id=3a72a08c8805 code=invalid_image status=400
+2026-10-21 12:39:25,865 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,873 WARNING core.scene Scene request failed id=5dbda74384dc code=invalid_image status=400
+2026-10-21 12:39:25,874 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,876 WARNING core.scene Scene request failed id=d0e57f14bdbc code=invalid_scene_input status=400
+2026-10-21 12:39:25,877 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,878 WARNING core.scene Scene request failed id=b4f02437e67c code=invalid_scene_input status=400
+2026-10-21 12:39:25,879 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,880 WARNING core.scene Scene request failed id=cb523fa1f84f code=invalid_scene_input status=400
+2026-10-21 12:39:25,881 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,882 WARNING core.scene Scene request failed id=620dd575d7e4 code=invalid_scene_input status=400
+2026-10-21 12:39:25,883 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,884 WARNING core.scene Scene request failed id=3780aa73a9d6 code=invalid_scene_input status=400
+2026-10-21 12:39:25,884 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,885 WARNING core.scene Scene request failed id=19fc93e8b1f5 code=invalid_scene_input status=400
+2026-10-21 12:39:25,886 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,887 WARNING core.scene Scene request failed id=03333b702935 code=invalid_scene_input status=400
+2026-10-21 12:39:25,888 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,889 WARNING core.scene Scene request failed id=c7084deb0afb code=invalid_scene_input status=400
+2026-10-21 12:39:25,890 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,891 WARNING core.scene Scene request failed id=4b5677724b33 code=invalid_scene_input status=400
+2026-10-21 12:39:25,891 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,893 WARNING core.scene Scene request failed id=d5f544257fca code=invalid_scene_input status=400
+2026-10-21 12:39:25,893 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,895 WARNING core.scene Scene request failed id=c6065f3dba09 code=invalid_scene_input status=400
+2026-10-21 12:39:25,895 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,897 WARNING core.scene Scene request failed id=a7f70d1e70ca code=invalid_scene_input status=400
+2026-10-21 12:39:25,897 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,899 WARNING core.scene Scene request failed id=c1bcbc364d9a code=invalid_scene_input status=400
+2026-10-21 12:39:25,899 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,900 WARNING core.scene Scene request failed id=af96115e9d72 code=invalid_scene_input status=400
+2026-10-21 12:39:25,901 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,903 WARNING core.scene Scene request failed id=11070a30c336 code=invalid_scene_input status=400
+2026-10-21 12:39:25,903 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,905 WARNING core.scene Scene request failed id=4730277939c1 code=invalid_scene_input status=400
+2026-10-21 12:39:25,906 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,907 WARNING core.scene Scene request failed id=edf86727c9e0 code=invalid_scene_input status=400
+2026-10-21 12:39:25,908 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,909 WARNING core.scene Scene request failed id=037321e207b5 code=invalid_scene_input status=400
+2026-10-21 12:39:25,910 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,911 WARNING core.scene Scene request failed id=4f33dfdd82df code=invalid_scene_input status=400
+2026-10-21 12:39:25,912 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,914 WARNING core.scene Scene request failed id=97146fec5995 code=invalid_scene_input status=400
+2026-10-21 12:39:25,914 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,916 WARNING core.scene Scene request failed id=3c2ea9d6fef0 code=invalid_scene_input status=400
+2026-10-21 12:39:25,917 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,918 WARNING core.scene Scene request failed id=e1b196e54c90 code=invalid_scene_input status=400
+2026-10-21 12:39:25,918 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,920 WARNING core.scene Scene request failed id=248353f8ff4c code=invalid_scene_input status=400
+2026-10-21 12:39:25,920 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,922 WARNING core.scene Scene request failed id=83fe790c8c0a code=invalid_scene_input status=400
+2026-10-21 12:39:25,923 WARNING django.request Bad Request: /scene/describe/
+2026-10-21 12:39:25,924 WARNING core.scene Scene request failed id=3fd90a17497e code=invalid_scene_input status=400
+2026-10-21 12:39:25,925 WARNING django.request Bad Request: /scene/describe/
+.2026-10-21 12:39:25,946 INFO core.vlm VLM request started id=87a2ab31e6bc model=qwen3-vl-plus objects=50
+2026-10-21 12:39:25,947 INFO core.vlm VLM response received id=87a2ab31e6bc status=200
+2026-10-21 12:39:25,947 INFO core.vlm VLM request completed id=87a2ab31e6bc elapsed_ms=0 input_tokens=321 output_tokens=18 objects=50
+.2026-10-21 12:39:25,954 INFO core.vlm VLM request started id=4247ddba2775 model=qwen3-vl-plus objects=1
+2026-10-21 12:39:25,954 INFO core.vlm VLM response received id=4247ddba2775 status=200
+2026-10-21 12:39:25,954 INFO core.vlm VLM request completed id=4247ddba2775 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=1
+2026-10-21 12:39:25,958 INFO core.vlm VLM request started id=766be0b189af model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,959 INFO core.vlm VLM response received id=766be0b189af status=401
+2026-10-21 12:39:25,959 WARNING core.scene Scene request failed id=766be0b189af code=vlm_authentication_failed status=502
+2026-10-21 12:39:25,960 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-21 12:39:25,963 INFO core.vlm VLM request started id=59c7af3de788 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,963 INFO core.vlm VLM response received id=59c7af3de788 status=403
+2026-10-21 12:39:25,963 WARNING core.scene Scene request failed id=59c7af3de788 code=vlm_authentication_failed status=502
+2026-10-21 12:39:25,965 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-21 12:39:25,967 INFO core.vlm VLM request started id=b6a4f6e66781 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,968 INFO core.vlm VLM response received id=b6a4f6e66781 status=429
+2026-10-21 12:39:25,968 WARNING core.scene Scene request failed id=b6a4f6e66781 code=vlm_quota_exceeded status=503
+2026-10-21 12:39:25,969 ERROR django.request Service Unavailable: /scene/describe/
+2026-10-21 12:39:25,972 INFO core.vlm VLM request started id=ca5b19454c26 model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,972 INFO core.vlm VLM response received id=ca5b19454c26 status=500
+2026-10-21 12:39:25,972 WARNING core.scene Scene request failed id=ca5b19454c26 code=vlm_upstream_error status=502
+2026-10-21 12:39:25,973 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-21 12:39:25,976 INFO core.vlm VLM request started id=27f4882b81ae model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,977 INFO core.vlm VLM response received id=27f4882b81ae status=302
+2026-10-21 12:39:25,977 WARNING core.scene Scene request failed id=27f4882b81ae code=vlm_upstream_error status=502
+2026-10-21 12:39:25,978 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-21 12:39:25,980 WARNING core.scene Scene request failed id=74b45688260e code=vlm_not_configured status=503
+2026-10-21 12:39:25,982 ERROR django.request Service Unavailable: /scene/describe/
+....2026-10-21 12:39:25,997 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,997 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,997 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,997 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,997 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,997 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,998 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,998 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,998 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,998 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,998 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,999 INFO core.vlm VLM request completed id=rid elapsed_ms=14 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,999 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,999 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:25,999 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:25,999 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-21 12:39:26,001 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,001 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,002 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,002 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,002 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,003 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,003 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,004 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,004 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,005 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,005 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,005 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,006 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,006 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,006 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=None output_tokens=None objects=0
+.2026-10-21 12:39:26,008 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,008 INFO core.vlm VLM response received id=rid status=500
+.2026-10-21 12:39:26,011 INFO core.vlm VLM request started id=rid model=qwen-vl-test objects=0
+2026-10-21 12:39:26,012 INFO core.vlm VLM response received id=rid status=200
+2026-10-21 12:39:26,012 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-21 12:39:26,014 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,015 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-21 12:39:26,015 WARNING core.vlm VLM transport failed id=rid exception_type=ConnectionResetError
+.............ZeroGPU live protocol rejected received=12
+...ZeroGPU live protocol rejected received=0
+...ZeroGPU live protocol rejected received=1
+ZeroGPU live protocol rejected received=1
+ZeroGPU live transport failed type=TimeoutError
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_transport.py", line 254, in write_results
+    await session.warmup_acknowledged.wait()
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\asyncio\locks.py", line 212, in wait
+    await fut
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_transport.py", line 177, in socket
+    task.result()
+  File "E:\AI_map\backend\zerogpu\live_transport.py", line 252, in write_results
+    async with asyncio.timeout(WARMUP_SECONDS):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\asyncio\timeouts.py", line 115, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+.ZeroGPU live worker failed frames=0 type=RuntimeError
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_worker.py", line 157, in run_worker
+    detector = factory(*arguments, **options)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\core\test_zerogpu_live.py", line 253, in broken
+    raise RuntimeError("Synthetic allocated detector failure")
+RuntimeError: Synthetic allocated detector failure
+................Local model load failed type=RuntimeError code=local_model_load_failed
+.....Local worker failed session=None code=local_busy type=IntegrationError
+.Local worker failed session=7ded2c691b6142968e3d3d3bb7018559 code=local_inference_failed type=ValueError
+.Local worker failed session=fb1a5ead4b5246808c828ca8418ae580 code=frame_geometry_changed type=IntegrationError
+Local worker failed session=cc5ee8bee4ae44088a4e42b0eeb2d831 code=invalid_timestamp type=IntegrationError
+Local worker failed session=9de742f060f043deadfb8aba2ba7395a code=invalid_sequence type=IntegrationError
+...Local worker failed session=90587dad7030485fb88fc8053329a63f code=local_capacity type=IntegrationError
+.......Local depth test failed frames=1 code=depth_inference_failed
+..Local test aborted code=ValueError
+......................Object depth unavailable objects=1 total=1
+.BoT-SORT unavailable until explicit reset type=RuntimeError
+...BoT-SORT unavailable until explicit reset type=ValueError
+.......Track class changed id=7; distance history restarted
+.......................
+----------------------------------------------------------------------
+Ran 263 tests in 21.573s
+
+OK
+Destroying test database for alias 'default'...
