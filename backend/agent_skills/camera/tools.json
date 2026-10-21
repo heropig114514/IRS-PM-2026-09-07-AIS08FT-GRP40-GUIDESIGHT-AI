@@ -1,0 +1,3 @@
+{"tools": [
+  "ui_snapshot", "ui_navigate", "ui_action", "camera_status", "camera_start", "camera_stop"
+], "requires": {}, "limits": {}, "result_counts": {}}

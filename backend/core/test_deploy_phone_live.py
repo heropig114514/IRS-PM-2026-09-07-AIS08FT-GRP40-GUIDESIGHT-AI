@@ -8,6 +8,8 @@ DeploymentAssetTests.test_maps_dependency_closure;
 DeploymentAssetTests.test_navigation_speech_profiles;
 DeploymentAssetTests.test_camera_dependency_closure;
 DeploymentAssetTests.test_scene_files_published.
+DeploymentAssetTests.test_agent_bundle; DeploymentAssetTests.test_agent_overlay_refusal.
+DeploymentAssetTests.test_agent_environment; DeploymentAssetTests.test_full_outputs_activation;
 DeploymentAssetTests.test_navigation_scope — navigation closure and preserved camera/config paths;
 DeploymentAssetTests.test_overlay_profile_stage;
 DeploymentAssetTests.test_overlay_profile_stage.command;
@@ -40,12 +42,12 @@ class DeploymentAssetTests(SimpleTestCase):
     """
 
     def check_dependency_closure(
-        self, page_name, asset_prefix, published_name="FRONTEND", inherited=()
+        self, page_name, asset_prefix, published_name="FRONTEND", inherited=(), entrypoints=None
     ):
         """Functionality: Require every locally referenced page asset in one release.
-        Inputs: page_name, HTML prefix, selected publication list and explicit inherited assets.
+        Inputs: page_name, asset_prefix, published_name, inherited assets and optional entrypoints.
         Outputs: Missing dependency assertion with file names; local source reads only.
-        Logic: Read the literal allowlist via AST, seed from HTML, traverse static JS once,
+        Logic: Read allowlist via AST; seed from HTML or entries; traverse JS once;
         resolve nested HTML and ./ or ../ imports within frontend before rejecting escapes.
         No publisher import, so no Paramiko credential/runtime requirement.
         Constraints: Covers static imports only; not dynamic imports or CDN availability;
@@ -64,9 +66,9 @@ class DeploymentAssetTests(SimpleTestCase):
         frontend = (backend.parent / "frontend").resolve()
         html = (frontend / page_name).read_text(encoding="utf-8")
         required = {page_name}
-        pending = [frontend / name for name in re.findall(
+        pending = [frontend / name for name in (entrypoints or re.findall(
             r'(?:src|href)="' + re.escape(asset_prefix) + r'([^"?#]+)"', html
-        )]
+        ))]
         self.assertTrue(pending, f"No local assets found in {page_name}")
         while pending:
             path = pending.pop().resolve()
@@ -95,7 +97,8 @@ class DeploymentAssetTests(SimpleTestCase):
         """Functionality: Keep shared maps speech deployable in each profile that publishes maps.
         Inputs: Real nested entry/imports and full/navigation/outputs literal lists.
         Outputs: Complete runtime closure and explicit bridge test/checker presence.
-        Logic: Resolve canonical relative paths and check each independently selected scope.
+        Logic: Full release checks current HTML; legacy scopes check the shared speech entry.
+        test_agent_overlay_refusal requires legacy scopes to reject current agent HTML.
         Constraints: No routing upgrade, SSH or actual deployment is performed.
         """
         from tools import deploy_phone_live as publisher
@@ -113,6 +116,8 @@ class DeploymentAssetTests(SimpleTestCase):
                 self.check_dependency_closure(
                     "maps.html", "../assets/", name,
                     inherited=("camera.css",) if name == "NAVIGATION_FRONTEND" else (),
+                    entrypoints=None if name == "FRONTEND" else
+                    ("integration/maps-navigation-speech.js",),
                 )
                 self.assertLessEqual(required, set(getattr(publisher, name)))
 
@@ -147,6 +152,90 @@ class DeploymentAssetTests(SimpleTestCase):
         self.assertLessEqual(
             {"scene-client.js", "tests/scene-client.test.mjs"}, lists["FRONTEND"]
         )
+
+    def test_agent_bundle(self):
+        """Functionality: Include dynamic worklet/runtime/skills in a full publication.
+        Inputs: actual allowlists and agent package; Outputs: complete-set assertions.
+        Logic: Worklet, Markdown workflows and JSON scopes need explicit publication coverage.
+        Constraints: Reads local files only; does not validate a remote deployment.
+        """
+        from tools import deploy_phone_live as publisher
+
+        backend = Path(__file__).resolve().parents[1]
+        required = {
+            str(path.relative_to(backend)).replace("\\", "/")
+            for root, pattern in ((backend / "core/agent", "*.py"),
+                                  (backend / "agent_skills", "*.md"),
+                                  (backend / "agent_skills", "*.json"))
+            for path in root.rglob(pattern)
+        }
+        self.assertLessEqual(required, set(publisher.BACKEND))
+        self.assertLessEqual({"voice-worklet.js", "tools/check_agent_extended.mjs"},
+                             set(publisher.FRONTEND))
+
+    def test_agent_overlay_refusal(self):
+        """Functionality: Reject partial deployment before any remote operation.
+        Inputs: current agent-enabled source, explicit valid runtime, SSH mocks.
+        Outputs: refusal and zero execute calls; Logic: exercise source dependency guard.
+        Constraints: No upload, credentials, remote mutation or full-deployment assertion.
+        """
+        from tools import deploy_phone_live as publisher
+
+        for profile in ("vibration", "outputs", "navigation"):
+            with self.subTest(profile=profile), patch.object(publisher, "execute") as command:
+                with self.assertRaisesRegex(ValueError, "pre-agent source snapshot"):
+                    publisher.stage(Mock(), Mock(), profile,
+                                    runtime_path=publisher.PREFIX + "/runtimes/test-agent")
+                command.assert_not_called()
+
+    def test_agent_environment(self):
+        """Functionality: Keep secret updates scoped and reject invalid configuration.
+        Inputs: temporary synthetic dotenv and private bytes; Outputs: value/byte assertions.
+        Logic: Actual whitelist, region validation and serialization; no real credentials are read.
+        Constraints: Does not connect to SSH or a model; unrelated fields remain identical.
+        """
+        from tools import deploy_phone_live as publisher
+
+        values = {"PRS_AGENT_API_KEY": "test-only-secret", "PRS_AGENT_BASE_URL":
+                  "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                  "PRS_AGENT_MODEL": "qwen3.6-plus", "PRS_ASR_MODEL": "qwen3-asr-flash",
+                  "PRS_AGENT_SEARCH_COUNTRY": "SGP"}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / ".env"
+            path.write_text("\n".join(f"{k}={v}" for k, v in values.items()) +
+                            "\nDJANGO_SECRET_KEY=must-not-copy\n", encoding="utf-8")
+            selected = publisher.load_agent_environment(path)
+            path.write_text(path.read_text(encoding="utf-8").replace(
+                "PRS_AGENT_SEARCH_COUNTRY=SGP", "PRS_AGENT_SEARCH_COUNTRY=Singapore"
+            ), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "alpha-3"):
+                publisher.load_agent_environment(path)
+        self.assertEqual(selected, values)
+        original = b"HF_INFERENCE_TOKEN='fixture'\r\nORS_API_KEY=fixture\nPRS_MCP_PROFILE=outputs\n"
+        updated = publisher.merge_agent_environment(original, selected)
+        self.assertTrue(updated.startswith(original))
+        self.assertEqual(updated.count(b"PRS_AGENT_MODEL="), 1)
+        with self.assertRaisesRegex(ValueError, "Unrelated"):
+            publisher.merge_agent_environment(original, {"HF_INFERENCE_TOKEN": "change"})
+
+    def test_full_outputs_activation(self):
+        """Functionality: Preserve restricted registry and HF/ORS on a full agent release.
+        Inputs: empty hash manifest and explicit mocked secret loader/SSH dispatcher.
+        Outputs: shared outputs activator receives settings; Logic: actual activation routing.
+        Constraints: Mocks cover external boundaries; no service/config mutation is performed.
+        """
+        from tools import deploy_phone_live as publisher
+
+        manifest = {"profile": "full", "mcp_profile": "outputs", "files": {},
+                    "path": publisher.PREFIX + "/releases/test-agent", "release": "test-agent",
+                    "previous": publisher.PREFIX + "/releases/previous"}
+        values = {"PRS_AGENT_API_KEY": "fixture-only"}
+        with patch.object(publisher, "execute", return_value=manifest["previous"]), \
+                patch.object(publisher, "load_agent_environment", return_value=values), \
+                patch.object(publisher, "activate_outputs") as activate:
+            publisher.activate(Mock(), Mock(), manifest, Path("explicit-test-env"))
+        activate.assert_called_once()
+        self.assertEqual(activate.call_args.kwargs, {"agent_values": values})
 
     def test_overlay_profile_stage(self):
         """Functionality: Verify scoped staging and reject model drift before mutation.
@@ -386,9 +475,19 @@ class DeploymentAssetTests(SimpleTestCase):
 
                 sftp = Mock()
                 sftp.open.side_effect = open_file
-                with patch.object(publisher, "execute", return_value=current) as command:
+                # Functionality: Exercise the route prerequisite using a pre-agent source boundary.
+                # Logic: Only plan/model files are needed before the route check.
+                # Constraints: Current agent HTML refusal is independently tested above.
+                with tempfile.TemporaryDirectory() as directory, \
+                        patch.object(publisher, "execute", return_value=current) as command:
+                    source = Path(directory)
+                    for name in ("models/inference-plan.json", "models/yolo26n.json"):
+                        target = source / "backend" / name
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_bytes((backend / name).read_bytes())
                     with self.assertRaisesRegex(ValueError, "upgrade the shared asset route"):
                         publisher.stage(Mock(), sftp, profile,
+                                        source_root=source,
                                         runtime_path=publisher.PREFIX + "/runtimes/test-existing")
                 command.assert_called_once()
                 self.assertTrue(command.call_args.args[1].startswith("readlink"))

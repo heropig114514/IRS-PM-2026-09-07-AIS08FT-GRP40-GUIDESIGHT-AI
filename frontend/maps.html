@@ -1,9 +1,9 @@
 <!doctype html>
-<!-- Responsibilities: OSM 位置、ORS 步行路线和持续导航界面。
-Implementation: 固定 Leaflet 1.9.4/SRI；先安装共享语言控制，再初始化地图；加载 AI 控制桥及默认关闭的独立导航语音连接层；明确定位、选点、示例和规划；nonce 由 core.maps 替换。
-Related Modules: i18n.js, translations.js, maps-client.js, maps-page.js, navigation-ui.js, ai-control.js, speech-output.js, integration/maps-navigation-speech.js, camera.css, core.maps/services。
-Declaration Index: None。
-Variable Index: __CSP_NONCE__ — CSS nonce；language — 语言偏好；表单 id 供控制器引用；navigation-* — 导航按钮/状态；Leaflet URL/integrity — 固定依赖。 -->
+<!-- Responsibilities: Present OSM location, ORS walking routes and continuous navigation.
+Implementation: Pin Leaflet 1.9.4/SRI; install shared language controls before maps; load the AI bridge and separate navigation speech wiring, disabled by default; require explicit location, selection, sample and planning actions; core.maps substitutes the nonce.
+Related Modules: agent-client.js/agent.css (voice/text assistant), i18n.js, translations.js, maps-client.js, maps-page.js, navigation-ui.js, ai-control.js, speech-output.js, integration/maps-navigation-speech.js, camera.css, core.maps/services.
+Declaration Index: None.
+Variable Index: __CSP_NONCE__ — CSS nonce; language — preference; form IDs — controller bindings; navigation-* — navigation buttons/status; Leaflet URL/integrity — pinned dependency. -->
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -11,6 +11,8 @@ Variable Index: __CSP_NONCE__ — CSS nonce；language — 语言偏好；表单
     <title>PRS · 步行路线测试</title>
     <link rel="stylesheet" href="../assets/camera.css" />
     <link rel="stylesheet" href="../assets/integration/maps-navigation-speech.css" />
+    <link rel="stylesheet" href="../assets/agent.css" />
+    <script type="module" src="../assets/agent-client.js"></script>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
