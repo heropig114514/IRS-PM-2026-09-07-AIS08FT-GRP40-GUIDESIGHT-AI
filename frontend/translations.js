@@ -1,10 +1,24 @@
 /** Responsibilities: 中英文界面词典，包括动态状态、错误和无障碍文字。
  * Implementation: 中文原文作为键；{n} 表示运行时字段，字段内容不翻译。
- * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js。
+ * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js, integration/maps-navigation-speech.js。
  * Declaration Index: None。
  * Variable Index: translations — 中文到英文的固定界面词典；不包含坐标或图像数据。
  */
 export const translations = {
+  "导航语音": "Navigation speech",
+  "启用导航播报（默认关闭）": "Enable navigation speech (off by default)",
+  "播报语言": "Announcement language",
+  "本地声音": "Local voice",
+  "请选择本地声音": "Select a local voice explicitly",
+  "读取本地声音": "Read local voices",
+  "停止导航播报": "Stop navigation speech",
+  "手动恢复导航语音": "Resume navigation speech manually",
+  "还需启用下方语音输出。只播报导航模块提供的步骤和状态，同一步骤的定位更新不重复播报。": "Also enable speech output below. Announcements use the navigation module's steps and states; location updates within one step do not repeat them.",
+  "停止导航播报不会停止定位；仅结束本轮播报，下次重新开始导航后恢复。取消失败时先显式停止清理，再手动恢复错误暂停。": "Stopping navigation speech leaves location tracking active and ends speech for this run; explicitly restart navigation to announce again. If cancellation fails, stop again explicitly to clear output before resuming the error pause.",
+  "原生语音输出": "Native speech output",
+  "须明确选择声音": "Select a voice explicitly",
+  "语速（默认2倍，可调整）": "Rate (2x by default, adjustable)",
+  "语音引擎事件不等于实际扬声器听音验证。导航语音与视频警报保持独立。": "Speech engine events do not verify loudspeaker audibility. Navigation speech remains independent of video alerts.",
   "步行导航": "Walking navigation",
   "开始导航": "Start navigation",
   "停止导航": "Stop navigation",

@@ -3,13 +3,20 @@
 系统使用 [官方 MCP Python SDK](https://py.sdk.modelcontextprotocol.io/) 2.3.0，提供
 Streamable HTTP MCP 服务。它与 Django、摄像头和地图共用一个 ASGI 进程和数据库。
 当前按需求不增加 MCP 鉴权或 SQL 权限限制。
-上述完整接口使用默认 `PRS_MCP_PROFILE=full`。本次公网设备输出发布显式配置
-`PRS_MCP_PROFILE=outputs`。本次代码在原 `ui_sessions` 和震动/语音七项工具基础上，
-增加三项导航工具，共11项；保留配置名，不增加通用 DOM 或数据库工具。
+上述完整接口使用默认 `PRS_MCP_PROFILE=full`。设备输出配置使用
+`PRS_MCP_PROFILE=outputs`，包括 `ui_sessions`、震动/语音及三项导航工具，
+共11项；保留配置名，不增加通用 DOM 或数据库工具。
 导航状态包含设备位置；此处说明源码契约，修改代码不代表已发布到公网。
 其余函数保留供本地完整配置使用，不注册到该公网工具目录；无效配置停止启动，不回退。
 公网入口为 `https://47.239.50.129/prs/mcp`，使用相同的 Streamable HTTP 客户端协议。
-在摄像头页真实点击并启用输出后，调用会话发现选择该 tab；公网输出配置不提供自动启用开关的工具。
+在具有相应输出控件的摄像头页或地图页真实点击并启用输出后，调用会话发现选择该 tab；
+震动仍仅在摄像头页提供，公网输出配置不提供自动启用开关的工具。
+
+本机统一 `--assist` 入口同样使用 `outputs` 配置，`/maps/` 中导航MCP和页面按钮共用
+原导航实例，语音MCP和自动提醒共用原语音驱动。感知、导航及自动输出开关由用户明确操作；
+`navigation_start` 不自动开启摄像头或声音。统一风险仲裁属于页面连接层，不新增导航工具
+或修改MCP参数；请求 `navigation_status` 仍可能返回设备位置。统一模式仅在显式本地启动时
+生效，不能据本地源码或测试推断公网已更新。
 
 ## 启动和连接
 
@@ -158,7 +165,7 @@ vibration_stop({"session_id":"..."})
 
 真实 HTTP/WS/Chrome 联调命令见前端说明。测试明确替换原生震动 API，不代表实际手机马达验证。
 
-语音输出同样需要用户在摄像头页真实点击并启用开关。浏览器共用接口为
+语音输出需要用户在摄像头页或带语音控件的地图页真实点击并启用开关。浏览器共用接口为
 `frontend/speech-output.js` 导出的 `speechOutput`（其他页面为null）：
 `describe()`、`voiceList()`、`speak(text, options)`、`stop()`。
 UI按钮、浏览器控制桥和以下MCP工具使用这一实例，不申请麦克风/摄像头权限。
@@ -273,12 +280,12 @@ SQL 不附加权限过滤，可以执行 INSERT/UPDATE/DELETE/DDL，实际支持
 生产模板使用 `/prs/mcp`，启用 lifespan。MCP 代理读超时 70 秒，媒体路径原预算保持。
 发布工具的 allowlist 包含新后端模块、依赖文件和前端桥接模块；staging 校验依赖及 ASGI 导入。
 服务器需事先明确安装 `requirements.txt` 中的新依赖，发布脚本不会隐式修改运行环境。
-本次仅完成本地实现与验证，未发布公网、未修改个人客户端配置、未创建 Git 提交。
+部署验证应分别检查协议、浏览器控制和实际设备；本地通过不代表公网代理或外部服务可用。
 
 只读协议验证：
 
 ```powershell
-.\.venv\Scripts\python.exe -m tools.check_mcp --url http://127.0.0.1:8766/mcp --output benchmarks/2026-10-05/mcp-readonly.json
+.\.venv\Scripts\python.exe -m tools.check_mcp --url http://127.0.0.1:8766/mcp --output .venv/tmp/mcp-readonly.json
 ```
 
 增加 `--exercise-db` 会创建/读写/删除唯一命名的测试 Group；结束后清理自己的测试行。
@@ -287,21 +294,16 @@ SQL 不附加权限过滤，可以执行 INSERT/UPDATE/DELETE/DDL，实际支持
 `PRS_PLAYWRIGHT_PATH` 指向已有 Playwright 包：
 
 ```powershell
-node tools/check_mcp_browser.mjs http://127.0.0.1:8766/live/ benchmarks/2026-10-05/mcp-browser-local-final.json --synthetic-facing
+node tools/check_mcp_browser.mjs http://127.0.0.1:8766/live/ ../backend/.venv/tmp/mcp-browser.json --synthetic-facing
 ```
 
-Chrome 原生模拟摄像头无法满足 `facingMode.exact=environment`，失败记录保留在
-`benchmarks/2026-10-05/mcp-browser-camera-diagnostic.json`；相同启动条件下的原生媒体探测结果
-保存在 `mcp-camera-native-probe.json`。
+Chrome 原生模拟摄像头无法满足 `facingMode.exact=environment`。
 显式 `--synthetic-facing` 仅在测试浏览器中移除这一模拟设备不支持的条件，保留尺寸/audio
 约束；实际系统严格镜头条件不变。地图配置/路线也使用明确合成的夹具，真实 DOM、JS、JPEG、
 WebSocket、MCP HTTP、数据库及页面跳转均执行；不代表真实摄像头、GPS、ORS 或 GPU验证。
 
-本次完成 Django check、迁移差异检查、100 项后端测试、37 项前端测试、依赖完整性检查、
-变更 Python 文件 Ruff 和新 JavaScript 语法检查；真实 Chrome/MCP 联调记录为
-`mcp-browser-local-final.json`。另实际验证 2025-06-18 的 initialize/tools/list/tools/call，
-发现 11 个工具且数据库探测成功，兼容该协议版本的传统客户端。
-仓库没有 `tools/check_docs.py`，已人工核对变更文件的注释与声明/变量索引；未创建提交，
-因此未验证 Git 提交原子性。完整 `ruff check .` 仍在既有
-`benchmarks/2026-10-04/kaggle-v11/gpu-rebenchmark.ipynb` 报 I001 和 E501，未修改历史实验工件。
-公网代理/systemd、PostgreSQL、真实摄像头/GPS及 ORS/HF 上游尚未在本次工作中验证。
+交付前执行 Django check、迁移差异检查、后端与前端测试、完整 `ruff check .`，
+并人工核对变更文件的注释与声明/变量索引。协议检查覆盖 initialize、tools/list 和
+tools/call；工具清单应与所选 MCP profile 一致。运行详情保存为结构化报告。
+公网代理/systemd、PostgreSQL、真实摄像头/GPS及 ORS/HF 上游须在对应环境单独验证，
+不能由本地测试或合成夹具结果推断。

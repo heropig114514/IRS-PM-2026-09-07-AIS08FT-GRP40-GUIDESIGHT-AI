@@ -22,7 +22,9 @@
  * 已编码JPEG与检测元数据供 scene-client.js 读取，停止即清空，不持久化；
  * cameraApp 为页面控制器的导出引用；
  * cameraPhase 定位阶段，pipeline持有有界取消信号；apiBase为同源API挂载点；listeners是观察者集合；
- * localDeviceId是本地UI明确选择的设备，localOnly阻止本地MVP误启动HF，sessionId标记结果生命周期。
+ * localDeviceId是本地UI明确选择的设备；localFacingMode默认null，整合入口可显式指定environment请求后置镜头；
+ * 两者同时配置时明确deviceId优先，非法非null方向配置仍拒绝；localOnly阻止本地MVP误启动HF，sessionId标记结果生命周期；
+ * localSessionSeconds默认55，独立整合入口可显式设null接入连续本地会话，HF不接收此选项。
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
 import { LiveDetectionClient } from "./live-detection-client.js";
@@ -66,7 +68,7 @@ function encodeJpeg(canvas) {
  * Constraints: 不录音、不保存帧；页面隐藏、设备结束、停止或故障均释放摄像头。 */
 export class CameraApp {
   /** Functionality: 绑定控件。Inputs: 当前 document/window。Outputs: 实例及事件注册。
-   * Logic: processing选择模式；保存媒体/客户端/计时；apiBase由页面相对同源挂载点解析；不自动申请权限。
+   * Logic: processing选择模式；保存媒体/客户端/计时；本地会话默认55秒；apiBase由页面相对同源挂载点解析；不自动申请权限。
    * Constraints: 运行时锁定模式，停止后才能切换。 */
   constructor() {
     this.video = document.getElementById("preview");
@@ -89,7 +91,9 @@ export class CameraApp {
     this.lastDetection = null;
     this.listeners = new Set();
     this.localDeviceId = "";
+    this.localFacingMode = null;
     this.localOnly = document.documentElement?.dataset?.localMvp === "true";
+    this.localSessionSeconds = 55;
     this.sessionId = null;
     this.apiBase = document.documentElement?.dataset?.apiBase || "./";
     this.generation = 0;
@@ -165,10 +169,12 @@ export class CameraApp {
     this.message.textContent = error.message;
     this.message.dataset.kind = "error";
   }
-  /** Functionality: 授权摄像头并使用显式所选模式。Inputs: facingMode、processing、浏览器媒体 API。
+  /** Functionality: 授权摄像头并使用显式所选模式。Inputs: localDeviceId、localFacingMode、facingMode、processing、浏览器媒体 API。
    * Outputs: 本地 video、返回 img、往返时间及首帧后的完成速率。
-   * Logic: 原样保持单在途；HF/本地复用30FPS/12作业流水线；本地只用显式deviceId，HF保留exact镜头。
-   * Constraints: exact镜头；检测失败停止，不切换模式或自动重新授权；不丢弃已发送帧来制造速率；
+   * Logic: 原样保持单在途；HF/本地复用30FPS/12作业流水线；本地显式deviceId优先，否则仅允许入口明确指定environment；
+   * 后置模式先检查facingMode约束支持再申请一次权限；本地转传localSessionSeconds，HF保留exact镜头。
+   * Constraints: exact镜头；浏览器不支持或无后置镜头即失败，不回退到前置或默认设备；
+   * 检测失败停止，不切换模式或自动重新授权；不丢弃已发送帧来制造速率；
    * 没有固定等待不保证达到10FPS；计时从 drawImage 前开始，不等于传感器曝光或屏幕实际绘制时间。 */
   async start() {
     if (this.mode !== "idle") return;
@@ -183,13 +189,21 @@ export class CameraApp {
       const processing = this.processing.value;
       const path = processingPath(processing);
       if (this.localOnly && processing === "hf") throw new Error("本地 MVP 不允许调用 Hugging Face。");
-      if (processing === "local" && !this.localDeviceId) throw new Error("请先明确选择本地摄像头。");
+      if (processing === "local" && this.localFacingMode !== null && this.localFacingMode !== "environment")
+        throw new Error("本地摄像头方向配置无效，仅支持明确指定后置摄像头。");
+      if (processing === "local" && !this.localDeviceId && this.localFacingMode === null)
+        throw new Error("请先明确选择本地摄像头。");
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         throw new Error("摄像头需要 HTTPS，请在手机系统浏览器中打开安全链接");
       }
+      if (processing === "local" && !this.localDeviceId &&
+          navigator.mediaDevices.getSupportedConstraints?.().facingMode !== true)
+        throw new Error("当前浏览器不支持明确选择后置摄像头，请使用手机系统浏览器。");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          ...(processing === "local" ? {deviceId: {exact: this.localDeviceId}} : {facingMode: {exact: this.camera.value}}),
+          ...(processing === "local" ? this.localDeviceId
+            ? {deviceId: {exact: this.localDeviceId}} : {facingMode: {exact: this.localFacingMode}}
+            : {facingMode: {exact: this.camera.value}}),
           width: { ideal: 640 },
           height: { ideal: 480 },
         },
@@ -211,7 +225,8 @@ export class CameraApp {
       const url = this.apiUrl(path);
       url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const client = processing !== "echo"
-        ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd, {provider: processing})
+        ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd,
+          {provider: processing, ...(processing === "local" ? {localSessionSeconds: this.localSessionSeconds} : {})})
         : new EchoClient(url.href, this.handleDisconnect);
       this.client = client;
       this.cameraPhase = "connect";

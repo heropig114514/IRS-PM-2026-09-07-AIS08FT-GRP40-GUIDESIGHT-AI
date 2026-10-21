@@ -1,0 +1,21 @@
+/* Responsibilities: Keep unified maps/perception controls readable and keyboard accessible.
+ * Implementation: Responsive layout using existing camera styles and visible focus outlines.
+ * Related Modules: assist-panel.html, maps.html, assist-mvp.js.
+ * Declaration Index: None.
+ * Variable Index: None. */
+.assist-panel { padding: 24px; margin-top: 24px; }
+.assist-panel h2 { margin: 0; }
+.assist-panel section { border-top: 1px solid #dce5ec; padding: 18px 0; }
+.assist-panel label { display: inline-block; min-width: 0; max-width: 100%; margin: 8px 0; }
+.assist-panel select, .assist-panel input[type="file"] { max-width: 100%; padding: 10px; }
+.assist-settings { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.assist-panel .screens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.assist-panel video, .assist-panel img { max-width: 100%; max-height: 360px; background: #13232c; }
+.assist-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+#assist-stop-all { background: #9f2828; color: white; min-height: 48px; }
+.assist-panel :focus-visible { outline: 3px solid #146d9b; outline-offset: 3px; }
+[hidden] { display: none !important; }
+#maps-navigation-speech-panel label, #speech-test label { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: .8rem 0; min-width: 0; }
+#maps-navigation-speech-panel select, #speech-test select, #speech-test input, #speech-test textarea { min-width: 0; max-width: 100%; }
+.navigation-speech-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: .8rem 0; }
+@media (max-width: 700px) { .assist-panel .screens { grid-template-columns: 1fr; } }

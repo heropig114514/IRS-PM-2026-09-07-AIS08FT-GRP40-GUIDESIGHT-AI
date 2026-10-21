@@ -2,11 +2,13 @@
 Implementation: PRF2 network-order uint32/float64 envelope; unchanged PRS1 response encoding.
 Related Modules: realtime.protocol; core.detector; integration.services/inference.services.
 Declaration Index: pack_request; unpack_request; read_manifest; model_contract;
-validate_contract; validate_result; web_origins; inference_url; is_loopback; is_stop.
+validate_contract; validate_result; local_session_seconds; web_origins; inference_url;
+is_loopback; is_stop.
 Variable Index: ROOT — backend source root; REQUEST_HEADER/REQUEST_MAGIC — PRF2 framing;
 MAX_INFLIGHT/SESSION_SECONDS/COLD_SECONDS/STEADY_SECONDS/IDLE_SECONDS — transport budgets;
 HASH_PATTERN — model fingerprint syntax; MAX_REQUEST_BYTES — header plus existing JPEG bound.
 distance_mode/depth_interval — additive explicit B/C identity; absent mode retains legacy A.
+LOCAL_MVP_MODE — explicit offline/assist transport policy, never an algorithm setting.
 """
 
 import json
@@ -97,11 +99,25 @@ def read_manifest(path=None):
         raise IntegrationError("local_manifest_invalid", "本地检测模型清单缺失或无效。") from None
 
 
-def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth", depth_interval=3):
+def local_session_seconds():
+    """Functionality: Resolve the explicitly selected local transport session policy.
+    Inputs: LOCAL_MVP_MODE environment, default offline. Outputs: 55 seconds or None for assist.
+    Logic: only the assist entry permits continuous local input; unknown modes fail closed.
+    Constraints: no automatic reconnect or changes to capture clocks and inference/idle budgets.
+    """
+    mode = os.environ.get("LOCAL_MVP_MODE", "offline")
+    if mode not in {"offline", "assist"}:
+        raise IntegrationError("local_configuration_invalid", "本地运行模式配置无效。")
+    return None if mode == "assist" else SESSION_SECONDS
+
+
+def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth", depth_interval=3,
+                   session_seconds=SESSION_SECONDS):
     """Functionality: Declare the complete selected local pipeline without foreign validation.
-    Inputs: session ID, manifest, loaded flag and optional mode/interval. Outputs: public hello.
+    Inputs: session ID, manifest, loaded flag, mode/interval and session policy. Outputs: hello.
     Logic: use existing native FP32 control/settings; explicit geometry replaces only depth.
-    Constraints: capability means selected support; loaded separately describes initialization.
+    Constraints: capability means selected support; loaded separately describes initialization;
+    None is an explicitly selected continuous local session, not an inference timeout exemption.
     """
     contract = {
         "kind": "session",
@@ -119,7 +135,7 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
         "max_edge": 640,
         "jpeg_quality": 0.8,
         "max_inflight": MAX_INFLIGHT,
-        "session_seconds": SESSION_SECONDS,
+        "session_seconds": session_seconds,
         "cold_seconds": COLD_SECONDS,
         "steady_seconds": STEADY_SECONDS,
         "depth_model": "yolo26n-depth",
@@ -131,6 +147,9 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
     }
     if distance_mode not in DISTANCE_MODES or type(depth_interval) is not int or depth_interval < 1:
         raise IntegrationError("local_contract_invalid", "测距模式或深度间隔无效。")
+    if session_seconds is not None and (
+            type(session_seconds) is not int or session_seconds != SESSION_SECONDS):
+        raise IntegrationError("local_contract_invalid", "本地会话时间配置无效。")
     if distance_mode != "depth":
         contract.update(distance_mode=distance_mode, distance_units="m",
                         depth_interval=depth_interval if distance_mode == "temporal_depth" else 0)
@@ -155,7 +174,8 @@ def validate_contract(message):
     mode = message.get("distance_mode", "depth")
     expected = model_contract("fixture", {"names": [], "source_sha256": ""},
                               distance_mode=mode, depth_interval=message.get("depth_interval", 3)
-                              if mode == "temporal_depth" else 3)
+                              if mode == "temporal_depth" else 3,
+                              session_seconds=local_session_seconds())
     fixed = set(expected) - {"session_id", "names", "source_sha256", "loaded"}
     if (
         any(message.get(key) != expected[key] for key in fixed)

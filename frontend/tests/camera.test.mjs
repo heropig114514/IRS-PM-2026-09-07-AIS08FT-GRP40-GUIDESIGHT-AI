@@ -1,4 +1,4 @@
-/** Responsibilities: 验证取消、画布复用、原采集参数及首帧/稳态计时边界。
+/** Responsibilities: 验证显式后置/设备选择、取消、画布复用、原采集参数及首帧/稳态计时边界。
  * Implementation: 页面、媒体权限、轨道、画布及图像解码使用显式替身；不调用真实摄像头或网络。
  * Related Modules: camera.js；真机权限与浏览器行为仍须另行验证。
  * Declaration Index: FakeElement; FakeElement.constructor; FakeElement.addEventListener;
@@ -10,11 +10,22 @@
  * testCancelled.waitForPermission.register; testCancelled.stopTrack;
  * testCancelled.getTracks; testProcessingPath; testApiMount; testDecodeCancelled;
  * testDecodeCancelled.waitForDecode;
- * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testSceneHooks; testTimingBoundaries; testCameraEvents; testLocalDeviceGate。
+ * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testSceneHooks; testTimingBoundaries; testCameraEvents; testLocalDeviceGate;
+ * testLocalSessionForwarding; testLocalSessionForwarding.recordAdmission; testLocalSessionForwarding.requestCamera;
+ * testLocalSessionForwarding.playVideo; testLocalSessionForwarding.getTracks; testLocalSessionForwarding.stopTrack;
+ * testLocalRearCamera; testLocalRearCamera.requestCamera; testLocalRearCamera.playVideo;
+ * testLocalRearCamera.getTracks; testLocalRearCamera.stopTrack;
+ * testLocalCameraPolicy; testLocalCameraPolicy.rejectUnexpected; testLocalCameraPolicy.rejectSelected;
+ * testRearUnavailable; testRearUnavailable.rejectRear;
+ * testRearPermissionGeneration; testRearPermissionGeneration.requestCamera; testRearPermissionGeneration.registerPermission;
+ * testRearPermissionGeneration.playVideo; testRearPermissionGeneration.registerPlayback;
+ * testRearPermissionGeneration.oldTracks; testRearPermissionGeneration.newTracks;
+ * testRearPermissionGeneration.stopOld; testRearPermissionGeneration.stopNew。
  * Variable Index: None；所有 mock 限于 Node 的独立测试文件进程。
  */
 import assert from "node:assert/strict";
 import test from "node:test";
+import {LiveDetectionClient} from "../live-detection-client.js";
 
 /** Functionality: 最小 DOM 替身。Logic: 保存控件值，不执行渲染。
  * Constraints: 不能证明真实浏览器布局、视频播放或解码。 */
@@ -157,6 +168,204 @@ test("local mode requires explicit device and local-only page blocks HF", async 
   app.processing.value = "local"; await app.start(); assert.equal(calls, 0);
   app.localOnly = true; app.processing.value = "hf"; await app.start(); assert.equal(calls, 0);
   assert.match(app.message.textContent, /本地 MVP/);
+});
+
+/** Functionality: Verify an explicitly enabled product camera uses a single exact rear request.
+ * Inputs: supported facingMode, no device ID and synthetic permission/preview.
+ * Outputs: exact rear constraint, original dimensions/no audio, one permission call and released track.
+ * Logic: stop during preview startup before the transport seam; Constraints: no real permission, media or inference. */
+test("explicit local rear camera needs no device enumeration or preauthorization", async function testLocalRearCamera() {
+  const requests = [];
+  let stopped = 0;
+  /** Functionality: Count release. Inputs: None. Outputs: counter increment.
+   * Logic: actual controller stop owns cleanup; Constraints: synthetic track only. */
+  function stopTrack() { stopped++; }
+  const track = {stop: stopTrack, addEventListener: ignoreWindowEvent};
+  /** Functionality: Return the same owned track. Inputs: None. Outputs: one track.
+   * Logic: identity remains stable; Constraints: no hardware. */
+  function getTracks() { return [track]; }
+  /** Functionality: Capture the single permission request. Inputs: constraints. Outputs: synthetic stream.
+   * Logic: no enumerateDevices or separate authorization call; Constraints: does not validate browser constraint enforcement. */
+  async function requestCamera(constraints) { requests.push(constraints); return {getTracks}; }
+  const app = makeApp(requestCamera);
+  assert.equal(app.localFacingMode, null);
+  app.processing.value = "local"; app.localFacingMode = "environment";
+  navigator.mediaDevices.getSupportedConstraints = () => ({facingMode: true});
+  /** Functionality: End the fixture before WebSocket creation. Inputs: None. Outputs: resolved preview Promise.
+   * Logic: stop advances generation while preview awaits; Constraints: no actual playback. */
+  async function playVideo() { app.stop(); }
+  app.video.play = playVideo;
+  await app.start();
+  assert.deepEqual(requests, [{video: {facingMode: {exact: "environment"},
+    width: {ideal: 640}, height: {ideal: 480}}, audio: false}]);
+  assert.equal(stopped, 1); assert.equal(app.mode, "idle");
+  assert.equal(app.stream, null); assert.equal(app.client, null);
+});
+
+/** Functionality: Reject invalid rear policy/unsupported constraints and preserve explicit device selection.
+ * Inputs: invalid non-null policies, missing/false facing support, explicit device override.
+ * Outputs: no media calls for invalid policies, clear failure and device constraint when explicitly selected.
+ * Logic: unsupported mandatory constraints must never silently capture another lens; Constraints: synthetic failures only. */
+test("local rear policy rejects invalid or unsupported values and explicit device wins", async function testLocalCameraPolicy() {
+  let calls = 0;
+  /** Functionality: Detect unwanted permission requests. Inputs: None. Outputs: rejection.
+   * Logic: count calls before rejecting; Constraints: no media. */
+  async function rejectUnexpected() { calls++; throw new Error("unexpected permission request"); }
+  for (const invalid of [undefined, "", "user", "rear", false, {}]) {
+    const app = makeApp(rejectUnexpected);
+    app.processing.value = "local"; app.localFacingMode = invalid; app.localDeviceId = "explicit-device";
+    await app.start();
+    assert.match(app.message.textContent, /方向配置无效/);
+    assert.equal(app.mode, "idle"); assert.equal(calls, 0);
+  }
+  for (const support of [undefined, () => ({}), () => ({facingMode: false})]) {
+    const app = makeApp(rejectUnexpected);
+    app.processing.value = "local"; app.localFacingMode = "environment";
+    navigator.mediaDevices.getSupportedConstraints = support;
+    await app.start();
+    assert.match(app.message.textContent, /不支持明确选择后置摄像头/);
+    assert.equal(app.mode, "idle"); assert.equal(calls, 0);
+  }
+  const requests = [];
+  /** Functionality: Inspect an explicit device selection without media acquisition. Inputs: constraints. Outputs: rejection.
+   * Logic: record once and stop before preview; Constraints: not a physical device check. */
+  async function rejectSelected(constraints) { requests.push(constraints); throw new Error("synthetic device admission stop"); }
+  const app = makeApp(rejectSelected);
+  app.processing.value = "local"; app.localFacingMode = "environment"; app.localDeviceId = "explicit-device";
+  await app.start();
+  assert.deepEqual(requests, [{video: {deviceId: {exact: "explicit-device"},
+    width: {ideal: 640}, height: {ideal: 480}}, audio: false}]);
+});
+
+/** Functionality: Verify denied or unavailable rear cameras never trigger a second capture request.
+ * Inputs: native-style NotAllowedError and OverconstrainedError fixtures.
+ * Outputs: one call, idle cleanup and original failure shown.
+ * Logic: rejection follows existing error cleanup; Constraints: does not test physical iPhone permission UI. */
+test("rear camera denial or absence fails visibly without front camera fallback or retry", async function testRearUnavailable() {
+  for (const name of ["NotAllowedError", "OverconstrainedError"]) {
+    let calls = 0;
+    /** Functionality: Reject one requested rear camera. Inputs: constraints. Outputs: typed rejection.
+     * Logic: preserve browser-style error; Constraints: no real permission or device. */
+    async function rejectRear(constraints) {
+      calls++;
+      assert.equal(constraints.video.facingMode.exact, "environment");
+      const error = new Error(`synthetic ${name}`); error.name = name; throw error;
+    }
+    const app = makeApp(rejectRear);
+    app.processing.value = "local"; app.localFacingMode = "environment";
+    navigator.mediaDevices.getSupportedConstraints = () => ({facingMode: true});
+    await app.start();
+    assert.equal(calls, 1); assert.equal(app.mode, "idle"); assert.equal(app.stream, null);
+    assert.equal(app.client, null); assert.equal(app.status.dataset.kind, "error");
+    assert.equal(app.message.textContent, `synthetic ${name}`);
+  }
+});
+
+/** Functionality: Preserve generation cleanup when an old rear-camera permission resolves after a new start.
+ * Inputs: two manually completed permission Promises, pending preview and separate synthetic tracks.
+ * Outputs: stale stream released without touching current preview; final stop releases new stream and opens no transport.
+ * Logic: real stop/start owns independent generations; Constraints: synthetic permissions cannot prove Safari behavior. */
+test("late rear permission cannot replace or stop the current camera generation", async function testRearPermissionGeneration() {
+  const permissions = [];
+  let finishPlayback, oldStopped = 0, newStopped = 0;
+  /** Functionality: Store permission resolution. Inputs: resolve. Outputs: queue entry.
+   * Logic: fixture explicitly chooses return order; Constraints: no browser prompt. */
+  function registerPermission(resolve) { permissions.push(resolve); }
+  /** Functionality: Defer each explicit start's permission. Inputs: constraints. Outputs: pending Promise.
+   * Logic: verify rear policy on both generations; Constraints: no auto retry. */
+  function requestCamera(constraints) {
+    assert.equal(constraints.video.facingMode.exact, "environment");
+    return new Promise(registerPermission);
+  }
+  /** Functionality: Store preview resolution. Inputs: resolve. Outputs: completion handle.
+   * Logic: block before transport; Constraints: not real video. */
+  function registerPlayback(resolve) { finishPlayback = resolve; }
+  /** Functionality: Hold newer preview pending. Inputs: None. Outputs: pending Promise.
+   * Logic: old permission can resolve while new preview owns stream; Constraints: no pixels. */
+  function playVideo() { return new Promise(registerPlayback); }
+  /** Functionality: Count old track cleanup. Inputs: None. Outputs: increment.
+   * Logic: independent old ownership; Constraints: no hardware. */
+  function stopOld() { oldStopped++; }
+  /** Functionality: Count current track cleanup. Inputs: None. Outputs: increment.
+   * Logic: independent current ownership; Constraints: no hardware. */
+  function stopNew() { newStopped++; }
+  const oldTrack = {stop: stopOld}, newTrack = {stop: stopNew, addEventListener: ignoreWindowEvent};
+  /** Functionality: Provide old track identity. Inputs: None. Outputs: old track.
+   * Logic: late permission retains its own resource; Constraints: synthetic stream. */
+  function oldTracks() { return [oldTrack]; }
+  /** Functionality: Provide current track identity. Inputs: None. Outputs: new track.
+   * Logic: current preview retains its own resource; Constraints: synthetic stream. */
+  function newTracks() { return [newTrack]; }
+  const app = makeApp(requestCamera), currentStream = {getTracks: newTracks};
+  app.processing.value = "local"; app.localFacingMode = "environment"; app.video.play = playVideo;
+  navigator.mediaDevices.getSupportedConstraints = () => ({facingMode: true});
+  const oldStart = app.start();
+  app.stop();
+  const newStart = app.start();
+  assert.equal(permissions.length, 2);
+  permissions[1](currentStream); await Promise.resolve();
+  assert.equal(app.stream, currentStream);
+  permissions[0]({getTracks: oldTracks}); await oldStart;
+  assert.equal(oldStopped, 1); assert.equal(newStopped, 0);
+  assert.equal(app.stream, currentStream); assert.equal(app.video.srcObject, currentStream);
+  app.stop(); finishPlayback(); await newStart;
+  assert.equal(oldStopped, 1); assert.equal(newStopped, 1);
+  assert.equal(app.stream, null); assert.equal(app.client, null); assert.equal(app.mode, "idle");
+});
+
+/** Functionality: Forward only explicit local duration policy through the real camera start path.
+ * Inputs: default/continuous local and HF configurations with isolated media/play/admission fixtures.
+ * Outputs: constructor policy/provider, original media constraints and released tracks.
+ * Logic: stop at the transport admission seam before capture; HF never receives the local override.
+ * Constraints: mocked connect deliberately rejects; no real media, WebSocket, frames or GPU are exercised. */
+test("camera forwards continuous policy only to local transport and preserves55s defaults", async function testLocalSessionForwarding(t) {
+  const clients = [], requests = [], previousWindowLocation = window.location;
+  const previousLocation = Object.getOwnPropertyDescriptor(globalThis, "location");
+  let stopped = 0;
+  /** Functionality: Record constructed transport before capture. Inputs: instance receiver. Outputs: controlled rejection.
+   * Logic: test observes real constructor options; Constraints: never opens a socket or starts a pipeline. */
+  function recordAdmission() { clients.push(this); return Promise.reject(new Error("synthetic admission stop")); }
+  /** Functionality: Record track cleanup. Inputs: None. Outputs: count increment.
+   * Logic: real CameraApp.stop invokes this fixture; Constraints: no physical device. */
+  function stopTrack() { stopped++; }
+  const track = {addEventListener: ignoreWindowEvent, stop: stopTrack};
+  /** Functionality: Supply a stable track fixture. Inputs: None. Outputs: one track.
+   * Logic: same identity across permission and cleanup; Constraints: no generated media. */
+  function getTracks() { return [track]; }
+  /** Functionality: Resolve synthetic media permission. Inputs: requested constraints. Outputs: minimal stream Promise.
+   * Logic: preserve constraints for assertions; Constraints: no permissions UI or capture. */
+  function requestCamera(constraints) { requests.push(constraints); return Promise.resolve({getTracks}); }
+  /** Functionality: Resolve synthetic preview startup. Inputs: None. Outputs: fulfilled Promise.
+   * Logic: allows actual start to reach client construction; Constraints: no video playback. */
+  function playVideo() { return Promise.resolve(); }
+  t.mock.method(LiveDetectionClient.prototype, "connect", recordAdmission);
+  window.location = {href: "https://test.invalid/"};
+  Object.defineProperty(globalThis, "location", {configurable: true, value: {protocol: "https:"}});
+  try {
+    for (const {provider, configured, expected} of [
+      {provider: "local", configured: 55, expected: 55},
+      {provider: "local", configured: null, expected: null},
+      {provider: "hf", configured: null, expected: 55},
+    ]) {
+      const app = makeApp(requestCamera);
+      assert.equal(app.localSessionSeconds, 55);
+      app.processing.value = provider; app.localDeviceId = "explicit-device";
+      app.localSessionSeconds = configured; app.video.play = playVideo;
+      await app.start();
+      assert.equal(clients.at(-1).provider, provider);
+      assert.equal(clients.at(-1).localSessionSeconds, expected);
+      assert.deepEqual(requests.at(-1), {video: {
+        ...(provider === "local" ? {deviceId: {exact: "explicit-device"}} : {facingMode: {exact: "environment"}}),
+        width: {ideal: 640}, height: {ideal: 480},
+      }, audio: false});
+      assert.equal(app.mode, "idle"); assert.equal(app.client, null);
+    }
+    assert.equal(clients.length, 3); assert.equal(stopped, 3);
+  } finally {
+    window.location = previousWindowLocation;
+    if (previousLocation) Object.defineProperty(globalThis, "location", previousLocation);
+    else delete globalThis.location;
+  }
 });
 
 /** Functionality: Resolve the additive live page against the existing same-origin API mount.

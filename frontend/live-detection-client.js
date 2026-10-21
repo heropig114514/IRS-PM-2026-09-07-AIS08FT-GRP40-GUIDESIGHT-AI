@@ -19,7 +19,8 @@
  * Valid unexpired motion may persist while the current raw depth is null; server owns timeout.
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery;
- * provider selects hf/local explicitly; lastCaptureTimeS enforces monotonic local source timestamps.
+ * provider selects hf/local explicitly; localSessionSeconds admits only55s/default or explicit null continuous local sessions;
+ * HF always requires55s; cold/steady failure budgets remain55s/10s. lastCaptureTimeS enforces monotonic local source timestamps.
  * distance_mode admits explicit geometry/temporal_depth without changing legacy A admission.
  */
 import {MAX_FRAME_BYTES} from "./echo-client.js";
@@ -48,19 +49,22 @@ async function sha256(buffer) {
   return result;
 }
 
-/** Functionality: Validate an explicitly selected HF or local session. Inputs: parsed hello, provider. Outputs: accepted contract copy.
+/** Functionality: Validate an explicitly selected HF or local session.
+ * Inputs: parsed hello, provider and localSessionSeconds(55 or explicit null). Outputs: accepted contract copy.
  * Logic: original model/settings/budgets; explicit resident/AOT/compiled Torch backend/precision
  * and three complete COCO quality records admitted by the server; no capability/token accepted.
  * Constraints: local resident FP32 admission requires real capability identity, never HF COCO evidence;
- * HF quality checks remain intact. Admission alone does not prove accuracy, hardware or performance. */
-function validateSession(message, provider) {
+ * HF quality checks and55s session limit remain intact; continuous local admission changes no frame budgets.
+ * Admission alone does not prove accuracy, hardware or performance. */
+function validateSession(message, provider, localSessionSeconds) {
   const validation = message?.validation;
+  const sessionSeconds = provider === "local" ? localSessionSeconds : 55;
   if (!message || message.kind !== "session" || message.model !== "yolo26n" ||
       !["FP32", "FP16", "BF16"].includes(message.precision) || message.output_precision !== "FP32" ||
       !["PyTorch resident CUDA", "PyTorch AOT CUDA", "PyTorch compiled CUDA"].includes(message.backend) ||
       message.classes !== 80 || message.confidence_threshold !== 0.25 ||
       message.max_edge !== 640 || message.jpeg_quality !== 0.8 || message.max_inflight !== MAX_INFLIGHT ||
-      message.session_seconds !== 55 || message.cold_seconds !== 55 || message.steady_seconds !== 10 ||
+      message.session_seconds !== sessionSeconds || message.cold_seconds !== 55 || message.steady_seconds !== 10 ||
       !HASH_PATTERN.test(message.source_sha256) || !Array.isArray(message.names) || message.names.length !== 80 ||
       Object.hasOwn(message, "capability") || Object.hasOwn(message, "token"))
     throw new Error("视频会话配置无效，请检查服务端。");
@@ -247,12 +251,16 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
  * Constraints: caller holds additional admission through display, no automatic reconnect/retry. */
 export class LiveDetectionClient {
   /** Functionality: Initialize transport and lifecycle callbacks.
-   * Inputs: same-origin url, onDisconnect, onEnd, socketFactory and explicit provider(hf default).
+   * Inputs: same-origin url, onDisconnect, onEnd, socketFactory, provider(hf default), localSessionSeconds(55 default/null).
    * Outputs: instance. Logic: bind events and bounded counters; no immediate network or camera.
-   * Constraints: callbacks do not receive credentials; no arbitrary destination from query parameters. */
-  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, provider = "hf"} = {}) {
+   * Constraints: only explicit null opts local into continuous sessions; HF stays55s regardless this option.
+   * Callbacks do not receive credentials; no arbitrary destination from query parameters. */
+  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, provider = "hf", localSessionSeconds = 55} = {}) {
     if (!["hf", "local"].includes(provider)) throw new Error("未知视频服务类型。");
+    if (localSessionSeconds !== 55 && localSessionSeconds !== null)
+      throw new Error("本地视频会话时长必须为 55 或 null。");
     this.provider = provider;
+    this.localSessionSeconds = localSessionSeconds;
     this.lastCaptureTimeS = -1;
     this.url = url;
     this.onDisconnect = onDisconnect;
@@ -351,7 +359,7 @@ export class LiveDetectionClient {
           return;
         }
         if (!this.connectWait || this.contract) throw new Error("非预期视频控制消息。");
-        this.contract = validateSession(message, this.provider);
+        this.contract = validateSession(message, this.provider, this.localSessionSeconds);
         const waiting = this.connectWait;
         this.connectWait = null;
         clearTimeout(waiting.timer);

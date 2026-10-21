@@ -12,12 +12,14 @@ The live-tuning profile overlays only capture/transport scheduling and its tests
 explicit runtime, and preserves the current model, device outputs and service configuration.
 The navigation profile overlays map guidance and its shared MCP/static dependencies, using an
 explicit current runtime; preserves camera/inference sources, routes, templates and credentials.
+Navigation/outputs require the active shared nested asset route before staging any files.
 Related Modules: hf_video_relay/inference_plan/ai_mcp/ai_bridge; realtime.depth/tracking/risk;
 frontend live pipeline;
 deploy templates;
 private server_info.txt.
 Declaration Index: PinnedHost — SSH policy; PinnedHost.missing_host_key — fingerprint check;
 connect_server — private authentication; execute — checked remote command;
+require_shared_asset_route — read-only compatibility contract for scoped navigation/output staging;
 wait_ready — listener/health observation; stage — hash-verified inactive release;
 activate_overlay — configuration-preserving vibration, live-tuning or navigation release;
 activate_outputs — isolated-runtime device-output deployment;
@@ -31,11 +33,13 @@ snapshot directory, and git_commit records its Git identity without reading priv
 OUTPUT_FRONTEND/OUTPUT_BACKEND — output/navigation UI/MCP overlay preserving inference code;
 LIVE_FRONTEND/LIVE_BACKEND — coordinated browser/PRS live transport overlay, excluding GPU compute;
 NAVIGATION_FRONTEND/NAVIGATION_BACKEND — map/MCP files, preserving camera/inference sources;
-runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest.
+runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest;
+shared_asset_route_sha256 — verified active route identity for navigation/output prerequisites.
 Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
 """
 
 import argparse
+import ast
 import base64
 import hashlib
 import io
@@ -60,6 +64,12 @@ NAVIGATION_FRONTEND = (
     # Shared asset whitelist also names this inert module; no scene UI or HTTP route is enabled.
     "scene-client.js", "README.md", "tests/navigation.test.mjs", "tests/maps-client.test.mjs",
     "tools/check_maps_browser.mjs", "tools/check_navigation_browser.mjs",
+    "integration/maps-navigation-speech.js", "integration/maps-navigation-bridge.js",
+    "integration/maps-navigation-speech.css", "integration/navigation-speech.js",
+    "integration/events.js", "integration/catalog.js",
+    "tests/integration-maps-navigation-bridge.test.mjs",
+    "tools/check_maps_navigation_speech_browser.mjs",
+    "tools/check_local_navigation_browser.mjs",
 )
 NAVIGATION_BACKEND = (
     "core/camera.py", "core/ai_mcp.py", "core/test_ai_control.py", "core/test_mcp_profile.py",
@@ -84,12 +94,18 @@ VIBRATION_BACKEND = (
     "tools/deploy_phone_live.py", "deploy/README.md",
 )
 OUTPUT_FRONTEND = (
-    "index.html", "camera.css", "translations.js", "vibration.js", "speech-output.js",
+    "index.html", "camera.css", "i18n.js", "translations.js", "vibration.js", "speech-output.js",
     "ai-control.js", "README.md", "tests/vibration.test.mjs", "tests/speech-output.test.mjs",
     "maps.html", "maps-page.js", "maps-client.js", "navigation.js", "navigation-ui.js",
     "tests/navigation.test.mjs",
     "tools/check_vibration_browser.mjs", "tools/check_vibration_mcp_browser.mjs",
     "tools/check_speech_browser.mjs",
+    "integration/maps-navigation-speech.js", "integration/maps-navigation-bridge.js",
+    "integration/maps-navigation-speech.css", "integration/navigation-speech.js",
+    "integration/events.js", "integration/catalog.js",
+    "tests/integration-maps-navigation-bridge.test.mjs",
+    "tools/check_maps_navigation_speech_browser.mjs",
+    "tools/check_local_navigation_browser.mjs",
 )
 OUTPUT_BACKEND = (
     "config/asgi.py", "core/camera.py", "core/ai_bridge.py", "core/ai_database.py",
@@ -127,6 +143,12 @@ FRONTEND = (
     "tests/vibration.test.mjs",
     "tests/speech-output.test.mjs",
     "tests/scene-client.test.mjs",
+    "integration/maps-navigation-speech.js", "integration/maps-navigation-bridge.js",
+    "integration/maps-navigation-speech.css", "integration/navigation-speech.js",
+    "integration/events.js", "integration/catalog.js",
+    "tests/integration-maps-navigation-bridge.test.mjs",
+    "tools/check_maps_navigation_speech_browser.mjs",
+    "tools/check_local_navigation_browser.mjs",
 )
 BACKEND = (
     "config/asgi.py",
@@ -295,6 +317,46 @@ def execute(client, script):
     return output + error
 
 
+def require_shared_asset_route(raw):
+    """Functionality: Verify an active route file can serve the nested navigation speech assets.
+    Inputs: Read-only bytes from the active backend/config/urls.py. Outputs: Verified source SHA256.
+    Logic: Parse bounded UTF-8 source without executing it and require the explicit shared path
+    converter to target camera_asset; comments and the old single-segment route do not qualify.
+    Constraints: No route patching, code execution or fallback; scoped publication requires an
+    explicit prior shared-asset-route upgrade when the active release lacks this contract.
+    """
+    message = (
+        "Scoped navigation/output deployment requires existing shared assets/<path:name>; "
+        "upgrade the shared asset route explicitly before publishing this scope"
+    )
+    try:
+        if not isinstance(raw, bytes) or len(raw) > 262144:
+            raise ValueError(message)
+        tree = ast.parse(raw.decode("utf-8"))
+        routes = [
+            value for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == "urlpatterns"
+                    for target in node.targets)
+            and isinstance(node.value, (ast.List, ast.Tuple))
+            for value in node.value.elts
+        ]
+        compatible = any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name) and node.func.id == "path"
+            and len(node.args) >= 2
+            and isinstance(node.args[0], ast.Constant)
+            and node.args[0].value == "assets/<path:name>"
+            and isinstance(node.args[1], ast.Name) and node.args[1].id == "camera_asset"
+            for node in routes
+        )
+    except (SyntaxError, UnicodeDecodeError, ValueError) as error:
+        raise ValueError(message) from error
+    if not compatible:
+        raise ValueError(message)
+    return hashlib.sha256(raw).hexdigest()
+
+
 def stage(client, sftp, profile="full", source_root=None, git_commit=None, runtime_path=None):
     """Functionality: Build a checked live/maps/MCP release while preserving unrelated services.
     Inputs: client/sftp, profile(full/vibration/outputs/live-tuning/navigation),
@@ -316,6 +378,8 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     and tests, with no service template, registry setting, model or GPU implementation changes.
     Navigation similarly requires the existing runtime; it ships map/MCP dependencies and checks
     the selected registry, leaving camera, server routing, inference and service config untouched.
+    Navigation/outputs verify the active shared nested-asset route before local or remote staging;
+    incompatible routes require a separate explicit upgrade and are never patched by this scope.
     """
     if profile not in {"full", "vibration", "outputs", "live-tuning", "navigation"}:
         raise ValueError("Unknown deployment profile")
@@ -345,6 +409,16 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
                     raise ValueError(
                         "Scoped deployment changes the active inference identity: " + name
                     )
+    shared_asset_route_sha256 = None
+    if profile in {"navigation", "outputs"}:
+        try:
+            with sftp.open(old + "/backend/config/urls.py", "rb") as active:
+                shared_asset_route_sha256 = require_shared_asset_route(active.read(262145))
+        except OSError as error:
+            raise ValueError(
+                "Cannot verify active shared asset route; "
+                "upgrade it explicitly before scoped publication"
+            ) from error
     frontend = {"full": FRONTEND, "vibration": VIBRATION_FRONTEND,
                 "outputs": OUTPUT_FRONTEND, "live-tuning": LIVE_FRONTEND,
                 "navigation": NAVIGATION_FRONTEND}[profile]
@@ -398,6 +472,7 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
         "runtime": runtime,
         "generated": generated,
         "git_commit": git_commit,
+        "shared_asset_route_sha256": shared_asset_route_sha256,
         "inference": {"backend": plan["backend"], "precision": plan["precision"],
                       "provenance": plan["provenance"]},
     }

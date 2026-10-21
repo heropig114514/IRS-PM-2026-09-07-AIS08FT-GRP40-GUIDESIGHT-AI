@@ -8,9 +8,11 @@
  * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
  * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
  * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity; testLocalHello; testLocalCapture; testLocalCorrelation;
- * testDistanceModes; testDistanceModeFailures.
+ * testDistanceModes; testDistanceModeFailures; testLocalContinuous; testSessionDurationAdmission;
+ * testSessionDurationOptions; testHfDurationIsolation.
  * Variable Index: manifest/contract — original public model identity; plan — current deployment's
- * compute/quality contract; localContract is independent local capability admission; JPEG — synthetic markers.
+ * compute/quality contract; localContract is independent local capability admission; JPEG — synthetic markers;
+ * duration options exercise explicit continuous-local admission with virtual timers, never actual long-running inference.
  */
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
@@ -92,6 +94,63 @@ test("local native hello is independent from the preserved HF COCO gate", async 
   const hf = fixture(), waiting = assert.rejects(hf.client.connect());
   hf.socket.message(JSON.stringify(localContract)); await waiting;
   assert.equal(hf.state.errors.length, 1);
+});
+
+/** Functionality: Admit continuous local sessions without relaxing frame response deadlines.
+ * Inputs: explicit null option/hello, synthetic packets and virtual timer. Outputs: post55s frame admission and10s failure.
+ * Logic: finish the first frame, advance past the bounded-session duration, then time out a second frame.
+ * Constraints: verifies protocol/lifecycle only; no real elapsed time, GPU, capture or latency claim. */
+test("explicit continuous local admission preserves per-frame budgets beyond55s", async function testLocalContinuous(t) {
+  t.mock.timers.enable({apis: ["setTimeout"]});
+  const f = await admitted(fixture("local", {localSessionSeconds: null}), {...localContract, session_seconds: null});
+  const first = f.client.sendFrame(JPEG.slice().buffer, {capturedAt: 1000});
+  f.socket.message(packet(0, {...riskMetadata(), provider: "local", session_id: localContract.session_id,
+    capture_time_s: 1, timestamp_source: "browser_capture"}));
+  await first;
+  t.mock.timers.tick(55001);
+  assert.equal(f.client.stopped, false); assert.equal(f.client.contract.session_seconds, null);
+  const rejected = assert.rejects(f.client.sendFrame(JPEG.slice().buffer, {capturedAt: 56001}), /超时/);
+  t.mock.timers.tick(9999); assert.equal(f.client.stopped, false);
+  t.mock.timers.tick(1); await rejected;
+  assert.equal(f.state.errors.length, 1); assert.equal(f.client.sequence, 2);
+});
+
+/** Functionality: Reject an unrequested session lifetime before sending frames.
+ * Inputs: default/explicit55/undefined/null client policies and contrary local hellos. Outputs: admission or clear rejection.
+ * Logic: default stays55; continuous mode requires both explicit null policy and matching hello.
+ * Constraints: fixtures prove transport contracts, not server lifetime enforcement. */
+test("local duration defaults stay55 and explicit policies must match the hello", async function testSessionDurationAdmission() {
+  for (const options of [{}, {localSessionSeconds: 55}, {localSessionSeconds: undefined}]) {
+    const good = await admitted(fixture("local", options), localContract);
+    assert.equal(good.client.localSessionSeconds, 55); good.client.stop();
+    const bad = fixture("local", options), rejected = assert.rejects(bad.client.connect(), /会话配置/);
+    bad.socket.message(JSON.stringify({...localContract, session_seconds: null})); await rejected;
+    assert.equal(bad.socket.sent.length, 0); assert.equal(bad.state.errors.length, 1);
+  }
+  const bounded = fixture("local", {localSessionSeconds: null}), rejected = assert.rejects(bounded.client.connect(), /会话配置/);
+  bounded.socket.message(JSON.stringify(localContract)); await rejected;
+  assert.equal(bounded.socket.sent.length, 0); assert.equal(bounded.state.errors.length, 1);
+});
+
+/** Functionality: Reject malformed opt-in settings synchronously.
+ * Inputs: unsupported numbers, strings and other values. Outputs: constructor errors before any socket.
+ * Logic: only literal55 or null admitted; undefined is covered by the default-policy test.
+ * Constraints: does not coerce values or change model settings. */
+test("local session policy rejects unsupported or coerced values", function testSessionDurationOptions() {
+  for (const value of [0, -1, 54, 56, Infinity, NaN, "55", "null", false, {}, []])
+    assert.throws(() => fixture("local", {localSessionSeconds: value}), /会话时长/);
+});
+
+/** Functionality: Keep HF duration admission fixed despite the local-only option.
+ * Inputs: HF clients configured with explicit null and otherwise valid55/null hellos. Outputs:55 success, null failure.
+ * Logic: local policy cannot override HF model/quality/duration requirements.
+ * Constraints: no HF requests or quality measurements; existing independent quality fixtures remain intact. */
+test("continuous local option cannot relax HF session duration", async function testHfDurationIsolation() {
+  const good = await admitted(fixture("hf", {localSessionSeconds: null}), contract);
+  assert.equal(good.client.contract.session_seconds, 55); good.client.stop();
+  const bad = fixture("hf", {localSessionSeconds: null}), rejected = assert.rejects(bad.client.connect(), /会话配置/);
+  bad.socket.message(JSON.stringify({...contract, session_seconds: null})); await rejected;
+  assert.equal(bad.socket.sent.length, 0); assert.equal(bad.state.errors.length, 1);
 });
 
 /** Functionality: Verify PRF2 source timestamp and strictly monotonic capture admission.
@@ -205,9 +264,9 @@ function packet(index, overrides = {}, jpeg = JPEG) {
 }
 
 /** Functionality: Bind actual client to explicit socket/lifecycle fixtures.
- * Inputs: provider(hf default). Outputs: client/socket/state. Logic: callbacks collect diagnostics.
+ * Inputs: provider(hf default), optional local-session policy. Outputs: client/socket/state. Logic: callbacks collect diagnostics.
  * Constraints: never fetches HF quota or requests a GPU. */
-function fixture(provider = "hf") {
+function fixture(provider = "hf", options = {}) {
   const socket = new FakeSocket(), state = {errors: [], ends: 0};
   /** Functionality: Return injected socket. Inputs: ignored url. Outputs: fixture.
    * Logic: no new socket. Constraints: explicitly synthetic. */
@@ -218,7 +277,8 @@ function fixture(provider = "hf") {
   /** Functionality: Record bounded end. Inputs: None. Outputs: end count.
    * Logic: no auto-start. Constraints: no actual resource-release proof. */
   function ended() { state.ends += 1; }
-  return {client: new LiveDetectionClient(`wss://test.invalid/ws/detect/${provider}/`, failed, ended, {socketFactory, provider}), socket, state};
+  return {client: new LiveDetectionClient(`wss://test.invalid/ws/detect/${provider}/`, failed, ended,
+    {...options, socketFactory, provider}), socket, state};
 }
 
 /** Functionality: Resolve explicit public hello. Inputs: fixture and explicit contract.

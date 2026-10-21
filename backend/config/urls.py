@@ -1,5 +1,6 @@
 """Responsibilities: Register the camera page, shared assets, maps, scene description, health/admin.
-Implementation: Root redirects to live/; ASGI Echo/HF paths perform frame processing.
+Implementation: Root redirects to live/; shared assets accept exact allowlisted nested names;
+live assets retain their single-segment route; ASGI Echo/HF paths perform frame processing.
 Related Modules: core.camera/maps/scene/urls; config.asgi; config.base.
 Declaration Index: None.
 Variable Index: urlpatterns — explicit HTTP routes; no detector HTTP API.
@@ -17,7 +18,7 @@ urlpatterns = [
     path("", RedirectView.as_view(url="live/", permanent=False), name="camera-root"),
     path("live/", camera_page, name="camera"),
     path("live/assets/<str:name>", camera_asset, name="camera-asset"),
-    path("assets/<str:name>", camera_asset, name="shared-asset"),
+    path("assets/<path:name>", camera_asset, name="shared-asset"),
     path("maps/", maps_page, name="maps"),
     path("maps/config/", maps_config, name="maps-config"),
     path("maps/route/", maps_route, name="maps-route"),

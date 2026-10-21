@@ -1,5 +1,8 @@
 # PRS 摄像头部署
 
+手机访问本机 GPU 的统一 MVP 使用独立 `/mvp/` HTTPS 中转，不替换本页的 `/prs/`
+服务；反向 SSH、访问认证及显式安装流程见 [手机 MVP](../PHONE-MVP.md)。
+
 系统新增 [MCP AI 控制接口](../MCP.md)，生产模板地址 `/prs/mcp`。
 单独发布导航使用 `--profile navigation --source-root <Git快照> --git-commit <SHA>
 --runtime <当前服务实际解释器目录>`，随后以该清单 `--activate`。
@@ -7,6 +10,10 @@
 推理/模型、HTTP路由、systemd/nginx/env和凭据。`scene-client.js` 随共享资源白名单提供，
 但不会发布场景页面入口或后端场景接口。无新增依赖；staging验证导航工具注册和模型字节一致。
 激活只切换current并重启prs-camera，检查监听与健康；不reload nginx、不迁移数据库。
+地图语音依赖精确白名单下的 `/assets/integration/` 资源。导航/outputs范围发布保留原
+`config/urls.py`，暂存前只读校验活动版本已有 `assets/<path:name>` 共享资源路由；旧单段路由
+会明确拒绝暂存，须先单独审核并升级共享资源路由，工具不会自动改写其它HTTP路由。
+full范围包含该资源路由及完整语音依赖；源码或发布清单更新不代表实际环境已经升级。
 `models/inference-plan.json` 与 `models/yolo26n.json` 在 Git 中保留原字节（`.gitattributes`
 显式 `-text`），因为部署要求它们与当前服务器逐字节一致。两份元数据沿用既有 CRLF；
 该设置不改变 JSON 内容、推理参数或线上文件，也不放宽 SHA/原字节检查。

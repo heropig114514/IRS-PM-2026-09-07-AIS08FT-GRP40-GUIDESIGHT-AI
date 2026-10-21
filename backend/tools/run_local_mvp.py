@@ -1,21 +1,23 @@
 """Responsibilities: Supervise the isolated web and local CUDA inference processes.
 Implementation: Check fixed environments/weights, prepare a private local key, start once on
 loopback, observe listeners then health once, and terminate only owned Popen children on exit.
-Related Modules: integration.asgi; integration.inference.asgi; config.base;
+Related Modules: integration.asgi/assist_asgi; integration.inference.asgi; config.base;
 requirements.txt/requirements-inference.txt; LOCAL-MVP.md.
 Declaration Index: StartupError; python_path; inference_settings; inspect_environment;
-verify_models; read_or_create_key; child_environment; verify_ports; launch; wait_listener;
-read_health; stop_children; handle_signal; run; main.
+verify_models; read_or_create_key; read_ors_key; child_environment; verify_ports; launch;
+wait_listener; read_health; stop_children; handle_signal; run; main.
 Variable Index: ROOT — backend directory; WEB_PACKAGES/INFERENCE_PACKAGES — required direct pins;
 DEPTH_SHA256 — explicitly provisioned official depth checkpoint identity;
 PRS_DISTANCE_* — inherited explicit strategy profile; B preflights only detection weights;
 STOP_REQUESTED — foreground supervisor shutdown event; children — owned process handles only;
 log_handles — optional owned log files; key — private local Django key, never logged.
+assist/ors_key — explicit maps-enabled transport mode and web-only ORS credential.
 """
 
 import argparse
 import hashlib
 import http.client
+import io
 import json
 import os
 import secrets
@@ -198,12 +200,43 @@ def read_or_create_key(path):
     return values[0]
 
 
-def child_environment(key, web_port, inference_port, *, web):
-    """Functionality: Construct explicit offline child configuration without mutating the parent.
-    Inputs: private local key, approved loopback ports, child role. Outputs: child environment.
+def read_ors_key(path=None):
+    """Functionality: Read only the explicitly authorized ORS credential for assist mode.
+    Inputs: optional dotenv Path, otherwise process ORS_API_KEY. Outputs: key or unconfigured empty.
+    Logic: bounded UTF-8 dotenv parsing without interpolation/execution; select exactly one ORS key.
+    Constraints: no parent mutation, automatic .env discovery, other credentials or key diagnostics.
+    """
+    if path is None:
+        value = os.environ.get("ORS_API_KEY", "")
+    else:
+        from dotenv.parser import parse_stream
+
+        try:
+            with path.open("rb") as source:
+                raw = source.read(65537)
+            if len(raw) > 65536:
+                raise StartupError("Explicit ORS environment file exceeds 64 KiB.")
+            bindings = list(parse_stream(io.StringIO(raw.decode("utf-8-sig"))))
+        except (OSError, UnicodeError):
+            raise StartupError("Explicit ORS environment file cannot be read as UTF-8.") from None
+        values = [binding.value for binding in bindings if binding.key == "ORS_API_KEY"]
+        if any(binding.error for binding in bindings) or len(values) != 1 or not values[0]:
+            raise StartupError("Explicit ORS environment file must contain one valid ORS_API_KEY.")
+        value = values[0]
+    value = value.strip()
+    if path is not None and not value:
+        raise StartupError("Explicit ORS environment file contains an empty ORS_API_KEY.")
+    if len(value) > 8192 or any(character.isspace() for character in value):
+        raise StartupError("ORS_API_KEY must be one bounded non-whitespace credential.")
+    return value
+
+
+def child_environment(key, web_port, inference_port, *, web, assist=False, ors_key=""):
+    """Functionality: Construct explicit role-specific child settings without parent mutation.
+    Inputs: private Django key, loopback ports, role, assist selection and ORS key. Outputs: env.
     Logic: Empty known external credentials take precedence over config.base's .env loading;
-    web uses development SQLite/outputs MCP, worker receives no Django key.
-    Constraints: no HF/ORS/DashScope calls, wildcard Origin, inherited production configuration.
+    web uses SQLite/outputs MCP; only assist web receives ORS; worker has no Django/ORS key.
+    Constraints: HF/DashScope stay disabled; no wildcard Origin or inherited production/mode policy.
     """
     environment = os.environ.copy()
     environment.update(
@@ -219,12 +252,14 @@ def child_environment(key, web_port, inference_port, *, web):
         OPENBLAS_NUM_THREADS="1",
         LOCAL_WEB_ORIGIN=f"http://127.0.0.1:{web_port}",
         LOCAL_INFERENCE_URL=f"ws://127.0.0.1:{inference_port}/ws/infer/",
+        LOCAL_MVP_MODE="assist" if assist else "offline",
     )
     if web:
         environment.update(
             DJANGO_SECRET_KEY=key,
             DJANGO_SETTINGS_MODULE="config.settings",
             PRS_MCP_PROFILE="outputs",
+            ORS_API_KEY=ors_key if assist else "",
         )
     else:
         for name in ("DJANGO_SECRET_KEY", "DJANGO_SETTINGS_MODULE", "PRS_MCP_PROFILE"):
@@ -369,12 +404,17 @@ def handle_signal(signum, frame):
 
 def run(args):
     """Functionality: Check prerequisites or supervise the two independent local services.
-    Inputs: parsed CLI flags. Outputs: None on normal stop, otherwise actionable failure.
+    Inputs: parsed CLI flags, optional explicit assist/ORS file. Outputs: normal stop or failure.
     Logic: Check all prerequisites before private-key creation; start GPU then web once; observe
     health and wait for user stop or child failure; finally stop only owned children.
     Constraints: --check never writes configuration or starts services; no install/download/GPU
-    inference, automatic restart, migration or remote deployment; .env remains untouched.
+    inference, restart, migration or deployment; --assist alone permits explicit ORS routes.
     """
+    assist = getattr(args, "assist", False)
+    ors_env = getattr(args, "ors_env", None)
+    if ors_env is not None and not assist:
+        raise StartupError("--ors-env requires the explicit --assist mode.")
+    ors_key = read_ors_key(ors_env) if assist else ""
     web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
     inspect_environment(web_python, WEB_PACKAGES)
     runtime = inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
@@ -412,7 +452,7 @@ def run(args):
             (
                 "web",
                 web_python,
-                "integration.asgi:application",
+                "integration.assist_asgi:application" if assist else "integration.asgi:application",
                 args.web_port,
                 True,
                 "/integration/status/",
@@ -425,12 +465,17 @@ def run(args):
                 python,
                 module,
                 port,
-                child_environment(key, args.web_port, args.inference_port, web=web),
+                child_environment(key, args.web_port, args.inference_port, web=web,
+                                  assist=assist, ors_key=ors_key),
                 output,
             )
             children.append(child)
             wait_listener(child, port)
             health = read_health(port, path)
+            if "session_seconds" not in health or (
+                    health["session_seconds"] is not None if assist else
+                    type(health["session_seconds"]) is not int or health["session_seconds"] != 55):
+                raise StartupError("Web/worker session policy does not match the selected mode.")
             print(
                 f"{name} listener/health available on 127.0.0.1:{port}; "
                 f"model_loaded={health.get('loaded', False)}; "
@@ -438,7 +483,7 @@ def run(args):
                 flush=True,
             )
         print(
-            f"Open http://127.0.0.1:{args.web_port}/live/ ; "
+            f"Open http://127.0.0.1:{args.web_port}/{'maps/' if assist else 'live/'} ; "
             "Ctrl+C stops only these two child processes.",
             flush=True,
         )
@@ -459,7 +504,7 @@ def run(args):
 
 def main():
     """Functionality: Parse the explicit local supervisor command and report safe failures.
-    Inputs: CLI --check/ports/optional log directory. Outputs: process exit status.
+    Inputs: CLI --check/ports/log directory/--assist/explicit --ors-env. Outputs: exit status.
     Logic: Default runs until Ctrl+C; errors return 1 without private values or child log dumps.
     Constraints: no background PID registry, implicit installation or remote actions.
     """
@@ -472,6 +517,10 @@ def main():
     parser.add_argument("--web-port", type=int, default=8766)
     parser.add_argument("--inference-port", type=int, default=8767)
     parser.add_argument("--log-dir", type=Path, help="Optional log parent directory inside backend")
+    parser.add_argument("--assist", action="store_true",
+                        help="Enable same-page maps with local continuous perception; HF stays off")
+    parser.add_argument("--ors-env", type=Path,
+                        help="Explicit UTF-8 dotenv file: import only ORS_API_KEY with --assist")
     args = parser.parse_args()
     try:
         run(args)

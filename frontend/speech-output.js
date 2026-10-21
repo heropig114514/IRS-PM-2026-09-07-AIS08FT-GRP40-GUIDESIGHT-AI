@@ -1,6 +1,7 @@
 /** Responsibilities: 浏览器语音输出共用接口、测试UI、状态事件及明确失败反馈。
  * Implementation: 默认关闭；手动UI与MCP共享speak/stop，保留前台和用户激活要求；
- * 只提交一个utterance，按start/end/error记录引擎状态，停止及后台取消，不重试或替换语音。
+ * 只提交一个utterance，按start/end/error记录引擎状态，停止及后台取消，不重试或替换语音；
+ * 广播前固定请求事件快照，每个订阅者收到独立副本，隔离同步重入与订阅者修改。
  * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js; core.ai_mcp/core.camera。
  * Declaration Index: SpeechOutput; SpeechOutput.constructor; SpeechOutput.feedback;
  * SpeechOutput.render; SpeechOutput.refreshVoices; SpeechOutput.describe; SpeechOutput.voiceList;
@@ -13,6 +14,7 @@
  * speechOutput — 摄像头页共享实例，其他页为null。实例engine/doc/win为浏览器依赖；
  * current保留utterance并隔离旧事件，canceling隔离取消过程事件，sequence标识请求；
  * phase/lastRequest/lastError/nativeVoices/voiceReadError为有限状态；listeners订阅非正文生命周期；
+ * notify的局部event固定本次phase/request_id/reason/at，快照监听器各收独立副本；
  * localOnly仅由独立integration页面明确声明，拒绝默认/远程声音而不影响原页面。
  */
 export const MAX_TEXT_LENGTH = 1000;
@@ -88,13 +90,16 @@ export class SpeechOutput {
    * Logic: local Set; events carry request identity and actual browser engine phase.
    * Constraints: no polling, voice replacement, permission grant or hardware-success inference. */
   subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
-  /** Functionality: Publish output lifecycle. Inputs: phase and optional reason. Outputs: callbacks.
-   * Logic: stable request_id separates manual, scene and guidance utterances.
-   * Constraints: body omitted; observer exceptions cannot alter native output semantics. */
+  /** Functionality: Publish one request-bound lifecycle snapshot to independent observers.
+   * Inputs: phase, optional reason and current request identity. Outputs: Independent event copies.
+   * Logic: Capture identity/time and listener set before callbacks; nested new requests cannot
+   * relabel the original event, and one observer's mutations cannot affect later observers.
+   * Constraints: Body omitted; observer exceptions cannot alter native output semantics. */
   notify(phase, reason = null) {
-    for (const listener of this.listeners) {
-      try { listener({channel: "speech", phase, request_id: this.lastRequest?.id ?? null,
-        reason, at: performance.now()}); }
+    const event = Object.freeze({channel: "speech", phase, request_id: this.lastRequest?.id ?? null,
+      reason, at: performance.now()});
+    for (const listener of [...this.listeners]) {
+      try { listener({...event}); }
       catch (error) { this.win.console.error("Speech observer failed", {error_type: error.name}); }
     }
   }
