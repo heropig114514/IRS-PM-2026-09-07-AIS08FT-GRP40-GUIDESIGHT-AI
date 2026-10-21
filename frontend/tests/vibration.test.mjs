@@ -1,12 +1,13 @@
 /** Responsibilities: 验证手动震动的用户边界、拒绝反馈、生命周期取消及词典覆盖。
- * Implementation: 用 EventTarget 派发真实注册回调；仅替换 DOM 和原生震动函数，不调用硬件或网络。
+ * Implementation: 用 EventTarget 派发真实注册回调并覆盖重入广播快照/观察者隔离；仅替换 DOM 和原生震动函数，不调用硬件或网络。
  * Related Modules: vibration.js, ai-control.js, index.html, translations.js, i18n.js。
  * Declaration Index: TestControl; TestControl.constructor; TestDocument; TestDocument.constructor;
  * TestDocument.getElementById; TestDocument.querySelectorAll; TestWindow; TestWindow.constructor;
  * TestWindow.info; TestWindow.error; setup; enable; testManual; testManual.native;
  * testUnavailable; testActivation; testActivation.native; testFailures; testFailures.native;
  * testLifecycle; testLifecycle.native; testCancelRejected; testCancelRejected.native; testTranslations。
- * testMcpShared; testMcpShared.native; testMcpFailures; testMcpFailures.native; testGuidanceOwnership。
+ * testMcpShared; testMcpShared.native; testMcpFailures; testMcpFailures.native; testGuidanceOwnership;
+ * testReentrantBroadcast。
  * Variable Index: None；每个测试的calls记录固定请求，logs记录非敏感诊断，response控制原生替身结果。
  */
 import test from "node:test";
@@ -27,6 +28,41 @@ test("vibration event identity protects a newer manual pattern from guidance sto
   assert.equal(calls.length, 2); assert.equal(f.tester.stopOwned(second.request_id), true);
   assert.deepEqual(events.map(event => event.phase), ["start", "start", "cancel"]);
   assert.ok(events.every(event => event.hardware_verified === false));
+});
+
+/** Functionality: Preserve cancellation identity when an observer immediately starts another pattern.
+ * Inputs: Real shared driver's cancel, explicit nested pattern and mutation of the first observer's event.
+ * Outputs: Old cancellation ID/time for later observers and separate new-pattern start identity.
+ * Logic: Exercise actual testPattern/stop with a native acceptance fixture, not a notify reimplementation.
+ * Constraints: API events are not physical motor start/end; observer assertions run after dispatch. */
+test("reentrant vibration cancellation retains its original request and timestamp", function testReentrantBroadcast() {
+  const calls = [], f = setup(pattern => { calls.push(pattern); return true; }); enable(f.doc);
+  let firstId = null, original = null, firstReference = null, nested = null;
+  const later = [];
+  const unsubscribeFirst = f.tester.subscribe(event => {
+    if (event.phase !== "cancel" || event.request_id !== firstId) return;
+    original = {...event}; firstReference = event;
+    event.request_id = -1; event.phase = "observer_mutation"; event.at = -1;
+    event.reason = "observer_mutation"; event.channel = "observer_mutation"; event.hardware_verified = true;
+    nested = f.tester.testPattern("double");
+  });
+  const unsubscribeLater = f.tester.subscribe(event => later.push(event));
+  const first = f.tester.testPattern("short"); firstId = first.request_id;
+  assert.equal(f.tester.stop("manual"), true);
+  assert.equal(nested?.accepted, true);
+  const cancellation = later.filter(event => event.phase === "cancel");
+  assert.equal(cancellation.length, 1);
+  assert.deepEqual(cancellation[0], original);
+  assert.notEqual(cancellation[0], firstReference);
+  assert.equal(cancellation[0].request_id, firstId);
+  assert.equal(cancellation[0].at, original.at);
+  assert.equal(cancellation[0].hardware_verified, false);
+  assert.ok(later.some(event => event.phase === "start" && event.request_id === nested.request_id));
+  assert.notEqual(nested.request_id, firstId);
+  assert.equal(f.tester.describe().request_id, nested.request_id);
+  assert.equal(f.tester.describe().request_pending, true);
+  assert.deepEqual(calls, [[200], 0, [150, 100, 150]]);
+  unsubscribeFirst(); unsubscribeLater(); f.tester.stop();
 });
 
 /** Functionality: 提供可派发点击/变更事件的独立控件。

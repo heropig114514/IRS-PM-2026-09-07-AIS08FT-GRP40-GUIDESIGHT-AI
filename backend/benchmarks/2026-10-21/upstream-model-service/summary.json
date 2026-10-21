@@ -1,0 +1,389 @@
+{
+  "scope": "Latest upstream integration with existing manifest-approved official models on local GPU",
+  "git": {
+    "branch": "codex/resident-inference-optimization",
+    "optimization_parent": "928d9d5f9f9823057e43baf0f7bcdd2102d21f41",
+    "upstream_main": "7ff49f967748129074a471a16d3ee53acfb9f98f",
+    "merge_resolution_pending_commit_at_capture": true
+  },
+  "new_weights_downloaded": false,
+  "models_sha256": {
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+  },
+  "source_code_sha256": {
+    "../frontend/camera.js": "8971aaba74c61eee6020b7d2a51c172e553afbda134ba1d736743aeae7141044",
+    "../frontend/live-detection-client.js": "1b665ef5b04cd43a71330f60b21856bb520ee0c1859f7d2e4d2729dbbee2c22c",
+    "../frontend/tests/live-detection-client.test.mjs": "9b3dbe1be6285e556a926187f833f1a537d9b41d4266d8633efb157fba496371",
+    "../frontend/translations.js": "9d784e7b62d7d788e026e3f5afebfc3fdac7cf24a71b6b2f8586f556b6a5dbf2",
+    "integration/inference/services.py": "1e832941d7e762a14004214d40a14f5857c6f765cd2eceb610202259d992356a",
+    "integration/services.py": "d8262c0e59df08463c9fc9a2ba501db463867341ececeda90b4b0c12025a5ed0",
+    "integration/protocol.py": "58ea745b6484802a5ee09ace7315124507bceb1b19286e724de2b57d4db4ebef",
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "tools/check_local_mvp.py": "4ae6012dd4ec580f3b6ed4604365be02a08acdcdc52085f6159ab7b7ce648861",
+    "../frontend/tools/check_local_video_browser.mjs": "ac27d8051c59ce12083576e0323f63f3fc27c88f9b10ade58301eec49d17a635"
+  },
+  "runtime_report": "runtime.json",
+  "browser_matrix": [
+    {
+      "run": "browser-before",
+      "report": "browser-before/report.json",
+      "conditions": {
+        "input_fps": 30,
+        "max_inflight": 12,
+        "frames_per_session": 181,
+        "mode": "full",
+        "depth_graph_experiment": false,
+        "asgi_entry": "config.resident_asgi:application",
+        "source_kind": "moving_video",
+        "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+      },
+      "model_sha256": {
+        "models/yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "models/yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+        "models/yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+      },
+      "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+      "sessions": [
+        {
+          "sent": 181,
+          "received": 181,
+          "summary": {
+            "first_decoded_ms": 4994.5,
+            "steady_frames": 180,
+            "steady_fps": 19.274424979653237,
+            "decoded_p50_ms": 603.5,
+            "decoded_p95_ms": 662.9650000020862,
+            "decoded_max_ms": 700.3000000007451,
+            "queue_p50_ms": 543.6055999998644,
+            "server_p50_ms": 48.43165000056615,
+            "depth_p50_ms": 16.73829999890586,
+            "meets_existing_10fps_500ms_gate": false
+          }
+        },
+        {
+          "sent": 181,
+          "received": 181,
+          "summary": {
+            "first_decoded_ms": 65.5,
+            "steady_frames": 180,
+            "steady_fps": 19.64207769532955,
+            "decoded_p50_ms": 605.5499999988824,
+            "decoded_p95_ms": 641.05,
+            "decoded_max_ms": 671.6999999992549,
+            "queue_p50_ms": 543.4173000030569,
+            "server_p50_ms": 48.883049999858486,
+            "depth_p50_ms": 17.649649998929817,
+            "meets_existing_10fps_500ms_gate": false
+          }
+        }
+      ],
+      "meets_existing_10fps_500ms_gate": false
+    },
+    {
+      "run": "browser-depth-graph",
+      "report": "browser-depth-graph/report.json",
+      "conditions": {
+        "input_fps": 30,
+        "max_inflight": 12,
+        "frames_per_session": 181,
+        "mode": "full",
+        "depth_graph_experiment": true,
+        "asgi_entry": "tools.resident_graph_asgi:application",
+        "source_kind": "moving_video",
+        "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+      },
+      "model_sha256": {
+        "models/yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "models/yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+        "models/yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+      },
+      "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+      "sessions": [
+        {
+          "sent": 181,
+          "received": 181,
+          "summary": {
+            "first_decoded_ms": 4794.800000000745,
+            "steady_frames": 180,
+            "steady_fps": 24.01024437092921,
+            "decoded_p50_ms": 488.74999999813735,
+            "decoded_p95_ms": 524.825000000745,
+            "decoded_max_ms": 537.0999999977648,
+            "queue_p50_ms": 438.42994999977236,
+            "server_p50_ms": 40.280999999595224,
+            "depth_p50_ms": 9.15404999977909,
+            "meets_existing_10fps_500ms_gate": false
+          }
+        },
+        {
+          "sent": 181,
+          "received": 181,
+          "summary": {
+            "first_decoded_ms": 55.900000002235174,
+            "steady_frames": 180,
+            "steady_fps": 25.43917916248837,
+            "decoded_p50_ms": 442.9500000011176,
+            "decoded_p95_ms": 497.0050000000745,
+            "decoded_max_ms": 501.8999999985099,
+            "queue_p50_ms": 395.9299500002089,
+            "server_p50_ms": 38.24654999880295,
+            "depth_p50_ms": 8.89544999881764,
+            "meets_existing_10fps_500ms_gate": false
+          }
+        }
+      ],
+      "meets_existing_10fps_500ms_gate": false
+    },
+    {
+      "run": "browser-after",
+      "report": "browser-after/report.json",
+      "conditions": {
+        "input_fps": 30,
+        "max_inflight": 12,
+        "frames_per_session": 181,
+        "mode": "full",
+        "depth_graph_experiment": false,
+        "asgi_entry": "config.resident_asgi:application",
+        "source_kind": "moving_video",
+        "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+      },
+      "model_sha256": {
+        "models/yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "models/yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+        "models/yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+      },
+      "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+      "sessions": [
+        {
+          "sent": 181,
+          "received": 181,
+          "summary": {
+            "first_decoded_ms": 4211.300000000745,
+            "steady_frames": 180,
+            "steady_fps": 19.144251938353992,
+            "decoded_p50_ms": 623.0999999996275,
+            "decoded_p95_ms": 651.9699999986216,
+            "decoded_max_ms": 667.6000000014901,
+            "queue_p50_ms": 561.9623999991745,
+            "server_p50_ms": 50.19460000039544,
+            "depth_p50_ms": 17.475200000262703,
+            "meets_existing_10fps_500ms_gate": false
+          }
+        },
+        {
+          "sent": 181,
+          "received": 181,
+          "summary": {
+            "first_decoded_ms": 64.69999999925494,
+            "steady_frames": 180,
+            "steady_fps": 19.913046364207975,
+            "decoded_p50_ms": 599.5999999996275,
+            "decoded_p95_ms": 632.8350000007077,
+            "decoded_max_ms": 644.9000000022352,
+            "queue_p50_ms": 538.5492499990505,
+            "server_p50_ms": 48.330300000088755,
+            "depth_p50_ms": 17.52190000115661,
+            "meets_existing_10fps_500ms_gate": false
+          }
+        }
+      ],
+      "meets_existing_10fps_500ms_gate": false
+    }
+  ],
+  "browser_frames_total": 1086,
+  "browser_steady_frames_total": 1080,
+  "local_static_probe": {
+    "report": "local-model-probe.json",
+    "complete": true,
+    "frames_by_session": [
+      6,
+      1
+    ]
+  },
+  "local_video": {
+    "report": "local-video.json",
+    "complete": true,
+    "source": {
+      "name": "MOT17-10-FRCNN-browser-h264.mp4",
+      "bytes": 13008260,
+      "sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5"
+    },
+    "sessions": [
+      {
+        "end_mode": "manual_stop",
+        "stats": {
+          "source": "local_video",
+          "sourceCallbacks": 8,
+          "observedPresentedFrames": 9,
+          "callbackGaps": 1,
+          "skippedCadence": 0,
+          "skippedCredit": 0,
+          "skippedFirstFrame": 4,
+          "admitted": 4,
+          "encoded": 4,
+          "sent": 4,
+          "delivered": 2,
+          "cancelledBeforeSend": 0,
+          "maxInFlight": 2,
+          "firstSourceMediaTime": 0.033333,
+          "lastSourceMediaTime": 0.3,
+          "lastPresentedFrames": 10,
+          "uncapturedObservedFrames": 5,
+          "currentInFlight": 0
+        },
+        "summary": {
+          "first_frame_ms": 163.80000000074506,
+          "unique_source_frames": 2,
+          "media_span_s": 0.2,
+          "capture_span_s": 0.19369999999925494,
+          "source_sample_fps": 5,
+          "delivered_fps": 10.416666666666666,
+          "media_capture_span_difference_ms": -6.3000000007450705,
+          "steady_p95_ms": 66.10000000149012,
+          "steady_max_ms": 66.10000000149012,
+          "steady_above_500ms": 0,
+          "frames_with_tracks": 2,
+          "frames_with_motion": 0,
+          "frames_with_alerts": 0
+        },
+        "cleanup": {
+          "guidance_session_id": null,
+          "guidance_navigation_pending": false
+        },
+        "video": {
+          "paused": true,
+          "loop": false,
+          "playback_rate": 1
+        }
+      },
+      {
+        "end_mode": "eof",
+        "stats": {
+          "source": "local_video",
+          "sourceCallbacks": 653,
+          "observedPresentedFrames": 653,
+          "callbackGaps": 0,
+          "skippedCadence": 73,
+          "skippedCredit": 139,
+          "skippedFirstFrame": 1,
+          "admitted": 440,
+          "encoded": 440,
+          "sent": 440,
+          "delivered": 440,
+          "cancelledBeforeSend": 0,
+          "maxInFlight": 12,
+          "firstSourceMediaTime": 0.033333,
+          "lastSourceMediaTime": 21.766667,
+          "lastPresentedFrames": 654,
+          "uncapturedObservedFrames": 213,
+          "currentInFlight": 0
+        },
+        "summary": {
+          "first_frame_ms": 60,
+          "unique_source_frames": 440,
+          "media_span_s": 21.7,
+          "capture_span_s": 21.70060000000149,
+          "source_sample_fps": 20.23041474654378,
+          "delivered_fps": 19.764714357105856,
+          "media_capture_span_difference_ms": 0.6000000014907414,
+          "steady_p95_ms": 639.9000000022352,
+          "steady_max_ms": 692,
+          "steady_above_500ms": 412,
+          "frames_with_tracks": 440,
+          "frames_with_motion": 436,
+          "frames_with_alerts": 324
+        },
+        "cleanup": {
+          "guidance_session_id": null,
+          "guidance_navigation_pending": false
+        },
+        "video": {
+          "paused": true,
+          "loop": false,
+          "playback_rate": 1
+        }
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "django-check",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.238596300001518
+    },
+    {
+      "name": "migrations",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "makemigrations",
+        "--check",
+        "--dry-run"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.938782599998376
+    },
+    {
+      "name": "backend-tests",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+        "manage.py",
+        "test"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 34.61398780000309
+    },
+    {
+      "name": "ruff",
+      "command": [
+        "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+        "check",
+        "."
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.5050128000002587
+    },
+    {
+      "name": "frontend-tests",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "--test",
+        "../frontend/tests/*.test.mjs"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.8066969000028621
+    },
+    {
+      "name": "browser-benchmark-tests",
+      "command": [
+        "C:/Program Files/nodejs/node.exe",
+        "--test",
+        "tools/benchmark_resident_browser.test.mjs"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.19610590000229422
+    }
+  ],
+  "documentation_audit": "documentation-audit.json",
+  "service_observation": "service-observation.json",
+  "decision": {
+    "depth_graph_default_enabled": false,
+    "existing_latency_gate_met": false,
+    "next_candidate": "Same-frame CPU tracking association and depth Graph overlap, still unimplemented and unvalidated"
+  },
+  "limitations": [
+    "Browser runs share source video and settings but sample different delivered source frames; throughput differences are observations, not identical-frame causal speedup estimates.",
+    "PRF2 video admission preserves the existing cadence/credit policy; 440 sent frames at EOF do not imply all 654 source frames were inferred.",
+    "Manual-stop cancellation is reported separately from the EOF drain.",
+    "No depth/distance ground truth or new detection quality evaluation; physical camera/audio/vibration and external services remain unverified.",
+    "Two independent local processes explicitly use the existing combined environment; the default separate-venv launcher was not exercised.",
+    "Service state is a point-in-time observation; runtime logs continue in the ignored local directory."
+  ]
+}

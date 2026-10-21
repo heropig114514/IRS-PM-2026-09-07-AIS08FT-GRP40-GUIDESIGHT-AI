@@ -2,7 +2,7 @@
 Implementation: 普通响应读取小型静态源码；不接收上传，也不根据用户输入拼接任意路径。
 Related Modules: config.urls, core.maps, frontend/index.html；
 i18n/translations 及摄像头/检测/有界视频流水线/地图/导航/ai-control/震动/语音输出/
-场景描述客户端模块；场景接口见 core.scene。
+场景描述客户端模块；integration 导航播报薄接线；场景接口见 core.scene。
 Declaration Index: camera_page — 主页面；camera_asset — 白名单资源；serve_file — 公共响应头。
 Variable Index: FRONTEND_DIR — 前端目录；ASSETS — 允许文件名与 MIME 的固定映射。
 """
@@ -28,6 +28,12 @@ ASSETS = {
     "vibration.js": "text/javascript",
     "speech-output.js": "text/javascript",
     "scene-client.js": "text/javascript",
+    "integration/maps-navigation-speech.js": "text/javascript",
+    "integration/maps-navigation-bridge.js": "text/javascript",
+    "integration/maps-navigation-speech.css": "text/css",
+    "integration/navigation-speech.js": "text/javascript",
+    "integration/events.js": "text/javascript",
+    "integration/catalog.js": "text/javascript",
 }
 
 
@@ -68,7 +74,7 @@ def camera_page(request):
 @require_safe
 def camera_asset(request, name):
     """Functionality: 提供固定白名单中的 JavaScript/CSS。
-    Inputs: Django request 和路由的单段 name。
+    Inputs: Django request 和路由的 name；共享资源允许映射中明确列出的嵌套名称。
     Outputs: 固定 MIME HttpResponse；未知文件抛 Http404。
     Logic: 先查固定映射，验证通过后才读取文件。
     Constraints: 不暴露 README、配置、密钥或任意目录。

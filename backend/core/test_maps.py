@@ -3,6 +3,7 @@ Implementation: 页面读取真实文件；上游 HTTP 仅用 mock，密钥是�
 Related Modules: core.maps/services；真实上游另做联调。
 Declaration Index: route_fixture — 合成上游；MapsTests — HTTP；
 MapsTests.test_page — 策略、双语及导航资源接入；
+MapsTests.test_navigation_speech_assets — 精确嵌套资源与拒绝边界；
 MapsTests.test_config — 凭据边界；MapsTests.test_route_input — 输入；
 MapsTests.test_route_result — 路线适配；
 ServiceTests — 服务；ServiceTests.setUp — 重置限流；ServiceTests.test_coordinates — 坐标；
@@ -89,6 +90,40 @@ class MapsTests(SimpleTestCase):
         for name in ["maps-page.js", "maps-client.js", "navigation.js", "navigation-ui.js",
                      "i18n.js", "translations.js"]:
             self.assertEqual(self.client.get(f"/assets/{name}").status_code, 200)
+        self.assertContains(first, 'src="../assets/integration/maps-navigation-speech.js"')
+        self.assertContains(first, 'href="../assets/integration/maps-navigation-speech.css"')
+        self.assertContains(first, 'id="speech-enabled"')
+        self.assertContains(first, 'id="navigation-speech-enabled"')
+        self.assertRegex(first.content.decode(), r'id="speech-rate"[^>]*value="2"')
+        self.assertNotContains(first, "video-mvp.js")
+
+    def test_navigation_speech_assets(self):
+        """Functionality: Serve only the explicitly named nested navigation integration assets.
+        Inputs: Actual fixed files, HEAD and unknown/traversal requests.
+        Outputs: MIME, body and 404 checks.
+        Logic: Use the shared nested route while retaining the live single-segment route.
+        Constraints: No browser, GPS, route service or real speech engine is exercised.
+        """
+        names = (
+            "maps-navigation-speech.js", "maps-navigation-bridge.js", "maps-navigation-speech.css",
+            "navigation-speech.js", "events.js", "catalog.js",
+        )
+        for name in names:
+            with self.subTest(name=name):
+                response = self.client.get("/assets/integration/" + name)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Type"].split(";")[0],
+                                 "text/css" if name.endswith(".css") else "text/javascript")
+                self.assertTrue(response.content)
+                self.assertEqual(response["Cache-Control"], "no-store")
+                self.assertEqual(self.client.head("/assets/integration/" + name).status_code, 200)
+                live = self.client.get("/live/assets/integration/" + name)
+                self.assertEqual(live.status_code, 404)
+        for name in ("integration/unknown.js", "integration/../../backend/.env",
+                     "integration/../navigation.js", "integration/navigation-sample.json",
+                     "integration/video-mvp.js", "../.env", "README.md"):
+            with self.subTest(rejected=name):
+                self.assertEqual(self.client.get("/assets/" + name).status_code, 404)
 
     def test_config(self):
         """Functionality: key 只留服务端；Inputs: 假 key 和空值环境；Outputs: 配置断言。

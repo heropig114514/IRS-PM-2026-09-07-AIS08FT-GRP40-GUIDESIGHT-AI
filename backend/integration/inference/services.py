@@ -13,6 +13,7 @@ executor — single native worker thread; load_error — explicit initialization
 detector/hashes/active_session/frame_size — worker-owned resident/state/provenance;
 distance_config — startup-selected A/B/C profile; B has no depth dependency or hash;
 incoming/received/delivered/inflight — bounded session accounting and uncancellable GPU work.
+session_seconds/stopping — frozen explicit session policy and cancellation-safe continuous wait.
 """
 
 import asyncio
@@ -36,6 +37,7 @@ from integration.protocol import (
     STEADY_SECONDS,
     is_loopback,
     is_stop,
+    local_session_seconds,
     model_contract,
     read_manifest,
     unpack_request,
@@ -99,6 +101,7 @@ class InferenceRuntime:
         self.detector = self.load_error = self.last_inference = self.active_session = None
         self.hashes, self.frame_size, self.busy = {}, None, False
         self.distance_config = read_distance_config()
+        self.session_seconds = local_session_seconds()
         if factory is load_detector:
             # Freeze configuration before hello; lazy model loading must use that same identity.
             self.factory = partial(factory, distance_config=self.distance_config)
@@ -111,7 +114,8 @@ class InferenceRuntime:
         """
         return model_contract(session_id, self.manifest_reader(), self.detector is not None,
                               distance_mode=self.distance_config.distance_mode,
-                              depth_interval=self.distance_config.depth_interval)
+                              depth_interval=self.distance_config.depth_interval,
+                              session_seconds=self.session_seconds)
 
     def status(self):
         """Functionality: Report process admission, resident state and observed inference only.
@@ -146,6 +150,7 @@ class InferenceRuntime:
                 },
             },
             "distance_mode": self.distance_config.distance_mode,
+            "session_seconds": self.session_seconds,
             "depth_interval": self.distance_config.depth_interval,
             "capabilities": {"detection": True,
                              "depth": self.distance_config.distance_mode != "geometry",
@@ -249,6 +254,7 @@ class WorkerSession:
         self.previous_timestamp = self.inflight = None
         self.disconnected = False
         self.started = asyncio.Event()
+        self.stopping = asyncio.Event()
 
 
 class InferenceWorker:
@@ -326,6 +332,7 @@ class InferenceWorker:
         Constraints: repeated cancellation cannot bypass gather/drain or free the slot early.
         """
         try:
+            session.stopping.set()
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -403,12 +410,15 @@ class InferenceWorker:
 
     async def lifetime(self, session):
         """Functionality: Bound active session lifetime without counting admission-only waiting.
-        Inputs: first-processing event. Outputs: completion after 55 seconds.
-        Logic: deadline starts at first GPU submission. Constraints: cleanup still drains native
-        work.
+        Inputs: first-processing/stop events and frozen session policy. Outputs: policy completion.
+        Logic: offline ends 55 seconds after first submission; assist waits for explicit cleanup.
+        Constraints: cancellation wakes this wait; native work still drains before release.
         """
         await session.started.wait()
-        await asyncio.sleep(SESSION_SECONDS)
+        if self.runtime.session_seconds is None:
+            await session.stopping.wait()
+        else:
+            await asyncio.sleep(SESSION_SECONDS)
 
     async def drain(self, session):
         """Functionality: Await real native completion despite additional async cancellation.

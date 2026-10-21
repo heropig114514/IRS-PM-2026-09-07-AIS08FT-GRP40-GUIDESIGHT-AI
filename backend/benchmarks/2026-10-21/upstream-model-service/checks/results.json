@@ -1,0 +1,64 @@
+[
+  {
+    "name": "django-check",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "check"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 2.238596300001518
+  },
+  {
+    "name": "migrations",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "makemigrations",
+      "--check",
+      "--dry-run"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.938782599998376
+  },
+  {
+    "name": "backend-tests",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "test"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 34.61398780000309
+  },
+  {
+    "name": "ruff",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+      "check",
+      "."
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.5050128000002587
+  },
+  {
+    "name": "frontend-tests",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "--test",
+      "../frontend/tests/*.test.mjs"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.8066969000028621
+  },
+  {
+    "name": "browser-benchmark-tests",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "--test",
+      "tools/benchmark_resident_browser.test.mjs"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.19610590000229422
+  }
+]

@@ -1,0 +1,509 @@
+/* Responsibilities: Arbitrate real navigation and algorithm-required risk output in one owner.
+ * Implementation: Latest-source scheduling, separate monotonic/GPS clocks, existing short-text
+ * policies, owned preemption, source deadlines and start-based channel cooldowns.
+ * Related Modules: video-alerts.js, navigation-speech.js, maps-navigation-bridge.js, events.js,
+ * catalog.js, ../navigation.js, ../speech-output.js, ../vibration.js; no core/device creation.
+ * Declaration Index: AssistGuidanceManager; AssistGuidanceManager.constructor;
+ * AssistGuidanceManager.navPort.begin; AssistGuidanceManager.navPort.ingest;
+ * AssistGuidanceManager.navPort.stop; AssistGuidanceManager.navPort.describe;
+ * AssistGuidanceManager.subscribe; AssistGuidanceManager.describe; AssistGuidanceManager.context;
+ * AssistGuidanceManager.report; AssistGuidanceManager.configure; AssistGuidanceManager.pause;
+ * AssistGuidanceManager.suppress; AssistGuidanceManager.resume; AssistGuidanceManager.setRiskEnabled;
+ * AssistGuidanceManager.setNavigationEnabled; AssistGuidanceManager.beginRisk;
+ * AssistGuidanceManager.ingestRisk; AssistGuidanceManager.stopRisk;
+ * AssistGuidanceManager.beginNavigation; AssistGuidanceManager.ingestNavigation;
+ * AssistGuidanceManager.stopNavigation; AssistGuidanceManager.riskFresh;
+ * AssistGuidanceManager.navigationFresh; AssistGuidanceManager.navigationCandidate;
+ * AssistGuidanceManager.refreshNavigation; AssistGuidanceManager.eligible;
+ * AssistGuidanceManager.driverOwns; AssistGuidanceManager.cancel;
+ * AssistGuidanceManager.submitSpeech; AssistGuidanceManager.submitVibration;
+ * AssistGuidanceManager.outputEvent; AssistGuidanceManager.armTimer;
+ * AssistGuidanceManager.pump; AssistGuidanceManager.stop; AssistGuidanceManager.dispose.
+ * Variable Index: RISK_TTL_MS/COOLDOWN_MS retain existing output policies; PATTERNS retains
+ * existing driver pattern names/durations. latestRisk/latestNavigation are bounded sources;
+ * active/pendingSubmission preserve ownership; histories separate speech/vibration actual starts;
+ * navigationRevision/completedNavigation deduplicate completed steps; paused/reasons require
+ * explicit recovery; schedulerTimer expires sources without retrying failed output.
+ */
+import {EventBus} from "./events.js";
+import {languageOf} from "./catalog.js";
+import {selectVideoAlert, videoAlertText} from "./video-alerts.js";
+import {navigationSpeechText} from "./navigation-speech.js";
+import {NAVIGATION_POLICY} from "../navigation.js";
+
+const RISK_TTL_MS = 1000, COOLDOWN_MS = 3000;
+const PATTERNS = {1: {name: "short", duration: 200}, 2: {name: "short", duration: 200},
+  3: {name: "double", duration: 400}, 4: {name: "long", duration: 800}};
+
+/* Functionality: Own all automatic speech/vibration for one explicitly unified assistance page.
+ * Logic: Every required risk tier takes speech precedence over navigation; completed navigation
+ * steps are not repeated, but still-current interrupted guidance may resume after risk clears.
+ * Constraints: Disabled initially; no algorithms, navigation controls, voice replacement or retries. */
+export class AssistGuidanceManager {
+  /* Functionality: Bind caller-owned drivers and separate source clocks without starting output.
+   * Inputs: Speech/vibration, monotonic now, epochNow and injectable timers. Outputs: Disabled owner.
+   * Logic: Subscribe once per driver and expose a navigation-only port for the existing bridge.
+   * Constraints: Do not instantiate other automatic output managers over these same drivers. */
+  constructor({speech, vibration, now = () => performance.now(), epochNow = Date.now,
+    setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
+    clearTimer = timer => globalThis.clearTimeout(timer)} = {}) {
+    Object.assign(this, {speech, vibration, now, epochNow, setTimer, clearTimer});
+    this.events = new EventBus();
+    this.riskEnabled = this.navigationEnabled = false;
+    this.voiceId = ""; this.language = "zh-CN";
+    this.riskSessionId = this.navigationRunId = null;
+    this.latestRisk = this.latestNavigation = null;
+    this.riskGeneration = this.navigationGeneration = 0;
+    this.trackingEpoch = null;
+    this.histories = {speech: new Map(), vibration: new Map()};
+    this.active = {speech: null, vibration: null};
+    this.paused = {speech: false, vibration: false};
+    this.reasons = {speech: null, vibration: null};
+    this.navigationKey = this.navigation = null;
+    this.navigationRevision = 0; this.completedNavigation = null;
+    this.pendingSubmission = this.schedulerTimer = null;
+    this.suspended = this.pumping = this.disposed = false;
+    this.suppressions = new Map();
+    this.navPort = Object.freeze({
+      // Functionality: Accept bridge run identity. Inputs: ID. Outputs: Manager state.
+      // Logic: Delegate only navigation lifecycle. Constraints: Does not clear risk source/output.
+      begin: runId => this.beginNavigation(runId),
+      // Functionality: Accept original navigation snapshot. Inputs: Snapshot. Outputs: Manager state.
+      // Logic: Delegate source validation. Constraints: Does not create or control navigation.
+      ingest: snapshot => this.ingestNavigation(snapshot),
+      // Functionality: Stop bridge-owned navigation output. Inputs: Reason. Outputs: Manager state.
+      // Logic: Clear only navigation lifecycle. Constraints: Risk remains independently active.
+      stop: reason => this.stopNavigation(reason),
+      // Functionality: Read unified ownership metadata. Inputs: None. Outputs: State.
+      // Logic: Delegate description. Constraints: No source text or coordinate exposure.
+      describe: () => this.describe(),
+    });
+    this.unsubscribers = [speech?.subscribe(event => this.outputEvent(event)),
+      vibration?.subscribe(event => this.outputEvent(event))].filter(Boolean);
+  }
+
+  /* Functionality: Observe non-body output lifecycle. Inputs: Listener. Outputs: Unsubscribe.
+   * Logic: Local event stream. Constraints: No source replay or browser/device acquisition. */
+  subscribe(listener) { return this.events.subscribe(listener); }
+
+  /* Functionality: Describe independent sources and unified ownership. Inputs: Instance state.
+   * Outputs: JSON-compatible metadata. Logic: Distinguish enabled sources and paused channels.
+   * Constraints: No utterance, coordinates, images or hardware-success claim. */
+  describe() {
+    return {risk_enabled: this.riskEnabled, navigation_enabled: this.navigationEnabled,
+      risk_session_id: this.riskSessionId, navigation_run_id: this.navigationRunId,
+      paused: {...this.paused}, reasons: {...this.reasons},
+      navigation_state: this.latestNavigation?.state ?? null,
+      navigation_pending: Boolean(this.navigation && this.completedNavigation !== this.navigation.revision),
+      active: Object.fromEntries(Object.entries(this.active).map(([channel, active]) => [channel, active && {
+        request_id: active.requestId, kind: active.kind, started: active.started,
+        cancel_failed: active.cancelFailed === true, ...this.context(active)}])),
+      hardware_outputs_verified: false, disposed: this.disposed};
+  }
+
+  /* Functionality: Extract request-bound source context. Inputs: Owned descriptor.
+   * Outputs: Finite metadata. Logic: Use captured source identity rather than newer state.
+   * Constraints: No box body, spoken text, instruction or GPS coordinate. */
+  context(descriptor) {
+    return {kind: descriptor?.kind ?? null, ...descriptor?.source,
+      source: descriptor?.kind === "risk" ? "perception" : descriptor?.kind === "navigation" ? "navigation" : null,
+      notice: descriptor?.notice ?? null,
+      track_id: descriptor?.box?.track_id ?? null, alert_priority: descriptor?.box?.alert_priority ?? null};
+  }
+
+  /* Functionality: Publish diagnosed state changes. Inputs: Phase/details. Outputs: Event.
+   * Logic: Include current independent run IDs and monotonic event time.
+   * Constraints: Only body-free machine metadata is reported. */
+  report(phase, details = {}) {
+    this.events.publish({phase, risk_session_id: this.riskSessionId, navigation_run_id: this.navigationRunId,
+      paused: {...this.paused}, reasons: {...this.reasons}, at: this.now(), ...details});
+  }
+
+  /* Functionality: Store an explicit common local voice selection. Inputs: voiceId/language.
+   * Outputs: State. Logic: Live identity is checked at each submission.
+   * Constraints: Does not enable, resume or replace an unavailable voice. */
+  configure({voiceId, language}) { this.voiceId = voiceId; this.language = languageOf(language); return this.describe(); }
+
+  /* Functionality: Latch one output-channel failure. Inputs: Channel/reason/descriptor.
+   * Outputs: Paused state/event. Logic: Preserve ownership if cancellation is unconfirmed.
+   * Constraints: New source data and timers never clear this latch. */
+  pause(channel, reason, descriptor = null) {
+    this.paused[channel] = true; this.reasons[channel] = reason;
+    this.report("paused", {channel, reason, request_id: descriptor?.requestId ?? null, ...this.context(descriptor)});
+  }
+
+  /* Functionality: Bound repeated prerequisite diagnostics. Inputs: Channel/reason/descriptor.
+   * Outputs: One suppression event per transition. Logic: Stable target keys omit per-frame changes.
+   * Constraints: No queue, retry or hidden setting changes. */
+  suppress(channel, reason, descriptor) {
+    const key = `${reason}/${descriptor?.kind}/${descriptor?.box?.track_id}/${descriptor?.box?.alert_priority}/${descriptor?.revision}`;
+    if (this.suppressions.get(channel) === key) return;
+    this.suppressions.set(channel, key);
+    this.report("suppressed", {channel, reason, ...this.context(descriptor)});
+  }
+
+  /* Functionality: Recover a channel only at explicit user request. Inputs: speech/vibration.
+   * Outputs: State/eligible output. Logic: Unconfirmed owned cancellation must be cleaned first.
+   * Constraints: No device enablement, voice substitution or expired-source replay. */
+  resume(channel) {
+    if (!Object.hasOwn(this.paused, channel)) throw new TypeError("Unknown assist output channel");
+    if (this.disposed || this.active[channel]?.cancelFailed) return this.describe();
+    this.paused[channel] = false; this.reasons[channel] = null;
+    this.suppressions.delete(channel); this.report("resumed", {channel}); this.pump(); return this.describe();
+  }
+
+  /* Functionality: Apply the explicit risk-output switch. Inputs: Boolean. Outputs: State.
+   * Logic: Disable clears risk only while preserving current camera identity for future input.
+   * Constraints: Never enables either driver or stops navigation. */
+  setRiskEnabled(enabled) {
+    this.riskEnabled = enabled === true;
+    if (!this.riskEnabled) { const id = this.riskSessionId; this.stopRisk("risk_disabled"); this.riskSessionId = id; }
+    else this.pump();
+    this.report("risk_enabled", {enabled: this.riskEnabled}); return this.describe();
+  }
+
+  /* Functionality: Apply the explicit navigation-output switch. Inputs: Boolean. Outputs: State.
+   * Logic: Disable clears only navigation work; later current-run GPS remains independently valid.
+   * Constraints: Never changes GPS, route, risk state or shared driver switches. */
+  setNavigationEnabled(enabled) {
+    this.navigationEnabled = enabled === true;
+    if (!this.navigationEnabled) { const id = this.navigationRunId; this.stopNavigation("navigation_disabled"); this.navigationRunId = id; }
+    else this.pump();
+    this.report("navigation_enabled", {enabled: this.navigationEnabled}); return this.describe();
+  }
+
+  /* Functionality: Begin one explicit perception session. Inputs: Nonempty session ID.
+   * Outputs: Fresh risk history. Logic: Stop only previous risk ownership before assigning identity.
+   * Constraints: Does not discard navigation or clear channel failures. */
+  beginRisk(sessionId) {
+    if (typeof sessionId !== "string" || !sessionId.trim()) throw new TypeError("Risk session ID required");
+    if (this.disposed) return this.describe();
+    this.stopRisk("new_risk_session"); this.riskSessionId = sessionId;
+    this.report("risk_session"); return this.describe();
+  }
+
+  /* Functionality: Accept a validated perception result from the current session.
+   * Inputs: Session ID, capture monotonic timestamp and metadata. Outputs: State/eligible output.
+   * Logic: Keep only newest receipt; tracker-epoch changes clear per-channel track histories.
+   * Constraints: Receipt does not refresh source age, classify risk or start another session. */
+  ingestRisk({sessionId, capturedAt, metadata}) {
+    if (this.disposed || !this.riskSessionId || sessionId !== this.riskSessionId) return this.describe();
+    const epoch = metadata.tracking_epoch ?? null;
+    if (epoch !== this.trackingEpoch) {
+      this.trackingEpoch = epoch;
+      this.histories.speech.clear(); this.histories.vibration.clear();
+    }
+    this.latestRisk = structuredClone({capturedAt, metadata}); this.pump(); return this.describe();
+  }
+
+  /* Functionality: Stop perception-owned work independently. Inputs: Reason.
+   * Outputs: State. Logic: Clear source/history before one explicit owned cancellation per channel.
+   * Constraints: Navigation and foreign driver requests remain intact; failed cleanup stays owned. */
+  stopRisk(reason = "risk_stop") {
+    this.riskSessionId = this.latestRisk = this.trackingEpoch = null; this.riskGeneration++;
+    this.histories.speech.clear(); this.histories.vibration.clear();
+    for (const channel of ["speech", "vibration"])
+      if (this.active[channel]?.kind === "risk") this.cancel(channel, reason, true);
+    this.report("risk_stopped", {reason}); this.pump(); return this.describe();
+  }
+
+  /* Functionality: Begin a real navigation speech generation supplied by the existing bridge.
+   * Inputs: Nonempty run ID. Outputs: State. Logic: Invalidate previous navigation only.
+   * Constraints: No navigation core call or risk reset, and failures require explicit recovery. */
+  beginNavigation(runId) {
+    if (typeof runId !== "string" || !runId.trim()) throw new TypeError("Navigation run ID required");
+    if (this.disposed) return this.describe();
+    this.stopNavigation("new_navigation_run"); this.navigationRunId = runId;
+    this.report("navigation_run"); return this.describe();
+  }
+
+  /* Functionality: Consume the existing navigation snapshot unchanged in meaning.
+   * Inputs: Core snapshot. Outputs: State/eligible output. Logic: Detach latest source and schedule.
+   * Constraints: No run means ignore; no coordinate inference, device request or new policy. */
+  ingestNavigation(snapshot) {
+    if (this.disposed || !this.navigationRunId) return this.describe();
+    this.latestNavigation = structuredClone(snapshot); this.pump(); return this.describe();
+  }
+
+  /* Functionality: Stop navigation-owned output independently. Inputs: Reason.
+   * Outputs: State. Logic: Invalidate its candidate before cancelling its own speech once.
+   * Constraints: Perception speech/vibration and manual output remain untouched. */
+  stopNavigation(reason = "navigation_stop") {
+    this.navigationRunId = this.latestNavigation = this.navigation = this.navigationKey = null;
+    this.completedNavigation = null; this.navigationGeneration++; this.navigationRevision++;
+    if (this.active.speech?.kind === "navigation") this.cancel("speech", reason, true);
+    this.report("navigation_stopped", {reason}); this.pump(); return this.describe();
+  }
+
+  /* Functionality: Check perception source age on the monotonic clock. Inputs: Latest source.
+   * Outputs: Boolean. Logic: Existing one-second TTL, rejecting future/nonfinite ages.
+   * Constraints: Started short risk speech may finish without extending new-submission eligibility. */
+  riskFresh() {
+    const age = this.latestRisk ? this.now() - this.latestRisk.capturedAt : Infinity;
+    return Number.isFinite(age) && age >= 0 && age < RISK_TTL_MS;
+  }
+
+  /* Functionality: Check source GPS age on the epoch clock. Inputs: Core snapshot.
+   * Outputs: Boolean. Logic: Existing NAVIGATION_POLICY freshness boundary.
+   * Constraints: Never compare GPS epoch timestamps to performance.now or use cached age_ms. */
+  navigationFresh(snapshot) {
+    const timestamp = snapshot?.position?.timestamp, age = this.epochNow() - timestamp;
+    return Number.isFinite(timestamp) && Number.isFinite(age) && age >= 0 && age < NAVIGATION_POLICY.max_fix_age_ms;
+  }
+
+  /* Functionality: Derive an eligible existing navigation semantic state. Inputs: Latest snapshot.
+   * Outputs: Semantic key/kind/step or null. Logic: Mirror existing quality/activity/arrival gates.
+   * Constraints: Error notices need no fix; no risk inference or new navigation thresholds. */
+  navigationCandidate() {
+    const snapshot = this.latestNavigation;
+    if (!this.navigationRunId || !snapshot) return null;
+    if (snapshot.state === "error") return {key: `error/${snapshot.reason}`, notice: "error", step_index: null};
+    if (!this.navigationFresh(snapshot)) return null;
+    const accuracy = snapshot.position?.accuracy_m;
+    if (!Number.isFinite(accuracy) || accuracy < 0) return null;
+    if (snapshot.active === true && snapshot.state === "locating" && snapshot.reason === "accuracy_insufficient")
+      return {key: "accuracy_insufficient", notice: "accuracy_insufficient", step_index: null};
+    if (accuracy > NAVIGATION_POLICY.max_accuracy_m) return null;
+    if (snapshot.state === "arrived" && accuracy <= NAVIGATION_POLICY.arrival_m)
+      return {key: "arrived", notice: "arrived", step_index: null};
+    if (!snapshot.active) return null;
+    if (snapshot.state === "off_route") return {key: "off_route", notice: "off_route", step_index: null};
+    const index = snapshot.progress?.step_index;
+    return snapshot.state === "navigating" && Number.isInteger(index) && index >= 0 &&
+      navigationSpeechText(snapshot, this.language) ? {key: `step/${index}`, notice: "turn", step_index: index} : null;
+  }
+
+  /* Functionality: Replace only the latest navigation candidate and invalidate obsolete output.
+   * Inputs: Current GPS source/time. Outputs: Candidate/revision or cancellation.
+   * Logic: Same-step GPS updates keep utterances; semantic changes permit a new instruction.
+   * Constraints: An originally queued instruction expires on its own GPS source deadline. */
+  refreshNavigation() {
+    const candidate = this.navigationCandidate(), key = candidate?.key ?? null;
+    if (key !== this.navigationKey) {
+      this.navigationKey = key; this.navigationRevision++; this.completedNavigation = null;
+      if (this.active.speech?.kind === "navigation") this.cancel("speech", "navigation_changed");
+    }
+    this.navigation = candidate && {...candidate, kind: "navigation", revision: this.navigationRevision,
+      generation: this.navigationGeneration, snapshot: this.latestNavigation,
+      source: {run_id: this.navigationRunId, step_index: candidate.step_index,
+        source_timestamp: this.latestNavigation.position?.timestamp ?? null}};
+    const active = this.active.speech;
+    if (active?.kind === "navigation" && active.notice !== "error" && !active.started && !active.cancelFailed &&
+        !this.navigationFresh(active.snapshot)) {
+      this.cancel("speech", "navigation_expired_before_start");
+      this.completedNavigation = this.navigationRevision;
+    }
+  }
+
+  /* Functionality: Check channel-specific risk output cooldown. Inputs: Selected box/channel.
+   * Outputs: Boolean. Logic: First/upgraded priority immediate, equal priority after3s since start.
+   * Constraints: Downgrades do not generate new reminders; vibration cannot consume speech cooldown. */
+  eligible(box, channel) {
+    const previous = this.histories[channel].get(box.track_id);
+    return !previous || box.alert_priority > previous.priority ||
+      box.alert_priority === previous.priority && this.now() - previous.at >= COOLDOWN_MS;
+  }
+
+  /* Functionality: Check whether an unconfirmed driver request is still this owner's request.
+   * Inputs: Channel/request ID. Outputs: Boolean. Logic: Use existing driver ownership metadata.
+   * Constraints: Does not stop, replace or infer actual device activity. */
+  driverOwns(channel, requestId) {
+    const state = this[channel]?.describe();
+    return channel === "speech" ? state?.active_request === true && state.last_request?.id === requestId
+      : state?.request_pending === true && state.request_id === requestId;
+  }
+
+  /* Functionality: Cancel only a request created by this manager. Inputs: Channel/reason/explicit flag.
+   * Outputs: Confirmed cleanup or retained ownership/pause. Logic: Detach during synchronous events.
+   * Constraints: Failed cancellation is never retried by source updates, timers or another channel. */
+  cancel(channel, reason, explicit = false) {
+    const active = this.active[channel];
+    if (!active || active.cancelFailed && !explicit) return;
+    this.active[channel] = null;
+    const previous = this.suspended; this.suspended = true;
+    let result;
+    try { result = this[channel]?.stopOwned(active.requestId); }
+    catch { result = channel === "speech" ? {accepted: false, reason: "cancel_failed"} : false; }
+    finally { this.suspended = previous; }
+    const accepted = channel === "speech" ? result?.accepted === true : result === true;
+    const notOwned = channel === "speech" ? result?.reason === "not_owned" : !this.driverOwns(channel, active.requestId);
+    this.report("output_cancel", {channel, request_id: active.requestId, ...this.context(active), accepted, reason});
+    if (!accepted && !notOwned) {
+      active.cancelFailed = true; this.active[channel] = active;
+      this.pause(channel, channel === "speech" ? result?.reason || "cancel_failed" : "cancel_failed", active);
+    }
+  }
+
+  /* Functionality: Submit one explicitly local utterance. Inputs: Frozen descriptor/text.
+   * Outputs: Request ownership or diagnosed pause/suppression. Logic: Protect all foreign speech.
+   * Constraints: No default voice, automatic enablement, retry or scene/manual preemption. */
+  submitSpeech(descriptor, text) {
+    const status = this.speech?.describe();
+    if (this.paused.speech) return this.suppress("speech", "channel_paused", descriptor);
+    if (!status?.supported || !status.enabled || status.visible === false || status.user_activated === false)
+      return this.suppress("speech", "speech_unavailable", descriptor);
+    if (status.active_request || status.engine_speaking || status.engine_pending || status.engine_paused)
+      return this.suppress("speech", "foreign_speech_busy", descriptor);
+    if (typeof this.voiceId !== "string" || !this.voiceId) return this.suppress("speech", "explicit_local_voice_required", descriptor);
+    const inventory = this.speech.voiceList(), voices = inventory.voices?.filter(voice => voice.id === this.voiceId) || [];
+    if (!inventory.accepted || voices.length !== 1 || voices[0].local_service !== true ||
+        typeof voices[0].language !== "string" || voices[0].language.split("-")[0].toLowerCase() !== this.language.split("-")[0].toLowerCase())
+      return this.pause("speech", "local_voice_unavailable", descriptor);
+    this.pendingSubmission = {...descriptor, channel: "speech", started: false, requestId: null};
+    let result;
+    try { result = this.speech.speak(text, {language: this.language, voice_id: this.voiceId,
+      rate: Number(this.speech.rate?.value ?? 2), volume: Number(this.speech.volume?.value ?? 1)}); }
+    catch { result = {accepted: false, reason: "speak_failed"}; }
+    const pending = this.pendingSubmission; this.pendingSubmission = null;
+    if (!result?.accepted) return this.pause("speech", result?.reason || "speak_failed", pending);
+    if (!pending.finished && !this.active.speech && !this.paused.speech)
+      this.active.speech = {...pending, requestId: result.last_request.id};
+    this.suppressions.delete("speech");
+    this.report("output_submitted", {channel: "speech", request_id: result.last_request.id,
+      ...this.context(descriptor), actual_start: pending.started});
+  }
+
+  /* Functionality: Submit the existing fixed risk vibration pattern once. Inputs: Risk descriptor.
+   * Outputs: Owned accepted request or paused/suppressed channel.
+   * Logic: Foreign pending patterns cannot be replaced; source output remains risk-only.
+   * Constraints: Native acceptance is not physical motor verification or completion. */
+  submitVibration(descriptor) {
+    const status = this.vibration?.describe();
+    if (this.paused.vibration) return this.suppress("vibration", "channel_paused", descriptor);
+    if (!status?.supported || !status.enabled || status.visible === false || status.user_activated === false)
+      return this.suppress("vibration", "vibration_unavailable", descriptor);
+    if (status.request_pending) return this.suppress("vibration", "foreign_vibration_pending", descriptor);
+    const pattern = PATTERNS[descriptor.box.alert_priority];
+    this.pendingSubmission = {...descriptor, channel: "vibration", started: false, requestId: null,
+      elapsed: false, endsAt: this.now() + pattern.duration};
+    let result;
+    try { result = this.vibration.testPattern(pattern.name); }
+    catch { result = {accepted: false, reason: "vibration_failed"}; }
+    const pending = this.pendingSubmission; this.pendingSubmission = null;
+    if (!result?.accepted) return this.pause("vibration", result?.reason || "vibration_failed", pending);
+    if (!pending.finished && !this.active.vibration && !this.paused.vibration)
+      this.active.vibration = {...pending, requestId: result.request_id};
+    this.suppressions.delete("vibration");
+    this.report("output_submitted", {channel: "vibration", request_id: result.request_id,
+      ...this.context(descriptor), actual_start: pending.started});
+  }
+
+  /* Functionality: Consume real driver lifecycle with synchronous submission support.
+   * Inputs: Body-free shared-driver event. Outputs: Start cooldown, completion or latched failure.
+   * Logic: Match exact owned IDs; unconfirmed external stop retains ownership and pauses.
+   * Constraints: Old/foreign callbacks cannot complete another request or silently recover a channel. */
+  outputEvent(event) {
+    if (this.disposed || this.suspended || !Object.hasOwn(this.active, event.channel)) return;
+    const channel = event.channel; let active = this.active[channel];
+    if (!active && this.pendingSubmission?.channel === channel && ["submitted", "start", "end", "error"].includes(event.phase)) {
+      active = this.pendingSubmission; active.requestId = event.request_id; this.active[channel] = active;
+    }
+    if (!active || active.requestId !== event.request_id) {
+      if (["end", "cancel"].includes(event.phase)) this.pump();
+      return;
+    }
+    if (event.phase === "start") {
+      active.started = true;
+      if (active.kind === "risk" && active.generation === this.riskGeneration && active.source.tracking_epoch === this.trackingEpoch) {
+        const history = this.histories[channel];
+        if (!history.has(active.box.track_id) && history.size >= 300) history.delete(history.keys().next().value);
+        history.set(active.box.track_id, {priority: active.box.alert_priority, at: this.now()});
+      }
+      this.report("output_start", {channel, request_id: active.requestId, ...this.context(active),
+        actual_start: true, hardware_verified: false,
+        capture_to_start_ms: active.kind === "risk" ? this.now() - active.source.captured_at_ms : null});
+    } else if (["end", "cancel", "error"].includes(event.phase)) {
+      const retained = event.phase === "error" &&
+        (event.reason === "cancel_failed" || this.driverOwns(channel, active.requestId));
+      if (retained) active.cancelFailed = true;
+      else { this.active[channel] = null; active.finished = true; }
+      if (event.phase === "end" && active.kind === "navigation" && active.revision === this.navigationRevision &&
+          active.generation === this.navigationGeneration) this.completedNavigation = active.revision;
+      this.report("output_" + event.phase, {channel, request_id: active.requestId, ...this.context(active), reason: event.reason ?? null});
+      if (event.phase !== "end") this.pause(channel, event.reason || (event.phase === "cancel" ? "cancelled" : "output_error"), active);
+    }
+    this.pump();
+  }
+
+  /* Functionality: Arm only the earliest source/nominal-pattern deadline. Inputs: Source clocks.
+   * Outputs: One timer. Logic: Recompute exact original deadlines after each state change.
+   * Constraints: No cooldown loop, failed-output retry or source timestamp refresh. */
+  armTimer() {
+    if (this.schedulerTimer !== null) this.clearTimer(this.schedulerTimer);
+    this.schedulerTimer = null;
+    if (this.disposed) return;
+    const delays = [];
+    if (this.riskEnabled && this.latestRisk && this.riskFresh())
+      delays.push(RISK_TTL_MS - (this.now() - this.latestRisk.capturedAt));
+    if (this.navigationEnabled && this.navigation && this.navigation.notice !== "error")
+      delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - this.navigation.snapshot.position.timestamp));
+    const speech = this.active.speech;
+    if (speech && !speech.started && !speech.cancelFailed) {
+      if (speech.kind === "risk") delays.push(RISK_TTL_MS - (this.now() - speech.source.captured_at_ms));
+      else if (speech.notice !== "error") delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - speech.snapshot.position.timestamp));
+    }
+    const vibration = this.active.vibration;
+    if (vibration && !vibration.elapsed && !vibration.cancelFailed) delays.push(vibration.endsAt - this.now());
+    const delay = Math.min(...delays.filter(value => Number.isFinite(value) && value > 0));
+    if (Number.isFinite(delay)) this.schedulerTimer = this.setTimer(() => { this.schedulerTimer = null; this.pump(); }, delay);
+  }
+
+  /* Functionality: Arbitrate latest eligible risk and current real navigation.
+   * Inputs: Independent source/driver state. Outputs: Owned speech/vibration actions.
+   * Logic: Risk preempts only owned navigation/lower risk; started short risk may finish after
+   * source loss; latest fresh unfinished navigation resumes only after current risk disappears.
+   * Constraints: No manual/scene preemption, frame FIFO, algorithm changes or failed cleanup retries. */
+  pump() {
+    if (this.disposed || this.suspended || this.pumping) return;
+    this.pumping = true;
+    try {
+      this.refreshNavigation();
+      const box = this.riskEnabled && this.riskSessionId && this.riskFresh()
+        ? selectVideoAlert(this.latestRisk.metadata.boxes) : null;
+      const speech = this.active.speech;
+      if (speech?.kind === "risk") {
+        const expiredQueued = !speech.started && this.now() - speech.source.captured_at_ms >= RISK_TTL_MS;
+        if ((!box && !speech.started) || expiredQueued || box && box.alert_priority > speech.box.alert_priority)
+          this.cancel("speech", expiredQueued ? "risk_expired_before_start" : "risk_changed");
+      } else if (speech?.kind === "navigation" && box) this.cancel("speech", "risk_preempted_navigation");
+      const vibration = this.active.vibration;
+      if (vibration) {
+        if (!vibration.elapsed && this.now() >= vibration.endsAt) {
+          vibration.elapsed = true;
+          this.report("pattern_elapsed", {channel: "vibration", request_id: vibration.requestId, ...this.context(vibration), hardware_verified: false});
+        }
+        if (!box || box.alert_priority > vibration.box.alert_priority || vibration.elapsed && this.eligible(box, "vibration"))
+          this.cancel("vibration", "risk_changed");
+      }
+      if (box) {
+        const descriptor = {kind: "risk", box, generation: this.riskGeneration,
+          source: Object.freeze({session_id: this.riskSessionId, frame_index: this.latestRisk.metadata.index,
+            captured_at_ms: this.latestRisk.capturedAt, tracking_epoch: this.trackingEpoch})};
+        if (!this.active.speech && this.eligible(box, "speech")) this.submitSpeech(descriptor, videoAlertText(box, this.language));
+        if (!this.active.vibration && this.eligible(box, "vibration")) this.submitVibration(descriptor);
+      } else if (!this.active.speech && this.navigationEnabled && this.navigation &&
+          this.completedNavigation !== this.navigation.revision)
+        this.submitSpeech(this.navigation, navigationSpeechText(this.navigation.snapshot, this.language));
+    } finally { this.pumping = false; this.armTimer(); }
+  }
+
+  /* Functionality: Stop all manager-owned work at a page/global lifecycle boundary.
+   * Inputs: Reason. Outputs: Cleared independent sources with honest retained failed ownership.
+   * Logic: Suspend scheduling across both source stops to prevent intermediate submissions.
+   * Constraints: Driver switches, channel errors and unrelated manual requests remain unchanged. */
+  stop(reason = "stop") {
+    const previous = this.suspended; this.suspended = true;
+    try { this.stopRisk(reason); this.stopNavigation(reason); }
+    finally { this.suspended = previous; }
+    if (this.schedulerTimer !== null) this.clearTimer(this.schedulerTimer);
+    this.schedulerTimer = null; this.report("stopped", {reason}); return this.describe();
+  }
+
+  /* Functionality: Release owned work and both driver subscriptions.
+   * Inputs: Current state. Outputs: Disposed metadata. Logic: One stop then unsubscribe.
+   * Constraints: Does not dispose shared drivers, restart sources or assert physical silence. */
+  dispose() {
+    if (!this.disposed) { this.stop("disposed"); this.disposed = true; for (const unsubscribe of this.unsubscribers) unsubscribe(); }
+    return this.describe();
+  }
+}

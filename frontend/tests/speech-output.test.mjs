@@ -1,12 +1,13 @@
 /** Responsibilities: 验证共用语音接口的输入、生命周期、语音选择与MCP分派边界。
- * Implementation: 用EventTarget替身驱动原生事件和设备接口；不播放真实声音或请求网络。
+ * Implementation: 用EventTarget替身驱动原生事件和设备接口；额外检验重入广播的请求快照与观察者隔离；不播放真实声音或请求网络。
  * Related Modules: speech-output.js, ai-control.js, index.html, translations.js, i18n.js。
  * Declaration Index: Control; Control.constructor; Control.replaceChildren; Control.append;
  * SpeechDocument; SpeechDocument.constructor; SpeechDocument.getElementById;
  * SpeechDocument.querySelectorAll; SpeechDocument.createElement; Utterance; Utterance.constructor;
  * Engine; Engine.constructor; Engine.getVoices; Engine.speak; Engine.cancel; Engine.emit;
  * fixture; enable; testPrerequisites; testLifecycle; testLimits; testVoices;
- * testVoiceQuery; testCancellation; testNativeErrors; testVisibility; testMcp; testTranslations; testGuidanceEvents; testLocalVoiceOnly。
+ * testVoiceQuery; testCancellation; testNativeErrors; testVisibility; testMcp; testTranslations;
+ * testGuidanceEvents; testLocalVoiceOnly; testReentrantBroadcast。
  * Variable Index: VOICES — 明确本地/远程测试身份；其他变量只保存本测试的控件、请求和诊断。
  * Constraints: 替身不能证明真实MCP网络、TTS引擎或扬声器；真实浏览器回归另行执行。
  */
@@ -47,6 +48,42 @@ test("local-MVP marker rejects remote and browser-default speech", function test
   assert.equal(output.speak("sample", {language: "en-US", voice_id: "remote-en"}).reason, "local_voice_required");
   assert.equal(engine.requests.length, 0);
   assert.equal(output.speak("sample", {voice_id: "local-zh"}).accepted, true); output.stop();
+});
+
+/** Functionality: Preserve a terminal event when its first observer immediately submits new output.
+ * Inputs: Real driver end/cancel, explicit second request and observer-local event mutation.
+ * Outputs: Old request identity/time for every terminal observer plus distinct nested submitted event.
+ * Logic: Exercise actual driver dispatch and native-fixture completion rather than calling notify directly.
+ * Constraints: No native audio, substituted clock or assertions swallowed inside driver observers. */
+test("reentrant end and cancel broadcasts retain their original request and timestamp", function testReentrantBroadcast() {
+  for (const phase of ["end", "cancel"]) {
+    const {engine, output} = fixture(); enable(output);
+    let firstId = null, original = null, firstReference = null, nested = null;
+    const later = [];
+    const unsubscribeFirst = output.subscribe(event => {
+      if (event.phase !== phase || event.request_id !== firstId) return;
+      original = {...event}; firstReference = event;
+      event.request_id = -1; event.phase = "observer_mutation"; event.at = -1;
+      event.channel = "observer_mutation"; event.reason = "observer_mutation";
+      nested = output.speak("second request", {voice_id: "local-zh"});
+    });
+    const unsubscribeLater = output.subscribe(event => later.push(event));
+    const first = output.speak("first request", {voice_id: "local-zh"}); firstId = first.last_request.id;
+    const oldUtterance = engine.requests[0];
+    if (phase === "end") engine.emit(oldUtterance, "end");
+    else output.stop();
+    assert.equal(nested?.accepted, true);
+    const terminal = later.filter(event => event.phase === phase);
+    assert.equal(terminal.length, 1);
+    assert.deepEqual(terminal[0], original);
+    assert.notEqual(terminal[0], firstReference);
+    assert.equal(terminal[0].request_id, firstId);
+    assert.equal(terminal[0].at, original.at);
+    assert.ok(later.some(event => event.phase === "submitted" && event.request_id === nested.last_request.id));
+    assert.notEqual(nested.last_request.id, firstId);
+    assert.equal(output.current, engine.requests[1]);
+    unsubscribeFirst(); unsubscribeLater(); output.stop();
+  }
 });
 
 /** Functionality: 提供具有实际事件派发的简单控件。

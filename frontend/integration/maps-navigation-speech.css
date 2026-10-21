@@ -1,0 +1,10 @@
+/* Responsibilities: Keep opt-in speech controls on the existing maps page usable at mobile widths.
+Implementation: Scope flexible labels and bounded selects to the added speech panels.
+Related Modules: ../maps.html, maps-navigation-speech.js, ../camera.css.
+Declaration Index: None. Variable Index: None. */
+#maps-navigation-speech-panel label, #speech-test label { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: .8rem 0; min-width: 0; }
+#maps-navigation-speech-panel select, #speech-test select, #speech-test input, #speech-test textarea { min-width: 0; max-width: 100%; }
+#maps-navigation-speech-panel select, #speech-test select { padding: .5rem; }
+.navigation-speech-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: .8rem 0; }
+#speech-test .speech-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 660px) { #speech-test .speech-settings { grid-template-columns: 1fr; } }

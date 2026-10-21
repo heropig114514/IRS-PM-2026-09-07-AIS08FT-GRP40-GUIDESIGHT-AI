@@ -21,7 +21,8 @@
  * Valid unexpired motion may persist while the current raw depth is null; server owns timeout.
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery;
- * provider selects hf/local/resident explicitly; lastCaptureTimeS enforces monotonic local timestamps.
+ * provider selects hf/local/resident explicitly; localSessionSeconds admits only55s/default or explicit null continuous local sessions;
+ * HF always requires55s; cold/steady failure budgets remain55s/10s. lastCaptureTimeS enforces monotonic local source timestamps.
  * distance_mode admits explicit geometry/temporal_depth without changing legacy A admission.
  */
 import {MAX_FRAME_BYTES} from "./echo-client.js";
@@ -56,11 +57,12 @@ async function sha256(buffer) {
 }
 
 /** Functionality: Validate explicitly selected HF, local PRF2 or resident-v1 admission.
- * Inputs: parsed hello, provider. Outputs: accepted contract copy.
+ * Inputs: parsed hello, provider, localSessionSeconds (55 or explicit null). Outputs: accepted contract copy.
  * Logic: shared model/settings; HF retains COCO/budgets, local requires capabilities/source time,
  * resident requires FP32, explicit workload and no allocation deadline; no capability/token accepted.
- * Constraints: provider contracts cannot substitute for one another; admission is not quality proof. */
-function validateSession(message, provider) {
+ * Constraints: provider contracts cannot substitute for one another; only explicit local null admits
+ * continuous PRF2; HF remains55s, resident has independent budgets; admission is not quality proof. */
+function validateSession(message, provider, localSessionSeconds) {
   const validation = message?.validation;
   if (!message || message.kind !== "session" || message.model !== "yolo26n" ||
       !["FP32", "FP16", "BF16"].includes(message.precision) || message.output_precision !== "FP32" ||
@@ -83,7 +85,7 @@ function validateSession(message, provider) {
     const mode = message.distance_mode ?? "depth";
     const geometry = mode === "geometry";
     if (message.provider !== "local" || message.protocol_version !== 2 ||
-        Object.hasOwn(message, "protocol") || message.session_seconds !== 55 ||
+        Object.hasOwn(message, "protocol") || message.session_seconds !== localSessionSeconds ||
         message.cold_seconds !== 55 || message.steady_seconds !== 10 ||
         message.backend !== "PyTorch resident CUDA" || message.precision !== "FP32" ||
         typeof message.session_id !== "string" || !/^[a-f0-9]{32}$/.test(message.session_id) ||
@@ -272,17 +274,22 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
  * Constraints: caller holds additional admission through display, no automatic reconnect/retry. */
 export class LiveDetectionClient {
   /** Functionality: Initialize transport and lifecycle callbacks.
-   * Inputs: same-origin url, callbacks, socketFactory, provider (hf default), legacy protocol alias.
+   * Inputs: same-origin url, callbacks, socketFactory, provider (hf default), legacy protocol alias,
+   * localSessionSeconds (55 default or explicit null for continuous local).
    * Outputs: instance. Logic: bind events and bounded counters; no immediate network or camera.
-   * Constraints: inconsistent explicit selectors fail; no arbitrary destination from query parameters. */
-  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, provider, protocol} = {}) {
+   * Constraints: inconsistent selectors fail; local duration never changes HF/resident admission;
+   * no arbitrary destination from query parameters. */
+  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, provider, protocol, localSessionSeconds = 55} = {}) {
     if (protocol !== undefined && !["hf", "resident-v1"].includes(protocol))
       throw new Error("未知视频会话协议。");
     provider ??= protocol === "resident-v1" ? "resident" : "hf";
     if (!["hf", "local", "resident"].includes(provider)) throw new Error("未知视频服务类型。");
     const selectedProtocol = provider === "resident" ? "resident-v1" : "hf";
     if (protocol !== undefined && protocol !== selectedProtocol) throw new Error("未知视频会话协议。");
+    if (localSessionSeconds !== 55 && localSessionSeconds !== null)
+      throw new Error("本地视频会话时长必须为 55 或 null。");
     this.provider = provider;
+    this.localSessionSeconds = localSessionSeconds;
     this.lastCaptureTimeS = -1;
     this.url = url;
     this.protocol = selectedProtocol;
@@ -388,7 +395,7 @@ export class LiveDetectionClient {
           return;
         }
         if (!this.connectWait || this.contract) throw new Error("非预期视频控制消息。");
-        this.contract = validateSession(message, this.provider);
+        this.contract = validateSession(message, this.provider, this.localSessionSeconds);
         const waiting = this.connectWait;
         this.connectWait = null;
         clearTimeout(waiting.timer);

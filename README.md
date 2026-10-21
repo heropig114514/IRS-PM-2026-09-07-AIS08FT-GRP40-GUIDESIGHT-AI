@@ -4,6 +4,9 @@
 
 仓库以 `backend/` 和 `frontend/` 为顶层，按实际克隆路径启动。本机MVP通过独立Web和CUDA推理进程接通已有软件与算法；两个环境、官方权重、启动器和验证边界见 [本地MVP](backend/LOCAL-MVP.md)。
 
+手机可通过既有服务器的独立 `/mvp/` HTTPS 中转使用本机导航与检测，无需与电脑同网；
+访问认证、启动和停止见 [手机MVP](backend/PHONE-MVP.md)，原 `/prs/` 服务保持独立。
+
 ```text
 backend/              后端唯一开发入口
   config/             开发/生产配置与 ASGI/WSGI 入口
@@ -19,19 +22,21 @@ frontend/             摄像头回传、Leaflet/OSM 步行路线与客户端测�
 
 本机入口由 `backend/tools/run_local_mvp.py` 启动，默认 http://127.0.0.1:8766/live/ 。算法复用YOLO26n、YOLO26 Depth、BoT-SORT、距离运动状态及TTC/规则风险；浏览器Guidance在用户启用后仲裁语音/振动提醒与导航示例。中台负责协议和运行环境适配，不修改模型参数或风险规则。工件与许可见 [模型说明](backend/models/README.md)。
 
+统一MVP使用启动器的显式 `--assist` 模式，入口为 http://127.0.0.1:8766/maps/ 。产品页集中显示步行导航、设备摄像头、提醒设置与停止操作；导航区的“填入 NUS 示例”只填写固定起终点，仍须手动规划路线，示例不代表设备位置。点击“环境感知”即可申请手机后置镜头并显示原始画面及回传标记画面，无须再选择设备，失败时明确提示且不切换镜头或重试。它复用原地图、导航MCP和唯一的自动语音/振动仲裁器；风险优先，结束后只恢复当前有效的导航指令。语音、导航播报与风险提醒默认开启，设备支持时也默认开启振动。声音自动匹配界面语言的本地音色，语速固定2倍，实际音量通过设备按键调节；没有匹配声音时明确提示，不改用其它语言或远程声音。通过“启动语音”或首次真实点击检测/导航开始按钮同步校准，收到原生引擎开始事件后才放行自动语音。默认开启不代表权限已获准、输入已启动或声音实际可听，页面加载不自动申请摄像头/定位、规划路线或朗读。测试按钮、手动镜头选择、声音调节、视频回放和详细统计位于 `/maps/test`，手机中转下为 `/mvp/maps/test`，该诊断页保留手动声音选择。此模式支持连续本地推理，ORS凭据只在明确配置后供Web进程使用，HF与场景服务保持关闭。其它独立测试入口使用默认离线模式并保留原输出开关策略；启动与验收边界见 [统一入口说明](backend/LOCAL-MVP.md#统一导航与感知入口)。
+
 独立本地视频入口为 `/integration/video/`，用户选择本地文件后按原生1倍速回放，不申请电脑摄像头权限。它复用相同双模型与提醒链路，保留原参数及55秒会话预算；当前选用MOT17白天/夜间移动街景样本，来源及显式转码记录见 [视频数据说明](backend/model_tests/DATASETS.md#连续街景视频用于本地联调)，采集/媒体两个时钟和验收命令见 [连续视频说明](backend/LOCAL-MVP.md#连续本地视频入口)。
 
 MOT17的两个原始预览、两个H.264回放副本及来源清单属于仓库测试素材；完整数据集、标注包和运行输出按目录规则单独管理。验收应区分吞吐、采集到告警的时延和设备实际输出，具体方法见 [本地验收说明](backend/LOCAL-MVP.md#验收方法与边界)。
 
 开发启动与检查见 [后端说明](backend/README.md)，协议与操作见 [前端说明](frontend/README.md)，隔离部署见 [运维说明](backend/deploy/README.md)。当前未实现持久化媒体或业务账号接口。
 
-可选 [Hugging Face ZeroGPU Space](https://huggingface.co/spaces/Heropig114514/prs-yolo26) 模式需服务端token及足够免费额度，一次视频最多55秒，首帧/后续等待预算55/10秒。配置及额度边界见 [ZeroGPU说明](backend/ZEROGPU.md)；本地MVP启动器明确关闭外部凭据。
+可选 [Hugging Face ZeroGPU Space](https://huggingface.co/spaces/Heropig114514/prs-yolo26) 模式需服务端token及足够免费额度，一次视频最多55秒，首帧/后续等待预算55/10秒。配置及额度边界见 [ZeroGPU说明](backend/ZEROGPU.md)；本地MVP默认离线模式明确关闭外部凭据，统一模式仅显式允许ORS。
 
 当前提供原样回传、本地CUDA集成、HF GPU检测、可选场景描述和定位/步行路线。模型导出、Space发布及验证工具集中于 `backend/tools/`；结构化实验结果存放于 `backend/benchmarks/`。
 
 [步行路线测试页面](https://47.239.50.129/prs/maps/) 使用 Leaflet 1.9.4 + OpenStreetMap 底图和 ORS `foot-walking` 路线。服务端配置 `ORS_API_KEY`，浏览器仅获配置状态。点击获取设备起点，点选地图终点，再提交路线；也可明确选择 NUS 固定示例。规划时起终点发送 PRS 和 ORS，不存数据库；返回路线、距离、预计时间和转向步骤。初始 NUS 区域预览和示例均不是设备位置。
 
-按用户选择以 ORS 替代原 proposal 中的 Google 路线实现；原 proposal 文件未改写。地图页现支持持续定位、转向指令、剩余距离、偏航提示、到达判断和手动停止；agent 可通过 `navigation_start`、`navigation_stop`、`navigation_status` 操作同一控制器。需先规划路线并允许浏览器定位，隐藏页面停止，不自动重规划。地图导航尚未接入TTS/避障调度；阈值与验证边界见 [前端说明](frontend/README.md) 和 [MCP 契约](backend/MCP.md)。后续正式实验需记录导航实现与地图数据来源。
+按用户选择以 ORS 替代原 proposal 中的 Google 路线实现；原 proposal 文件未改写。地图页现支持持续定位、转向指令、剩余距离、偏航提示、到达判断和手动停止；agent 可通过 `navigation_start`、`navigation_stop`、`navigation_status` 操作同一控制器。需先规划路线并允许浏览器定位，隐藏页面停止，不自动重规划。统一入口连接导航TTS与风险提醒，保持两类输入和原计算逻辑独立，不自动生成绕障路线；阈值与验证边界见 [前端说明](frontend/README.md) 和 [MCP 契约](backend/MCP.md)。后续正式实验需记录导航实现与地图数据来源。
 
 本地Guidance的导航示例用于提醒仲裁，不代表GPS/ORS或完整导航验证；真实手机声音、振动和风险准确率需另行验证。
 

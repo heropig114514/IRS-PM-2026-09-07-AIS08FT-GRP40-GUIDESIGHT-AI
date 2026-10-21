@@ -1,0 +1,122 @@
+<!doctype html>
+<!-- Responsibilities: Present walking navigation, optional NUS endpoints and camera reminders.
+Implementation: One-click rear-camera detection with separate live and annotated views; original
+controller IDs preserve lifecycle ownership, including the original explicit NUS fill action.
+Manual camera selection and diagnostics live at ./test.
+Related Modules: assist-mvp.js, product-ui.js, assist-product.css; original maps/navigation/camera;
+integration.assist renders the explicit product marker and the separate diagnostics entry.
+Declaration Index: None.
+Variable Index: product-* presentation IDs; original IDs bind existing controllers; data-product-copy
+keys select fixed bilingual labels. No inline code, saved coordinates, device IDs or credentials. -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#123e40" />
+  <title>PRS · 出行助手</title>
+  <link rel="stylesheet" href="../assets/integration/assist.css" />
+  <link rel="stylesheet" href="../assets/integration/assist-product.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+  <script type="module" src="../assets/i18n.js"></script>
+  <script type="module" src="../assets/maps-page.js"></script>
+  <script type="module" src="../assets/integration/assist-mvp.js"></script>
+  <script type="module" src="../assets/integration/product-ui.js"></script>
+  <script type="module" src="../assets/ai-control.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#product-main" data-product-copy="skip">跳到主要操作</a>
+  <div class="product-shell">
+    <header class="product-header">
+      <a class="product-brand" href="./"><span class="product-mark" aria-hidden="true">P</span><span>PRS<span class="brand-caption" data-product-copy="brand">出行助手</span></span></a>
+      <label class="product-language"><span data-product-copy="language">界面语言</span>
+        <select id="language" aria-label="语言"><option value="system">跟随系统</option><option value="zh-CN">中文</option><option value="en">English</option></select>
+      </label>
+    </header>
+    <main id="product-main" tabindex="-1">
+      <div class="product-intro">
+        <p class="product-eyebrow" data-product-copy="eyebrow">步行导航 · 环境提醒</p>
+        <h1 data-product-copy="heading">出行，从这里开始。</h1>
+        <p data-product-copy="intro">选择目的地，开启摄像头，沿途听取导航与风险提醒。</p>
+      </div>
+      <section class="speech-banner" aria-labelledby="product-speech-heading">
+        <div><h2 id="product-speech-heading" data-product-copy="speechHeading">语音提醒</h2>
+          <p id="assist-speech-status" role="status" data-language-original>语音提醒已开启，点击即可启动。</p>
+        </div>
+        <div class="product-actions"><button id="assist-speech-start" class="button primary" type="button" data-product-copy="activate">启动语音</button>
+          <button id="assist-resume-speech" class="button secondary" type="button" disabled hidden data-product-copy="recoverSpeech">恢复语音</button></div>
+      </section>
+      <nav class="product-jump" aria-label="主要功能" data-product-aria="mainNavigation"><a href="#product-navigation" data-product-copy="navigation">步行导航</a><button id="product-camera-start" type="button" data-product-copy="startCameraShortcut" disabled>开启环境感知</button><a href="#product-preferences" data-product-copy="preferences">提醒设置</a></nav>
+      <div class="product-grid">
+        <section id="product-navigation" class="product-card" aria-labelledby="product-navigation-heading">
+          <div class="product-card-heading"><div><span class="product-step" aria-hidden="true">01</span><h2 id="product-navigation-heading" data-product-copy="navigation">步行导航</h2></div><span id="product-map-state" class="product-badge" role="status" data-language-original>正在准备地图</span></div>
+          <p class="product-hint" data-product-copy="routeHint">获取当前位置后，点选地图上的目的地。</p>
+          <div class="product-actions"><button id="locate" class="button secondary" type="button" disabled data-product-copy="locate">使用当前位置</button><button id="example" class="button secondary" type="button" disabled data-product-copy="example">填入 NUS 示例</button></div>
+          <p id="product-route-message" class="product-notice" role="status" data-language-original>正在准备路线服务。</p>
+          <div id="map" aria-label="OpenStreetMap 地图"></div>
+          <p class="product-map-caption" data-product-copy="mapHint">地图初始位置仅供浏览；可使用当前位置或 NUS 示例。</p>
+          <p id="product-tile-message" class="product-error" role="status" data-language-original></p>
+          <div class="product-location-summary"><span data-product-copy="origin">起点</span><strong id="product-origin" data-language-original>尚未选择</strong><span data-product-copy="destination">目的地</span><strong id="product-destination" data-language-original>请在地图上点选</strong></div>
+          <form id="route-form">
+            <details class="product-coordinates"><summary data-product-copy="coordinates">手动输入坐标</summary>
+              <div class="product-coordinate-grid">
+                <fieldset><legend data-product-copy="origin">起点</legend><label for="start-latitude">纬度</label><input id="start-latitude" type="number" step="any" min="-90" max="90" required disabled /><label for="start-longitude">经度</label><input id="start-longitude" type="number" step="any" min="-180" max="180" required disabled /></fieldset>
+                <fieldset><legend data-product-copy="destination">目的地</legend><label for="end-latitude">纬度</label><input id="end-latitude" type="number" step="any" min="-90" max="90" required disabled /><label for="end-longitude">经度</label><input id="end-longitude" type="number" step="any" min="-180" max="180" required disabled /></fieldset>
+              </div>
+            </details>
+            <button id="plan" class="button primary full-width" type="submit" disabled data-product-copy="plan">规划步行路线</button>
+          </form>
+          <section id="navigation-panel" class="product-navigation-panel" aria-label="步行导航">
+            <h3 id="navigation-status" role="status">尚未开始导航</h3>
+            <p id="product-navigation-message" role="status" data-language-original></p>
+            <p id="navigation-progress">暂无可靠导航进度</p>
+            <h3 id="navigation-turn">等待转向指令</h3>
+            <div class="product-actions"><button id="navigation-start" class="button primary" type="button" disabled data-product-copy="startNavigation">开始导航</button><button id="navigation-stop" class="button secondary" type="button" disabled data-product-copy="stopNavigation">结束导航</button></div>
+          </section>
+          <details class="product-route-details"><summary data-product-copy="routeDetails">查看路线详情</summary><h3 id="route-summary">尚未请求路线</h3><ol id="steps"></ol></details>
+          <p id="route-attribution" class="product-attribution">© openrouteservice.org by HeiGIT | © OpenStreetMap contributors</p>
+        </section>
+        <div class="product-side">
+          <section id="assist-camera-panel" class="product-card" aria-labelledby="product-camera-heading">
+            <div class="product-card-heading"><div><span class="product-step" aria-hidden="true">02</span><h2 id="product-camera-heading" data-product-copy="camera">环境感知</h2></div><span id="product-camera-state" class="product-badge" role="status" data-language-original>未开启</span></div>
+            <p class="product-hint" data-product-copy="cameraHint">点击开始检测，自动使用手机后置摄像头。首次使用请允许摄像头权限。</p>
+            <div class="product-actions"><button id="start" class="button primary" type="button" disabled data-product-copy="startDetection">开始检测</button><button id="stop" class="button secondary" type="button" disabled data-product-copy="stopDetection">停止检测</button></div>
+            <p id="product-camera-message" class="product-notice" role="status" data-language-original></p>
+            <p id="assist-status" role="status" data-language-original>感知尚未开始。</p><p id="assist-output-status" class="product-output" role="status" data-language-original>风险提醒已开启。</p>
+            <div class="product-camera-views">
+              <figure><figcaption data-product-copy="liveCamera">实时画面</figcaption><div class="product-camera-preview"><video id="preview" muted autoplay playsinline aria-label="摄像头预览" data-product-aria="preview"></video><div id="local-placeholder" class="product-preview-placeholder" data-product-copy="cameraOff">摄像头尚未开启</div></div></figure>
+              <figure><figcaption data-product-copy="annotatedCamera">识别结果</figcaption><div class="product-camera-preview"><img id="echo" alt="带目标标记框的检测画面" hidden /><div id="echo-placeholder" class="product-preview-placeholder" data-product-copy="resultPending">开始检测后，显示带标记框的返回画面</div></div></figure>
+            </div>
+          </section>
+          <details id="product-preferences" class="product-card product-preferences"><summary data-product-copy="preferences">提醒设置</summary>
+            <p class="product-hint" data-product-copy="settingsHint">声音跟随界面语言，音量通过手机按键调节。</p>
+            <label class="product-switch"><span data-product-copy="speechToggle">语音提醒</span><input id="speech-enabled" type="checkbox" disabled /></label>
+            <label class="product-switch"><span data-product-copy="navigationToggle">导航播报</span><input id="navigation-speech-enabled" type="checkbox" checked /></label>
+            <label class="product-switch"><span data-product-copy="riskToggle">风险预警</span><input id="assist-risk-enabled" type="checkbox" checked /></label>
+            <div id="product-vibration-preference"><label class="product-switch"><span data-product-copy="vibrationToggle">振动提醒</span><input id="vibration-enabled" type="checkbox" disabled /></label><p id="product-vibration-note" class="product-hint" data-language-original></p><button id="assist-resume-vibration" class="button secondary" type="button" disabled hidden data-product-copy="recoverVibration">恢复振动</button></div>
+          </details>
+        </div>
+      </div>
+      <p class="product-session-note" data-product-copy="foreground">使用时请保持页面在前台。离开或锁屏后，需要重新开始导航和检测。</p>
+    </main>
+    <footer class="product-footer"><span>PRS</span><a id="product-test-link" href="./test" data-product-copy="diagnostics">测试与诊断</a></footer>
+  </div>
+  <div class="product-stop-bar"><button id="assist-stop-all" class="button danger" type="button" data-product-copy="stopAll">停止导航与检测</button></div>
+  <!-- These noninteractive bindings satisfy the original controllers; diagnostics are visible only
+  on the dedicated test page. Hidden subtrees are excluded from keyboard and screen reader flow. -->
+  <div id="product-driver-bindings" hidden aria-hidden="true" data-language-original>
+    <span id="maps-status"></span><p id="maps-message"></p><span id="tile-status"></span><span id="location-source">尚未指定</span><span id="accuracy"></span>
+    <p id="navigation-message"></p><p id="navigation-position"></p><p id="navigation-deviation"></p><p id="navigation-instruction"></p><p id="navigation-next"></p>
+    <section id="maps-navigation-speech-panel"><h2>语音绑定</h2><select id="navigation-speech-language"><option value="zh-CN">中文</option><option value="en-US">English</option></select><select id="navigation-speech-voice"><option value="">自动匹配</option></select><button id="navigation-voices-refresh" type="button"></button><button id="navigation-speech-stop" type="button"></button><button id="navigation-speech-resume" type="button" disabled></button><p id="navigation-speech-status"></p></section>
+    <section id="speech-test"><span id="speech-status"></span><textarea id="speech-text" maxlength="2000"></textarea><select id="speech-language"><option value="zh-CN">中文</option><option value="en-US">English</option></select><select id="speech-voice"><option value=""></option></select><input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="2" /><output id="speech-rate-value"></output><input id="speech-volume" type="range" min="0" max="1" step="0.1" value="1" /><output id="speech-volume-value"></output><button id="speech-play" type="button"></button><button id="speech-stop" type="button"></button><p id="speech-message"></p><p id="speech-request"></p></section>
+    <section id="vibration-test"><span id="vibration-status"></span><button id="vibration-stop" type="button"></button><p id="vibration-message"></p></section>
+    <button id="assist-devices-authorize" type="button"></button><button id="assist-devices-refresh" type="button"></button><select id="assist-device"><option value=""></option></select>
+    <select id="assist-source"><option value="camera" selected>camera</option><option value="video">video</option></select>
+    <section id="assist-video-panel" hidden><input id="assist-video-file" type="file" accept="video/*" /><button id="assist-video-start" type="button" disabled></button><button id="assist-video-stop" type="button" disabled></button><p id="assist-video-status"></p><video id="video-source" muted playsinline preload="metadata"></video><img id="video-result" alt="" hidden /></section>
+    <select id="processing"><option value="local">local</option></select><select id="camera"><option value="environment">environment</option><option value="user">user</option></select><button id="ping" type="button"></button>
+    <span id="verified"></span><p id="status"></p><p id="message"></p><p id="hf-note"></p><p id="capture-source"></p><span id="latency"></span><span id="frames"></span><span id="size"></span><span id="fps"></span><p id="assist-result-status"></p><ol id="assist-results"></ol><pre id="assist-stats"></pre>
+  </div>
+</body>
+</html>

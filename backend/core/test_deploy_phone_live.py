@@ -5,6 +5,7 @@ Related Modules: tools.deploy_phone_live; frontend/index.html, maps.html, device
 i18n.js supplies shared language behavior.
 Declaration Index: DeploymentAssetTests; DeploymentAssetTests.check_dependency_closure;
 DeploymentAssetTests.test_maps_dependency_closure;
+DeploymentAssetTests.test_navigation_speech_profiles;
 DeploymentAssetTests.test_camera_dependency_closure;
 DeploymentAssetTests.test_scene_files_published.
 DeploymentAssetTests.test_navigation_scope — navigation closure and preserved camera/config paths;
@@ -15,10 +16,15 @@ DeploymentAssetTests.test_overlay_profile_stage.open_file;
 DeploymentAssetTests.test_overlay_profile_activation.
 DeploymentAssetTests.test_outputs_scope; DeploymentAssetTests.test_outputs_activation;
 DeploymentAssetTests.test_outputs_activation.open_file.
+DeploymentAssetTests.test_shared_asset_route_contract;
+DeploymentAssetTests.test_shared_asset_route_precondition;
+DeploymentAssetTests.test_shared_asset_route_precondition.open_file.
 Variable Index: None; required/pending are test-local file-name sets, with no credentials.
 """
 
 import ast
+import hashlib
+import io
 import re
 import tempfile
 from pathlib import Path
@@ -33,45 +39,49 @@ class DeploymentAssetTests(SimpleTestCase):
     Constraints: No SSH, uploads, deployment-only imports or external-service assertions.
     """
 
-    def check_dependency_closure(self, page_name, asset_prefix):
+    def check_dependency_closure(
+        self, page_name, asset_prefix, published_name="FRONTEND", inherited=()
+    ):
         """Functionality: Require every locally referenced page asset in one release.
-        Inputs: page_name and HTML asset_prefix, static imports and publisher FRONTEND declaration.
+        Inputs: page_name, HTML prefix, selected publication list and explicit inherited assets.
         Outputs: Missing dependency assertion with file names; local source reads only.
         Logic: Read the literal allowlist via AST, seed from HTML, traverse static JS once,
-        reject path escapes. No publisher import, so no Paramiko credential/runtime requirement.
-        Constraints: Covers static imports only; not dynamic imports or CDN availability.
+        resolve nested HTML and ./ or ../ imports within frontend before rejecting escapes.
+        No publisher import, so no Paramiko credential/runtime requirement.
+        Constraints: Covers static imports only; not dynamic imports or CDN availability;
+        inherited names explicitly denote protected assets preserved by copying current.
         """
         backend = Path(__file__).resolve().parents[1]
         publisher = ast.parse((backend / "tools/deploy_phone_live.py").read_text(encoding="utf-8"))
         declarations = [
             ast.literal_eval(node.value) for node in publisher.body
             if isinstance(node, ast.Assign)
-            and any(isinstance(target, ast.Name) and target.id == "FRONTEND"
+            and any(isinstance(target, ast.Name) and target.id == published_name
                     for target in node.targets)
         ]
-        self.assertEqual(len(declarations), 1, "Publisher must have one literal FRONTEND allowlist")
+        self.assertEqual(len(declarations), 1, "Publisher must have one literal selected allowlist")
         published = set(declarations[0])
-        frontend = backend.parent / "frontend"
+        frontend = (backend.parent / "frontend").resolve()
         html = (frontend / page_name).read_text(encoding="utf-8")
         required = {page_name}
-        pending = re.findall(r'(?:src|href)="' + re.escape(asset_prefix) + r'([^"/]+)"', html)
+        pending = [frontend / name for name in re.findall(
+            r'(?:src|href)="' + re.escape(asset_prefix) + r'([^"?#]+)"', html
+        )]
         self.assertTrue(pending, f"No local assets found in {page_name}")
         while pending:
-            name = pending.pop()
+            path = pending.pop().resolve()
+            self.assertTrue(path.is_relative_to(frontend), str(path))
+            name = path.relative_to(frontend).as_posix()
             if name in required:
                 continue
-            path = (frontend / name).resolve()
-            self.assertTrue(path.is_relative_to(frontend.resolve()), name)
             required.add(name)
             if path.suffix == ".js":
                 source = path.read_text(encoding="utf-8")
-                imports = re.findall(r"(?:\bfrom\s*|\bimport\s*)['\"](\./[^'\"]+)['\"]", source)
-                pending.extend(
-                    str(path.parent.joinpath(item).relative_to(frontend)).replace("\\", "/")
-                    for item in imports
-                )
+                imports = re.findall(r"(?:\bfrom\s*|\bimport\s*)['\"](\.\.?/[^'\"]+)['\"]", source)
+                pending.extend(path.parent / item for item in imports)
         self.assertFalse(
-            required - published, f"Unpublished {page_name} assets: {required - published}"
+            required - published - set(inherited),
+            f"Unpublished {page_name} assets: {required - published - set(inherited)}",
         )
 
     def test_maps_dependency_closure(self):
@@ -80,6 +90,31 @@ class DeploymentAssetTests(SimpleTestCase):
         Logic: Traverse the common static closure. Constraints: No remote deployment or CDN check.
         """
         self.check_dependency_closure("maps.html", "../assets/")
+
+    def test_navigation_speech_profiles(self):
+        """Functionality: Keep shared maps speech deployable in each profile that publishes maps.
+        Inputs: Real nested entry/imports and full/navigation/outputs literal lists.
+        Outputs: Complete runtime closure and explicit bridge test/checker presence.
+        Logic: Resolve canonical relative paths and check each independently selected scope.
+        Constraints: No routing upgrade, SSH or actual deployment is performed.
+        """
+        from tools import deploy_phone_live as publisher
+
+        required = {
+            "integration/maps-navigation-speech.js", "integration/maps-navigation-bridge.js",
+            "integration/maps-navigation-speech.css", "integration/navigation-speech.js",
+            "integration/events.js", "integration/catalog.js",
+            "tests/integration-maps-navigation-bridge.test.mjs",
+            "tools/check_maps_navigation_speech_browser.mjs",
+            "tools/check_local_navigation_browser.mjs",
+        }
+        for name in ("FRONTEND", "NAVIGATION_FRONTEND", "OUTPUT_FRONTEND"):
+            with self.subTest(profile=name):
+                self.check_dependency_closure(
+                    "maps.html", "../assets/", name,
+                    inherited=("camera.css",) if name == "NAVIGATION_FRONTEND" else (),
+                )
+                self.assertLessEqual(required, set(getattr(publisher, name)))
 
     def test_camera_dependency_closure(self):
         """Functionality: Include the camera page's manual vibration module in publication.
@@ -132,6 +167,9 @@ class DeploymentAssetTests(SimpleTestCase):
                 remote = {}
                 scripts = []
                 current = publisher.PREFIX + "/releases/test-current"
+                remote[current + "/backend/config/urls.py"] = (
+                    backend / "config/urls.py"
+                ).read_bytes()
                 for name in ("models/inference-plan.json", "models/yolo26n.json"):
                     target = source / "backend" / name
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -247,6 +285,7 @@ class DeploymentAssetTests(SimpleTestCase):
         protected = {"core/hf_video_relay.py", "zerogpu/live_transport.py",
                      "models/inference-plan.json", "models/yolo26n.json"}
         self.assertFalse(protected & set(publisher.OUTPUT_BACKEND))
+        self.assertNotIn("config/urls.py", publisher.OUTPUT_BACKEND)
         self.assertFalse({"camera.js", "frame-pipeline.js", "live-detection-client.js"} &
                          set(publisher.OUTPUT_FRONTEND))
         self.assertTrue({"vibration.js", "speech-output.js", "ai-control.js", "maps.html"} <=
@@ -291,6 +330,71 @@ class DeploymentAssetTests(SimpleTestCase):
             publisher.activate(Mock(), Mock(), manifest)
             activate.assert_called_once()
             self.assertIs(activate.call_args.args[1], manifest)
+
+    def test_shared_asset_route_contract(self):
+        """Functionality: Verify route capability from active source without executing it.
+        Inputs: Valid and incompatible source bytes. Outputs: Verified hash or explicit refusal.
+        Logic: Only a direct urlpatterns shared path to camera_asset qualifies; old routes,
+        comments, unused declarations, malformed source and oversized data cannot bypass it.
+        Constraints: No Django route patch, module execution, SSH or active configuration change.
+        """
+        from tools import deploy_phone_live as publisher
+
+        valid = b'urlpatterns = [path("assets/<path:name>", camera_asset, name="shared-asset")]'
+        self.assertEqual(
+            publisher.require_shared_asset_route(valid), hashlib.sha256(valid).hexdigest()
+        )
+        for raw in (
+            b'urlpatterns = [path("assets/<str:name>", camera_asset)]',
+            b'# path("assets/<path:name>", camera_asset)\nurlpatterns=[]',
+            b'example=path("assets/<path:name>", camera_asset)\nurlpatterns=[]',
+            b'urlpatterns=[path("assets/<path:name>", other_asset)]',
+            b'urlpatterns=[path("live/assets/<path:name>", camera_asset)]',
+            b'urlpatterns=[', b'\xff', b' ' * 262145,
+        ):
+            with self.subTest(source_prefix=raw[:64]):
+                with self.assertRaisesRegex(ValueError, "upgrade the shared asset route"):
+                    publisher.require_shared_asset_route(raw)
+
+    def test_shared_asset_route_precondition(self):
+        """Functionality: Refuse incompatible navigation/output scopes before staging any files.
+        Inputs: Real local model metadata, mocked active source and read-only remote boundaries.
+        Outputs: Explicit prerequisite error, only a readlink command and no uploads/chmods.
+        Logic: Both scoped profiles check active urls without changing it or retrying.
+        Constraints: No network, remote mutation, source bundle writes or actual service checks.
+        """
+        from tools import deploy_phone_live as publisher
+
+        backend = Path(__file__).resolve().parents[1]
+        current = publisher.PREFIX + "/releases/test-current"
+        for profile in ("navigation", "outputs"):
+            with self.subTest(profile=profile):
+                remote = {current + "/backend/" + name: (backend / name).read_bytes()
+                          for name in ("models/inference-plan.json", "models/yolo26n.json")}
+                remote[current + "/backend/config/urls.py"] = (
+                    b'urlpatterns=[path("assets/<str:name>", camera_asset)]'
+                )
+
+                def open_file(path, mode="r", remote=remote):
+                    """Functionality: Expose only selected active bytes through a mock read.
+                    Inputs: Path/mode and private fixture dictionary. Outputs: In-memory stream.
+                    Logic: Reject writes and unknown paths.
+                    Constraints: No real SFTP or credentials.
+                    """
+                    self.assertEqual(mode, "rb")
+                    return io.BytesIO(remote[path])
+
+                sftp = Mock()
+                sftp.open.side_effect = open_file
+                with patch.object(publisher, "execute", return_value=current) as command:
+                    with self.assertRaisesRegex(ValueError, "upgrade the shared asset route"):
+                        publisher.stage(Mock(), sftp, profile,
+                                        runtime_path=publisher.PREFIX + "/runtimes/test-existing")
+                command.assert_called_once()
+                self.assertTrue(command.call_args.args[1].startswith("readlink"))
+                sftp.putfo.assert_not_called()
+                sftp.chmod.assert_not_called()
+                self.assertEqual(sftp.open.call_count, 3)
 
     def test_outputs_activation(self):
         """Functionality: Preserve credentials and isolate deployment to the owned service.

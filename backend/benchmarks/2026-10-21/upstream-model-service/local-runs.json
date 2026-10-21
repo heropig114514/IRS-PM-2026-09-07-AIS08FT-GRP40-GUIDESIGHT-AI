@@ -1,0 +1,27 @@
+[
+  {
+    "name": "local-model-probe",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.check_local_mvp",
+      "--output",
+      "benchmarks\\2026-10-21\\upstream-model-service\\local-model-probe.json"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 9.392016600002535
+  },
+  {
+    "name": "local-video",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "../frontend/tools/check_local_video_browser.mjs",
+      "http://127.0.0.1:8766/integration/video/",
+      "benchmarks\\2026-10-21\\upstream-model-service\\local-video.json",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 27.457386999998562
+  }
+]

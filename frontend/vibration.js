@@ -1,6 +1,6 @@
 /** Responsibilities: 手动UI与显式MCP调用共享的手机震动测试和浏览器能力/拒绝反馈。
  * Implementation: 统一入口保留用户启用、前台和激活要求，发送固定节奏并返回结构化结果；
- * 关闭、隐藏或离页时请求取消，不自动恢复。
+ * 关闭、隐藏或离页时请求取消，不自动恢复；请求广播固定事件快照并向每个订阅者提供独立副本。
  * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js；core.camera提供资源。
  * Declaration Index: VibrationTester; VibrationTester.constructor; VibrationTester.render;
  * VibrationTester.feedback; VibrationTester.callNative; VibrationTester.handleEnable;
@@ -11,7 +11,8 @@
  * Variable Index: PATTERNS — 固定毫秒节奏；tester — 当前页面测试控制器。
  * 实例 doc/win 为浏览器依赖；enabled/buttons/stopButton/status/message 为独立控件；
  * supported 仅说明接口存在，requested 记录尚未成功取消的已接受请求，不证明马达仍在震动；
- * nativeOutcome记录最近一次原生结果；sequence/requestId及listeners给引导模块明确所有权与API生命周期。
+ * nativeOutcome记录最近一次原生结果；sequence/requestId及listeners给引导模块明确所有权与API生命周期；
+ * notify的局部event固定本次请求/阶段/时间，隔离订阅者修改和同步新请求。
  */
 const PATTERNS = {short: [200], long: [800], double: [150, 100, 150]};
 
@@ -62,13 +63,16 @@ export class VibrationTester {
   /** Functionality: Subscribe to vibration API lifecycle. Inputs: listener. Outputs: unsubscribe callback.
    * Logic: Set retains listeners. Constraints: API acknowledgement is not observed motor start/end. */
   subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
-  /** Functionality: Publish non-sensitive request events. Inputs: phase/reason. Outputs: callbacks.
-   * Logic: each accepted pattern has an identity; cancel/error refer to the current request.
-   * Constraints: no hardware verification, retries or synthetic activation; observer failures are diagnosed. */
+  /** Functionality: Publish one accepted-request event snapshot to independent observers.
+   * Inputs: phase/reason and current request ID. Outputs: Independent body-free event copies.
+   * Logic: Capture identity/time and listeners before dispatch; reentrant new patterns cannot
+   * change the old event, and one observer cannot mutate another observer's copy.
+   * Constraints: No hardware verification, retries or synthetic activation; failures are diagnosed. */
   notify(phase, reason = null) {
-    for (const listener of this.listeners) {
-      try { listener({channel: "vibration", phase, request_id: this.requestId, reason,
-        at: performance.now(), hardware_verified: false}); }
+    const event = Object.freeze({channel: "vibration", phase, request_id: this.requestId, reason,
+      at: performance.now(), hardware_verified: false});
+    for (const listener of [...this.listeners]) {
+      try { listener({...event}); }
       catch (error) { this.win.console.error("Vibration observer failed", {error_type: error.name}); }
     }
   }

@@ -10,11 +10,20 @@ LocalLauncherTests.test_duplicate_ports_fail_before_binding;
 LocalLauncherTests.test_cleanup_terminates_only_owned_live_children;
 LocalLauncherTests.test_cuda_local_version_suffix_is_accepted;
 LocalLauncherTests.test_readonly_probe_uses_project_offline_settings;
-LocalLauncherTests.test_health_is_one_request_without_redirect_following.
+LocalLauncherTests.test_health_is_one_request_without_redirect_following;
+AssistLauncherTests; AssistLauncherTests.test_explicit_ors_is_web_only;
+AssistLauncherTests.test_dotenv_imports_only_ors_without_interpolation;
+AssistLauncherTests.test_invalid_ors_files_are_rejected_safely;
+AssistLauncherTests.test_ors_file_requires_assist_before_preflight;
+AssistLauncherTests.test_assist_check_has_no_writes_or_children;
+AssistLauncherTests.test_assist_launch_selects_entry_and_session_policy;
+AssistLauncherTests.test_policy_mismatch_stops_owned_children.
 Variable Index: None.
 """
 
 import argparse
+import contextlib
+import io
 import json
 import subprocess
 import tempfile
@@ -200,3 +209,167 @@ class LocalLauncherTests(unittest.TestCase):
                 launcher.read_health(8767, "/health/")
         connection.request.assert_called_once_with("GET", "/health/")
         connection.close.assert_called_once()
+
+
+class AssistLauncherTests(unittest.TestCase):
+    """Functionality: Verify opt-in route credentials and combined-entry process configuration.
+    Logic: synthetic credentials, file contents and process handles only.
+    Constraints: no real secret discovery, subprocess, port, external API or CUDA operations.
+    """
+
+    def test_explicit_ors_is_web_only(self):
+        """Functionality: Pass authorized ORS only to the assist web process.
+        Inputs: synthetic parent keys/mode and explicit selected ORS key. Outputs: isolated envs.
+        Logic: inference retains no route key; default mode ignores inherited assist/ORS settings.
+        Constraints: no parent mutation or accidental HF/DashScope activation.
+        """
+        parent = {"ORS_API_KEY": "parent-private", "HF_TOKEN": "external-private",
+                  "DASHSCOPE_API_KEY": "other-private", "LOCAL_MVP_MODE": "assist"}
+        with patch.dict(launcher.os.environ, parent, clear=True):
+            selected = launcher.read_ors_key()
+            web = launcher.child_environment("synthetic", 8766, 8767, web=True,
+                                             assist=True, ors_key=selected)
+            worker = launcher.child_environment("synthetic", 8766, 8767, web=False,
+                                                assist=True, ors_key=selected)
+            offline = launcher.child_environment("synthetic", 8766, 8767, web=True)
+            self.assertEqual(dict(launcher.os.environ), parent)
+        self.assertEqual(web["ORS_API_KEY"], "parent-private")
+        self.assertEqual(worker["ORS_API_KEY"], "")
+        self.assertEqual(offline["ORS_API_KEY"], "")
+        self.assertEqual(offline["LOCAL_MVP_MODE"], "offline")
+        for environment in (web, worker):
+            self.assertEqual(environment["LOCAL_MVP_MODE"], "assist")
+            self.assertEqual(environment["HF_TOKEN"], "")
+            self.assertEqual(environment["DASHSCOPE_API_KEY"], "")
+
+    def test_dotenv_imports_only_ors_without_interpolation(self):
+        """Functionality: Read an explicit dotenv without importing arbitrary values or expansion.
+        Inputs: synthetic file with comments/quoted ORS and unrelated secret-shaped assignments.
+        Outputs: literal ORS string and unchanged process. Logic: safe parser, no load_dotenv call.
+        Constraints: no automatic .env discovery, shell expansion or private value diagnostics.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "explicit.env"
+            path.write_text('HF_TOKEN=do-not-copy\nDJANGO_SECRET_KEY=do-not-copy\n'
+                            'export ORS_API_KEY="${NOT_EXPANDED}-literal" # comment\n',
+                            encoding="utf-8")
+            with patch.dict(launcher.os.environ, {"NOT_EXPANDED": "private"}, clear=True):
+                before = dict(launcher.os.environ)
+                self.assertEqual(launcher.read_ors_key(path), "${NOT_EXPANDED}-literal")
+                self.assertEqual(dict(launcher.os.environ), before)
+
+    def test_invalid_ors_files_are_rejected_safely(self):
+        """Functionality: Reject duplicate/malformed/oversized/unreadable credential files.
+        Inputs: explicit synthetic invalid files. Outputs: safe StartupError without key content.
+        Logic: one ORS binding, 64KiB and UTF-8 bounds. Constraints: never repair or replace files.
+        """
+        contents = (b"ORS_API_KEY=private-one\nORS_API_KEY=private-two\n",
+                    b"ORS_API_KEY='private-broken\n", b"HF_TOKEN=private-only\n",
+                    b"ORS_API_KEY=private-" + b"a" * 65536, b"ORS_API_KEY=\xff")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "explicit.env"
+            for content in contents:
+                path.write_bytes(content)
+                with self.assertRaises(launcher.StartupError) as caught:
+                    launcher.read_ors_key(path)
+                self.assertNotIn("private-", str(caught.exception))
+                self.assertEqual(path.read_bytes(), content)
+
+    def test_ors_file_requires_assist_before_preflight(self):
+        """Functionality: Keep default offline mode from reading or using an explicit ORS file.
+        Inputs: offline CLI arguments with a synthetic credential path. Outputs: early failure.
+        Logic: reject incompatible options before runtime probes or credential reads.
+        Constraints: no file access, key creation, GPU query or subprocess.
+        """
+        args = argparse.Namespace(assist=False, ors_env=Path("not-read.env"))
+        with patch.object(launcher, "read_ors_key") as reader, \
+                patch.object(launcher, "python_path") as python:
+            with self.assertRaises(launcher.StartupError):
+                launcher.run(args)
+            reader.assert_not_called()
+            python.assert_not_called()
+
+    def test_assist_check_has_no_writes_or_children(self):
+        """Functionality: Keep successful --assist --check read-only after explicit config parsing.
+        Inputs: synthetic prerequisite results. Outputs: no configuration creation or child launch.
+        Logic: inspect prerequisites before mutation. Constraints: no real GPU or sockets.
+        """
+        args = argparse.Namespace(assist=True, ors_env=None, check=True,
+                                  web_port=8766, inference_port=8767, log_dir=None)
+        with (
+            patch.object(launcher, "read_ors_key", return_value="private-check"),
+            patch.object(launcher, "python_path", return_value=Path("synthetic")),
+            patch.object(launcher, "inspect_environment", return_value={
+                "device": "synthetic", "cuda_runtime": "synthetic"}),
+            patch.object(launcher, "verify_models"), patch.object(launcher, "verify_ports"),
+            patch.object(launcher, "read_or_create_key") as key,
+            patch.object(launcher, "launch") as launch,
+            contextlib.redirect_stdout(io.StringIO()) as output,
+        ):
+            launcher.run(args)
+            key.assert_not_called()
+            launch.assert_not_called()
+        self.assertNotIn("private-check", output.getvalue())
+
+    def test_assist_launch_selects_entry_and_session_policy(self):
+        """Functionality: Select two explicit process modes and advertise the combined page.
+        Inputs: mock listeners/health and immediate user stop. Outputs: exact modules/envs/cleanup.
+        Logic: assist owns web ORS only and both processes agree on unbounded session policy.
+        Constraints: all processes, signals and waits are substitutes; no running server or GPU.
+        """
+        args = argparse.Namespace(assist=True, ors_env=None, check=False,
+                                  web_port=8766, inference_port=8767, log_dir=None)
+        children = [Mock(), Mock()]
+        with (
+            patch.object(launcher, "read_ors_key", return_value="private-selected"),
+            patch.object(launcher, "python_path", return_value=Path("synthetic")),
+            patch.object(launcher, "inspect_environment", return_value={
+                "device": "synthetic", "cuda_runtime": "synthetic"}),
+            patch.object(launcher, "verify_models"), patch.object(launcher, "verify_ports"),
+            patch.object(launcher, "read_or_create_key", return_value="private-django"),
+            patch.object(launcher.signal, "signal"),
+            patch.object(launcher.STOP_REQUESTED, "wait", return_value=True),
+            patch.object(launcher, "launch", side_effect=children) as launch,
+            patch.object(launcher, "wait_listener"),
+            patch.object(launcher, "read_health", return_value={"session_seconds": None}),
+            patch.object(launcher, "stop_children") as stop,
+            contextlib.redirect_stdout(io.StringIO()) as output,
+        ):
+            launcher.run(args)
+            self.assertEqual(launch.call_args_list[0].args[1],
+                             "integration.inference.asgi:application")
+            self.assertEqual(launch.call_args_list[1].args[1],
+                             "integration.assist_asgi:application")
+            self.assertEqual(launch.call_args_list[0].args[3]["ORS_API_KEY"], "")
+            self.assertEqual(launch.call_args_list[1].args[3]["ORS_API_KEY"], "private-selected")
+            stop.assert_called_once_with(children)
+        self.assertIn("http://127.0.0.1:8766/maps/", output.getvalue())
+        self.assertNotIn("private-", output.getvalue())
+
+    def test_policy_mismatch_stops_owned_children(self):
+        """Functionality: Reject an old worker's 55-second policy during continuous startup.
+        Inputs: assist selection but incompatible worker health. Outputs: failure and owned cleanup.
+        Logic: never start web or claim availability under a mismatched transport contract.
+        Constraints: no restart, automatic policy adjustment or actual subprocess.
+        """
+        args = argparse.Namespace(assist=True, ors_env=None, check=False,
+                                  web_port=8766, inference_port=8767, log_dir=None)
+        child = Mock()
+        with (
+            patch.object(launcher, "read_ors_key", return_value=""),
+            patch.object(launcher, "python_path", return_value=Path("synthetic")),
+            patch.object(launcher, "inspect_environment", return_value={
+                "device": "synthetic", "cuda_runtime": "synthetic"}),
+            patch.object(launcher, "verify_models"), patch.object(launcher, "verify_ports"),
+            patch.object(launcher, "read_or_create_key", return_value="private-django"),
+            patch.object(launcher.signal, "signal"),
+            patch.object(launcher, "launch", return_value=child) as launch,
+            patch.object(launcher, "wait_listener"),
+            patch.object(launcher, "read_health", return_value={"session_seconds": 55}),
+            patch.object(launcher, "stop_children") as stop,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            with self.assertRaises(launcher.StartupError):
+                launcher.run(args)
+            launch.assert_called_once()
+            stop.assert_called_once_with([child])

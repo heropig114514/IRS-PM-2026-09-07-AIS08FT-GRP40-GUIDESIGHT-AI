@@ -1,0 +1,42 @@
+{
+  "explicit_interpreter": "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+  "separate_venvs": false,
+  "web": {
+    "python": [
+      3,
+      12
+    ],
+    "packages": {
+      "Django": "5.2.17",
+      "djangorestframework": "3.18.1",
+      "uvicorn": "0.52.4",
+      "python-dotenv": "1.2.3",
+      "websockets": "16.1.1",
+      "mcp": "2.3.0",
+      "httpx2": "2.13.1",
+      "numpy": "1.26.4",
+      "Pillow": "12.3.0"
+    }
+  },
+  "inference": {
+    "python": [
+      3,
+      12
+    ],
+    "packages": {
+      "torch": "2.8.0+cu126",
+      "torchvision": "0.23.0+cu126",
+      "ultralytics": "8.4.171",
+      "numpy": "1.26.4",
+      "Pillow": "12.3.0",
+      "opencv-python": "4.11.0.86",
+      "lap": "0.5.12",
+      "uvicorn": "0.52.4",
+      "websockets": "16.1.1"
+    },
+    "cuda_available": true,
+    "cuda_runtime": "12.6",
+    "device": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "model_sha256_verified": true
+}

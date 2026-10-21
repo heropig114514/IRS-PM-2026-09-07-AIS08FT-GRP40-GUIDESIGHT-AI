@@ -1,0 +1,39 @@
+[
+  {
+    "name": "browser-before",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\upstream-model-service\\browser-before",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 36.537581199998385
+  },
+  {
+    "name": "browser-depth-graph",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\upstream-model-service\\browser-depth-graph",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4",
+      "--depth-graph"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 31.858655699998053
+  },
+  {
+    "name": "browser-after",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\upstream-model-service\\browser-after",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 34.98974850000013
+  }
+]
