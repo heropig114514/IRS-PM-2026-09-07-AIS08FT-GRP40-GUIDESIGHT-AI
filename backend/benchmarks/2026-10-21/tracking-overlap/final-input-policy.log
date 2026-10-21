@@ -1,0 +1,54 @@
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING [31m[1mrequirements:[0m Ultralytics requirement ['pi-heif'] not found, AutoUpdate disabled by YOLO_AUTOINSTALL=False
+Overlap experiment failed type=ModuleNotFoundError
+Experimental graph pipeline failed type=ModuleNotFoundError
+Resident inference failed id=30ca2d2400ac type=ModuleNotFoundError
+Traceback (most recent call last):
+  File "E:\AI_map\backend\.venv\Lib\site-packages\ultralytics\utils\patches.py", line 79, in image_open
+    return _image_open(filename, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\.venv\Lib\site-packages\PIL\Image.py", line 3715, in open
+    raise UnidentifiedImageError(msg)
+PIL.UnidentifiedImageError: cannot identify image file <_io.BytesIO object at 0x0000021E1CBCD3F0>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<stdin>", line 46, in <module>
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "<stdin>", line 18, in main
+  File "E:\AI_map\backend\realtime\services.py", line 155, in predict
+    return await self.execute(self.detector.predict, jpeg)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\realtime\services.py", line 89, in execute
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\tools\resident_overlap_probe.py", line 36, in __call__
+    metadata, result = super().__call__(jpeg)
+                       ^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\tools\resident_graph_probe.py", line 69, in __call__
+    metadata, result = self.original_predict(jpeg)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\tools\tracking_overlap_probe.py", line 69, in __call__
+    metadata, result = self.original_predict(jpeg, timestamp=timestamp)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\realtime\detector.py", line 108, in predict
+    image = decode_frame(jpeg)
+            ^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\core\detector.py", line 47, in decode_frame
+    with Image.open(io.BytesIO(payload)) as image:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\.venv\Lib\site-packages\ultralytics\utils\patches.py", line 84, in image_open
+    from pi_heif import register_heif_opener
+ModuleNotFoundError: No module named 'pi_heif'

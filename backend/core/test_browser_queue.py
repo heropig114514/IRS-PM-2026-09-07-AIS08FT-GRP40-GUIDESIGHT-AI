@@ -173,7 +173,7 @@ class BrowserQueueTests(SimpleTestCase):
         self.assertAlmostEqual(evidence[1]["offset_bound_ms"][1], 401)
 
     def test_invalid_evidence(self):
-        """Functionality: Reject malformed counters, clocks, missing stages and mixed contracts.
+        """Functionality: Reject malformed counters/clocks, overlapping stages and mixed contracts.
         Inputs: independently corrupted complete reports. Outputs: explicit exceptions.
         Logic: never substitute defaults or discard offending rows. Constraints: no partial success.
         """
@@ -190,6 +190,7 @@ class BrowserQueueTests(SimpleTestCase):
             ("tracking_ms", -1),
             ("depth_interval", 2),
             ("render_ms", True),
+            ("stage_timing_model", "overlapping_cpu_depth"),
         ):
             session = make_session()
             session["rows"][90]["metadata"][key] = value

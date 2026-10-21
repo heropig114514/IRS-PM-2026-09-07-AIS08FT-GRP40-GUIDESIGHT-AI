@@ -1,0 +1,563 @@
+{
+  "status": "completed",
+  "completed_frames": 500,
+  "mismatched_frames": 0,
+  "scope": "Full-video numerical/timing diagnostic; not browser/accuracy acceptance",
+  "depth_graph": true,
+  "trace_steady": false,
+  "tracking_overlap": true,
+  "trace_overlap": false,
+  "reference": "benchmarks\\2026-10-21\\tracking-overlap\\final-video07\\serial-before",
+  "implementation_sha256": {
+    "core/detector.py": "86cb7f653618d66f12616df598128bdacf6b74ef8d6ebbdb8c165b41355f7ddc",
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "realtime/distance.py": "f5e65e2d873f57f8d1f621cdd8aec569c803616885f9ae3feee7c909f239536f",
+    "realtime/distance_config.py": "45b1d0e1cfcea67bf5ee150be532394e92d57f94d587e505b4e86045cebe2940",
+    "realtime/performance.py": "50936879aad1c4bcd9829a9649b3b5c4d2e7c782dd6c690f7fa9cdc404d3a246",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/benchmark_video.py": "51a7eda0d86518313399cb97b0bcdacf54a00915dba75487bca8981053bb12e1",
+    "tools/benchmark_inference.py": "8d70018d05b051073f740bf0a2a8bb3f327b2b553734a57a9386dfe6f5f6ee17",
+    "tools/inference_profile.py": "f4a446963a4343a045dad9fc0b416b15d482e631431f3f874489b3a14d443ec6",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+    "tools/resident_graph_probe.py": "6f265f8645b92691d78bff7729986f7b26ee3270931f83c083276a8d9a181ae0",
+    "tools/tracking_overlap_probe.py": "df5b126b93ce4051db63113ceafba550f7aa21dfb253487a05f940d407740d95"
+  },
+  "identities": {
+    "video": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "pillow": "12.3.0",
+    "opencv": "4.11.0",
+    "torch": "2.8.0+cu126",
+    "ultralytics": "8.4.171",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "sdk_sha256": {
+    "engine/model.py": "844f7d6be1221ab617533a6685674a9f5221d58eec4ee559c1d849f2cf8718a5",
+    "engine/predictor.py": "d3de9cc0aa0c1f2c0b17c28ea35d1ae971ae7b56f1b7a5c2e3513e5b45e5efaa",
+    "models/yolo/depth/predict.py": "f0f5c1dbf588579be44ec2ebb4692e576a83aa281d2d13845f818c85830b8397",
+    "trackers/bot_sort.py": "a298b6eb7d75aae56a21d15822092dc646b6e054859d706c9c060cb5b9d37498",
+    "trackers/byte_tracker.py": "da509523f9acd0c223aaa9aed77493aad89a675c60787c6a3ee4371fa379ec21",
+    "trackers/utils/gmc.py": "d797f701a22347001d780b0dc4d0f2f5cabdfefb895c36bbab084ceb2dfc4000",
+    "trackers/utils/matching.py": "318bf81030558863a4ec6effea3c9d063a297f299367e379a58b89c24e3f421f",
+    "trackers/utils/stracks.py": "9534294af850c3a6755c3a5a1ba9b2b068c5b79a11166c8547652944e2632f58",
+    "cfg/trackers/botsort.yaml": "8cd88930d3be5557be0777f384eecff0a36a7011850fe613fc0a68178bfd5b01"
+  },
+  "opencv_native_sha256": {
+    "cv2.pyd": "d2e14633f0699469c37e43210ca9e167887ce4a162e01f1490be49fd8e45388f"
+  },
+  "settings": {
+    "declared_frames": 500,
+    "source_fps": 30.0,
+    "source_size": [
+      960,
+      540
+    ],
+    "detection_edge": 640,
+    "confidence": 0.25,
+    "depth_edge": 768,
+    "precision": "FP32",
+    "jpeg_quality": 80,
+    "batch": 1,
+    "tracking": {
+      "tracker": "botsort.yaml",
+      "history_size": 8,
+      "min_valid_samples": 3,
+      "ema_alpha": 0.5,
+      "stale_timeout_s": 2.0,
+      "motion_history_timeout_s": 2.0,
+      "min_time_span_s": 0.1,
+      "approaching_threshold_mps": 0.2,
+      "moving_away_threshold_mps": 0.2,
+      "confirmation_updates": 2
+    },
+    "risk": {
+      "min_closing_speed_mps": 0.2,
+      "max_ttc_sec": 10.0,
+      "distance_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          25
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          10.0,
+          5
+        ]
+      ],
+      "ttc_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          30
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          8.0,
+          5
+        ]
+      ],
+      "closing_speed_bands": [
+        [
+          1.0,
+          5
+        ],
+        [
+          2.0,
+          10
+        ]
+      ],
+      "motion_weights": [
+        [
+          "approaching",
+          15
+        ],
+        [
+          "moving_away",
+          -10
+        ],
+        [
+          "stationary",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "direction_weights": [
+        [
+          "front",
+          10
+        ],
+        [
+          "front_left",
+          7
+        ],
+        [
+          "front_right",
+          7
+        ],
+        [
+          "left",
+          3
+        ],
+        [
+          "right",
+          3
+        ],
+        [
+          "behind",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "class_weights": [
+        [
+          "car",
+          15
+        ],
+        [
+          "truck",
+          18
+        ],
+        [
+          "bus",
+          18
+        ],
+        [
+          "motorcycle",
+          15
+        ],
+        [
+          "bicycle",
+          12
+        ],
+        [
+          "scooter",
+          12
+        ],
+        [
+          "person",
+          5
+        ],
+        [
+          "animal",
+          5
+        ],
+        [
+          "bird",
+          5
+        ],
+        [
+          "cat",
+          5
+        ],
+        [
+          "dog",
+          5
+        ],
+        [
+          "horse",
+          5
+        ],
+        [
+          "sheep",
+          5
+        ],
+        [
+          "cow",
+          5
+        ],
+        [
+          "elephant",
+          5
+        ],
+        [
+          "bear",
+          5
+        ],
+        [
+          "zebra",
+          5
+        ],
+        [
+          "giraffe",
+          5
+        ],
+        [
+          "bench",
+          1
+        ],
+        [
+          "chair",
+          1
+        ],
+        [
+          "stop sign",
+          1
+        ],
+        [
+          "fire hydrant",
+          1
+        ],
+        [
+          "pole",
+          1
+        ],
+        [
+          "sign",
+          1
+        ]
+      ],
+      "default_class_weight": 5,
+      "risk_level_thresholds": [
+        25,
+        50,
+        75
+      ],
+      "alert_priorities": [
+        [
+          "low",
+          0
+        ],
+        [
+          "medium",
+          2
+        ],
+        [
+          "high",
+          3
+        ],
+        [
+          "critical",
+          4
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "medium_alert_enabled": true,
+      "medium_alert_max_distance_m": 3.0,
+      "medium_alert_directions": [
+        "front",
+        "front_left",
+        "front_right"
+      ],
+      "front_left_fraction": 0.3333333333333333,
+      "front_right_fraction": 0.6666666666666666
+    },
+    "distance": {
+      "distance_mode": "depth",
+      "depth_interval": 3,
+      "focal_length_px": 700.0,
+      "reference_width_px": 640,
+      "object_heights_m": [
+        [
+          "person",
+          1.7
+        ],
+        [
+          "bicycle",
+          1.1
+        ],
+        [
+          "motorcycle",
+          1.2
+        ],
+        [
+          "car",
+          1.5
+        ],
+        [
+          "bus",
+          3.2
+        ],
+        [
+          "truck",
+          3.0
+        ]
+      ]
+    },
+    "label_cache": false,
+    "timestamps": "decoder presentation time; no realtime pacing"
+  },
+  "model_initialization_ms": 927.2477000013168,
+  "depth_graph_evidence": {
+    "adapter": "experimental_native_fp32_depth_graph",
+    "shape": [
+      1,
+      3,
+      448,
+      768
+    ],
+    "dtype": "torch.float32",
+    "setup_ms": 256.5656000006129,
+    "preparation_output_equal": true,
+    "scope": "One fixture raw-output equality; no dataset quality claim"
+  },
+  "gpu_peak_allocated_bytes": 253339648,
+  "gpu_peak_reserved_bytes": 392167424,
+  "first_frame": {
+    "forward_event_ms": 5.014463901519775,
+    "inference_ms": 6.239499998628162,
+    "prepare_ms": 3.669000001536915,
+    "gpu_stage_ms": 611.9973999993817,
+    "depth_ms": 3216.716799997812,
+    "depth_predict_ms": 3184.56640000295,
+    "depth_fusion_ms": 31.928299995342968,
+    "decode_boxes_ms": 0.2220999995188322,
+    "tracking_ms": 3.7019000010332093,
+    "risk_ms": 0.22050000188755803,
+    "render_ms": 6.737699997756863,
+    "server_ms": 3843.043299999408,
+    "graph_setup_ms": 604.9786000003223,
+    "predict_wall_ms": 4107.391199999256,
+    "depth_evidence_ms": 1.0632000012265053,
+    "depth_graph_prepare_ms": 264.0843000008317
+  },
+  "steady": {
+    "predict_wall_ms": {
+      "count": 499,
+      "mean_ms": 34.754260921840476,
+      "min_ms": 25.416000000404892,
+      "max_ms": 52.39879999862751,
+      "p50_ms": 34.26739999849815,
+      "p95_ms": 42.63036000011198,
+      "p99_ms": 47.28783400118118
+    },
+    "forward_event_ms": {
+      "count": 499,
+      "mean_ms": 4.754944305859492,
+      "min_ms": 3.670016050338745,
+      "max_ms": 6.9916157722473145,
+      "p50_ms": 4.637695789337158,
+      "p95_ms": 5.740863943099976,
+      "p99_ms": 6.30390606880188
+    },
+    "inference_ms": {
+      "count": 499,
+      "mean_ms": 5.943374348623433,
+      "min_ms": 4.694499999459367,
+      "max_ms": 8.234599998104386,
+      "p50_ms": 5.837000000610715,
+      "p95_ms": 6.990760000553564,
+      "p99_ms": 7.623491999620455
+    },
+    "prepare_ms": {
+      "count": 499,
+      "mean_ms": 2.6332665330339373,
+      "min_ms": 2.287900002556853,
+      "max_ms": 3.8294000005407725,
+      "p50_ms": 2.590500000223983,
+      "p95_ms": 2.9926900006103097,
+      "p99_ms": 3.2705579982575728
+    },
+    "gpu_stage_ms": {
+      "count": 499,
+      "mean_ms": 5.997873948028048,
+      "min_ms": 4.756399997859262,
+      "max_ms": 8.294300001580268,
+      "p50_ms": 5.892200002563186,
+      "p95_ms": 7.033719999890309,
+      "p99_ms": 7.663580000735237
+    },
+    "depth_ms": {
+      "count": 499,
+      "mean_ms": 17.624696192454618,
+      "min_ms": 12.671699998463737,
+      "max_ms": 30.8917999973346,
+      "p50_ms": 16.931900001509348,
+      "p95_ms": 24.240820001796237,
+      "p99_ms": 28.022134001657832
+    },
+    "depth_predict_ms": {
+      "count": 499,
+      "mean_ms": 11.09218056108567,
+      "min_ms": 9.701799997856142,
+      "max_ms": 14.41519999934826,
+      "p50_ms": 11.009100002411287,
+      "p95_ms": 12.301020000813878,
+      "p99_ms": 13.155731999577256
+    },
+    "depth_fusion_ms": {
+      "count": 499,
+      "mean_ms": 6.357926853867642,
+      "min_ms": 2.4866999992809724,
+      "max_ms": 18.32290000311332,
+      "p50_ms": 5.594400001427857,
+      "p95_ms": 12.833470000259695,
+      "p99_ms": 15.657297999423463
+    },
+    "decode_boxes_ms": {
+      "count": 499,
+      "mean_ms": 0.17458877750130683,
+      "min_ms": 0.14480000027106144,
+      "max_ms": 0.3988999997091014,
+      "p50_ms": 0.17070000103558414,
+      "p95_ms": 0.209329999415786,
+      "p99_ms": 0.2491600027133245
+    },
+    "depth_sdk_preprocess_ms": null,
+    "depth_sdk_inference_ms": null,
+    "depth_sdk_postprocess_ms": null,
+    "tracking_ms": {
+      "count": 499,
+      "mean_ms": 8.915304007936145,
+      "min_ms": 7.186300001194468,
+      "max_ms": 11.89449999583303,
+      "p50_ms": 8.869199999026023,
+      "p95_ms": 9.987159993761452,
+      "p99_ms": 10.858989999687765
+    },
+    "risk_ms": {
+      "count": 499,
+      "mean_ms": 0.2146727454816276,
+      "min_ms": 0.10310000288882293,
+      "max_ms": 0.46039999870117754,
+      "p50_ms": 0.21130000095581636,
+      "p95_ms": 0.28902999983984046,
+      "p99_ms": 0.3732120004860917
+    },
+    "render_ms": {
+      "count": 499,
+      "mean_ms": 7.781930260534864,
+      "min_ms": 4.138600001169834,
+      "max_ms": 12.992899999517249,
+      "p50_ms": 7.758799998555332,
+      "p95_ms": 10.041800002363743,
+      "p99_ms": 11.081116000350448
+    },
+    "server_ms": {
+      "count": 499,
+      "mean_ms": 34.58170801604865,
+      "min_ms": 25.267799999710405,
+      "max_ms": 52.216299998690374,
+      "p50_ms": 34.09930000270833,
+      "p95_ms": 42.424060000121244,
+      "p99_ms": 47.119361998775275
+    },
+    "graph_setup_ms": {
+      "count": 499,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    },
+    "depth_evidence_ms": {
+      "count": 499,
+      "mean_ms": 0.8650987976200819,
+      "min_ms": 0.7136999993235804,
+      "max_ms": 1.3319999998202547,
+      "p50_ms": 0.8592999984102789,
+      "p95_ms": 0.9589500001311535,
+      "p99_ms": 1.0774039997340878
+    },
+    "depth_graph_prepare_ms": {
+      "count": 499,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    }
+  },
+  "overlap_steady": {
+    "depth_call_ms": {
+      "count": 499,
+      "mean_ms": 11.09218056108567,
+      "min_ms": 9.701799997856142,
+      "max_ms": 14.41519999934826,
+      "p50_ms": 11.009100002411287,
+      "p95_ms": 12.301020000813878,
+      "p99_ms": 13.155731999577256
+    },
+    "association_cpu_ms": {
+      "count": 499,
+      "mean_ms": 8.588291182396954,
+      "min_ms": 6.947399997443426,
+      "max_ms": 11.56029999765451,
+      "p50_ms": 8.544399999664165,
+      "p95_ms": 9.564950002459227,
+      "p99_ms": 10.562106002034852
+    },
+    "graph_submit_host_ms": {
+      "count": 499,
+      "mean_ms": 0.25855511024225464,
+      "min_ms": 0.2196000023104716,
+      "max_ms": 0.48489999971934594,
+      "p50_ms": 0.2480000002833549,
+      "p95_ms": 0.32646000072418246,
+      "p99_ms": 0.42358800070360303
+    },
+    "graph_stream_elapsed_ms": null
+  }
+}

@@ -210,7 +210,7 @@ class VideoBenchmarkTests(SimpleTestCase):
 
     def test_preconditions(self):
         """Functionality: Reject absent source or occupied output before inference/assets work.
-        Inputs: nonexistent path or existing directory. Outputs: ValueError.
+        Inputs: nonexistent/occupied paths or incompatible overlap flags. Outputs: ValueError.
         Logic: preflight only. Constraints: never overwrites results or initializes a model.
         """
         path = Path(__file__)
@@ -218,3 +218,7 @@ class VideoBenchmarkTests(SimpleTestCase):
             run(path.with_suffix(".absent"), path.parent)
         with self.assertRaises(ValueError):
             run(path, path.parent)
+        for options in ({"tracking_overlap": True}, {"trace_overlap": True},
+                        {"tracking_overlap": True, "depth_graph": True, "trace_steady": True}):
+            with self.assertRaisesMessage(ValueError, "Overlap requires"):
+                run(path, path.parent, **options)

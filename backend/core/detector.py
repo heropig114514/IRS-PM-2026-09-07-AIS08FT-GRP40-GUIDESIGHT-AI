@@ -1,6 +1,7 @@
 """Responsibilities: Bounded JPEG decoding and unchanged YOLO26 FP32 image transforms/rendering.
 Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels;
 optional explicit diagnostic text renderer, with direct Pillow drawing as the default.
+Decode through Pillow's JPEG factory so SDK patches cannot probe/install unrelated image plugins.
 Related Modules: realtime.detector/depth/tracking/risk; zerogpu.live_worker; realtime.protocol.
 Declaration Index: DetectionError; DetectionError.__init__; decode_frame; letterbox; decode_boxes;
 label_font; annotate.
@@ -36,20 +37,22 @@ class DetectionError(Exception):
 def decode_frame(payload):
     """Functionality: Decode only a bounded, complete camera JPEG into RGB.
     Inputs: payload bytes; Outputs: independent PIL RGB image or 400/413 DetectionError.
-    Logic: check byte size, JPEG format and dimensions before decompression, then force loading.
+    Logic: bound bytes, use pinned Pillow JPEG factory, check format/dimensions, then force loading.
+    The SDK globally patches Image.open with an optional-plugin probe; JPEG-only service decoding
+    must not invoke that generic format discovery or its installation side effects.
     Constraints: maximum edge 640 matches existing capture; no EXIF location parsing or disk writes.
     """
-    from PIL import Image, UnidentifiedImageError
+    from PIL import Image, JpegImagePlugin
 
     if not 0 < len(payload) <= MAX_FRAME_BYTES:
         raise DetectionError("frame_size", "图像为空或超过 1 MiB。", 413)
     try:
-        with Image.open(io.BytesIO(payload)) as image:
+        with JpegImagePlugin.jpeg_factory(io.BytesIO(payload)) as image:
             if image.format != "JPEG" or not 0 < min(image.size) <= max(image.size) <= INPUT_EDGE:
                 raise DetectionError("invalid_frame", "仅接受最大边不超过 640 的 JPEG。", 400)
             image.load()
             return image.convert("RGB")
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+    except (OSError, SyntaxError, ValueError, Image.DecompressionBombError) as error:
         raise DetectionError("invalid_frame", "JPEG 图像损坏或无法解码。", 400) from error
 
 

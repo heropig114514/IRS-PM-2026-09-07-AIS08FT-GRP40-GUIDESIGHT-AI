@@ -130,7 +130,8 @@ def validate_session(session):
     Inputs: saved browser session. Outputs: normalized original-pipeline intervals.
     Logic: verify order, counters, timestamps and both disjoint timing decompositions.
     Constraints: no partial-session inference, mixed clocks, rounded metrics or missing stages;
-    floating-point identity tolerance never changes latency acceptance.
+    floating-point identity tolerance never changes latency acceptance; overlapping-stage
+    experiments are rejected even if their numbers happen to match a disjoint sum.
     """
     rows = session["rows"]
     if (
@@ -147,6 +148,8 @@ def validate_session(session):
     intervals = []
     for index, row in enumerate(rows):
         metadata = row["metadata"]
+        if metadata.get("stage_timing_model", "disjoint") != "disjoint":
+            raise ValueError("Queue stage attribution requires disjoint timing semantics")
         if (
             row["ordinal"] != index + 1
             or metadata["index"] != index

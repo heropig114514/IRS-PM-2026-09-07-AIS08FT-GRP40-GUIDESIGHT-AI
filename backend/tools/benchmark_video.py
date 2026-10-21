@@ -2,7 +2,7 @@
 Implementation: Every decoded source frame and timestamp, first-call Graph readiness, full aligned
 depth hashes outside prediction timing, optional original-call stage tracing and exact references.
 Related Modules: tools.benchmark_inference/inference_profile/resident_graph_probe;
-realtime.detector.
+tools.tracking_overlap_probe; realtime.detector.
 Declaration Index: VideoFrames; VideoFrames.__init__; VideoFrames.__iter__; VideoFrames.close;
 DepthEvidence; DepthEvidence.__init__; DepthEvidence.__call__; DepthEvidence.consume;
 frame_identity; validate_reference; install_tracking_trace; file_hash; run; main.
@@ -35,7 +35,7 @@ SOURCES = ("core/detector.py", "realtime/detector.py", "realtime/depth.py",
            "realtime/distance_config.py", "realtime/performance.py", "zerogpu/runtime.py",
            "tools/benchmark_video.py", "tools/benchmark_inference.py",
            "tools/inference_profile.py", "tools/depth_graph_probe.py",
-           "tools/resident_graph_probe.py")
+           "tools/resident_graph_probe.py", "tools/tracking_overlap_probe.py")
 
 
 class VideoFrames:
@@ -195,23 +195,30 @@ def file_hash(path):
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
-def run(video, output, *, depth_graph=False, trace_steady=False, reference=None):
+def run(video, output, *, depth_graph=False, trace_steady=False, reference=None,
+        tracking_overlap=False, trace_overlap=False):
     """Functionality: Record a complete original or independent Graph full-video experiment.
-    Inputs: local video/new output, explicit Graph/trace flags and optional completed reference.
+    Inputs: local video/new output, explicit Graph/trace/overlap flags and completed reference.
     Outputs: every frame, first/steady distributions, equality verdict and failure-safe report.
     Logic: one model/process; source timestamps; first real frame then one Graph preparation;
     aligned-depth transfer/hash and output writing outside prediction timing; retain all mismatches.
     Constraints: no label cache, discarded outliers, source resampling, fallback/retry, accuracy or
     browser-FPS claim. Trace and diagnostic host copies can perturb timing; controls share copies.
+    Overlap requires Graph and uses separate optional device observations, never serial StageTrace.
     """
+    if (tracking_overlap and (not depth_graph or trace_steady)
+            or trace_overlap and not tracking_overlap):
+        raise ValueError("Overlap requires Graph and separate device observations, no serial trace")
     if not video.is_file() or output.exists():
         raise ValueError("Provide an existing video and a new output directory")
     output.mkdir(parents=True)
     report = {"status": "running", "completed_frames": 0, "mismatched_frames": 0,
               "scope": "Full-video numerical/timing diagnostic; not browser/accuracy acceptance",
               "depth_graph": depth_graph, "trace_steady": trace_steady,
+              "tracking_overlap": tracking_overlap, "trace_overlap": trace_overlap,
               "reference": str(reference) if reference else None}
     frames, source, trace, observer = [], None, StageTrace() if trace_steady else None, None
+    overlap = None
     try:
         report["implementation_sha256"] = {name: file_hash(ROOT / name) for name in SOURCES}
         report["identities"] = {"video": file_hash(video), **{
@@ -265,13 +272,18 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None)
             stack.enter_context(patch.object(detector.depth_estimator, "predict", observer))
             for identity, jpeg in source:
                 index = identity["index"]
-                predict = partial(detector.predict, timestamp=identity["timestamp_s"])
+                predict = partial(overlap or detector.predict, timestamp=identity["timestamp_s"])
                 started = time.perf_counter()
                 metadata, _ = trace.call(index, predict, jpeg) if trace else predict(jpeg)
                 prepare_ms = 0.0
                 if index == 0 and depth_graph:
                     preparing = time.perf_counter()
                     graph = prepare_depth_graph(detector, jpeg)
+                    if tracking_overlap:
+                        from tools.tracking_overlap_probe import TrackingOverlapProbe
+
+                        overlap = TrackingOverlapProbe(detector, graph,
+                                                       observe_device=trace_overlap)
                     prepare_ms = (time.perf_counter() - preparing) * 1000
                     report["depth_graph_evidence"] = graph.evidence
                     logging.getLogger(__name__).info("Depth Graph prepared once ms=%.3f",
@@ -282,7 +294,8 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None)
                 evidence_ms = (time.perf_counter() - verifying) * 1000
                 row = {**identity, "metadata": metadata, "depth": depth, "predict_wall_ms": wall,
                        "depth_evidence_ms": evidence_ms, "depth_graph_prepare_ms": prepare_ms,
-                       "depth_graph_replayed": depth_graph and index > 0}
+                       "depth_graph_replayed": depth_graph and index > 0,
+                       "tracking_overlap_replayed": tracking_overlap and index > 0}
                 if reference_rows is not None:
                     expected, actual = frame_identity(reference_rows[index]), frame_identity(row)
                     row["unequal_fields"] = [
@@ -292,7 +305,8 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None)
                 records.flush()
                 frames.append({**{key: metadata[key] for key in TIMINGS if key in metadata},
                     "predict_wall_ms": wall, "depth_evidence_ms": evidence_ms,
-                    "depth_graph_prepare_ms": prepare_ms})
+                    "depth_graph_prepare_ms": prepare_ms,
+                    **metadata.get("tracking_overlap_experiment", {})})
                 report["completed_frames"] += 1
                 if (metadata["tracking_status"] != "active"
                         or metadata["performance"]["total_frames"] != index + 1
@@ -320,6 +334,10 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None)
         report["first_frame"] = frames[0] if frames else None
         report["steady"] = {key: distribution([frame[key] for frame in frames[1:] if key in frame])
                             for key in (*TIMINGS, "depth_evidence_ms", "depth_graph_prepare_ms")}
+        report["overlap_steady"] = {key: distribution([
+            frame[key] for frame in frames[1:] if key in frame]) for key in (
+                "depth_call_ms", "association_cpu_ms", "graph_submit_host_ms",
+                "graph_stream_elapsed_ms")}
         (output / "report.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n",
                                            encoding="utf-8", newline="\n")
     return report
@@ -327,7 +345,8 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None)
 
 def main():
     """Functionality: Execute one explicitly selected full-video experiment.
-    Inputs: --video/--output, optional --depth-graph/--trace-steady/--reference.
+    Inputs: --video/--output, optional --depth-graph/--trace-steady/--reference,
+    --tracking-overlap and its separate --trace-overlap device observations.
     Outputs: status/count and exit 2 for exact mismatch, 1 for runtime error, 0 for completion.
     Logic: parse and run once. Constraints: no dataset download or automatic repeat/acceptance.
     """
@@ -336,11 +355,14 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--depth-graph", action="store_true")
     parser.add_argument("--trace-steady", action="store_true")
+    parser.add_argument("--tracking-overlap", action="store_true")
+    parser.add_argument("--trace-overlap", action="store_true")
     parser.add_argument("--reference", type=Path)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     report = run(args.video, args.output, depth_graph=args.depth_graph,
-                 trace_steady=args.trace_steady, reference=args.reference)
+                 trace_steady=args.trace_steady, reference=args.reference,
+                 tracking_overlap=args.tracking_overlap, trace_overlap=args.trace_overlap)
     print(json.dumps({key: report[key] for key in
                       ("status", "completed_frames", "mismatched_frames")}))
     return 2 if report["status"] == "failed_equivalence" else 0

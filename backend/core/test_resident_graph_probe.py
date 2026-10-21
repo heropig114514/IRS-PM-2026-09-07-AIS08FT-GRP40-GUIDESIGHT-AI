@@ -6,7 +6,7 @@ Declaration Index: GraphServiceTests; GraphServiceTests.test_first_cost_and_reus
 GraphServiceTests.test_failure_and_input_rejection; GraphServiceTests.test_session_worker_reuse;
 GraphServiceTests.test_session_worker_reuse.factory;
 GraphServiceTests.test_session_worker_reuse.predict;
-GraphServiceTests.test_default_entry_isolation.
+GraphServiceTests.test_default_entry_isolation; GraphServiceTests.test_overlap_bridge.
 Variable Index: None. Synthetic timing assertions do not claim model speed or quality.
 """
 
@@ -20,6 +20,7 @@ from django.test import SimpleTestCase
 from core.detector import DetectionError
 from realtime.services import ResidentService
 from tools.resident_graph_probe import GraphServiceProbe
+from tools.resident_overlap_probe import OverlapServiceProbe
 
 
 class GraphServiceTests(SimpleTestCase):
@@ -133,6 +134,35 @@ class GraphServiceTests(SimpleTestCase):
             finally:
                 await service.close()
 
+    def test_overlap_bridge(self):
+        """Functionality: Keep first capture on original pipeline and reuse one overlap adapter.
+        Inputs: explicit pipeline/Graph/overlap doubles. Outputs: one setup and two overlap calls.
+        Logic: detector.predict points to wrapper, but the adapter must bind the original callable.
+        Constraints: orchestration proof only; actual browser tests provide model/timing evidence.
+        """
+        original = MagicMock(return_value=({"server_ms": 1}, b"first"))
+        detector = SimpleNamespace(predict=original)
+        probe = OverlapServiceProbe(detector)
+        detector.predict = probe
+        adapter = MagicMock(return_value=({"server_ms": 2}, b"next"))
+        graph = SimpleNamespace(evidence={})
+        with (patch("tools.resident_graph_probe.prepare_depth_graph", return_value=graph)
+              as prepare,
+              patch("tools.resident_overlap_probe.TrackingOverlapProbe", return_value=adapter)
+              as install):
+            first, jpeg = probe(b"input")
+            self.assertEqual(jpeg, b"first")
+            self.assertFalse(first["depth_graph_experiment"]["replayed"])
+            for _ in range(2):
+                later, jpeg = probe(b"input")
+                self.assertEqual(jpeg, b"next")
+                self.assertTrue(later["depth_graph_experiment"]["replayed"])
+        self.assertIs(adapter.original_predict, original)
+        self.assertEqual(adapter.call_count, 2)
+        original.assert_called_once()
+        prepare.assert_called_once()
+        install.assert_called_once_with(detector, graph)
+
     def test_default_entry_isolation(self):
         """Functionality: Keep experimental imports out of both production entry and service.
         Inputs: actual source files. Outputs: no graph-probe imports in production paths.
@@ -141,4 +171,7 @@ class GraphServiceTests(SimpleTestCase):
         """
         root = Path(__file__).resolve().parents[1]
         for name in ("config/resident_asgi.py", "realtime/services.py", "realtime/depth.py"):
-            self.assertNotIn("tools.resident_graph", (root / name).read_text(encoding="utf-8"))
+            source = (root / name).read_text(encoding="utf-8")
+            for experiment in ("tools.resident_graph", "tools.resident_overlap",
+                               "tools.tracking_overlap"):
+                self.assertNotIn(experiment, source)

@@ -1,0 +1,12 @@
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+Overlap experiment failed type=DetectionError
+Experimental graph pipeline failed type=DetectionError
+Resident inference failed id=d74c8224b0e1 type=DetectionError
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+Depth inference failed type=ValueError
+Overlap experiment failed type=DetectionError
+Experimental graph pipeline failed type=DetectionError
+Resident inference failed id=eb6d279e0a4a type=DetectionError
+{"complete": true, "scope": "Real GPU fault/reconnect check; no throughput claim", "invalid_input_code": "invalid_frame", "recovered_and_reconnected": true, "changed_shape_code": "depth_inference_failed", "fault_drained_and_latched": true, "no_recapture": true, "worker_closed": true}

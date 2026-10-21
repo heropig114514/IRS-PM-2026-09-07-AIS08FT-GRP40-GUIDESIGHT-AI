@@ -1,0 +1,563 @@
+{
+  "status": "completed",
+  "completed_frames": 500,
+  "mismatched_frames": 0,
+  "scope": "Full-video numerical/timing diagnostic; not browser/accuracy acceptance",
+  "depth_graph": true,
+  "trace_steady": false,
+  "tracking_overlap": true,
+  "trace_overlap": false,
+  "reference": "benchmarks\\2026-10-21\\tracking-overlap\\video07\\serial-before",
+  "implementation_sha256": {
+    "core/detector.py": "ad976da9873b3109901955a6eb91f101602f43f918b0a00d99cb6a70c1296cf5",
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "realtime/distance.py": "f5e65e2d873f57f8d1f621cdd8aec569c803616885f9ae3feee7c909f239536f",
+    "realtime/distance_config.py": "45b1d0e1cfcea67bf5ee150be532394e92d57f94d587e505b4e86045cebe2940",
+    "realtime/performance.py": "50936879aad1c4bcd9829a9649b3b5c4d2e7c782dd6c690f7fa9cdc404d3a246",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/benchmark_video.py": "51a7eda0d86518313399cb97b0bcdacf54a00915dba75487bca8981053bb12e1",
+    "tools/benchmark_inference.py": "8d70018d05b051073f740bf0a2a8bb3f327b2b553734a57a9386dfe6f5f6ee17",
+    "tools/inference_profile.py": "f4a446963a4343a045dad9fc0b416b15d482e631431f3f874489b3a14d443ec6",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+    "tools/resident_graph_probe.py": "6f265f8645b92691d78bff7729986f7b26ee3270931f83c083276a8d9a181ae0",
+    "tools/tracking_overlap_probe.py": "1c4f58fe38192bd6115094204db06d02be9665c9ed564feb2dc9189de215b274"
+  },
+  "identities": {
+    "video": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+  },
+  "environment": {
+    "python": "3.12.14",
+    "pillow": "12.3.0",
+    "opencv": "4.11.0",
+    "torch": "2.8.0+cu126",
+    "ultralytics": "8.4.171",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU"
+  },
+  "sdk_sha256": {
+    "engine/model.py": "844f7d6be1221ab617533a6685674a9f5221d58eec4ee559c1d849f2cf8718a5",
+    "engine/predictor.py": "d3de9cc0aa0c1f2c0b17c28ea35d1ae971ae7b56f1b7a5c2e3513e5b45e5efaa",
+    "models/yolo/depth/predict.py": "f0f5c1dbf588579be44ec2ebb4692e576a83aa281d2d13845f818c85830b8397",
+    "trackers/bot_sort.py": "a298b6eb7d75aae56a21d15822092dc646b6e054859d706c9c060cb5b9d37498",
+    "trackers/byte_tracker.py": "da509523f9acd0c223aaa9aed77493aad89a675c60787c6a3ee4371fa379ec21",
+    "trackers/utils/gmc.py": "d797f701a22347001d780b0dc4d0f2f5cabdfefb895c36bbab084ceb2dfc4000",
+    "trackers/utils/matching.py": "318bf81030558863a4ec6effea3c9d063a297f299367e379a58b89c24e3f421f",
+    "trackers/utils/stracks.py": "9534294af850c3a6755c3a5a1ba9b2b068c5b79a11166c8547652944e2632f58",
+    "cfg/trackers/botsort.yaml": "8cd88930d3be5557be0777f384eecff0a36a7011850fe613fc0a68178bfd5b01"
+  },
+  "opencv_native_sha256": {
+    "cv2.pyd": "d2e14633f0699469c37e43210ca9e167887ce4a162e01f1490be49fd8e45388f"
+  },
+  "settings": {
+    "declared_frames": 500,
+    "source_fps": 30.0,
+    "source_size": [
+      960,
+      540
+    ],
+    "detection_edge": 640,
+    "confidence": 0.25,
+    "depth_edge": 768,
+    "precision": "FP32",
+    "jpeg_quality": 80,
+    "batch": 1,
+    "tracking": {
+      "tracker": "botsort.yaml",
+      "history_size": 8,
+      "min_valid_samples": 3,
+      "ema_alpha": 0.5,
+      "stale_timeout_s": 2.0,
+      "motion_history_timeout_s": 2.0,
+      "min_time_span_s": 0.1,
+      "approaching_threshold_mps": 0.2,
+      "moving_away_threshold_mps": 0.2,
+      "confirmation_updates": 2
+    },
+    "risk": {
+      "min_closing_speed_mps": 0.2,
+      "max_ttc_sec": 10.0,
+      "distance_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          25
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          10.0,
+          5
+        ]
+      ],
+      "ttc_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          30
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          8.0,
+          5
+        ]
+      ],
+      "closing_speed_bands": [
+        [
+          1.0,
+          5
+        ],
+        [
+          2.0,
+          10
+        ]
+      ],
+      "motion_weights": [
+        [
+          "approaching",
+          15
+        ],
+        [
+          "moving_away",
+          -10
+        ],
+        [
+          "stationary",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "direction_weights": [
+        [
+          "front",
+          10
+        ],
+        [
+          "front_left",
+          7
+        ],
+        [
+          "front_right",
+          7
+        ],
+        [
+          "left",
+          3
+        ],
+        [
+          "right",
+          3
+        ],
+        [
+          "behind",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "class_weights": [
+        [
+          "car",
+          15
+        ],
+        [
+          "truck",
+          18
+        ],
+        [
+          "bus",
+          18
+        ],
+        [
+          "motorcycle",
+          15
+        ],
+        [
+          "bicycle",
+          12
+        ],
+        [
+          "scooter",
+          12
+        ],
+        [
+          "person",
+          5
+        ],
+        [
+          "animal",
+          5
+        ],
+        [
+          "bird",
+          5
+        ],
+        [
+          "cat",
+          5
+        ],
+        [
+          "dog",
+          5
+        ],
+        [
+          "horse",
+          5
+        ],
+        [
+          "sheep",
+          5
+        ],
+        [
+          "cow",
+          5
+        ],
+        [
+          "elephant",
+          5
+        ],
+        [
+          "bear",
+          5
+        ],
+        [
+          "zebra",
+          5
+        ],
+        [
+          "giraffe",
+          5
+        ],
+        [
+          "bench",
+          1
+        ],
+        [
+          "chair",
+          1
+        ],
+        [
+          "stop sign",
+          1
+        ],
+        [
+          "fire hydrant",
+          1
+        ],
+        [
+          "pole",
+          1
+        ],
+        [
+          "sign",
+          1
+        ]
+      ],
+      "default_class_weight": 5,
+      "risk_level_thresholds": [
+        25,
+        50,
+        75
+      ],
+      "alert_priorities": [
+        [
+          "low",
+          0
+        ],
+        [
+          "medium",
+          2
+        ],
+        [
+          "high",
+          3
+        ],
+        [
+          "critical",
+          4
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "medium_alert_enabled": true,
+      "medium_alert_max_distance_m": 3.0,
+      "medium_alert_directions": [
+        "front",
+        "front_left",
+        "front_right"
+      ],
+      "front_left_fraction": 0.3333333333333333,
+      "front_right_fraction": 0.6666666666666666
+    },
+    "distance": {
+      "distance_mode": "depth",
+      "depth_interval": 3,
+      "focal_length_px": 700.0,
+      "reference_width_px": 640,
+      "object_heights_m": [
+        [
+          "person",
+          1.7
+        ],
+        [
+          "bicycle",
+          1.1
+        ],
+        [
+          "motorcycle",
+          1.2
+        ],
+        [
+          "car",
+          1.5
+        ],
+        [
+          "bus",
+          3.2
+        ],
+        [
+          "truck",
+          3.0
+        ]
+      ]
+    },
+    "label_cache": false,
+    "timestamps": "decoder presentation time; no realtime pacing"
+  },
+  "model_initialization_ms": 707.6649000009638,
+  "depth_graph_evidence": {
+    "adapter": "experimental_native_fp32_depth_graph",
+    "shape": [
+      1,
+      3,
+      448,
+      768
+    ],
+    "dtype": "torch.float32",
+    "setup_ms": 258.2111999981862,
+    "preparation_output_equal": true,
+    "scope": "One fixture raw-output equality; no dataset quality claim"
+  },
+  "gpu_peak_allocated_bytes": 253339648,
+  "gpu_peak_reserved_bytes": 392167424,
+  "first_frame": {
+    "forward_event_ms": 4.380320072174072,
+    "inference_ms": 5.432999998447485,
+    "prepare_ms": 3.3903000003192574,
+    "gpu_stage_ms": 572.7708999984316,
+    "depth_ms": 3220.2529000023787,
+    "depth_predict_ms": 3188.711000002513,
+    "depth_fusion_ms": 31.341499998234212,
+    "decode_boxes_ms": 0.2004000016313512,
+    "tracking_ms": 3.8134999995236285,
+    "risk_ms": 0.23710000095888972,
+    "render_ms": 6.528599999001017,
+    "server_ms": 3806.993300000613,
+    "graph_setup_ms": 566.5380999998888,
+    "predict_wall_ms": 4074.8409000007086,
+    "depth_evidence_ms": 1.1115000015706755,
+    "depth_graph_prepare_ms": 267.5859999981185
+  },
+  "steady": {
+    "predict_wall_ms": {
+      "count": 499,
+      "mean_ms": 34.85620060111436,
+      "min_ms": 25.567399999999907,
+      "max_ms": 48.6321999997017,
+      "p50_ms": 34.532399997260654,
+      "p95_ms": 41.81032000160485,
+      "p99_ms": 45.58376799970574
+    },
+    "forward_event_ms": {
+      "count": 499,
+      "mean_ms": 4.796216752581701,
+      "min_ms": 4.141056060791016,
+      "max_ms": 6.540448188781738,
+      "p50_ms": 4.62886381149292,
+      "p95_ms": 5.669507122039795,
+      "p99_ms": 6.032076206207275
+    },
+    "inference_ms": {
+      "count": 499,
+      "mean_ms": 5.989907815595058,
+      "min_ms": 5.241400001978036,
+      "max_ms": 8.114500000374392,
+      "p50_ms": 5.815599997731624,
+      "p95_ms": 6.889899998350302,
+      "p99_ms": 7.3576879995380295
+    },
+    "prepare_ms": {
+      "count": 499,
+      "mean_ms": 2.6396713426925955,
+      "min_ms": 2.298999999766238,
+      "max_ms": 3.541800000675721,
+      "p50_ms": 2.610299998195842,
+      "p95_ms": 2.961419997882331,
+      "p99_ms": 3.180675998883089
+    },
+    "gpu_stage_ms": {
+      "count": 499,
+      "mean_ms": 6.042182965873741,
+      "min_ms": 5.284800001390977,
+      "max_ms": 8.159799999702955,
+      "p50_ms": 5.868000000191387,
+      "p95_ms": 6.949459999304963,
+      "p99_ms": 7.399212000382249
+    },
+    "depth_ms": {
+      "count": 499,
+      "mean_ms": 17.582880160127118,
+      "min_ms": 12.952600001881365,
+      "max_ms": 28.068800002074568,
+      "p50_ms": 17.09359999586013,
+      "p95_ms": 23.32639999985986,
+      "p99_ms": 26.282690001025912
+    },
+    "depth_predict_ms": {
+      "count": 499,
+      "mean_ms": 11.169980561107822,
+      "min_ms": 9.579699999449076,
+      "max_ms": 15.817599996807985,
+      "p50_ms": 11.1127000018314,
+      "p95_ms": 12.34926999968593,
+      "p99_ms": 13.714990002117702
+    },
+    "depth_fusion_ms": {
+      "count": 499,
+      "mean_ms": 6.239559719323732,
+      "min_ms": 2.5765999998839106,
+      "max_ms": 16.816999999718973,
+      "p50_ms": 5.689900001016213,
+      "p95_ms": 11.879560002489598,
+      "p99_ms": 14.939296001393814
+    },
+    "decode_boxes_ms": {
+      "count": 499,
+      "mean_ms": 0.17333987969556358,
+      "min_ms": 0.1405000002705492,
+      "max_ms": 0.2679999997781124,
+      "p50_ms": 0.170899998920504,
+      "p95_ms": 0.20596000249497592,
+      "p99_ms": 0.2328199973271694
+    },
+    "depth_sdk_preprocess_ms": null,
+    "depth_sdk_inference_ms": null,
+    "depth_sdk_postprocess_ms": null,
+    "tracking_ms": {
+      "count": 499,
+      "mean_ms": 8.971432264757652,
+      "min_ms": 7.422499998938292,
+      "max_ms": 13.100500003929483,
+      "p50_ms": 8.913099998608232,
+      "p95_ms": 10.037659999215975,
+      "p99_ms": 11.622665999893798
+    },
+    "risk_ms": {
+      "count": 499,
+      "mean_ms": 0.2150521041860525,
+      "min_ms": 0.10409999958937988,
+      "max_ms": 0.43989999903715216,
+      "p50_ms": 0.21239999841782264,
+      "p95_ms": 0.28831000163336284,
+      "p99_ms": 0.3469079973001499
+    },
+    "render_ms": {
+      "count": 499,
+      "mean_ms": 7.860961122226186,
+      "min_ms": 3.8918999998713844,
+      "max_ms": 15.389500000310363,
+      "p50_ms": 7.81730000016978,
+      "p95_ms": 9.850770002231002,
+      "p99_ms": 11.275219997114618
+    },
+    "server_ms": {
+      "count": 499,
+      "mean_ms": 34.67939979954078,
+      "min_ms": 25.40189999854192,
+      "max_ms": 48.45729999942705,
+      "p50_ms": 34.353399998508394,
+      "p95_ms": 41.61814000108279,
+      "p99_ms": 45.40407399777905
+    },
+    "graph_setup_ms": {
+      "count": 499,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    },
+    "depth_evidence_ms": {
+      "count": 499,
+      "mean_ms": 0.8743909818946406,
+      "min_ms": 0.7291000001714565,
+      "max_ms": 1.3078000010864343,
+      "p50_ms": 0.8637999999336898,
+      "p95_ms": 1.0097799997311085,
+      "p99_ms": 1.189810000214493
+    },
+    "depth_graph_prepare_ms": {
+      "count": 499,
+      "mean_ms": 0.0,
+      "min_ms": 0.0,
+      "max_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0
+    }
+  },
+  "overlap_steady": {
+    "depth_call_ms": {
+      "count": 499,
+      "mean_ms": 11.169980561107822,
+      "min_ms": 9.579699999449076,
+      "max_ms": 15.817599996807985,
+      "p50_ms": 11.1127000018314,
+      "p95_ms": 12.34926999968593,
+      "p99_ms": 13.714990002117702
+    },
+    "association_cpu_ms": {
+      "count": 499,
+      "mean_ms": 8.634942485062316,
+      "min_ms": 7.244500000524567,
+      "max_ms": 12.876600001618499,
+      "p50_ms": 8.586800002376549,
+      "p95_ms": 9.630129998913617,
+      "p99_ms": 11.226956001191866
+    },
+    "graph_submit_host_ms": {
+      "count": 499,
+      "mean_ms": 0.25976613221222533,
+      "min_ms": 0.21860000197193585,
+      "max_ms": 0.4741000011563301,
+      "p50_ms": 0.2505000011296943,
+      "p95_ms": 0.32062000027508475,
+      "p99_ms": 0.3816319989709882
+    },
+    "graph_stream_elapsed_ms": null
+  }
+}

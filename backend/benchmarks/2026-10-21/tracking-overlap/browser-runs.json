@@ -1,0 +1,82 @@
+[
+  {
+    "name": "browser-serial-before",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\browser-serial-before",
+      "--depth-graph",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 31.33570569999938
+  },
+  {
+    "name": "browser-overlap",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\browser-overlap",
+      "--depth-graph",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4",
+      "--tracking-overlap"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 29.03021880000233
+  },
+  {
+    "name": "browser-serial-after",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\browser-serial-after",
+      "--depth-graph",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 31.103056399999332
+  },
+  {
+    "name": "browser07-serial-before",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\browser07-serial-before",
+      "--depth-graph",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 32.62186060000022
+  },
+  {
+    "name": "browser07-overlap",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\browser07-overlap",
+      "--depth-graph",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4",
+      "--tracking-overlap"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 30.366128300000128
+  },
+  {
+    "name": "browser07-serial-after",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\browser07-serial-after",
+      "--depth-graph",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 32.7438882000024
+  }
+]

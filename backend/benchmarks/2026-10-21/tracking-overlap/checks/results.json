@@ -1,0 +1,147 @@
+[
+  {
+    "name": "django-check",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "check"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.7315467999978864
+  },
+  {
+    "name": "migrations",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "makemigrations",
+      "--check",
+      "--dry-run"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.9539001999983157
+  },
+  {
+    "name": "backend-tests",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "test"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 28.119668600000296
+  },
+  {
+    "name": "ruff",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+      "check",
+      "."
+    ],
+    "exit_code": 1,
+    "elapsed_seconds": 0.06799559999853955
+  },
+  {
+    "name": "browser-tests",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "--test",
+      "tools/benchmark_resident_browser.test.mjs"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.1905786999996053
+  },
+  {
+    "name": "ruff-final",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+      "check",
+      "."
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.0739638000013656
+  },
+  {
+    "name": "backend-tests-final",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "test"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 28.166493500000797
+  },
+  {
+    "name": "ruff-post-input-policy",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+      "check",
+      "."
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.07468430000153603
+  },
+  {
+    "name": "jpeg-django-check",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "check"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.6904209999993327
+  },
+  {
+    "name": "jpeg-migrations",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "makemigrations",
+      "--check",
+      "--dry-run"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.793663699998433
+  },
+  {
+    "name": "jpeg-backend-tests",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "test"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 28.549527400002262
+  },
+  {
+    "name": "jpeg-ruff",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\ruff.exe",
+      "check",
+      "."
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.07587129999956232
+  },
+  {
+    "name": "jpeg-browser-tests",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "--test",
+      "tools/benchmark_resident_browser.test.mjs"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.19585770000048797
+  },
+  {
+    "name": "native-fault-verified",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      ".venv/tmp/verify-overlap-input-policy.py",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-input-policy-verified"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 9.957451300000685
+  }
+]

@@ -1,0 +1,33 @@
+E501 Line too long (101 > 100)
+   --> core\test_resident_graph_probe.py:149:101
+    |
+147 |         adapter = MagicMock(return_value=({"server_ms": 2}, b"next"))
+148 |         graph = SimpleNamespace(evidence={})
+149 |         with (patch("tools.resident_graph_probe.prepare_depth_graph", return_value=graph) as prepare,
+    |                                                                                                     ^
+150 |               patch("tools.resident_overlap_probe.TrackingOverlapProbe", return_value=adapter)
+151 |               as install):
+    |
+
+E501 Line too long (101 > 100)
+  --> tools\resident_overlap_probe.py:22:101
+   |
+21 |     def __init__(self, detector):
+22 |         """Functionality: Bind the unchanged first-frame path. Inputs: full detector. Outputs: probe.
+   |                                                                                                     ^
+23 |         Logic: parent retains original predict before installation. Constraints: no CUDA work here.
+24 |         """
+   |
+
+E501 Line too long (101 > 100)
+  --> tools\resident_overlap_probe.py:51:101
+   |
+49 |     """Functionality: Build the original full model for one explicitly selected experiment.
+50 |     Inputs: model root and full workload. Outputs: wrapped detector with unchanged model fields.
+51 |     Logic: reuse the production factory once. Constraints: no precision, parameter or default change.
+   |                                                                                                     ^
+52 |     """
+53 |     from realtime.services import build_detector
+   |
+
+Found 3 errors.

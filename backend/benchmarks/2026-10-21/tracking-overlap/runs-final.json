@@ -1,0 +1,152 @@
+[
+  {
+    "kind": "final_video",
+    "video": "07",
+    "run": "serial-before",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video07\\serial-before",
+      "--depth-graph"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 36.23144610000236
+  },
+  {
+    "kind": "final_video",
+    "video": "07",
+    "run": "overlap",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video07\\overlap",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--reference",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video07\\serial-before"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 31.130631700001686
+  },
+  {
+    "kind": "final_video",
+    "video": "07",
+    "run": "serial-after",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video07\\serial-after",
+      "--depth-graph",
+      "--reference",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video07\\serial-before"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 36.549655599999824
+  },
+  {
+    "kind": "final_video",
+    "video": "10",
+    "run": "serial-before",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video10\\serial-before",
+      "--depth-graph"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 40.13678760000039
+  },
+  {
+    "kind": "final_video",
+    "video": "10",
+    "run": "overlap",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video10\\overlap",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--reference",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video10\\serial-before"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 34.61071570000058
+  },
+  {
+    "kind": "final_video",
+    "video": "10",
+    "run": "serial-after",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video10\\serial-after",
+      "--depth-graph",
+      "--reference",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-video10\\serial-before"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 39.74256299999979
+  },
+  {
+    "kind": "final_browser",
+    "video": "07",
+    "run": "final-browser07-overlap",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-browser07-overlap",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 30.347392200001195
+  },
+  {
+    "kind": "final_browser",
+    "video": "10",
+    "run": "final-browser10-overlap",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\tracking-overlap\\final-browser10-overlap",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 29.137981700001546
+  }
+]

@@ -1,0 +1,180 @@
+"""Responsibilities: Test same-frame CPU association during outstanding depth Graph work.
+Implementation: Submit the original Graph inside the unchanged SDK inference scope, run the
+original CPU association before its existing exit synchronization, and consume that depth once.
+Related Modules: tools.depth_graph_probe/benchmark_video; realtime.detector/depth/distance.
+Declaration Index: TrackingOverlapProbe; TrackingOverlapProbe.__init__;
+TrackingOverlapProbe.__call__; TrackingOverlapProbe.associate; TrackingOverlapProbe.inference;
+TrackingOverlapProbe.depth; TrackingOverlapProbe.annotate_timings.
+Variable Index: logger — bounded error diagnostics; frame — one synchronous frame's ownership;
+distance_adjustment_ms — per-session correction to cumulative depth-stage wall accounting.
+"""
+
+import logging
+import time
+from contextlib import ExitStack
+from unittest.mock import patch
+
+logger = logging.getLogger(__name__)
+
+
+class TrackingOverlapProbe:
+    """Functionality: Interleave original depth and CPU tracking without cross-frame concurrency.
+    Logic: scoped instance hooks preserve all SDK preprocessing, postprocessing and synchronization.
+    Constraints: explicit FP32/A/no-ReID experiment only; single worker, fixed Graph, no fallback;
+    timing fields overlap and cannot be used by the disjoint queue-stage attribution tool.
+    """
+
+    def __init__(self, detector, graph, *, observe_device=False):
+        """Functionality: Bind a prepared Graph and original complete pipeline without warmup.
+        Inputs: warmed full detector, installed DepthGraphProbe and device observation flag.
+        Outputs: idle adapter. Logic: keep original predict; acquire current tracker on each call.
+        Constraints: session resets may replace trackers; no experimental imports in production.
+        """
+        self.detector, self.graph = detector, graph
+        self.original_predict = detector.predict
+        self.observe_device = observe_device
+        self.frame, self.failed = None, False
+        self.distance_adjustment_ms = 0.0
+
+    def __call__(self, jpeg, *, timestamp=None):
+        """Functionality: Execute exactly one frame, restoring hooks and draining failed GPU work.
+        Inputs: original JPEG and optional source seconds. Outputs: unchanged semantics/JPEG with
+        explicitly overlapping timing evidence. Logic: bind current tracker/depth/SDK methods;
+        enforce one submission/association/consumption and latch errors until explicit restart.
+        Constraints: reentrancy rejected; no retry or capture; failure cleanup waits on the owned
+        current CUDA stream before dropping references. No cancellation can interrupt this worker.
+        """
+        if self.failed or self.frame is not None:
+            raise RuntimeError("Overlap probe is failed or already processing a frame")
+        detector = self.detector
+        tracker, estimator = detector.object_tracker, detector.depth_estimator
+        predictor = estimator.model.predictor
+        args = tracker.tracker.args
+        if (detector.precision != "FP32"
+                or detector.distance_strategy.config.distance_mode != "depth"
+                or args.with_reid is not False or args.gmc_method != "sparseOptFlow"
+                or predictor.inference is not self.graph):
+            self.failed = True
+            raise ValueError("Overlap requires unchanged FP32/A/CPU tracking and installed Graph")
+        self.frame = {"phase": "armed", "original_associate": tracker.associate,
+                      "original_depth": estimator.predict, "stream": None}
+        try:
+            with ExitStack() as stack:
+                stack.enter_context(patch.object(tracker, "associate", self.associate))
+                stack.enter_context(patch.object(estimator, "predict", self.depth))
+                stack.enter_context(patch.object(predictor, "inference", self.inference))
+                metadata, result = self.original_predict(jpeg, timestamp=timestamp)
+                if self.frame["phase"] != "consumed":
+                    raise RuntimeError("Overlap frame did not consume exactly one depth result")
+                return self.annotate_timings(metadata), result
+        except BaseException as error:
+            self.failed = True
+            if self.frame["stream"] is not None:
+                try:
+                    self.frame["stream"].synchronize()
+                except BaseException as drain_error:
+                    logger.error("Overlap stream drain failed type=%s", type(drain_error).__name__)
+                    error.add_note("Owned CUDA stream drain also failed; restart is required")
+            logger.error("Overlap experiment failed type=%s", type(error).__name__)
+            raise
+        finally:
+            self.frame = None
+
+    def associate(self, image, boxes):
+        """Functionality: Start this frame's unchanged depth call at the association boundary.
+        Inputs: decoded image and original detection boxes. Outputs: original associated boxes.
+        Logic: the Graph hook runs association after submission; retain the resulting aligned map.
+        Constraints: image/boxes belong to this frame only; no second model call or stale cache.
+        """
+        frame = self.frame
+        if frame is None or frame["phase"] != "armed":
+            raise RuntimeError("Unexpected association ordering")
+        frame.update(phase="depth", image=image, boxes=boxes)
+        started = time.perf_counter()
+        frame["depth_map"] = frame["original_depth"](image)
+        frame["depth_call_ms"] = (time.perf_counter() - started) * 1000
+        if frame["phase"] != "associated":
+            raise RuntimeError("Depth SDK did not invoke the expected Graph hook exactly once")
+        frame["phase"] = "ready"
+        return frame["associated_boxes"]
+
+    def inference(self, tensor, *args, **kwargs):
+        """Functionality: Enqueue original Graph then perform CPU association before SDK sync.
+        Inputs: SDK-preprocessed CUDA tensor and unchanged options. Outputs: owned Graph tensors.
+        Logic: original Graph validates shape/device/options and clones output; CPU association
+        runs before returning to the SDK's existing Profile exit synchronization.
+        Constraints: optional CUDA events/query add observation overhead, not synchronization;
+        event elapsed includes stream work/waits, not pure kernel utilization or exact overlap time.
+        """
+        import torch
+
+        frame = self.frame
+        if frame is None or frame["phase"] != "depth":
+            raise RuntimeError("Unexpected depth Graph invocation")
+        frame["stream"] = torch.cuda.current_stream()
+        if self.observe_device:
+            frame["begin_event"] = torch.cuda.Event(enable_timing=True)
+            frame["end_event"] = torch.cuda.Event(enable_timing=True)
+            frame["begin_event"].record(frame["stream"])
+        started = time.perf_counter()
+        output = self.graph(tensor, *args, **kwargs)
+        frame["graph_submit_host_ms"] = (time.perf_counter() - started) * 1000
+        if self.observe_device:
+            frame["end_event"].record(frame["stream"])
+            frame["device_done_before_association"] = frame["end_event"].query()
+        frame["phase"] = "associating"
+        started = time.perf_counter()
+        frame["associated_boxes"] = frame["original_associate"](frame["image"], frame["boxes"])
+        frame["association_cpu_ms"] = (time.perf_counter() - started) * 1000
+        if self.observe_device:
+            frame["device_done_after_association"] = frame["end_event"].query()
+        frame["phase"] = "associated"
+        return output
+
+    def depth(self, image):
+        """Functionality: Supply the same frame's completed aligned depth to original fusion.
+        Inputs: identical decoded image object. Outputs: owned depth tensor, consumed once.
+        Logic: require completed SDK call and same object identity; clear the retained map.
+        Constraints: no recomputation, previous-frame cache, cross-frame reuse or implicit fallback.
+        """
+        frame = self.frame
+        if frame is None or frame["phase"] != "ready" or image is not frame["image"]:
+            raise RuntimeError("Unexpected depth consumption or frame identity")
+        depth = frame.pop("depth_map")
+        frame["phase"] = "consumed"
+        return depth
+
+    def annotate_timings(self, metadata):
+        """Functionality: Replace serial-slot accounting with explicitly overlapping host stages.
+        Inputs: original successful metadata and current measurements. Outputs: copied metadata.
+        Logic: remove early depth wall span from tracking, add true CPU association; replace cached
+        lookup duration with full SDK call in depth/distance and correct its cumulative average.
+        Constraints: depth call includes CPU association; these durations MUST NOT be summed.
+        Pipeline/server wall time remains unchanged; no fabricated device completion timestamp.
+        """
+        frame = self.frame
+        depth_wall, association = frame["depth_call_ms"], frame["association_cpu_ms"]
+        adjustment = depth_wall - metadata["depth_predict_ms"]
+        performance = metadata["performance"]
+        if performance["total_frames"] == 1:
+            self.distance_adjustment_ms = 0.0
+        self.distance_adjustment_ms += adjustment
+        evidence = {key: frame[key] for key in (
+            "depth_call_ms", "association_cpu_ms", "graph_submit_host_ms")}
+        evidence["device_observation_enabled"] = self.observe_device
+        if self.observe_device:
+            # The unmodified SDK has already synchronized inference and postprocessing.
+            if not frame["end_event"].query():
+                raise RuntimeError("Depth SDK returned without completing the submitted Graph")
+            evidence.update({key: frame[key] for key in (
+                "device_done_before_association", "device_done_after_association")})
+            evidence["graph_stream_elapsed_ms"] = frame["begin_event"].elapsed_time(
+                frame["end_event"])
+        return {**metadata, "stage_timing_model": "overlapping_cpu_depth",
+                "tracking_overlap_experiment": evidence,
+                "tracking_ms": metadata["tracking_ms"] - depth_wall + association,
+                "depth_predict_ms": depth_wall, "depth_ms": metadata["depth_ms"] + adjustment,
+                "distance_ms": metadata["distance_ms"] + adjustment,
+                "performance": {**performance, "average_distance_ms":
+                    performance["average_distance_ms"] +
+                    self.distance_adjustment_ms / performance["total_frames"]}}

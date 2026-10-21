@@ -1,0 +1,180 @@
+{
+  "check_docs_py_exists": false,
+  "method": "Manual semantic review plus temporary AST cross-check of actual Python declarations, qualified methods, exact index membership and required doc fields; browser JS headers/index and changed argument/metadata contracts reviewed manually. No production checker bypass.",
+  "files": [
+    {
+      "path": "core/detector.py",
+      "sha256": "86cb7f653618d66f12616df598128bdacf6b74ef8d6ebbdb8c165b41355f7ddc",
+      "actual_declarations": [
+        "DetectionError",
+        "DetectionError.__init__",
+        "decode_frame",
+        "letterbox",
+        "decode_boxes",
+        "label_font",
+        "annotate"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "core/test_jpeg_boundary.py",
+      "sha256": "6b58ab997d5580c7062a7c5aefe61572b20440b3d5c8e1e2a0ee11c11f9c8a54",
+      "actual_declarations": [
+        "JpegBoundaryTests",
+        "JpegBoundaryTests.test_reference_pixels",
+        "JpegBoundaryTests.test_invalid_input_without_plugin_probe"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/tracking_overlap_probe.py",
+      "sha256": "df5b126b93ce4051db63113ceafba550f7aa21dfb253487a05f940d407740d95",
+      "actual_declarations": [
+        "TrackingOverlapProbe",
+        "TrackingOverlapProbe.__init__",
+        "TrackingOverlapProbe.__call__",
+        "TrackingOverlapProbe.associate",
+        "TrackingOverlapProbe.inference",
+        "TrackingOverlapProbe.depth",
+        "TrackingOverlapProbe.annotate_timings"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/resident_overlap_probe.py",
+      "sha256": "727f70dd0331eae4714e5e7d9a39201fb162bdd5e7e3d615da144fd3ee740077",
+      "actual_declarations": [
+        "OverlapServiceProbe",
+        "OverlapServiceProbe.__init__",
+        "OverlapServiceProbe.__call__",
+        "build_overlap_detector"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/resident_overlap_asgi.py",
+      "sha256": "46d60014b71eaef40a1b0a92bd0889be9db809ef98602673c39f017029fe6f8b",
+      "actual_declarations": [],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "core/test_tracking_overlap.py",
+      "sha256": "cbb8fa7a3a866e84a415dc94576ed56303a4099707c57c50853a91439747e5ce",
+      "actual_declarations": [
+        "make_detector",
+        "make_detector.associate",
+        "make_detector.graph",
+        "make_detector.depth",
+        "make_detector.predict",
+        "TrackingOverlapTests",
+        "TrackingOverlapTests.test_order_and_restoration",
+        "TrackingOverlapTests.test_failure_drain",
+        "TrackingOverlapTests.test_consumption_identity",
+        "TrackingOverlapTests.test_session_tracker",
+        "TrackingOverlapTests.test_explicit_contract",
+        "TrackingOverlapTests.test_device_observation",
+        "TrackingOverlapTests.test_timing_accounting",
+        "TrackingOverlapTests.test_reentrancy",
+        "TrackingOverlapTests.test_bad_input_recovery"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/benchmark_video.py",
+      "sha256": "51a7eda0d86518313399cb97b0bcdacf54a00915dba75487bca8981053bb12e1",
+      "actual_declarations": [
+        "VideoFrames",
+        "VideoFrames.__init__",
+        "VideoFrames.__iter__",
+        "VideoFrames.close",
+        "DepthEvidence",
+        "DepthEvidence.__init__",
+        "DepthEvidence.__call__",
+        "DepthEvidence.consume",
+        "frame_identity",
+        "validate_reference",
+        "install_tracking_trace",
+        "file_hash",
+        "run",
+        "main"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/analyze_browser_queue.py",
+      "sha256": "efbe1005a059a0c582fad3ed53b28e8775aefa0a8351e18f37c567dc3c30172b",
+      "actual_declarations": [
+        "number",
+        "distribution",
+        "overlap",
+        "queue_bounds",
+        "validate_session",
+        "analyze_session",
+        "file_hash",
+        "run",
+        "main"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "core/test_browser_queue.py",
+      "sha256": "593cc75bbfddde2313957270e010bf63fe88287ba9ee7db1716ab57b9d4a1042",
+      "actual_declarations": [
+        "make_session",
+        "write_matrix",
+        "BrowserQueueTests",
+        "BrowserQueueTests.test_interior_extrema",
+        "BrowserQueueTests.test_uncertain_offset",
+        "BrowserQueueTests.test_certain_predecessors",
+        "BrowserQueueTests.test_cold_wrapper_gap",
+        "BrowserQueueTests.test_invalid_evidence",
+        "BrowserQueueTests.test_gate_has_no_clock_tolerance",
+        "BrowserQueueTests.test_report_retention",
+        "BrowserQueueTests.test_matrix_identity_rejection"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "core/test_video_benchmark.py",
+      "sha256": "2d13720ddf95ea89ff30675eddf4d4edaa2086ecfd608522dd4599f8c706f3c1",
+      "actual_declarations": [
+        "VideoBenchmarkTests",
+        "VideoBenchmarkTests.test_real_codec",
+        "VideoBenchmarkTests.test_decoder_boundaries",
+        "VideoBenchmarkTests.test_invalid_metadata",
+        "VideoBenchmarkTests.test_depth_evidence",
+        "VideoBenchmarkTests.test_frame_identity",
+        "VideoBenchmarkTests.test_trace_restoration",
+        "VideoBenchmarkTests.test_reference_roundtrip",
+        "VideoBenchmarkTests.test_preconditions"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "core/test_resident_graph_probe.py",
+      "sha256": "83885a6316020f83acdb972cc8f5b7f6e8745396b34a8034e159857a59cc8f67",
+      "actual_declarations": [
+        "GraphServiceTests",
+        "GraphServiceTests.test_first_cost_and_reuse",
+        "GraphServiceTests.test_failure_and_input_rejection",
+        "GraphServiceTests.test_session_worker_reuse",
+        "GraphServiceTests.test_session_worker_reuse.predict",
+        "GraphServiceTests.test_session_worker_reuse.factory",
+        "GraphServiceTests.test_overlap_bridge",
+        "GraphServiceTests.test_default_entry_isolation"
+      ],
+      "doc_fields_and_exact_index": true
+    }
+  ],
+  "js_manual_review": [
+    "tools/benchmark_resident_browser.mjs",
+    "tools/benchmark_resident_browser.test.mjs"
+  ],
+  "semantic_review": [
+    "JPEG factory matches Pillow registered JPEG decoder and retains format/size/RGB conversion; cannot invoke SDK generic plugin probe",
+    "Pre-GPU invalid-frame/size errors preserve service availability; post-submission failures drain owned stream and latch",
+    "Depth map belongs to one image and is consumed exactly once; hooks restore on errors and successful frames",
+    "Overlapping host-stage timings corrected and explicitly rejected by disjoint queue analyzer",
+    "Default service imports no experimental entry; all model/threshold/seed/window/source cadence unchanged"
+  ]
+}

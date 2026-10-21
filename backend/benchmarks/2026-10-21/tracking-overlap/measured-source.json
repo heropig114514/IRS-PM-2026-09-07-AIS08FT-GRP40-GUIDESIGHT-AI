@@ -1,0 +1,6 @@
+{
+  "path": "tools\\tracking_overlap_probe.py",
+  "sha256": "1c4f58fe38192bd6115094204db06d02be9665c9ed564feb2dc9189de215b274",
+  "snapshot": "measured-tracking-overlap-probe.py.txt",
+  "purpose": "Exact measured implementation before a subsequent bad-input-only failure-latch correction; successful scheduling path is unchanged."
+}
