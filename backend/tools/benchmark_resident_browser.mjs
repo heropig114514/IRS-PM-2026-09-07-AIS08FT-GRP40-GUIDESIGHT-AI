@@ -3,6 +3,7 @@
  * explicit static image or original-speed video canvas replaces only camera.
  * Related Modules: config.resident_asgi; tools.resident_graph_asgi/resident_graph_probe;
  * tools.resident_overlap_asgi/resident_overlap_probe/tracking_overlap_probe;
+ * tools.resident_host_fusion_asgi/resident_host_fusion_probe/host_fusion_probe;
  * frontend camera/live-detection-client/frame-pipeline.
  * Declaration Index: preparePage; preparePage.drawFixture; preparePage.fakeCamera; preparePage.finiteRun;
  * preparePage.recordFrame; waitForStartup; waitForStartup.receiveLog; waitForStartup.exited;
@@ -15,7 +16,7 @@
  * main.stopServer.exited; main.stopServer.expired.
  * Variable Index: root — backend; runtime — explicit Playwright module path;
  * main.report — all session rows, errors and fixed conditions; main.output — new evidence directory;
- * main.depthGraph/trackingOverlap/entry/video — explicit experiment/source selection, original default.
+ * main.depthGraph/trackingOverlap/hostFusion/entry/video — explicit selection, original default.
  * preparePage.probe — media observations and terminal counters retained after controller cleanup.
  * This covers local browser transport, never physical-camera or accuracy evidence.
  */
@@ -30,22 +31,24 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const runtime = process.env.PRS_PLAYWRIGHT_PATH;
 
 /** Functionality: Require explicit source/experiment selection without changing pipeline settings.
- * Inputs: CLI argument array. Outputs: output, video path and Graph/overlap selection.
+ * Inputs: CLI argument array. Outputs: output, video path and Graph/overlap/host-fusion selection.
  * Logic: reject missing, duplicate and unknown flags; overlap explicitly requires Graph.
  * Constraints: no implicit source fallback or device-observation overhead. */
 export function parseArguments(args) {
   const [output, ...flags] = args;
   if (!output || output.startsWith("--")) throw new Error("Use OUTPUT_DIR [--depth-graph] [--video PATH]");
-  let depthGraph = false, trackingOverlap = false, video = null;
+  let depthGraph = false, trackingOverlap = false, hostFusion = false, video = null;
   for (let index = 0; index < flags.length; index++) {
     if (flags[index] === "--depth-graph" && !depthGraph) depthGraph = true;
     else if (flags[index] === "--tracking-overlap" && !trackingOverlap) trackingOverlap = true;
+    else if (flags[index] === "--host-fusion" && !hostFusion) hostFusion = true;
     else if (flags[index] === "--video" && video === null && flags[index + 1] &&
         !flags[index + 1].startsWith("--")) video = flags[++index];
     else throw new Error(`Invalid or duplicate argument: ${flags[index]}`);
   }
   if (trackingOverlap && !depthGraph) throw new Error("Tracking overlap requires explicit --depth-graph");
-  return {output, depthGraph, trackingOverlap, video};
+  if (hostFusion && !trackingOverlap) throw new Error("Host fusion requires explicit --tracking-overlap");
+  return {output, depthGraph, trackingOverlap, hostFusion, video};
 }
 
 /** Functionality: Reject frozen, rewound or incomplete moving-source observations.
@@ -267,17 +270,19 @@ function waitForStartup(server) {
 }
 
 /** Functionality: Exercise two complete UI sessions, busy rejection and explicit user stop.
- * Inputs: new output directory, optional --depth-graph/--tracking-overlap/--video and PRS_PLAYWRIGHT_PATH.
+ * Inputs: new output directory, explicit Graph/overlap/host-fusion/video flags and PRS_PLAYWRIGHT_PATH.
  * Outputs: JSON/screenshots/server diagnostics with separate functional/performance verdicts.
  * Logic: one model process, unchanged 30 FPS/twelve-window path; counters restart per session.
  * Constraints: uses fixed local port8766 and no outside hosts; port conflicts fail, never kill others. */
 async function main() {
-  const {output, depthGraph, trackingOverlap, video} = parseArguments(process.argv.slice(2));
-  const entry = trackingOverlap ? "tools.resident_overlap_asgi:application" :
+  const {output, depthGraph, trackingOverlap, hostFusion, video} = parseArguments(process.argv.slice(2));
+  const entry = hostFusion ? "tools.resident_host_fusion_asgi:application" :
+    trackingOverlap ? "tools.resident_overlap_asgi:application" :
     depthGraph ? "tools.resident_graph_asgi:application" : "config.resident_asgi:application";
   const report = {status: "running", scope: "Actual browser with explicit canvas source and local GPU",
     conditions: {input_fps: 30, max_inflight: 12, frames_per_session: 181, mode: "full",
       depth_graph_experiment: depthGraph, tracking_overlap_experiment: trackingOverlap,
+      host_fusion_experiment: hostFusion,
       asgi_entry: entry, source_kind: video ? "moving_video" : "static_image",
       source_time_semantics: "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"},
     sessions: []};
@@ -296,6 +301,8 @@ async function main() {
     "realtime/distance_config.py", "realtime/performance.py", "tools/depth_graph_probe.py",
     "tools/resident_graph_probe.py", "tools/resident_graph_asgi.py",
     "tools/tracking_overlap_probe.py", "tools/resident_overlap_probe.py", "tools/resident_overlap_asgi.py",
+    "core/detector.py", "tools/host_fusion_probe.py", "tools/resident_host_fusion_probe.py",
+    "tools/resident_host_fusion_asgi.py",
     "tools/benchmark_resident_browser.mjs"])
     report.source_code_sha256[path] = createHash("sha256").update(await readFile(resolve(root, path))).digest("hex");
   const server = spawn(resolve(root, ".venv/Scripts/python.exe"), ["-m", "uvicorn",
@@ -377,6 +384,9 @@ async function main() {
         throw new Error("Incomplete or over-capacity resident page session");
       for (const [index, row] of evidence.rows.entries()) {
         const graph = row.metadata.depth_graph_experiment;
+        if (row.metadata.host_fusion_experiment !==
+            (hostFusion ? "exact_fp32_host_partition" : undefined))
+          throw new Error("Unexpected host-fusion experiment identity");
         const overlapExpected = trackingOverlap && !(session === 0 && index === 0);
         if (Boolean(row.metadata.tracking_overlap_experiment) !== overlapExpected ||
             (overlapExpected && (row.metadata.stage_timing_model !== "overlapping_cpu_depth" ||

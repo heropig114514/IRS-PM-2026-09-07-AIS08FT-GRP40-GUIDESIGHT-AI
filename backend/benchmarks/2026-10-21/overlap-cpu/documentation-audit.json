@@ -1,0 +1,116 @@
+{
+  "check_docs_py_exists": false,
+  "method": "Manual implementation and constraint review plus AST cross-check of declaration indexes and doc fields; JS headers/CLI and failure contracts reviewed manually.",
+  "files": [
+    {
+      "path": "core/test_host_fusion.py",
+      "sha256": "ec735bd64f96afeed96e70d455fcbe73166cad9f361b665052787568410b0f9e",
+      "actual_declarations": [
+        "HostFusionTests",
+        "HostFusionTests.test_exact_ranks",
+        "HostFusionTests.test_cuda_fusion",
+        "HostFusionTests.test_rejection_and_restoration",
+        "HostFusionTests.test_service_scope"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "core/test_resident_graph_probe.py",
+      "sha256": "7f52bb22db0c929afceda5467257a24b9b58b55fd47086b9ddb5a826a4d0d447",
+      "actual_declarations": [
+        "GraphServiceTests",
+        "GraphServiceTests.test_first_cost_and_reuse",
+        "GraphServiceTests.test_failure_and_input_rejection",
+        "GraphServiceTests.test_session_worker_reuse",
+        "GraphServiceTests.test_session_worker_reuse.predict",
+        "GraphServiceTests.test_session_worker_reuse.factory",
+        "GraphServiceTests.test_overlap_bridge",
+        "GraphServiceTests.test_default_entry_isolation"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "core/test_video_benchmark.py",
+      "sha256": "74648c78de79f223aee0e95ca3e9f68484c1ca8f6aeb99845a402139b271f489",
+      "actual_declarations": [
+        "VideoBenchmarkTests",
+        "VideoBenchmarkTests.test_real_codec",
+        "VideoBenchmarkTests.test_decoder_boundaries",
+        "VideoBenchmarkTests.test_invalid_metadata",
+        "VideoBenchmarkTests.test_depth_evidence",
+        "VideoBenchmarkTests.test_frame_identity",
+        "VideoBenchmarkTests.test_trace_restoration",
+        "VideoBenchmarkTests.test_reference_roundtrip",
+        "VideoBenchmarkTests.test_preconditions",
+        "VideoBenchmarkTests.test_overlap_trace"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/benchmark_video.py",
+      "sha256": "cd89bd0ef3e30c9a6c632f29a2f298418622762f59c0ce312ea56a9f9312e3b6",
+      "actual_declarations": [
+        "VideoFrames",
+        "VideoFrames.__init__",
+        "VideoFrames.__iter__",
+        "VideoFrames.close",
+        "DepthEvidence",
+        "DepthEvidence.__init__",
+        "DepthEvidence.__call__",
+        "DepthEvidence.consume",
+        "frame_identity",
+        "validate_reference",
+        "install_tracking_trace",
+        "file_hash",
+        "run",
+        "main"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/host_fusion_probe.py",
+      "sha256": "e46a0a0cb6e7fdecb1f1d4d048968c98cd63fcf8c176911af2596d23a332ab38",
+      "actual_declarations": [
+        "host_roi_median",
+        "host_fuse_object_depth"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/overlap_cpu_profile.py",
+      "sha256": "1116deae150d9f71d01771c254e57fe26116ebd236702c6f4101f85dae65217f",
+      "actual_declarations": [
+        "OverlapStageTrace",
+        "OverlapStageTrace.install",
+        "OverlapStageTrace.write"
+      ],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/resident_host_fusion_asgi.py",
+      "sha256": "8784aca6566f38e9d688f86edd603c2424ade1793eaef143752153ecf390e145",
+      "actual_declarations": [],
+      "doc_fields_and_exact_index": true
+    },
+    {
+      "path": "tools/resident_host_fusion_probe.py",
+      "sha256": "8e3e260ab292cf4e0c934c8b2e8b678d745de8b040a2ac2dfcabaf9a617477f7",
+      "actual_declarations": [
+        "HostFusionServiceProbe",
+        "HostFusionServiceProbe.__call__",
+        "build_host_fusion_detector"
+      ],
+      "doc_fields_and_exact_index": true
+    }
+  ],
+  "js_manual_review": [
+    "tools/benchmark_resident_browser.mjs",
+    "tools/benchmark_resident_browser.test.mjs"
+  ],
+  "semantic_review": [
+    "Host transfer is inside the timed fusion call and bounded by the unchanged 640-pixel input",
+    "Exact FP32 positive-finite central ranks; even half-before-add, odd no arithmetic, no retained source mutation",
+    "Scoped wrappers restore on both success/failure; Graph inference identity and original SDK synchronization untouched",
+    "Candidate flags require explicit overlap and Graph; no default imports or parameter/threshold/cadence/window changes"
+  ]
+}

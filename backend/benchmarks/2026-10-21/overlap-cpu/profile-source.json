@@ -1,0 +1,5 @@
+{
+  "snapshot": "profile-benchmark-video.py.txt",
+  "sha256": "06261626ed097946bcd1fc5bdb7bde408bdf68ff9121cb5811fa934777bac88f",
+  "scope": "Exact benchmark source for before/trace/after host diagnostics, before addition of the independent host-fusion flag. Remaining source identities are in those reports."
+}

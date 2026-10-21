@@ -1,0 +1,102 @@
+"""Responsibilities: Verify real GPU error recovery and fixed Graph failure boundaries.
+Implementation: Public input, explicit corrupt/shape requests, original ResidentService lifecycle.
+Related Modules: tools.resident_host_fusion_probe; realtime.services; core.detector.
+Declaration Index: main.
+Variable Index: ROOT/OUTPUT — explicit workspace/output; report — native evidence only.
+"""
+
+import asyncio
+import hashlib
+import io
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+OUTPUT = Path(sys.argv[1]).resolve()
+assert OUTPUT.is_relative_to(ROOT)
+OUTPUT.mkdir(exist_ok=False)
+
+
+async def main():
+    """Functionality: Verify final real-GPU fault policy without throughput claims.
+    Inputs: public fixture and explicitly corrupt/shape inputs. Outputs: structured evidence.
+    Logic: initialize, reject, recover, reconnect, reject changed shape, drain and shut down.
+    Constraints: no retries, model replacement, parameter changes or hardware accuracy claim.
+    """
+    from PIL import Image
+
+    from core.detector import DetectionError
+    from realtime.services import ResidentService
+    from tools.fixtures import fixture_bytes
+    from tools.resident_host_fusion_probe import build_host_fusion_detector
+
+    report = {"complete": False, "scope": "Real GPU fault/reconnect check; no throughput claim",
+              "source_sha256": {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+                  for name in ["tools/tracking_overlap_probe.py", "tools/resident_overlap_probe.py",
+                               "realtime/services.py", "core/detector.py", "tools/host_fusion_probe.py",
+                               "tools/resident_host_fusion_probe.py"]}, "frames": []}
+    service = ResidentService(ROOT, "full", factory=build_host_fusion_detector)
+    lease = None
+    try:
+        await service.start()
+        lease = service.claim()
+        await service.begin(lease)
+        jpeg, _ = fixture_bytes(ROOT / "model_tests/samples/bus.jpg")
+        metadata, _ = await service.predict(lease, jpeg)
+        report["frames"].append(metadata)
+        assert metadata["host_fusion_experiment"] == "exact_fp32_host_partition"
+        probe = service.detector.predict
+        graph, tracker = probe.graph, service.detector.object_tracker
+        try:
+            await service.predict(lease, b"invalid JPEG fixture")
+        except DetectionError as error:
+            report["invalid_input_code"] = error.code
+            assert error.code == "invalid_frame" and service.ready
+            assert not probe.failed and not probe.overlap.failed
+        else:
+            raise AssertionError("Bad input was accepted")
+        metadata, _ = await service.predict(lease, jpeg)
+        report["frames"].append(metadata)
+        assert metadata["host_fusion_experiment"] == "exact_fp32_host_partition"
+        assert metadata["performance"]["total_frames"] == 2
+        assert metadata["tracking_overlap_experiment"]
+        service.release(lease)
+        lease = service.claim()
+        await service.begin(lease)
+        metadata, _ = await service.predict(lease, jpeg)
+        report["frames"].append(metadata)
+        assert metadata["host_fusion_experiment"] == "exact_fp32_host_partition"
+        assert metadata["performance"]["total_frames"] == 1
+        assert service.detector.object_tracker is not tracker and probe.graph is graph
+        assert metadata["depth_graph_experiment"]["capture_count"] == 1
+        report["recovered_and_reconnected"] = True
+        image = Image.open(io.BytesIO(jpeg)).convert("RGB").resize(
+            (640, 360), Image.Resampling.BILINEAR)
+        buffer = io.BytesIO()
+        image.save(buffer, "JPEG", quality=80)
+        try:
+            await service.predict(lease, buffer.getvalue())
+        except DetectionError as error:
+            report["changed_shape_code"] = error.code
+            assert error.code == "depth_inference_failed" and not service.ready
+            assert probe.failed and probe.overlap.failed
+        else:
+            raise AssertionError("Changed Graph shape was accepted")
+        assert probe.overlap.frame is None and probe.graph is graph
+        service.release(lease)
+        lease = None
+        assert service.claim() is None
+        report.update(complete=True, fault_drained_and_latched=True, no_recapture=True)
+    finally:
+        if lease is not None:
+            service.release(lease)
+        await service.close()
+        report["worker_closed"] = True
+        (OUTPUT / "report.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n",
+                                           encoding="utf-8", newline="\n")
+    print(json.dumps({k: v for k, v in report.items() if k not in ("frames", "source_sha256")}))
+
+
+asyncio.run(main())

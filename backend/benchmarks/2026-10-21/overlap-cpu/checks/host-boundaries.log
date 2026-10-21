@@ -1,0 +1,22 @@
+Object depth unavailable objects=4 total=6
+Object depth unavailable objects=4 total=6
+Object depth unavailable objects=4 total=6
+Object depth unavailable objects=4 total=6
+..............2026-10-21 19:26:25,498 ERROR core.resident.graph_probe Experimental graph pipeline failed type=DetectionError
+2026-10-21 19:26:25,498 ERROR core.resident.graph_probe Experimental graph pipeline failed type=ValueError
+.2026-10-21 19:26:25,499 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=500.000
+.2026-10-21 19:26:25,501 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=0.015
+.2026-10-21 19:26:25,504 INFO core.resident.services Resident ready mode=full load_ms=0.8
+2026-10-21 19:26:25,504 INFO core.resident.services Resident session state reset mode=full
+2026-10-21 19:26:25,505 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=0.014
+2026-10-21 19:26:25,505 INFO core.resident.services Resident session state reset mode=full
+2026-10-21 19:26:25,506 ERROR core.resident.graph_probe Experimental graph pipeline failed type=ValueError
+2026-10-21 19:26:25,506 ERROR core.resident.services Resident inference failed id=7ab5e4708975 type=ValueError
+2026-10-21 19:26:25,508 INFO core.resident.services Resident stopped
+.
+----------------------------------------------------------------------
+Ran 18 tests in 4.256s
+
+OK
+Found 18 test(s).
+System check identified no issues (0 silenced).

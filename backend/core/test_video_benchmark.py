@@ -6,7 +6,7 @@ Declaration Index: VideoBenchmarkTests; VideoBenchmarkTests.test_real_codec;
 VideoBenchmarkTests.test_decoder_boundaries; VideoBenchmarkTests.test_invalid_metadata;
 VideoBenchmarkTests.test_depth_evidence; VideoBenchmarkTests.test_frame_identity;
 VideoBenchmarkTests.test_reference_roundtrip; VideoBenchmarkTests.test_trace_restoration;
-VideoBenchmarkTests.test_preconditions.
+VideoBenchmarkTests.test_preconditions; VideoBenchmarkTests.test_overlap_trace.
 Variable Index: None.
 """
 
@@ -219,6 +219,40 @@ class VideoBenchmarkTests(SimpleTestCase):
         with self.assertRaises(ValueError):
             run(path, path.parent)
         for options in ({"tracking_overlap": True}, {"trace_overlap": True},
+                        {"trace_overlap_cpu": True},
+                        {"host_fusion": True},
+                        {"tracking_overlap": True, "depth_graph": True,
+                         "trace_overlap": True, "trace_overlap_cpu": True},
                         {"tracking_overlap": True, "depth_graph": True, "trace_steady": True}):
             with self.assertRaisesMessage(ValueError, "Overlap requires"):
                 run(path, path.parent, **options)
+
+    def test_overlap_trace(self):
+        """Functionality: Preserve Graph identity and restore diagnostic hooks after failure.
+        Inputs: explicit host-only owners and malformed JPEG. Outputs: retained failed event.
+        Logic: install real wrappers while keeping inference untouched; unwind every patched call.
+        Constraints: no model initialization; this tests instrumentation, not GPU overlap speed.
+        """
+        import realtime.detector as pipeline
+        from core.detector import DetectionError, decode_frame
+        from tools.overlap_cpu_profile import OverlapStageTrace
+
+        graph = object()
+        predictor = SimpleNamespace(preprocess=decode_frame, postprocess=decode_frame,
+                                    inference=graph)
+        tracker = SimpleNamespace(associate=decode_frame, enrich=decode_frame)
+        detector = SimpleNamespace(object_tracker=tracker,
+            depth_estimator=SimpleNamespace(model=SimpleNamespace(predictor=predictor)))
+        trace = OverlapStageTrace()
+        with self.assertRaises(DetectionError), ExitStack() as stack:
+            trace.install(detector, stack)
+            self.assertIs(predictor.inference, graph)
+            trace.call(1, pipeline.decode_frame, b"invalid JPEG fixture")
+        self.assertIs(pipeline.decode_frame, decode_frame)
+        self.assertIs(tracker.associate, decode_frame)
+        self.assertEqual(trace.attempted, 1)
+        self.assertEqual(trace.completed, 0)
+        self.assertFalse(trace.events[0]["completed"])
+        with tempfile.TemporaryDirectory() as directory:
+            metadata = trace.write(Path(directory))
+            self.assertEqual(metadata["stage_timing_model"], "overlapping_cpu_depth")

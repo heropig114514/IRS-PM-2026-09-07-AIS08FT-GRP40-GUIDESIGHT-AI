@@ -2,7 +2,7 @@
 Implementation: Every decoded source frame and timestamp, first-call Graph readiness, full aligned
 depth hashes outside prediction timing, optional original-call stage tracing and exact references.
 Related Modules: tools.benchmark_inference/inference_profile/resident_graph_probe;
-tools.tracking_overlap_probe; realtime.detector.
+tools.tracking_overlap_probe/overlap_cpu_profile/host_fusion_probe; realtime.detector.
 Declaration Index: VideoFrames; VideoFrames.__init__; VideoFrames.__iter__; VideoFrames.close;
 DepthEvidence; DepthEvidence.__init__; DepthEvidence.__call__; DepthEvidence.consume;
 frame_identity; validate_reference; install_tracking_trace; file_hash; run; main.
@@ -35,7 +35,8 @@ SOURCES = ("core/detector.py", "realtime/detector.py", "realtime/depth.py",
            "realtime/distance_config.py", "realtime/performance.py", "zerogpu/runtime.py",
            "tools/benchmark_video.py", "tools/benchmark_inference.py",
            "tools/inference_profile.py", "tools/depth_graph_probe.py",
-           "tools/resident_graph_probe.py", "tools/tracking_overlap_probe.py")
+           "tools/resident_graph_probe.py", "tools/tracking_overlap_probe.py",
+           "tools/overlap_cpu_profile.py", "tools/host_fusion_probe.py")
 
 
 class VideoFrames:
@@ -196,7 +197,7 @@ def file_hash(path):
 
 
 def run(video, output, *, depth_graph=False, trace_steady=False, reference=None,
-        tracking_overlap=False, trace_overlap=False):
+        tracking_overlap=False, trace_overlap=False, trace_overlap_cpu=False, host_fusion=False):
     """Functionality: Record a complete original or independent Graph full-video experiment.
     Inputs: local video/new output, explicit Graph/trace/overlap flags and completed reference.
     Outputs: every frame, first/steady distributions, equality verdict and failure-safe report.
@@ -204,10 +205,13 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None,
     aligned-depth transfer/hash and output writing outside prediction timing; retain all mismatches.
     Constraints: no label cache, discarded outliers, source resampling, fallback/retry, accuracy or
     browser-FPS claim. Trace and diagnostic host copies can perturb timing; controls share copies.
-    Overlap requires Graph and uses separate optional device observations, never serial StageTrace.
+    Overlap uses separate device or host diagnostics, never the serial StageTrace installation.
+    Explicit host fusion includes its single full-map transfer inside prediction timing.
     """
     if (tracking_overlap and (not depth_graph or trace_steady)
-            or trace_overlap and not tracking_overlap):
+            or trace_overlap and not tracking_overlap
+            or trace_overlap_cpu and (not tracking_overlap or trace_overlap)
+            or host_fusion and not tracking_overlap):
         raise ValueError("Overlap requires Graph and separate device observations, no serial trace")
     if not video.is_file() or output.exists():
         raise ValueError("Provide an existing video and a new output directory")
@@ -216,8 +220,14 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None,
               "scope": "Full-video numerical/timing diagnostic; not browser/accuracy acceptance",
               "depth_graph": depth_graph, "trace_steady": trace_steady,
               "tracking_overlap": tracking_overlap, "trace_overlap": trace_overlap,
+              "trace_overlap_cpu": trace_overlap_cpu,
+              "host_fusion": host_fusion,
               "reference": str(reference) if reference else None}
     frames, source, trace, observer = [], None, StageTrace() if trace_steady else None, None
+    if trace_overlap_cpu:
+        from tools.overlap_cpu_profile import OverlapStageTrace
+
+        trace = OverlapStageTrace()
     overlap = None
     try:
         report["implementation_sha256"] = {name: file_hash(ROOT / name) for name in SOURCES}
@@ -270,11 +280,18 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None,
         with (ExitStack() as stack,
               (output / "frames.jsonl").open("w", encoding="utf-8", newline="\n") as records):
             stack.enter_context(patch.object(detector.depth_estimator, "predict", observer))
+            if host_fusion:
+                from tools.host_fusion_probe import host_fuse_object_depth
+
+                stack.enter_context(patch("realtime.distance.fuse_object_depth",
+                                          host_fuse_object_depth))
             for identity, jpeg in source:
                 index = identity["index"]
                 predict = partial(overlap or detector.predict, timestamp=identity["timestamp_s"])
                 started = time.perf_counter()
                 metadata, _ = trace.call(index, predict, jpeg) if trace else predict(jpeg)
+                if host_fusion:
+                    metadata["host_fusion_experiment"] = "exact_fp32_host_partition"
                 prepare_ms = 0.0
                 if index == 0 and depth_graph:
                     preparing = time.perf_counter()
@@ -315,7 +332,8 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None,
                 if index == 0 and trace:
                     installing = time.perf_counter()
                     trace.install(detector, stack)
-                    install_tracking_trace(trace, detector, stack)
+                    if not trace_overlap_cpu:
+                        install_tracking_trace(trace, detector, stack)
                     report["trace_setup_ms"] = (time.perf_counter() - installing) * 1000
         report.update(status="failed_equivalence" if report["mismatched_frames"] else "completed",
                       gpu_peak_allocated_bytes=torch.cuda.max_memory_allocated(),
@@ -346,7 +364,7 @@ def run(video, output, *, depth_graph=False, trace_steady=False, reference=None,
 def main():
     """Functionality: Execute one explicitly selected full-video experiment.
     Inputs: --video/--output, optional --depth-graph/--trace-steady/--reference,
-    --tracking-overlap and its separate --trace-overlap device observations.
+    --tracking-overlap, explicit --host-fusion and separate device/host trace diagnostics.
     Outputs: status/count and exit 2 for exact mismatch, 1 for runtime error, 0 for completion.
     Logic: parse and run once. Constraints: no dataset download or automatic repeat/acceptance.
     """
@@ -357,12 +375,15 @@ def main():
     parser.add_argument("--trace-steady", action="store_true")
     parser.add_argument("--tracking-overlap", action="store_true")
     parser.add_argument("--trace-overlap", action="store_true")
+    parser.add_argument("--trace-overlap-cpu", action="store_true")
+    parser.add_argument("--host-fusion", action="store_true")
     parser.add_argument("--reference", type=Path)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     report = run(args.video, args.output, depth_graph=args.depth_graph,
                  trace_steady=args.trace_steady, reference=args.reference,
-                 tracking_overlap=args.tracking_overlap, trace_overlap=args.trace_overlap)
+                 tracking_overlap=args.tracking_overlap, trace_overlap=args.trace_overlap,
+                 trace_overlap_cpu=args.trace_overlap_cpu, host_fusion=args.host_fusion)
     print(json.dumps({key: report[key] for key in
                       ("status", "completed_frames", "mismatched_frames")}))
     return 2 if report["status"] == "failed_equivalence" else 0

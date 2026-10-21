@@ -173,5 +173,6 @@ class GraphServiceTests(SimpleTestCase):
         for name in ("config/resident_asgi.py", "realtime/services.py", "realtime/depth.py"):
             source = (root / name).read_text(encoding="utf-8")
             for experiment in ("tools.resident_graph", "tools.resident_overlap",
-                               "tools.tracking_overlap"):
+                               "tools.tracking_overlap", "tools.host_fusion",
+                               "tools.resident_host_fusion"):
                 self.assertNotIn(experiment, source)

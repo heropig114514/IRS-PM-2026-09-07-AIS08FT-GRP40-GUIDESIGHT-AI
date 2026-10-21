@@ -1,0 +1,130 @@
+[
+  {
+    "clip": "07",
+    "name": "before",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\overlap-cpu\\browser07-before",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "seconds": 31.030650599997898,
+    "post_run_gpu_snapshot": {
+      "fields": "pstate,clocks.current.graphics,clocks.current.memory,power.draw,power.limit,temperature.gpu,utilization.gpu",
+      "values": "P3, 1050, 6001, 19.62, [N/A], 46, 6",
+      "exit_code": 0,
+      "scope": "Point observation after run, not averaged under-load telemetry; no GPU settings changed"
+    }
+  },
+  {
+    "clip": "07",
+    "name": "candidate",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\overlap-cpu\\browser07-candidate",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4",
+      "--host-fusion"
+    ],
+    "exit_code": 0,
+    "seconds": 30.30214429999978,
+    "post_run_gpu_snapshot": {
+      "fields": "pstate,clocks.current.graphics,clocks.current.memory,power.draw,power.limit,temperature.gpu,utilization.gpu",
+      "values": "P3, 975, 6001, 19.55, [N/A], 46, 6",
+      "exit_code": 0,
+      "scope": "Point observation after run, not averaged under-load telemetry; no GPU settings changed"
+    }
+  },
+  {
+    "clip": "07",
+    "name": "after",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\overlap-cpu\\browser07-after",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "seconds": 31.636347999999998,
+    "post_run_gpu_snapshot": {
+      "fields": "pstate,clocks.current.graphics,clocks.current.memory,power.draw,power.limit,temperature.gpu,utilization.gpu",
+      "values": "P3, 1155, 6001, 20.18, [N/A], 48, 2",
+      "exit_code": 0,
+      "scope": "Point observation after run, not averaged under-load telemetry; no GPU settings changed"
+    }
+  },
+  {
+    "clip": "10",
+    "name": "before",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\overlap-cpu\\browser10-before",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 0,
+    "seconds": 30.30455410000286,
+    "post_run_gpu_snapshot": {
+      "fields": "pstate,clocks.current.graphics,clocks.current.memory,power.draw,power.limit,temperature.gpu,utilization.gpu",
+      "values": "P0, 1905, 7001, 38.05, [N/A], 50, 2",
+      "exit_code": 0,
+      "scope": "Point observation after run, not averaged under-load telemetry; no GPU settings changed"
+    }
+  },
+  {
+    "clip": "10",
+    "name": "candidate",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\overlap-cpu\\browser10-candidate",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4",
+      "--host-fusion"
+    ],
+    "exit_code": 0,
+    "seconds": 30.357162100001005,
+    "post_run_gpu_snapshot": {
+      "fields": "pstate,clocks.current.graphics,clocks.current.memory,power.draw,power.limit,temperature.gpu,utilization.gpu",
+      "values": "P0, 1657, 7001, 29.97, [N/A], 49, 1",
+      "exit_code": 0,
+      "scope": "Point observation after run, not averaged under-load telemetry; no GPU settings changed"
+    }
+  },
+  {
+    "clip": "10",
+    "name": "after",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "tools/benchmark_resident_browser.mjs",
+      "benchmarks\\2026-10-21\\overlap-cpu\\browser10-after",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-10-FRCNN-browser-h264.mp4"
+    ],
+    "exit_code": 2,
+    "seconds": 30.98826410000038,
+    "post_run_gpu_snapshot": {
+      "fields": "pstate,clocks.current.graphics,clocks.current.memory,power.draw,power.limit,temperature.gpu,utilization.gpu",
+      "values": "P3, 1230, 6001, 39.78, [N/A], 50, 2",
+      "exit_code": 0,
+      "scope": "Point observation after run, not averaged under-load telemetry; no GPU settings changed"
+    }
+  }
+]

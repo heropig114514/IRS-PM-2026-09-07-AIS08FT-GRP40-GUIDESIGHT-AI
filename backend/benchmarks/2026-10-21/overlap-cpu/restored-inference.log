@@ -1,0 +1,20 @@
+INFO:     Started server process [32184]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8767 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54104 - "GET /health/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63774 - "GET /health/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56111 - "GET /health/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56113 - "WebSocket /ws/infer/" [accepted]
+INFO:     connection open
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:     127.0.0.1:56133 - "WebSocket /ws/infer/" [accepted]
+INFO:     connection open
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+INFO:     127.0.0.1:56135 - "GET /health/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /health/ HTTP/1.1" 200 OK

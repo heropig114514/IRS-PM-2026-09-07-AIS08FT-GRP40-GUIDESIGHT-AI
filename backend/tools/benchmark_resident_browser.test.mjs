@@ -22,16 +22,20 @@ function movingSession() {
 
 /** Functionality: Reject accidental parameter changes or ambiguous source selection.
  * Inputs: CLI examples. Outputs: assertions. Logic: accept only explicit known options;
- * tracking overlap requires Graph and cannot be duplicated.
+ * tracking overlap requires Graph; host fusion requires overlap; flags cannot be duplicated.
  * Constraints: no execution, retries or fallback source. */
 function argumentsAreExplicit() {
-  assert.deepEqual(parseArguments(["out"]), {output: "out", depthGraph: false, trackingOverlap: false, video: null});
+  assert.deepEqual(parseArguments(["out"]),
+    {output: "out", depthGraph: false, trackingOverlap: false, hostFusion: false, video: null});
   assert.deepEqual(parseArguments(["out", "--video", "sample.mp4", "--depth-graph"]),
-    {output: "out", depthGraph: true, trackingOverlap: false, video: "sample.mp4"});
+    {output: "out", depthGraph: true, trackingOverlap: false, hostFusion: false, video: "sample.mp4"});
   assert.equal(parseArguments(["out", "--depth-graph", "--tracking-overlap"]).trackingOverlap, true);
+  assert.equal(parseArguments(["out", "--depth-graph", "--tracking-overlap", "--host-fusion"]).hostFusion, true);
   for (const args of [[], ["--video"], ["out", "--video"], ["out", "--fps", "15"],
     ["out", "--video", "--depth-graph"], ["out", "--depth-graph", "--depth-graph"],
     ["out", "--video", "a", "--video", "b"], ["out", "--tracking-overlap"],
+    ["out", "--host-fusion"], ["out", "--depth-graph", "--host-fusion"],
+    ["out", "--depth-graph", "--tracking-overlap", "--host-fusion", "--host-fusion"],
     ["out", "--depth-graph", "--tracking-overlap", "--tracking-overlap"]])
     assert.throws(() => parseArguments(args));
 }

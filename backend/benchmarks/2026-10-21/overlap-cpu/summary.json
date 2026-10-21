@@ -1,0 +1,1248 @@
+{
+  "scope": "Further local optimization of explicit tracking/depth overlap with exact FP32 host ROI fusion",
+  "git_parent": "caa90680d9fc2788b7a70b980b7feb671f70fe8b",
+  "branch": "codex/resident-inference-optimization",
+  "environment": {
+    "python": "3.12.14",
+    "pillow": "12.3.0",
+    "opencv": "4.11.0",
+    "torch": "2.8.0+cu126",
+    "ultralytics": "8.4.171",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "numpy_observed_at_aggregation": "1.26.4"
+  },
+  "model_identities": {
+    "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "yolo26n.json": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023"
+  },
+  "source_sha256": {
+    "core/detector.py": "86cb7f653618d66f12616df598128bdacf6b74ef8d6ebbdb8c165b41355f7ddc",
+    "realtime/detector.py": "c7161b4a459165c74dc8898d084501ac34b033518ba04bd94f44b38cde26233f",
+    "realtime/depth.py": "8fe59c3048a68d20b7cb54d8e7231b28548c4455349e4d35589518287ba308b1",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/risk.py": "1a35e7b281e1f3bdc09473f6489514c23a0d44005651906b126ba46a16938c98",
+    "realtime/distance.py": "f5e65e2d873f57f8d1f621cdd8aec569c803616885f9ae3feee7c909f239536f",
+    "realtime/distance_config.py": "45b1d0e1cfcea67bf5ee150be532394e92d57f94d587e505b4e86045cebe2940",
+    "realtime/performance.py": "50936879aad1c4bcd9829a9649b3b5c4d2e7c782dd6c690f7fa9cdc404d3a246",
+    "zerogpu/runtime.py": "6f054504d5838e2e255440243fb773a205d1f0b5566e72ece2025e180231ceb9",
+    "tools/benchmark_video.py": "cd89bd0ef3e30c9a6c632f29a2f298418622762f59c0ce312ea56a9f9312e3b6",
+    "tools/benchmark_inference.py": "8d70018d05b051073f740bf0a2a8bb3f327b2b553734a57a9386dfe6f5f6ee17",
+    "tools/inference_profile.py": "f4a446963a4343a045dad9fc0b416b15d482e631431f3f874489b3a14d443ec6",
+    "tools/depth_graph_probe.py": "86bb5b5a59e532596bf3ca77654c1949e23119f5413e7261045052c925b6a4df",
+    "tools/resident_graph_probe.py": "6f265f8645b92691d78bff7729986f7b26ee3270931f83c083276a8d9a181ae0",
+    "tools/tracking_overlap_probe.py": "df5b126b93ce4051db63113ceafba550f7aa21dfb253487a05f940d407740d95",
+    "tools/overlap_cpu_profile.py": "1116deae150d9f71d01771c254e57fe26116ebd236702c6f4101f85dae65217f",
+    "tools/host_fusion_probe.py": "e46a0a0cb6e7fdecb1f1d4d048968c98cd63fcf8c176911af2596d23a332ab38"
+  },
+  "host_diagnosis": {
+    "commands": "runs.json",
+    "source_snapshot": "profile-source.json",
+    "runs": [
+      {
+        "report": "before/report.json",
+        "frames": 500,
+        "mismatched_frames": 0,
+        "steady_predict_wall_ms": {
+          "count": 499,
+          "mean_ms": 43.868705611325154,
+          "min_ms": 28.970000003027963,
+          "max_ms": 232.314500000939,
+          "p50_ms": 44.66859999956796,
+          "p95_ms": 53.19007999969472,
+          "p99_ms": 56.65358799989917
+        }
+      },
+      {
+        "report": "trace/report.json",
+        "frames": 500,
+        "mismatched_frames": 0,
+        "steady_predict_wall_ms": {
+          "count": 499,
+          "mean_ms": 39.86248837682507,
+          "min_ms": 27.612799996859394,
+          "max_ms": 237.725800001499,
+          "p50_ms": 38.170800002262695,
+          "p95_ms": 49.56122999974468,
+          "p99_ms": 59.36728600128845
+        }
+      },
+      {
+        "report": "after/report.json",
+        "frames": 500,
+        "mismatched_frames": 0,
+        "steady_predict_wall_ms": {
+          "count": 499,
+          "mean_ms": 45.251340480963826,
+          "min_ms": 28.729699999530567,
+          "max_ms": 66.85369999831892,
+          "p50_ms": 46.23229999924661,
+          "p95_ms": 52.71525999887672,
+          "p99_ms": 59.81873799821187
+        }
+      }
+    ],
+    "trace": "trace/stage-trace.json",
+    "per_stage": {
+      "image_copy": {
+        "calls": 1497,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 0.21847635254747735,
+          "min_ms": 0.14649999866378494,
+          "max_ms": 0.409399999625748,
+          "p50_ms": 0.21299999934853986,
+          "p95_ms": 0.28372000269882847,
+          "p99_ms": 0.32807599680381827
+        }
+      },
+      "decode_frame": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 0.9328062124059252,
+          "min_ms": 0.7431999983964488,
+          "max_ms": 1.499800000601681,
+          "p50_ms": 0.9261999985028524,
+          "p95_ms": 1.126720000320347,
+          "p99_ms": 1.3340820004668785
+        }
+      },
+      "letterbox": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 1.825275751523254,
+          "min_ms": 1.5179999973042868,
+          "max_ms": 3.4463000010873657,
+          "p50_ms": 1.7842000015662052,
+          "p95_ms": 2.1709800024837023,
+          "p99_ms": 2.4963860019488493
+        }
+      },
+      "decode_boxes": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 0.18152104199609442,
+          "min_ms": 0.14659999942523427,
+          "max_ms": 0.3256999989389442,
+          "p50_ms": 0.1740000006975606,
+          "p95_ms": 0.2341899999009911,
+          "p99_ms": 0.27136400080053136
+        }
+      },
+      "depth_profile_clock": {
+        "calls": 2994,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 1.966354308589182,
+          "min_ms": 0.152299995534122,
+          "max_ms": 158.4222999990743,
+          "p50_ms": 0.46350000775419176,
+          "p95_ms": 4.988669998419937,
+          "p99_ms": 7.247004006712814
+        }
+      },
+      "depth_preprocess": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 1.0810194389176866,
+          "min_ms": 0.9368999999423977,
+          "max_ms": 1.9238999993831385,
+          "p50_ms": 1.041100000293227,
+          "p95_ms": 1.3568800008215476,
+          "p99_ms": 1.5940919989225222
+        }
+      },
+      "tracking_associate": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 8.860851903795673,
+          "min_ms": 7.132999999157619,
+          "max_ms": 14.419099999940954,
+          "p50_ms": 8.752599998842925,
+          "p95_ms": 10.232890000406769,
+          "p99_ms": 11.919103999243816
+        }
+      },
+      "depth_postprocess": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 0.23790921844198612,
+          "min_ms": 0.17189999925903976,
+          "max_ms": 0.5343000011635013,
+          "p50_ms": 0.2220999995188322,
+          "p95_ms": 0.3309999989141943,
+          "p99_ms": 0.4185079998569563
+        }
+      },
+      "roi_median": {
+        "calls": 6530,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 6.314703807726905,
+          "min_ms": 2.7029999982914887,
+          "max_ms": 19.422900000790833,
+          "p50_ms": 5.680199999915203,
+          "p95_ms": 12.706830005117808,
+          "p99_ms": 15.334887996868929
+        }
+      },
+      "depth_fusion": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 6.647137675386175,
+          "min_ms": 2.919799997471273,
+          "max_ms": 20.43480000065756,
+          "p50_ms": 5.980199999612523,
+          "p95_ms": 13.264840000556433,
+          "p99_ms": 16.074931997354724
+        }
+      },
+      "tracking_enrich": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 0.3337184368970548,
+          "min_ms": 0.09110000246437266,
+          "max_ms": 0.7308999993256293,
+          "p50_ms": 0.33830000029411167,
+          "p95_ms": 0.5547699998714961,
+          "p99_ms": 0.620354001148371
+        }
+      },
+      "draw_rectangle": {
+        "calls": 13060,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 0.12812184373790284,
+          "min_ms": 0.061499998992076144,
+          "max_ms": 0.28169999131932855,
+          "p50_ms": 0.12569998943945393,
+          "p95_ms": 0.17387000370945316,
+          "p99_ms": 0.23091399751137942
+        }
+      },
+      "draw_textbbox": {
+        "calls": 6530,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 2.103660520856602,
+          "min_ms": 0.9671000043454114,
+          "max_ms": 4.571299999952316,
+          "p50_ms": 2.1050999930594116,
+          "p95_ms": 2.825409997603856,
+          "p99_ms": 3.5784660062927287
+        }
+      },
+      "draw_text": {
+        "calls": 6530,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 5.016946693389972,
+          "min_ms": 2.2621999960392714,
+          "max_ms": 11.368799998308532,
+          "p50_ms": 5.016499995690538,
+          "p95_ms": 6.715139999505482,
+          "p99_ms": 8.523971984759555
+        }
+      },
+      "jpeg_save": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 0.7388619238565319,
+          "min_ms": 0.66059999880963,
+          "max_ms": 1.1626000014075544,
+          "p50_ms": 0.7202999986475334,
+          "p95_ms": 0.8830599981592968,
+          "p99_ms": 0.999944001523545
+        }
+      },
+      "annotate": {
+        "calls": 499,
+        "per_frame_host_ms": {
+          "count": 499,
+          "mean_ms": 8.253979358662532,
+          "min_ms": 4.202100000838982,
+          "max_ms": 17.779199999495177,
+          "p50_ms": 8.238699996582,
+          "p95_ms": 10.833720001028269,
+          "p99_ms": 13.47858400149562
+        }
+      }
+    },
+    "timing_contract": "Nested host wall intervals, original SDK waits preserved, Graph inference identity untouched; no sum across stages or kernel-time claim. Each stage distribution sums its calls within a frame. All steady frames retained.",
+    "interpretation": "ROI reductions account for most original fusion host wall. Text/bounds dominate annotation while JPEG is smaller. Controls have different GPU-stage timings from the traced run; do not interpret trace-to-control wall difference as an optimization or quantify profiling overhead from it."
+  },
+  "candidate": {
+    "entry": "tools.resident_host_fusion_asgi:application",
+    "cli": "--depth-graph --tracking-overlap --host-fusion",
+    "behavior": "One synchronous bounded same-frame CUDA FP32 plane copy; exact positive-finite host partition with original FP32 half-before-add even median, odd direct value; original canonical assembly/logging",
+    "constraints": [
+      "Complete transfer and reduction are inside fusion and wall timing",
+      "No transfer for empty boxes; no retained plane, model fallback, retry or source mutation",
+      "Original weights, FP32, batch 1, resolutions, thresholds, source order/cadence and 30FPS/12-window remain",
+      "Production source is unchanged; default imports do not include this experiment"
+    ],
+    "numerical_boundary_tests": "core.test_host_fusion: exact ranks with zero-to-17 valid values, duplicates, NaN/Inf/zero/negative values, maximum finite values and odd/even subnormals on CPU and actual CUDA; strided planes, invalid/fractional/clipped boxes, source ownership, unsupported maps and hook restoration"
+  },
+  "full_video": {
+    "command_records": "video-runs.json",
+    "runs": [
+      {
+        "clip": "07",
+        "source_sha256": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+        "runs": [
+          {
+            "name": "before",
+            "report": "video07/before/report.json",
+            "completed_frames": 500,
+            "compared_frames": 0,
+            "mismatched_frames": 0,
+            "steady_predict_wall_ms": {
+              "count": 499,
+              "mean_ms": 45.17897274540984,
+              "min_ms": 28.554100001201732,
+              "max_ms": 59.46430000039982,
+              "p50_ms": 45.94530000031227,
+              "p95_ms": 53.41665999767429,
+              "p99_ms": 57.184081997329486
+            },
+            "steady_fusion_ms": {
+              "count": 499,
+              "mean_ms": 6.606556112224909,
+              "min_ms": 2.586200000223471,
+              "max_ms": 14.926100000593578,
+              "p50_ms": 6.318700001429534,
+              "p95_ms": 9.65453000353591,
+              "p99_ms": 13.714770000151475
+            },
+            "first_frame": {
+              "forward_event_ms": 4.378015995025635,
+              "inference_ms": 5.6288999985554256,
+              "prepare_ms": 3.375899999809917,
+              "gpu_stage_ms": 626.8326999997953,
+              "depth_ms": 3694.272600001568,
+              "depth_predict_ms": 3656.0911999986274,
+              "depth_fusion_ms": 37.94470000138972,
+              "decode_boxes_ms": 0.23670000155107118,
+              "tracking_ms": 4.060700000991346,
+              "risk_ms": 0.2181999989261385,
+              "render_ms": 6.7192999995313585,
+              "server_ms": 4335.479400000622,
+              "graph_setup_ms": 620.4115000000456,
+              "predict_wall_ms": 4623.505600000499,
+              "depth_evidence_ms": 1.1512999990372919,
+              "depth_graph_prepare_ms": 287.7745000005234
+            }
+          },
+          {
+            "name": "candidate",
+            "report": "video07/candidate/report.json",
+            "completed_frames": 500,
+            "compared_frames": 500,
+            "mismatched_frames": 0,
+            "steady_predict_wall_ms": {
+              "count": 499,
+              "mean_ms": 40.14929258523707,
+              "min_ms": 26.452800000697607,
+              "max_ms": 63.086400001338916,
+              "p50_ms": 40.96900000149617,
+              "p95_ms": 45.64339000025939,
+              "p99_ms": 48.01815800135955
+            },
+            "steady_fusion_ms": {
+              "count": 499,
+              "mean_ms": 0.8378709418888,
+              "min_ms": 0.6163999969430733,
+              "max_ms": 1.6276999995170627,
+              "p50_ms": 0.806100000772858,
+              "p95_ms": 1.1226299997360911,
+              "p99_ms": 1.2492600022233091
+            },
+            "first_frame": {
+              "forward_event_ms": 4.630496025085449,
+              "inference_ms": 5.8939000009559095,
+              "prepare_ms": 4.550000001472654,
+              "gpu_stage_ms": 728.9510000009614,
+              "depth_ms": 3623.189199999615,
+              "depth_predict_ms": 3621.4335999975447,
+              "depth_fusion_ms": 1.4997000034782104,
+              "decode_boxes_ms": 0.2558999985922128,
+              "tracking_ms": 4.309399999328889,
+              "risk_ms": 0.2296999991813209,
+              "render_ms": 6.9761000013386365,
+              "server_ms": 4368.205400001898,
+              "graph_setup_ms": 722.1692000020994,
+              "predict_wall_ms": 4699.1209000007075,
+              "depth_evidence_ms": 1.054100001056213,
+              "depth_graph_prepare_ms": 330.6269999993674
+            }
+          },
+          {
+            "name": "after",
+            "report": "video07/after/report.json",
+            "completed_frames": 500,
+            "compared_frames": 500,
+            "mismatched_frames": 0,
+            "steady_predict_wall_ms": {
+              "count": 499,
+              "mean_ms": 45.05036032069639,
+              "min_ms": 27.85020000010263,
+              "max_ms": 61.799000002793036,
+              "p50_ms": 45.917899999039946,
+              "p95_ms": 53.494039999714005,
+              "p99_ms": 59.86784799955785
+            },
+            "steady_fusion_ms": {
+              "count": 499,
+              "mean_ms": 6.885316833554343,
+              "min_ms": 2.4664999982633162,
+              "max_ms": 17.200700000103097,
+              "p50_ms": 6.221699997695396,
+              "p95_ms": 12.743550000232062,
+              "p99_ms": 16.342629998689517
+            },
+            "first_frame": {
+              "forward_event_ms": 4.74886417388916,
+              "inference_ms": 6.08730000021751,
+              "prepare_ms": 3.3363000002282206,
+              "gpu_stage_ms": 606.141000000207,
+              "depth_ms": 3442.7520999997796,
+              "depth_predict_ms": 3410.5777999975544,
+              "depth_fusion_ms": 31.9487000015215,
+              "decode_boxes_ms": 0.22560000070370734,
+              "tracking_ms": 3.675600000860868,
+              "risk_ms": 0.22230000104173087,
+              "render_ms": 6.728999996994389,
+              "server_ms": 4062.856299999112,
+              "graph_setup_ms": 599.2957999987993,
+              "predict_wall_ms": 4337.018800000806,
+              "depth_evidence_ms": 1.3005000000703149,
+              "depth_graph_prepare_ms": 273.8530000024184
+            }
+          }
+        ],
+        "wall_p50_reduction_percent_vs_before": 10.830922855618052,
+        "wall_p50_reduction_percent_vs_after": 10.777714132500071,
+        "fusion_p50_reduction_percent_vs_before": 87.24262901244738,
+        "fusion_p50_reduction_percent_vs_after": 87.04373401045616
+      },
+      {
+        "clip": "10",
+        "source_sha256": "0780ec0d648cfbca71a92cf0e45811e591b0f014307e3291a5f970112d855d01",
+        "runs": [
+          {
+            "name": "before",
+            "report": "video10/before/report.json",
+            "completed_frames": 654,
+            "compared_frames": 0,
+            "mismatched_frames": 0,
+            "steady_predict_wall_ms": {
+              "count": 653,
+              "mean_ms": 41.29918407352794,
+              "min_ms": 23.24380000209203,
+              "max_ms": 66.6443000009167,
+              "p50_ms": 42.16979999910109,
+              "p95_ms": 48.988779998762766,
+              "p99_ms": 53.448824001534376
+            },
+            "steady_fusion_ms": {
+              "count": 653,
+              "mean_ms": 5.429513323134411,
+              "min_ms": 1.7043999978341162,
+              "max_ms": 17.774400002963375,
+              "p50_ms": 5.050099996878998,
+              "p95_ms": 9.832759998244,
+              "p99_ms": 13.916728000185685
+            },
+            "first_frame": {
+              "forward_event_ms": 4.823967933654785,
+              "inference_ms": 6.115699998190394,
+              "prepare_ms": 3.5986000002594665,
+              "gpu_stage_ms": 601.7379999975674,
+              "depth_ms": 3340.2984000022116,
+              "depth_predict_ms": 3302.949799999624,
+              "depth_fusion_ms": 37.108800002897624,
+              "decode_boxes_ms": 0.23979999969014898,
+              "tracking_ms": 3.7000999982410576,
+              "risk_ms": 0.1979000007850118,
+              "render_ms": 6.66310000087833,
+              "server_ms": 3956.196099999943,
+              "graph_setup_ms": 594.852100002754,
+              "predict_wall_ms": 4214.31670000311,
+              "depth_evidence_ms": 0.9992999985115603,
+              "depth_graph_prepare_ms": 257.85719999839785
+            }
+          },
+          {
+            "name": "candidate",
+            "report": "video10/candidate/report.json",
+            "completed_frames": 654,
+            "compared_frames": 654,
+            "mismatched_frames": 0,
+            "steady_predict_wall_ms": {
+              "count": 653,
+              "mean_ms": 37.38263338445862,
+              "min_ms": 24.047900002187816,
+              "max_ms": 52.99829999785288,
+              "p50_ms": 38.1020000022545,
+              "p95_ms": 44.420179999724496,
+              "p99_ms": 47.66141199943377
+            },
+            "steady_fusion_ms": {
+              "count": 653,
+              "mean_ms": 0.7942050537443006,
+              "min_ms": 0.4877999999735039,
+              "max_ms": 1.7345999985991511,
+              "p50_ms": 0.775100001192186,
+              "p95_ms": 1.1176799991517328,
+              "p99_ms": 1.3463160017272457
+            },
+            "first_frame": {
+              "forward_event_ms": 4.6999359130859375,
+              "inference_ms": 5.997600001137471,
+              "prepare_ms": 3.456399997958215,
+              "gpu_stage_ms": 820.3463999998348,
+              "depth_ms": 3397.199899998668,
+              "depth_predict_ms": 3395.9208999986004,
+              "depth_fusion_ms": 1.0492000001249835,
+              "decode_boxes_ms": 0.22979999994277023,
+              "tracking_ms": 4.45670000044629,
+              "risk_ms": 0.19940000129281543,
+              "render_ms": 7.0238000007520895,
+              "server_ms": 4232.682599998952,
+              "graph_setup_ms": 813.4710999984236,
+              "predict_wall_ms": 4575.292399997124,
+              "depth_evidence_ms": 1.0913000005530193,
+              "depth_graph_prepare_ms": 342.31260000160546
+            }
+          },
+          {
+            "name": "after",
+            "report": "video10/after/report.json",
+            "completed_frames": 654,
+            "compared_frames": 654,
+            "mismatched_frames": 0,
+            "steady_predict_wall_ms": {
+              "count": 653,
+              "mean_ms": 40.855380704489036,
+              "min_ms": 23.50749999823165,
+              "max_ms": 56.33469999884255,
+              "p50_ms": 41.54560000097263,
+              "p95_ms": 48.339620000479044,
+              "p99_ms": 52.904515999980504
+            },
+            "steady_fusion_ms": {
+              "count": 653,
+              "mean_ms": 5.443664165299946,
+              "min_ms": 1.8085000046994537,
+              "max_ms": 17.109899999923073,
+              "p50_ms": 4.987300002539996,
+              "p95_ms": 9.829559995705495,
+              "p99_ms": 12.07336399849737
+            },
+            "first_frame": {
+              "forward_event_ms": 4.710048198699951,
+              "inference_ms": 5.9375999990152195,
+              "prepare_ms": 3.6714999987452757,
+              "gpu_stage_ms": 603.6963000005926,
+              "depth_ms": 3399.595599996246,
+              "depth_predict_ms": 3362.452800000028,
+              "depth_fusion_ms": 36.91379999872879,
+              "decode_boxes_ms": 0.22899999748915434,
+              "tracking_ms": 3.9272000030905474,
+              "risk_ms": 0.22190000163391232,
+              "render_ms": 6.679999998596031,
+              "server_ms": 4017.7924999989045,
+              "graph_setup_ms": 596.9506000001275,
+              "predict_wall_ms": 4305.053100000805,
+              "depth_evidence_ms": 1.0891999991144985,
+              "depth_graph_prepare_ms": 287.0024000003468
+            }
+          }
+        ],
+        "wall_p50_reduction_percent_vs_before": 9.64623971878762,
+        "wall_p50_reduction_percent_vs_after": 8.288723712348622,
+        "fusion_p50_reduction_percent_vs_before": 84.65178904039121,
+        "fusion_p50_reduction_percent_vs_after": 84.45852463662837
+      }
+    ],
+    "processed_frames": 3462,
+    "compared_frames": 2308,
+    "candidate_frames": 1154,
+    "mismatched_frames": 0,
+    "comparison": "Exact input/decoder PTS, complete aligned depth hash, raw detections, all boxes/IDs/distance/motion/risk fields and JPEG hashes; unchanged tolerance and full-frame order",
+    "timing_scope": "Steady predict wall includes complete fusion transfer; depth verification copies/hashes occur separately outside timing in all runs. Cold frame retained. Speedup relative to current overlap + original GPU fusion, not older default or another session."
+  },
+  "browser": {
+    "command_records": "browser-runs.json",
+    "runs": [
+      {
+        "clip": "07",
+        "name": "before",
+        "report": "browser07-before/report.json",
+        "conditions": {
+          "input_fps": 30,
+          "max_inflight": 12,
+          "frames_per_session": 181,
+          "mode": "full",
+          "depth_graph_experiment": true,
+          "tracking_overlap_experiment": true,
+          "host_fusion_experiment": false,
+          "asgi_entry": "tools.resident_overlap_asgi:application",
+          "source_kind": "moving_video",
+          "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+        },
+        "source_sha256": "1f2cc539f810d069b26d67e0d9025e5f72b9929f3f837b0df074705ef51e2a33",
+        "sessions": [
+          {
+            "index": 0,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 4560.199999999255,
+              "steady_frames": 180,
+              "steady_fps": 25.843132187629433,
+              "decoded_p50_ms": 420.1000000014901,
+              "decoded_p95_ms": 531.8749999999997,
+              "decoded_max_ms": 585.1999999992549,
+              "queue_p50_ms": 373.83035000129894,
+              "server_p50_ms": 35.79419999914535,
+              "depth_p50_ms": 11.59140000163461,
+              "meets_existing_10fps_500ms_gate": false
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.079477,
+              "last_observed_media_s": 11.113132,
+              "drawn_media_span_s": 11.033334,
+              "video_draws_during_capture": 331
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          },
+          {
+            "index": 1,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 57.69999999925494,
+              "steady_frames": 180,
+              "steady_fps": 27.266943375653746,
+              "decoded_p50_ms": 286.55000000074506,
+              "decoded_p95_ms": 490.16000000126655,
+              "decoded_max_ms": 498.19999999925494,
+              "queue_p50_ms": 239.7655000022496,
+              "server_p50_ms": 35.20794999894861,
+              "depth_p50_ms": 11.449899999206536,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.016679,
+              "last_observed_media_s": 6.243421,
+              "drawn_media_span_s": 6.233333,
+              "video_draws_during_capture": 187
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          }
+        ],
+        "busy_rejection_observed": true,
+        "user_stop": {
+          "mode": "idle",
+          "source_paused": true,
+          "tracks_ended": true
+        },
+        "page_errors": [],
+        "gate_passed": false
+      },
+      {
+        "clip": "07",
+        "name": "candidate",
+        "report": "browser07-candidate/report.json",
+        "conditions": {
+          "input_fps": 30,
+          "max_inflight": 12,
+          "frames_per_session": 181,
+          "mode": "full",
+          "depth_graph_experiment": true,
+          "tracking_overlap_experiment": true,
+          "host_fusion_experiment": true,
+          "asgi_entry": "tools.resident_host_fusion_asgi:application",
+          "source_kind": "moving_video",
+          "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+        },
+        "source_sha256": "1f2cc539f810d069b26d67e0d9025e5f72b9929f3f837b0df074705ef51e2a33",
+        "sessions": [
+          {
+            "index": 0,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 4730.60000000149,
+              "steady_frames": 180,
+              "steady_fps": 29.907287409024597,
+              "decoded_p50_ms": 62.80000000074506,
+              "decoded_p95_ms": 253.81999999713153,
+              "decoded_max_ms": 266.4000000022352,
+              "queue_p50_ms": 18.75819999986561,
+              "server_p50_ms": 29.71409999918251,
+              "depth_p50_ms": 11.156900001878967,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.070157,
+              "last_observed_media_s": 10.773169,
+              "drawn_media_span_s": 10.7,
+              "video_draws_during_capture": 321
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          },
+          {
+            "index": 1,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 55.099999997764826,
+              "steady_frames": 180,
+              "steady_fps": 29.933149299904315,
+              "decoded_p50_ms": 42.399999998509884,
+              "decoded_p95_ms": 48.23499999921768,
+              "decoded_max_ms": 56.399999998509884,
+              "queue_p50_ms": 0.035150000257999636,
+              "server_p50_ms": 29.189800001404365,
+              "depth_p50_ms": 11.151350001455285,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.016917,
+              "last_observed_media_s": 6.043029,
+              "drawn_media_span_s": 6.033333,
+              "video_draws_during_capture": 181
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          }
+        ],
+        "busy_rejection_observed": true,
+        "user_stop": {
+          "mode": "idle",
+          "source_paused": true,
+          "tracks_ended": true
+        },
+        "page_errors": [],
+        "gate_passed": true
+      },
+      {
+        "clip": "07",
+        "name": "after",
+        "report": "browser07-after/report.json",
+        "conditions": {
+          "input_fps": 30,
+          "max_inflight": 12,
+          "frames_per_session": 181,
+          "mode": "full",
+          "depth_graph_experiment": true,
+          "tracking_overlap_experiment": true,
+          "host_fusion_experiment": false,
+          "asgi_entry": "tools.resident_overlap_asgi:application",
+          "source_kind": "moving_video",
+          "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+        },
+        "source_sha256": "1f2cc539f810d069b26d67e0d9025e5f72b9929f3f837b0df074705ef51e2a33",
+        "sessions": [
+          {
+            "index": 0,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 4673.10000000149,
+              "steady_frames": 180,
+              "steady_fps": 25.3696212879391,
+              "decoded_p50_ms": 436.44999999925494,
+              "decoded_p95_ms": 554.4099999999625,
+              "decoded_max_ms": 621.7999999970198,
+              "queue_p50_ms": 387.92629999989003,
+              "server_p50_ms": 37.392850001197075,
+              "depth_p50_ms": 11.852249997900799,
+              "meets_existing_10fps_500ms_gate": false
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.068708,
+              "last_observed_media_s": 11.405521,
+              "drawn_media_span_s": 11.333333999999999,
+              "video_draws_during_capture": 340
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          },
+          {
+            "index": 1,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 58.80000000074506,
+              "steady_frames": 180,
+              "steady_fps": 27.478398925298663,
+              "decoded_p50_ms": 315.50000000186265,
+              "decoded_p95_ms": 503.92499999925485,
+              "decoded_max_ms": 524.5999999977648,
+              "queue_p50_ms": 271.57979999901727,
+              "server_p50_ms": 34.806949999619974,
+              "depth_p50_ms": 11.423599999034195,
+              "meets_existing_10fps_500ms_gate": false
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.0165,
+              "last_observed_media_s": 6.221063,
+              "drawn_media_span_s": 6.2,
+              "video_draws_during_capture": 186
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          }
+        ],
+        "busy_rejection_observed": true,
+        "user_stop": {
+          "mode": "idle",
+          "source_paused": true,
+          "tracks_ended": true
+        },
+        "page_errors": [],
+        "gate_passed": false
+      },
+      {
+        "clip": "10",
+        "name": "before",
+        "report": "browser10-before/report.json",
+        "conditions": {
+          "input_fps": 30,
+          "max_inflight": 12,
+          "frames_per_session": 181,
+          "mode": "full",
+          "depth_graph_experiment": true,
+          "tracking_overlap_experiment": true,
+          "host_fusion_experiment": false,
+          "asgi_entry": "tools.resident_overlap_asgi:application",
+          "source_kind": "moving_video",
+          "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+        },
+        "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+        "sessions": [
+          {
+            "index": 0,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 4849.5,
+              "steady_frames": 180,
+              "steady_fps": 27.317428519383018,
+              "decoded_p50_ms": 399.05000000074506,
+              "decoded_p95_ms": 467.8050000006333,
+              "decoded_max_ms": 497.1000000014901,
+              "queue_p50_ms": 353.8652999995975,
+              "server_p50_ms": 33.687499999359716,
+              "depth_p50_ms": 11.425249998865183,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.068359,
+              "last_observed_media_s": 11.122267,
+              "drawn_media_span_s": 11.033332999999999,
+              "video_draws_during_capture": 329
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          },
+          {
+            "index": 1,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 53.69999999925494,
+              "steady_frames": 180,
+              "steady_fps": 29.864118261904625,
+              "decoded_p50_ms": 43.899999998509884,
+              "decoded_p95_ms": 73.09999999999997,
+              "decoded_max_ms": 86.30000000074506,
+              "queue_p50_ms": 0.2872499990189681,
+              "server_p50_ms": 30.425249999098014,
+              "depth_p50_ms": 10.690200000681216,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.016802,
+              "last_observed_media_s": 6.037761,
+              "drawn_media_span_s": 6.033333,
+              "video_draws_during_capture": 181
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          }
+        ],
+        "busy_rejection_observed": true,
+        "user_stop": {
+          "mode": "idle",
+          "source_paused": true,
+          "tracks_ended": true
+        },
+        "page_errors": [],
+        "gate_passed": true
+      },
+      {
+        "clip": "10",
+        "name": "candidate",
+        "report": "browser10-candidate/report.json",
+        "conditions": {
+          "input_fps": 30,
+          "max_inflight": 12,
+          "frames_per_session": 181,
+          "mode": "full",
+          "depth_graph_experiment": true,
+          "tracking_overlap_experiment": true,
+          "host_fusion_experiment": true,
+          "asgi_entry": "tools.resident_host_fusion_asgi:application",
+          "source_kind": "moving_video",
+          "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+        },
+        "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+        "sessions": [
+          {
+            "index": 0,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 4921.89999999851,
+              "steady_frames": 180,
+              "steady_fps": 29.971028006256898,
+              "decoded_p50_ms": 146.84999999962747,
+              "decoded_p95_ms": 353.31500000134105,
+              "decoded_max_ms": 381.30000000074506,
+              "queue_p50_ms": 99.72784999808937,
+              "server_p50_ms": 28.825450001022546,
+              "depth_p50_ms": 11.318849999952363,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.069256,
+              "last_observed_media_s": 10.961578,
+              "drawn_media_span_s": 10.899999999999999,
+              "video_draws_during_capture": 326
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          },
+          {
+            "index": 1,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 41,
+              "steady_frames": 180,
+              "steady_fps": 29.944602485394583,
+              "decoded_p50_ms": 38.399999998509884,
+              "decoded_p95_ms": 42.8100000007078,
+              "decoded_max_ms": 48.100000001490116,
+              "queue_p50_ms": 0.03400000059627928,
+              "server_p50_ms": 26.697200000853627,
+              "depth_p50_ms": 10.442950000651763,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.015196,
+              "last_observed_media_s": 6.026588,
+              "drawn_media_span_s": 6.033333,
+              "video_draws_during_capture": 181
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          }
+        ],
+        "busy_rejection_observed": true,
+        "user_stop": {
+          "mode": "idle",
+          "source_paused": true,
+          "tracks_ended": true
+        },
+        "page_errors": [],
+        "gate_passed": true
+      },
+      {
+        "clip": "10",
+        "name": "after",
+        "report": "browser10-after/report.json",
+        "conditions": {
+          "input_fps": 30,
+          "max_inflight": 12,
+          "frames_per_session": 181,
+          "mode": "full",
+          "depth_graph_experiment": true,
+          "tracking_overlap_experiment": true,
+          "host_fusion_experiment": false,
+          "asgi_entry": "tools.resident_overlap_asgi:application",
+          "source_kind": "moving_video",
+          "source_time_semantics": "Capture-entry observations; not exact delivered pixel PTS or resident-v1 worker time"
+        },
+        "source_sha256": "ff435f4afd560e35b2bfe526ede2aa5f694322303eebe61770f9b15f2d82c8f5",
+        "sessions": [
+          {
+            "index": 0,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 4995.60000000149,
+              "steady_frames": 180,
+              "steady_fps": 25.234824057198935,
+              "decoded_p50_ms": 412.9500000011176,
+              "decoded_p95_ms": 660.2299999993295,
+              "decoded_max_ms": 699.1000000014901,
+              "queue_p50_ms": 365.2874500003236,
+              "server_p50_ms": 35.29460000027029,
+              "depth_p50_ms": 11.922199999389704,
+              "meets_existing_10fps_500ms_gate": false
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.069376,
+              "last_observed_media_s": 11.775086,
+              "drawn_media_span_s": 11.7,
+              "video_draws_during_capture": 351
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          },
+          {
+            "index": 1,
+            "sent": 181,
+            "received": 181,
+            "summary": {
+              "first_decoded_ms": 55.899999998509884,
+              "steady_frames": 180,
+              "steady_fps": 29.938625817071287,
+              "decoded_p50_ms": 45.5,
+              "decoded_p95_ms": 57.5,
+              "decoded_max_ms": 65.30000000074506,
+              "queue_p50_ms": 1.5432000000146218,
+              "server_p50_ms": 30.828299999484443,
+              "depth_p50_ms": 10.840799999641604,
+              "meets_existing_10fps_500ms_gate": true
+            },
+            "source_progress": {
+              "first_observed_media_s": 0.016706,
+              "last_observed_media_s": 6.043048,
+              "drawn_media_span_s": 6.033333,
+              "video_draws_during_capture": 181
+            },
+            "tracks_ended": true,
+            "source_paused": true
+          }
+        ],
+        "busy_rejection_observed": true,
+        "user_stop": {
+          "mode": "idle",
+          "source_paused": true,
+          "tracks_ended": true
+        },
+        "page_errors": [],
+        "gate_passed": false
+      }
+    ],
+    "all_runs_functionally_completed": true,
+    "all_frames": 2172,
+    "candidate_frames": 724,
+    "candidate_steady_frames": 720,
+    "all_four_candidate_sessions_pass_gate": true,
+    "gate": "At least 10 steady FPS AND maximum steady decoded latency <=500 ms, with cold frame retained separately",
+    "failed_control_reports": [
+      "browser07-before/report.json",
+      "browser07-after/report.json",
+      "browser10-after/report.json"
+    ],
+    "scope": "Actual page + original-speed video-backed canvas + codec/WS/native GPU. Different realtime sessions capture different source frames, so browser ratios are not same-input causal speedups. All control failures retained; no rerun to obtain a pass. GPU snapshots are post-run point observations, not sustained telemetry; no power/clock settings changed."
+  },
+  "native_fault_verification": {
+    "report": "native-fault/report.json",
+    "script": "native-fault-validation-script.py.txt",
+    "results": {
+      "complete": true,
+      "scope": "Real GPU fault/reconnect check; no throughput claim",
+      "invalid_input_code": "invalid_frame",
+      "recovered_and_reconnected": true,
+      "changed_shape_code": "depth_inference_failed",
+      "fault_drained_and_latched": true,
+      "no_recapture": true,
+      "worker_closed": true
+    },
+    "cases": [
+      "Corrupt JPEG rejected before GPU; explicit next valid request succeeds",
+      "Reconnect resets counters/tracker and reuses one Graph with host-fusion identity",
+      "Changed shape fails, drains owned work and latches service; no recapture or reclaim"
+    ],
+    "claim": "Actual pretrained local GPU service, no throughput or quality claim"
+  },
+  "checks": {
+    "results": [
+      {
+        "name": "host-boundaries",
+        "command": [
+          "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+          "manage.py",
+          "test",
+          "core.test_host_fusion",
+          "core.test_video_benchmark",
+          "core.test_resident_graph_probe"
+        ],
+        "exit_code": 0,
+        "seconds": 7.162675700001273
+      },
+      {
+        "name": "ruff",
+        "command": [
+          ".venv/Scripts/ruff.exe",
+          "check",
+          "."
+        ],
+        "exit_code": 0,
+        "seconds": 0.08259890000044834
+      },
+      {
+        "name": "browser-unit",
+        "command": [
+          "C:/Program Files/nodejs/node.exe",
+          "--test",
+          "tools/benchmark_resident_browser.test.mjs"
+        ],
+        "exit_code": 0,
+        "seconds": 0.221283199996833
+      },
+      {
+        "name": "django-check",
+        "command": [
+          "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+          "manage.py",
+          "check"
+        ],
+        "exit_code": 0,
+        "seconds": 1.8773236000015459
+      },
+      {
+        "name": "migrations",
+        "command": [
+          "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+          "manage.py",
+          "makemigrations",
+          "--check",
+          "--dry-run"
+        ],
+        "exit_code": 0,
+        "seconds": 2.0548903000017162
+      },
+      {
+        "name": "backend-tests",
+        "command": [
+          "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+          "manage.py",
+          "test"
+        ],
+        "exit_code": 0,
+        "seconds": 29.537212900002487
+      },
+      {
+        "name": "ruff-final",
+        "command": [
+          ".venv/Scripts/ruff.exe",
+          "check",
+          "."
+        ],
+        "exit_code": 0,
+        "seconds": 0.0739106000000902
+      },
+      {
+        "name": "browser-unit-final",
+        "command": [
+          "C:/Program Files/nodejs/node.exe",
+          "--test",
+          "tools/benchmark_resident_browser.test.mjs"
+        ],
+        "exit_code": 0,
+        "seconds": 0.1942124999986845
+      },
+      {
+        "name": "native-fault",
+        "command": [
+          "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+          "-B",
+          ".venv/tmp/verify-host-fusion-input-policy.py",
+          "benchmarks\\2026-10-21\\overlap-cpu\\native-fault"
+        ],
+        "exit_code": 0,
+        "seconds": 10.189177300002484
+      }
+    ],
+    "backend_tests": 341,
+    "browser_tool_tests": 5,
+    "documentation_audit": "documentation-audit.json",
+    "current_hashes_verified": true,
+    "diff_check": "Working tree check passed; staged check found an extra blank line at EOF in backend-tests.log, normalized before final staged check",
+    "retained_preflight_failure": {
+      "kind": "preflight",
+      "name": "sandbox-unit-tests",
+      "exit_code": 1,
+      "reason": "Two tests could not access Windows user TEMP; real-codec output could not be created. No production code fault. Explicit workspace TEMP used for subsequent checks."
+    },
+    "frontend_product_tests_rerun": false
+  },
+  "restored_local_service": {
+    "observation": "restored-local-service.json",
+    "probe": "restored-local-probe.json",
+    "probe_exit_code": 0,
+    "candidate_enabled": false,
+    "separate_venvs_verified": false
+  },
+  "decision": {
+    "sample_equivalence_and_performance_gate": "pass for the recorded complete-video and candidate browser conditions",
+    "default_adoption": false,
+    "unverified": [
+      "Ground-truth depth/distance and detection/motion/risk quality acceptance",
+      "Long-duration candidate soak, sustained thermal/clock variability, multi-client throughput",
+      "Physical camera/sensors, external HF/DashScope and remote deployments",
+      "Separate web/inference virtual environments"
+    ],
+    "next_step": "Inspect repeated text boundary/layout work in the pinned Pillow implementation, preserve font/layout/content/JPEG and exact pixels, and retain the prior full-label-cache negative evidence."
+  },
+  "log_encoding_normalization": {
+    "paths": [
+      "after.log",
+      "before.log",
+      "focused-tests.log",
+      "restored-inference.log",
+      "restored-web.log",
+      "trace.log",
+      "video07-after.log",
+      "video07-before.log",
+      "video07-candidate.log",
+      "video10-after.log",
+      "video10-before.log",
+      "video10-candidate.log",
+      "browser07-after/server.log",
+      "browser07-before/server.log",
+      "browser07-candidate/server.log",
+      "browser10-after/server.log",
+      "browser10-before/server.log",
+      "browser10-candidate/server.log",
+      "checks/backend-tests.log",
+      "checks/django-check.log",
+      "checks/host-boundaries.log",
+      "checks/migrations.log",
+      "checks/native-fault.log"
+    ],
+    "transformation": "UTF-8/LF, trailing-whitespace and trailing-blank-line normalization only; source snapshot and numerical JSON/JSONL values preserved"
+  }
+}

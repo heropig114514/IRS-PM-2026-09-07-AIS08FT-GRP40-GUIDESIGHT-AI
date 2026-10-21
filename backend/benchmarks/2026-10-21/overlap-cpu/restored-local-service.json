@@ -1,0 +1,131 @@
+{
+  "observed_at_utc": "2026-10-21T11:38:36.401680+00:00",
+  "url": "http://127.0.0.1:8766/integration/video/",
+  "health": {
+    "mode": "local",
+    "external_services": "disabled",
+    "status": "ok",
+    "provider": "local",
+    "loaded": true,
+    "ready": true,
+    "busy": false,
+    "accept_available": true,
+    "last_inference": {
+      "session_id": "7d7740ec71204b65ba43e707e83b7163",
+      "index": 0,
+      "completed_at_unix_s": 1792582623.1257844,
+      "capture_time_s": 28641.9052101,
+      "server_ms": 37.18529999969178
+    },
+    "error_code": null,
+    "models": {
+      "detection": {
+        "present": true,
+        "expected_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "verified_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+      },
+      "depth": {
+        "present": true,
+        "sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+      }
+    },
+    "distance_mode": "depth",
+    "session_seconds": 55,
+    "depth_interval": 3,
+    "capabilities": {
+      "detection": true,
+      "depth": true,
+      "tracking": true,
+      "risk": true
+    }
+  },
+  "supervisor_state": {
+    "supervisor_pid": 31496,
+    "interpreter": "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+    "separate_venvs": false,
+    "services": [
+      {
+        "name": "inference",
+        "pid": 31984,
+        "port": 8767,
+        "module": "integration.inference.asgi:application",
+        "initial_health": {
+          "status": "ok",
+          "provider": "local",
+          "loaded": false,
+          "ready": false,
+          "busy": false,
+          "accept_available": true,
+          "last_inference": null,
+          "error_code": null,
+          "models": {
+            "detection": {
+              "present": true,
+              "expected_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+              "verified_sha256": null
+            },
+            "depth": {
+              "present": true,
+              "sha256": null
+            }
+          },
+          "distance_mode": "depth",
+          "session_seconds": 55,
+          "depth_interval": 3,
+          "capabilities": {
+            "detection": true,
+            "depth": true,
+            "tracking": true,
+            "risk": true
+          }
+        }
+      },
+      {
+        "name": "web",
+        "pid": 21612,
+        "port": 8766,
+        "module": "integration.asgi:application",
+        "initial_health": {
+          "mode": "local",
+          "external_services": "disabled",
+          "status": "ok",
+          "provider": "local",
+          "loaded": false,
+          "ready": false,
+          "busy": false,
+          "accept_available": true,
+          "last_inference": null,
+          "error_code": null,
+          "models": {
+            "detection": {
+              "present": true,
+              "expected_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+              "verified_sha256": null
+            },
+            "depth": {
+              "present": true,
+              "sha256": null
+            }
+          },
+          "distance_mode": "depth",
+          "session_seconds": 55,
+          "depth_interval": 3,
+          "capabilities": {
+            "detection": true,
+            "depth": true,
+            "tracking": true,
+            "risk": true
+          }
+        }
+      }
+    ],
+    "state": "listening"
+  },
+  "probe": "restored-local-probe.json",
+  "probe_exit_code": 0,
+  "deployment": "Original integration web and GPU worker, explicit shared .venv interpreter; separate virtual environments not validated",
+  "depth_graph_enabled": false,
+  "tracking_overlap_enabled": false,
+  "host_fusion_enabled": false,
+  "restart_policy": "No automatic restart; original 55-second session bound and 30FPS/12-window retained"
+}

@@ -1,0 +1,75 @@
+[
+  {
+    "kind": "preflight",
+    "name": "sandbox-unit-tests",
+    "exit_code": 1,
+    "reason": "Two tests could not access Windows user TEMP; real-codec output could not be created. No production code fault. Explicit workspace TEMP used for subsequent checks."
+  },
+  {
+    "name": "focused-tests",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "test",
+      "core.test_video_benchmark"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 6.78947909999988
+  },
+  {
+    "name": "before",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\overlap-cpu\\before",
+      "--depth-graph",
+      "--tracking-overlap"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 36.29684149999957
+  },
+  {
+    "name": "trace",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\overlap-cpu\\trace",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--trace-overlap-cpu",
+      "--reference",
+      "benchmarks\\2026-10-21\\overlap-cpu\\before"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 34.141544500002055
+  },
+  {
+    "name": "after",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      "-m",
+      "tools.benchmark_video",
+      "--video",
+      "model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4",
+      "--output",
+      "benchmarks\\2026-10-21\\overlap-cpu\\after",
+      "--depth-graph",
+      "--tracking-overlap",
+      "--reference",
+      "benchmarks\\2026-10-21\\overlap-cpu\\before"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 37.281544100002066
+  }
+]

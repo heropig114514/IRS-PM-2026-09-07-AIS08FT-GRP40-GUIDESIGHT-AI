@@ -1,0 +1,98 @@
+[
+  {
+    "name": "host-boundaries",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "test",
+      "core.test_host_fusion",
+      "core.test_video_benchmark",
+      "core.test_resident_graph_probe"
+    ],
+    "exit_code": 0,
+    "seconds": 7.162675700001273
+  },
+  {
+    "name": "ruff",
+    "command": [
+      ".venv/Scripts/ruff.exe",
+      "check",
+      "."
+    ],
+    "exit_code": 0,
+    "seconds": 0.08259890000044834
+  },
+  {
+    "name": "browser-unit",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "--test",
+      "tools/benchmark_resident_browser.test.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.221283199996833
+  },
+  {
+    "name": "django-check",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "check"
+    ],
+    "exit_code": 0,
+    "seconds": 1.8773236000015459
+  },
+  {
+    "name": "migrations",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "makemigrations",
+      "--check",
+      "--dry-run"
+    ],
+    "exit_code": 0,
+    "seconds": 2.0548903000017162
+  },
+  {
+    "name": "backend-tests",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "manage.py",
+      "test"
+    ],
+    "exit_code": 0,
+    "seconds": 29.537212900002487
+  },
+  {
+    "name": "ruff-final",
+    "command": [
+      ".venv/Scripts/ruff.exe",
+      "check",
+      "."
+    ],
+    "exit_code": 0,
+    "seconds": 0.0739106000000902
+  },
+  {
+    "name": "browser-unit-final",
+    "command": [
+      "C:/Program Files/nodejs/node.exe",
+      "--test",
+      "tools/benchmark_resident_browser.test.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.1942124999986845
+  },
+  {
+    "name": "native-fault",
+    "command": [
+      "E:\\AI_map\\backend\\.venv\\Scripts\\python.exe",
+      "-B",
+      ".venv/tmp/verify-host-fusion-input-policy.py",
+      "benchmarks\\2026-10-21\\overlap-cpu\\native-fault"
+    ],
+    "exit_code": 0,
+    "seconds": 10.189177300002484
+  }
+]

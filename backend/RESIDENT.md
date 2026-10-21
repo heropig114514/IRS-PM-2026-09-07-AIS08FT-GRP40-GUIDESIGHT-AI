@@ -105,6 +105,12 @@ node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-video-graph
 重叠元数据声明 `stage_timing_model=overlapping_cpu_depth`；深度调用墙钟包含关联时间，不能相加阶段。
 默认服务不启用此候选；性能与真值质量须分别通过。
 
+在重叠实验上显式添加 `--host-fusion`，浏览器工具选择 `tools.resident_host_fusion_asgi`。
+该候选将同帧有界 FP32 CUDA 深度平面一次复制到主机，用精确分区代替逐目标 GPU 归约，
+保留原有限正值过滤、奇偶中位数运算顺序和目标字段组装。复制与归约均计入服务及融合耗时。
+它只接受原 FP32 CUDA 输入，无目标时不复制，不保留跨帧平面；临时钩子在成功或异常时恢复。
+默认入口不导入该候选。完整视频逐值对照、真实浏览器性能与真值质量分别验收。
+
 完整文字栅格缓存仅通过离线 `benchmark_inference --label-cache` 与 `validate_label_cache --video ...` 实验。移动视频显示命中不足且绘制变慢，因此默认服务未启用；工具及原始/候选/原始证据入口见推理优化计划。
 
 `benchmark_video --video ... --output ...` 在独立进程处理完整视频；`--depth-graph` 显式选择候选，`--trace-steady` 记录 SDK 和跟踪阶段，`--reference` 比较原始对照。该离线入口使用解码器源时间戳驱动跟踪，并在预测计时外校验完整深度图；不改变 resident-v1 的工作线程时间契约。操作顺序和计时边界见推理优化计划。
@@ -112,6 +118,10 @@ node tools/benchmark_resident_browser.mjs benchmarks/NEW_RUN/browser-video-graph
 离线重叠实验使用 `--depth-graph --tracking-overlap`；另加 `--trace-overlap` 才记录设备完成查询和 CUDA 事件。
 设备观测与无观测速度对照分开，重叠不能同时使用互斥阶段的 `--trace-steady`。
 两种诊断都保留首帧、全部源帧和失败结果，不自动调整采样或性能门槛。
+
+`--trace-overlap-cpu` 为重叠候选记录预处理、ROI、文字绘制和 JPEG 等嵌套主机区间，
+保留 SDK 原有同步，不替换 Graph 回调身份；它与设备观测互斥，需配套无诊断前后对照。
+离线 `--host-fusion` 同样必须显式提供 `--depth-graph --tracking-overlap`，与原重叠管线逐帧比较。
 
 服务输入严格限定为 JPEG。解码直接调用固定 Pillow 版本的 JPEG 工厂，保留原 RGB 像素转换与尺寸限制，
 避免模型 SDK 对通用 `Image.open` 的全局补丁触发其它格式插件探测或安装。
