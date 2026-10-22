@@ -37,7 +37,8 @@ class TransformTests(SimpleTestCase):
         Outputs: RGB or safe error; Logic: exercise actual decoder; Constraints: no inference.
         """
         self.assertEqual(detector.decode_frame(jpeg((640, 320))).size, (640, 320))
-        for payload in (jpeg((641, 20)), jpeg(format="PNG"), jpeg()[:100], b"bad"):
+        self.assertEqual(detector.decode_frame(jpeg((1280, 720))).size, (1280, 720))
+        for payload in (jpeg((1281, 20)), jpeg(format="PNG"), jpeg()[:100], b"bad"):
             with self.subTest(length=len(payload)), self.assertRaises(detector.DetectionError):
                 detector.decode_frame(payload)
         for payload in (b"", b"x" * (detector.MAX_FRAME_BYTES + 1)):
@@ -112,3 +113,71 @@ class TransformTests(SimpleTestCase):
                 detector.decode_boxes(rows, (120, 80), (1, 0, 0), NAMES)
         with self.assertRaises(detector.DetectionError):
             detector.decode_boxes(np.zeros((1, 6)), (120, 80), (1, 0, 0), NAMES)
+
+    def test_class_threshold(self):
+        """Functionality: Per-class confidence. Inputs: traffic light 0.15 and other 0.15 rows.
+        Outputs: only the traffic light survives; Logic: CLASS_CONF vs 0.25 default.
+        Constraints: synthetic rows, no model.
+        """
+        names = list(NAMES)
+        names[9] = "traffic light"
+        rows = np.zeros((1, 300, 6), dtype=np.float32)
+        rows[0, 0] = [10, 10, 20, 40, 0.15, 9]
+        rows[0, 1] = [30, 10, 60, 40, 0.15, 0]
+        boxes = detector.decode_boxes(rows, (640, 640), (1, 0, 0), names)
+        self.assertEqual([box["label"] for box in boxes], ["traffic light"])
+
+    def test_roi_and_front_light(self):
+        """Functionality: ROI geometry and front-light choice. Inputs: 1000x600 image, boxes.
+        Outputs: crop 400x330 at (300,0); the vertical light nearest centre is flagged.
+        Constraints: wide boxes are never chosen; nothing is removed.
+        """
+        self.assertIsNone(detector.roi_crop(Image.new("RGB", (2, 2))))
+        crop, x_offset, y_offset = detector.roi_crop(Image.new("RGB", (1000, 600)))
+        self.assertEqual((crop.size, x_offset, y_offset), ((400, 330), 300, 0))
+        light = lambda x1, x2, h: {"label": "traffic light", "xyxy": [x1, 0, x2, h]}  # noqa: E731
+        boxes = [light(100, 110, 30), light(480, 490, 30), light(495, 600, 30),
+                 {"label": "car", "xyxy": [0, 0, 5, 5]}]
+        marked = detector.mark_front_light(boxes, (1000, 600))
+        self.assertEqual([box.get("front_light") for box in marked], [False, True, False, None])
+        self.assertEqual(detector.mark_front_light([], (10, 10)), [])
+
+    def test_merge_boxes(self):
+        """Functionality: Class-aware NMS merge. Inputs: duplicate light, ROI car, ROI light.
+        Outputs: higher-score duplicate kept, ROI non-lights ignored; Constraints: needs torch.
+        """
+        try:
+            import torchvision  # noqa: F401
+        except ImportError:
+            self.skipTest("torchvision is only installed on inference hosts")
+        light = lambda box, score: {"xyxy": box, "score": score, "class_id": 9,  # noqa: E731
+                                    "label": "traffic light"}
+        car = {"xyxy": [0, 0, 50, 50], "score": 0.9, "class_id": 2, "label": "car"}
+        merged = detector.merge_boxes([car, light([600, 100, 620, 160], 0.2)],
+                                      [light([601, 101, 621, 161], 0.5), car])
+        self.assertEqual([(box["label"], box["score"]) for box in merged],
+                         [("car", 0.9), ("traffic light", 0.5)])
+
+    def test_merge_keeps_overlapping_persons(self):
+        """Functionality: NMS is traffic-light only. Inputs: two IoU>0.5 persons plus ROI light.
+        Outputs: both persons kept first in original order; Constraints: needs torchvision.
+        """
+        try:
+            import torchvision  # noqa: F401
+        except ImportError:
+            self.skipTest("torchvision is only installed on inference hosts")
+        person = lambda score: {"xyxy": [10, 10, 60, 120], "score": score,  # noqa: E731
+                                "class_id": 0, "label": "person"}
+        light = {"xyxy": [300, 0, 310, 30], "score": 0.3, "class_id": 9, "label": "traffic light"}
+        merged = detector.merge_boxes([person(0.5), person(0.9)], [light])
+        self.assertEqual([(box["label"], box["score"]) for box in merged],
+                         [("person", 0.5), ("person", 0.9), ("traffic light", 0.3)])
+
+    def test_front_light_tie_and_empty(self):
+        """Functionality: Tie and empty handling. Inputs: two lights equidistant from centre.
+        Outputs: exactly one flagged (first); empty list stays empty. Constraints: no deletion.
+        """
+        light = lambda x1, x2: {"label": "traffic light", "xyxy": [x1, 0, x2, 30]}  # noqa: E731
+        marked = detector.mark_front_light([light(490, 500), light(500, 510)], (1000, 600))
+        self.assertEqual([box["front_light"] for box in marked], [True, False])
+        self.assertEqual(detector.mark_front_light([], (1000, 600)), [])

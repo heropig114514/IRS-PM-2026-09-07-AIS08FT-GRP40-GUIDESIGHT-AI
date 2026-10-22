@@ -2,9 +2,12 @@
 Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels.
 Related Modules: realtime.detector/depth/tracking/risk; zerogpu.live_worker; realtime.protocol.
 Declaration Index: DetectionError; DetectionError.__init__; decode_frame; letterbox; decode_boxes;
-label_font; annotate.
-Variable Index: INPUT_EDGE —640; CONFIDENCE_THRESHOLD —0.25; JPEG_QUALITY —80;
-MAX_FRAME_BYTES —1MiB. No CPU model, allocator, singleton or hidden fallback is implemented here.
+roi_crop; merge_boxes; mark_front_light; label_font; annotate.
+Variable Index: INPUT_EDGE —640 model tensor edge; MAX_INPUT_EDGE —1280 accepted frame edge;
+CONFIDENCE_THRESHOLD —0.25 default; CLASS_CONF —per-class override (traffic light 0.12);
+ROI_X_FRACTION/ROI_Y_FRACTION —centre-top crop for the extra traffic-light pass;
+MERGE_IOU —0.5; TRAFFIC_LIGHT —class label; JPEG_QUALITY —80; MAX_FRAME_BYTES —1MiB.
+No CPU model, allocator, singleton or hidden fallback is implemented here.
 ttc/ttc_label — concise high/critical annotation text; no scoring rules live in rendering.
 """
 
@@ -13,7 +16,14 @@ import math
 from functools import lru_cache
 
 INPUT_EDGE = 640
+MAX_INPUT_EDGE = 1280
 CONFIDENCE_THRESHOLD = 0.25
+CLASS_CONF = {"traffic light": 0.12}
+TRAFFIC_LIGHT = "traffic light"
+# Extra ROI pass: horizontal middle 40% (0.3-0.7 of width), vertical top 55% (0-0.55 of height).
+ROI_X_FRACTION = (0.3, 0.7)
+ROI_Y_FRACTION = (0.0, 0.55)
+MERGE_IOU = 0.5
 JPEG_QUALITY = 80
 MAX_FRAME_BYTES = 1048576
 
@@ -36,7 +46,8 @@ def decode_frame(payload):
     """Functionality: Decode only a bounded, complete camera JPEG into RGB.
     Inputs: payload bytes; Outputs: independent PIL RGB image or 400/413 DetectionError.
     Logic: check byte size, JPEG format and dimensions before decompression, then force loading.
-    Constraints: maximum edge 640 matches existing capture; no EXIF location parsing or disk writes.
+    Constraints: maximum edge MAX_INPUT_EDGE (1280; the full-frame pass still downsizes to 640);
+    no EXIF location parsing or disk writes.
     """
     from PIL import Image, UnidentifiedImageError
 
@@ -44,8 +55,9 @@ def decode_frame(payload):
         raise DetectionError("frame_size", "图像为空或超过 1 MiB。", 413)
     try:
         with Image.open(io.BytesIO(payload)) as image:
-            if image.format != "JPEG" or not 0 < min(image.size) <= max(image.size) <= INPUT_EDGE:
-                raise DetectionError("invalid_frame", "仅接受最大边不超过 640 的 JPEG。", 400)
+            longest = max(image.size)
+            if image.format != "JPEG" or not 0 < min(image.size) <= longest <= MAX_INPUT_EDGE:
+                raise DetectionError("invalid_frame", "仅接受最大边不超过 1280 的 JPEG。", 400)
             image.load()
             return image.convert("RGB")
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
@@ -85,7 +97,8 @@ def decode_boxes(predictions, image_size, transform, names):
     """Functionality: Convert verified e2e rows to clipped original-image detections.
     Inputs: predictions [1,300,6], image_size (width,height), transform scale/left/top, names.
     Outputs: list of xyxy/score/class_id/label dictionaries; invalid model output raises 502.
-    Logic: validate all numbers/classes, filter score below 0.25, invert letterbox and clip padding.
+    Logic: validate all numbers/classes, filter score below the per-class threshold
+    (CLASS_CONF, default 0.25), invert letterbox and clip padding.
     Constraints: no external NMS; an empty list is a valid no-detection result.
     """
     import numpy as np
@@ -100,7 +113,9 @@ def decode_boxes(predictions, image_size, transform, names):
         (classes < 0) | (classes >= len(names)) | (classes != np.trunc(classes))
     ):
         raise DetectionError("invalid_prediction", "模型类别或置信度无效。", 502)
-    selected = rows[scores >= CONFIDENCE_THRESHOLD]
+    thresholds = np.asarray([CLASS_CONF.get(name, CONFIDENCE_THRESHOLD) for name in names],
+                            dtype=np.float32)
+    selected = rows[scores >= thresholds[classes.astype(np.int64)]]
     # Float64 matches the previous Python-float inverse, including clipping/order.
     restored = selected[:, :4].astype(np.float64)
     restored -= [left, top, left, top]
@@ -120,6 +135,61 @@ def decode_boxes(predictions, image_size, transform, names):
             }
         )
     return boxes
+
+
+def roi_crop(image):
+    """Functionality: Cut the centre-top region where the pedestrian signal ahead appears.
+    Inputs: RGB image. Outputs: (crop, x_offset, y_offset) in image pixels.
+    Logic: ROI_X_FRACTION/ROI_Y_FRACTION of width/height, rounded; crop stays native resolution.
+    Constraints: a degenerate (empty) crop returns None so the caller skips the ROI pass.
+    """
+    x1, x2 = (round(image.width * value) for value in ROI_X_FRACTION)
+    y1, y2 = (round(image.height * value) for value in ROI_Y_FRACTION)
+    if x2 <= x1 or y2 <= y1:
+        return None
+    return image.crop((x1, y1, x2, y2)), x1, y1
+
+
+def merge_boxes(full_boxes, roi_boxes, iou=MERGE_IOU):
+    """Functionality: Merge full-frame boxes with ROI traffic-light boxes.
+    Inputs: full-frame boxes and ROI boxes (already in full-frame coordinates), NMS IoU.
+    Outputs: new list; only traffic lights from roi_boxes are admitted.
+    Logic: NMS runs on traffic lights only; other full-frame boxes are returned untouched in
+    order, followed by the surviving lights (descending score).
+    Constraints: needs torch/torchvision (GPU host); empty ROI returns full_boxes unchanged.
+    """
+    roi_lights = [box for box in roi_boxes if box["label"] == TRAFFIC_LIGHT]
+    if not roi_lights:
+        return full_boxes
+    import torch
+    from torchvision.ops import batched_nms
+
+    others = [box for box in full_boxes if box["label"] != TRAFFIC_LIGHT]
+    lights = [*(box for box in full_boxes if box["label"] == TRAFFIC_LIGHT), *roi_lights]
+    kept = batched_nms(
+        torch.tensor([box["xyxy"] for box in lights], dtype=torch.float32),
+        torch.tensor([box["score"] for box in lights], dtype=torch.float32),
+        torch.tensor([box["class_id"] for box in lights], dtype=torch.int64), iou)
+    return [*others, *(lights[index] for index in kept.tolist())]
+
+
+def mark_front_light(boxes, image_size):
+    """Functionality: Flag the pedestrian signal straight ahead among traffic-light boxes.
+    Inputs: boxes (xyxy in frame pixels), (width,height). Outputs: new list; traffic lights get
+    front_light True for the chosen one and False for the rest; other classes are untouched.
+    Logic: candidates are vertical (h > w); choose the smallest |box centre x - frame centre x|.
+    Constraints: nothing is deleted; with no vertical candidate every light is False.
+    """
+    def vertical(box):
+        x1, y1, x2, y2 = box["xyxy"]
+        return box["label"] == TRAFFIC_LIGHT and (y2 - y1) > (x2 - x1)
+
+    candidates = [index for index, box in enumerate(boxes) if vertical(box)]
+    chosen = min(candidates, key=lambda index: abs(
+        (boxes[index]["xyxy"][0] + boxes[index]["xyxy"][2]) / 2 - image_size[0] / 2),
+        default=None)
+    return [{**box, "front_light": index == chosen} if box["label"] == TRAFFIC_LIGHT else box
+            for index, box in enumerate(boxes)]
 
 
 @lru_cache(maxsize=1)

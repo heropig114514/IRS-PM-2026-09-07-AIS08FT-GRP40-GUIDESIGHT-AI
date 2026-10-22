@@ -34,6 +34,8 @@ compensation, smooths distance by track ID and reports approaching/receding/stat
 risk rules return score, level, alert request and priority; see [RISK.md](RISK.md) for formulas/defaults.
 The algorithm emits risk fields only. After explicit user activation, local Guidance consumes them
 and schedules shared browser speech/vibration without changing scoring rules.
+Per-class traffic-light threshold, the centre ROI pass, front-light marking, and the pedestrian
+light-colour classifier study (results and integration contract) are in [TRAFFIC-LIGHT.md](TRAFFIC-LIGHT.md).
 
 Qwen2.5-VL scene description (`POST /scene/describe/`) is documented in [VLM.md](VLM.md). Local model
 tests live in [model_tests](model_tests/README.md), including entry points, samples and output conventions.
