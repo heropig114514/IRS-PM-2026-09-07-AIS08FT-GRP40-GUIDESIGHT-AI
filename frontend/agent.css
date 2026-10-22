@@ -1,0 +1,26 @@
+/* Responsibilities: Responsive assistant panel integrated with the PRS visual system.
+ * Implementation: Compact dialogue, touch controls and bounded activity areas.
+ * Related Modules: agent-client.js, camera.css.
+ * Declaration Index: None.
+ * Variable Index: None. */
+.agent-panel { background: #fff; border: 1px solid #d9e4e9; border-radius: 18px; padding: 24px; margin-bottom: 24px; color: #183047; }
+.agent-heading { display: flex; align-items: center; gap: 12px; }
+.agent-heading h2 { margin: 0; font-size: 22px; }
+.agent-badge { border-radius: 20px; padding: 3px 9px; font-size: 11px; background: #e5f4f0; color: #147d82; }
+.agent-panel p { line-height: 1.65; }
+#agent-status { color: #147d82; font-weight: 600; }
+.agent-dialogue { max-height: 300px; overflow: auto; overflow-wrap: anywhere; }
+.agent-message { padding: 12px 15px; background: #f3f7fa; border-radius: 12px; white-space: pre-wrap; }
+.agent-message.you { background: #edf6f3; }
+.agent-message strong { display: block; font-size: 12px; margin-bottom: 4px; }
+#agent-form label { display: block; font-size: 13px; margin: 12px 0 6px; }
+#agent-input { box-sizing: border-box; width: 100%; resize: vertical; min-height: 70px; border: 1px solid #c3d3db; border-radius: 10px; padding: 12px; color: #183047; background: #fff; font: inherit; }
+.agent-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.agent-actions button { border: 1px solid #c3d3db; border-radius: 10px; padding: 12px 15px; min-height: 44px; font: inherit; background: #fff; color: #183047; cursor: pointer; }
+#agent-record, #agent-send { background: #147d82; color: #fff; border-color: #147d82; }
+.agent-actions button:disabled { opacity: .45; cursor: default; }
+.agent-panel details { font-size: 13px; margin-top: 15px; }
+.agent-panel summary { cursor: pointer; }
+#agent-activity { max-height: 140px; overflow: auto; line-height: 1.8; }
+.agent-privacy { font-size: 12px; color: #607483; margin-bottom: 0; }
+@media (max-width: 480px) { .agent-panel { padding: 16px; } .agent-actions button { flex: 1 1 42%; } }

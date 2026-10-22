@@ -1,21 +1,23 @@
-"""Responsibilities: 验证 WebSocket 原样回传、控制契约、来源及容量边界。
-Implementation: ApplicationCommunicator 执行真实 ASGI 处理器，不访问网络或摄像头。
-Related Modules: core.echo, core.camera, frontend/i18n.js；真实公网 TLS/WSS 另由联调验证。
+"""Responsibilities: Verify unchanged WebSocket echo bytes, capacity, origin admission and asset
+boundaries.
+Implementation: Run real ASGI handlers with ApplicationCommunicator; no browser or camera is
+required.
+Related Modules: core.echo, core.camera, frontend/i18n.js; public TLS/WSS is validated separately.
 Declaration Index:
-- EchoTests — 协议与释放测试。
-- EchoTests.open_socket — 创建带明确来源的 ASGI 测试会话。
-- EchoTests.test_binary_is_unchanged — 二进制逐字节一致及断开释放。
-- EchoTests.test_ping_id_is_preserved — 应用级 ping/pong id 一致。
-- EchoTests.test_origin_and_host_rejected — 拒绝不同来源或主机。
-- EchoTests.test_invalid_control_rejected — 拒绝无效控制消息。
-- EchoTests.test_frame_limit — 拒绝大于上限及空消息。
-- EchoTests.test_capacity_and_release — 第五个连接拒绝，已占连接在结束后释放。
-- CameraPageTests — HTTP 页面及文件白名单。
-- CameraPageTests.test_page_and_script — 页面、摄像头、震动/语音及语言模块可获取且权限头明确。
-- CameraPageTests.test_retired_routes_and_modes — 两模式和旧HTTP拒绝。
-- CameraPageTests.test_retired_websockets — 旧WS拒绝。
-- CameraPageTests.test_unknown_asset_is_not_exposed — 未列入资源的文件无法读取。
-Variable Index: None。
+- EchoTests — protocol and resource-release tests.
+- EchoTests.open_socket — create an ASGI session with explicit origins.
+- EchoTests.test_binary_is_unchanged — byte equality and disconnect cleanup.
+- EchoTests.test_ping_id_is_preserved — application ping/pong ID equality.
+- EchoTests.test_origin_and_host_rejected — reject invalid origins/hosts.
+- EchoTests.test_invalid_control_rejected — reject invalid control messages.
+- EchoTests.test_frame_limit — reject empty and oversized frames.
+- EchoTests.test_capacity_and_release — reject the fifth connection and release admitted sessions.
+- CameraPageTests — HTTP page and asset allowlist tests.
+- CameraPageTests.test_page_and_script — page/modules and same-origin microphone policy.
+- CameraPageTests.test_retired_routes_and_modes — reject retired modes and HTTP routes.
+- CameraPageTests.test_retired_websockets — reject retired WebSocket routes.
+- CameraPageTests.test_unknown_asset_is_not_exposed — reject unlisted files.
+Variable Index: None.
 """
 
 import json
@@ -28,17 +30,18 @@ from . import echo
 
 
 class EchoTests(SimpleTestCase):
-    """Functionality: 检查 ASGI 回传协议及进程内容量状态。
-    Logic: 使用真实处理器和内存 ASGI 队列；断开后等待处理器结束。
-    Constraints: 仅单 worker，无实际网络或媒体设备。
+    """Functionality: Check ASGI echo contracts and process-local connection state.
+    Logic: Run the actual handler in an in-memory ASGI queue and await handler cleanup after
+    disconnect.
+    Constraints: One worker only; no real network or media devices.
     """
 
     async def open_socket(self, origin="http://127.0.0.1:8766", host="127.0.0.1:8766"):
-        """Functionality: 准备测试会话并返回首个服务事件。
-        Inputs: self、明确 origin 和 host；不替换服务器逻辑。
-        Outputs: communicator 与首个响应消息；调用者必须结束已接受连接。
-        Logic: 构造最小 websocket scope，然后发送 connect。
-        Constraints: 假队列验证协议，不代表浏览器握手已成功。
+        """Functionality: Prepare a test session and receive its first connection event.
+        Inputs: self, explicit origin and host; no admission-logic replacement.
+        Outputs: Communicator and first response; callers must disconnect accepted sessions.
+        Logic: Build a minimal WebSocket scope, then send connect.
+        Constraints: The queue verifies protocol behavior, not successful real-network connectivity.
         """
         communicator = ApplicationCommunicator(
             echo.echo_socket,
@@ -52,11 +55,11 @@ class EchoTests(SimpleTestCase):
         return communicator, await communicator.receive_output()
 
     async def test_binary_is_unchanged(self):
-        """Functionality: 验证含所有字节值的内容完全一致。
-        Inputs: 内存会话和合成二进制，不模拟 send/receive 处理器。
-        Outputs: 断言内容、类型和连接计数；结束会话。
-        Logic: 回传后主动断开并等待 finally 完成。
-        Constraints: 数据不是真实摄像头 JPEG，不验证图像解码。
+        """Functionality: Verify exact binary length and byte preservation.
+        Inputs: In-memory session and synthetic bytes; no send/receive handler mocks.
+        Outputs: Data/type/connection-count assertions and a closed session.
+        Logic: Echo, disconnect explicitly, then wait for final cleanup.
+        Constraints: Synthetic data is not a real camera JPEG; decoding is not tested.
         """
         socket, accepted = await self.open_socket()
         self.assertEqual(accepted["type"], "websocket.accept")
@@ -70,11 +73,11 @@ class EchoTests(SimpleTestCase):
         self.assertEqual(echo.active_connections, 0)
 
     async def test_ping_id_is_preserved(self):
-        """Functionality: 验证 pong 保留应用请求标识。
-        Inputs: 合成 ping JSON 和真实 ASGI 处理器。
-        Outputs: 匹配 pong；主动断开。
-        Logic: 解码响应并核对完整字典。
-        Constraints: 不测量真实网络延迟。
+        """Functionality: Verify pong preserves the application request identifier.
+        Inputs: Synthetic ping JSON and the real ASGI handler.
+        Outputs: Matching pong followed by normal disconnect.
+        Logic: Compare the complete response dictionary.
+        Constraints: Does not measure real-network latency.
         """
         socket, _ = await self.open_socket()
         await socket.send_input(
@@ -86,11 +89,11 @@ class EchoTests(SimpleTestCase):
         await socket.wait()
 
     async def test_origin_and_host_rejected(self):
-        """Functionality: 验证来源及 Host 双重准入边界。
-        Inputs: 错误 Origin 或 Host；无 mock。
-        Outputs: 1008 关闭，连接计数保持 0。
-        Logic: 未准入会话直接结束，不增加容量占用。
-        Constraints: 同源验证不等于用户身份认证。
+        """Functionality: Verify both Origin and Host admission boundaries.
+        Inputs: Invalid Origin/Host combinations without mocks.
+        Outputs: Close code 1008 and zero admitted connections.
+        Logic: Rejected sessions end directly without allocating connection capacity.
+        Constraints: Same-origin validation is not user authentication.
         """
         for origin, host in [
             ("https://other.example", "127.0.0.1:8766"),
@@ -102,11 +105,11 @@ class EchoTests(SimpleTestCase):
         self.assertEqual(echo.active_connections, 0)
 
     async def test_invalid_control_rejected(self):
-        """Functionality: 无效 JSON 控制消息必须失败。
-        Inputs: 三种无效消息；真实处理器，无 mock。
-        Outputs: 每条会话均以 1008 结束。
-        Logic: 覆盖 JSON 解析、对象类型、id 类型边界。
-        Constraints: 不重试无效消息。
+        """Functionality: Require explicit failure for invalid JSON/control messages.
+        Inputs: Three invalid messages and the actual handler without mocks.
+        Outputs: Each session closes with 1008 and is cleaned up.
+        Logic: Cover JSON parsing, message type and ID type boundaries.
+        Constraints: Invalid messages are not corrected.
         """
         for text in ["not-json", "[]", '{"type":"ping","id":3}']:
             socket, _ = await self.open_socket()
@@ -115,11 +118,11 @@ class EchoTests(SimpleTestCase):
             await socket.wait()
 
     async def test_frame_limit(self):
-        """Functionality: 拒绝空帧与超过 1 MiB 的帧。
-        Inputs: 两个合成 bytes；保留实际 MAX_FRAME_BYTES。
-        Outputs: 1009 关闭并释放连接。
-        Logic: 直接验证处理器边界，而非修改阈值以通过测试。
-        Constraints: ASGI 队列不验证 Uvicorn 的传输层大小限制。
+        """Functionality: Reject empty frames and frames exceeding 1 MiB.
+        Inputs: Two synthetic byte sequences and the actual MAX_FRAME_BYTES limit.
+        Outputs: Close code 1009 and released connections.
+        Logic: Test the handler boundary directly without changing its threshold.
+        Constraints: In-memory ASGI does not validate Uvicorn transport-size limits.
         """
         for payload in [b"", b"x" * (echo.MAX_FRAME_BYTES + 1)]:
             socket, _ = await self.open_socket()
@@ -129,11 +132,12 @@ class EchoTests(SimpleTestCase):
         self.assertEqual(echo.active_connections, 0)
 
     async def test_capacity_and_release(self):
-        """Functionality: 验证实际 4 连接上限及结束后的资源释放。
-        Inputs: 并存的内存会话，未修改 MAX_CONNECTIONS。
-        Outputs: 第五条 1013，最终计数为 0。
-        Logic: finally 结束全部已接纳会话，避免测试污染进程状态。
-        Constraints: 只适用单 worker，公网负载另受 systemd 限制。
+        """Functionality: Verify the real four-connection limit and cleanup on rejection/disconnect.
+        Inputs: Five in-memory sessions with MAX_CONNECTIONS unchanged.
+        Outputs: The fifth closes with 1013; final occupancy is zero.
+        Logic: Close all established sessions in finally to avoid leaking global state between
+        assertions.
+        Constraints: Single-worker in-memory capacity only; no network/systemd-limit coverage.
         """
         sockets = []
         try:
@@ -152,17 +156,17 @@ class EchoTests(SimpleTestCase):
 
 
 class CameraPageTests(SimpleTestCase):
-    """Functionality: 验证公开页面与资源访问范围。
-    Logic: Django 测试客户端读取实际前端文件，未替换文件系统。
-    Constraints: 不执行浏览器脚本，也不申请摄像头权限。
+    """Functionality: Verify the diagnostic page and asset access scope.
+    Logic: Use Django's test client and actual frontend files without mocking the filesystem.
+    Constraints: Do not execute browser scripts or request camera permission.
     """
 
     def test_page_and_script(self):
-        """Functionality: 页面、摄像头、震动/语音输出及语言 JavaScript 文件具有正确响应。
-        Inputs: self.client 与仓库前端文件。
-        Outputs: 状态、摄像头权限头和 MIME 断言；关闭响应。
-        Logic: 读取普通响应正文，文件由视图读取时自动关闭。
-        Constraints: 不代表真实手机页面布局已验证。
+        """Functionality: Verify the page and camera/voice/localization JavaScript responses.
+        Inputs: self.client and repository frontend files.
+        Outputs: Status, same-origin camera/microphone policy and MIME assertions; closed responses.
+        Logic: Read response bodies; the views close file handles while reading.
+        Constraints: Does not replace phone layout or permission validation.
         """
         for path, mime in [
             ("/live/", "text/html"),
@@ -176,7 +180,7 @@ class CameraPageTests(SimpleTestCase):
             try:
                 self.assertEqual(response.status_code, 200)
                 self.assertIn(mime, response["Content-Type"])
-                self.assertEqual(response["Permissions-Policy"], "camera=(self), microphone=()")
+                self.assertEqual(response["Permissions-Policy"], "camera=(self), microphone=(self)")
                 self.assertTrue(response.content)
             finally:
                 response.close()
@@ -230,11 +234,11 @@ class CameraPageTests(SimpleTestCase):
             await socket.wait()
 
     def test_unknown_asset_is_not_exposed(self):
-        """Functionality: 拒绝白名单外的文件。
-        Inputs: README.md 和 .env 资源路径；无 mock。
-        Outputs: 两个 404；无文件写入。
-        Logic: 在实际视图路径验证拒绝，不仅检查映射配置。
-        Constraints: 只验证当前资源路由。
+        """Functionality: Reject files outside the allowlist.
+        Inputs: README.md and .env asset paths without mocks.
+        Outputs: HTTP 404 for both; no filesystem writes.
+        Logic: Exercise real view routes rather than testing only the mapping.
+        Constraints: Covers only the current asset route.
         """
         for path in ["/assets/README.md", "/assets/.env"]:
             self.assertEqual(self.client.get(path).status_code, 404)

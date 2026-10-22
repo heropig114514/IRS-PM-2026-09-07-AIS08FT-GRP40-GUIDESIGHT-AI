@@ -1,9 +1,9 @@
-/* Responsibilities: 浏览器定位、表单坐标和同源 ORS 路线请求契约。
- * Implementation: 显式验证与超时；不重试、不替代位置；key 不进入浏览器。
- * Related Modules: maps-page.js, tests/maps-client.test.mjs, core.maps/services。
- * Declaration Index: getDevicePosition — 设备定位；parseCoordinateInputs — 输入校验；
- * validateRoute — 返回契约；requestWalkingRoute — 路线调用；turnLabel — 转向类型中文说明。
- * Variable Index: TURN_LABELS — ORS 0–13 官方指令类型；超时默认值位于函数参数。
+/* Responsibilities: Define browser location, form-coordinate and same-origin ORS route contracts.
+ * Implementation: Explicit validation/timeouts; no retries, substitute positions or browser-side keys.
+ * Related Modules: maps-page.js, tests/maps-client.test.mjs, core.maps/services.
+ * Declaration Index: getDevicePosition — locate device; parseCoordinateInputs — validate input;
+ * validateRoute — response contract; requestWalkingRoute — route request; turnLabel — Chinese turn labels.
+ * Variable Index: TURN_LABELS — official ORS instruction types 0–13; timeout defaults are function parameters.
  */
 const TURN_LABELS = [
   "左转",
@@ -22,10 +22,10 @@ const TURN_LABELS = [
   "靠右",
 ];
 
-/* Functionality: 获取当前设备位置，不上传或保存。
- * Inputs: navigator 默认浏览器；Outputs: GeolocationPosition Promise 和权限请求。
- * Logic: 一次高精度定位，10 秒超时、零缓存；浏览器错误明确呈现。
- * Constraints: 只由用户点击调用；不推断 IP 位置或生成示例坐标。
+/* Functionality: Obtain device location without uploading or persisting it.
+ * Inputs: navigator, defaulting to the browser; Outputs: GeolocationPosition Promise and permission request.
+ * Logic: One high-accuracy fix with a 10-second timeout and zero cache; expose browser errors explicitly.
+ * Constraints: Require a user click or explicit agent location request; no IP inference or sample coordinates.
  */
 export function getDevicePosition(navigator = globalThis.navigator) {
   if (!navigator.geolocation)
@@ -48,10 +48,10 @@ export function getDevicePosition(navigator = globalThis.navigator) {
   });
 }
 
-/* Functionality: 将两个表单值转为 [经度,纬度]。
- * Inputs: longitude/latitude 文本或数字；Outputs: 两个有限数值，错误抛 Error。
- * Logic: 拒绝空值、bool、非法类型、非有限和越界；保持经度在前。
- * Constraints: 不补默认值，不将缺失位置解释为零点。
+/* Functionality: Convert two form values into [longitude,latitude].
+ * Inputs: longitude/latitude text or numbers; Outputs: Two finite values, or an Error.
+ * Logic: Reject empty, boolean, invalid-type, nonfinite and out-of-range values; longitude comes first.
+ * Constraints: Supply no defaults and never interpret missing position as zero.
  */
 export function parseCoordinateInputs(longitude, latitude) {
   const values = [longitude, latitude];
@@ -67,10 +67,10 @@ export function parseCoordinateInputs(longitude, latitude) {
   return values.map(Number);
 }
 
-/* Functionality: 验证后端路线字段，阻止错误内容进入地图和列表。
- * Inputs: route JSON；Outputs: 原 route 或 Error。
- * Logic: 固定 provider/profile、LineString、有限数值和步骤类型/索引；不更改路线。
- * Constraints: 服务返回正确不代表路线适合视障安全通行。
+/* Functionality: Validate backend route fields before rendering maps/lists.
+ * Inputs: route JSON; Outputs: Original route or Error.
+ * Logic: Check fixed provider/profile, LineString, finite values and step types/indexes without altering routes.
+ * Constraints: A valid response does not establish safe travel for visually impaired pedestrians.
  */
 export function validateRoute(route) {
   if (
@@ -116,10 +116,10 @@ export function validateRoute(route) {
   return route;
 }
 
-/* Functionality: 请求后端 ORS 步行路线，超时或 HTTP 失败明确终止。
- * Inputs: start/end 数字坐标；fetchFn、url、timeoutMs 可注入；Outputs: 规范路线 Promise。
- * Logic: POST JSON，无 Cookie；25 秒 AbortController 边界；安全错误码与请求标识支持诊断。
- * Constraints: 只在用户点击时调用；不自动重试；真实位置会发送 PRS 和 ORS，key 留在后端。
+/* Functionality: Request an ORS walking route from the backend, failing explicitly on timeout/HTTP errors.
+ * Inputs: Numeric start/end coordinates; injectable fetchFn, url and timeoutMs; Outputs: Normalized route Promise.
+ * Logic: POST JSON without cookies; 25-second AbortController boundary; safe error codes/request IDs aid diagnosis.
+ * Constraints: Require explicit user/agent planning requests; no retries; PRS/ORS receive coordinates, keys stay server-side.
  */
 export async function requestWalkingRoute(
   start,
@@ -165,9 +165,9 @@ export async function requestWalkingRoute(
   }
 }
 
-/* Functionality: 给出 ORS 指令类型的中文名称。
- * Inputs: type 整数 0–13；Outputs: 中文标签，非法类型抛 Error。
- * Logic: 固定映射不解析或改写街道名称；Constraints: 原始英文 instruction 单独保留。
+/* Functionality: Return the Chinese label for an ORS instruction type.
+ * Inputs: Integer type 0–13; Outputs: Chinese label; invalid types throw Error.
+ * Logic: Fixed mapping never parses or rewrites street names; Constraints: Preserve original English instructions separately.
  */
 export function turnLabel(type) {
   if (!Number.isInteger(type) || type < 0 || type >= TURN_LABELS.length)

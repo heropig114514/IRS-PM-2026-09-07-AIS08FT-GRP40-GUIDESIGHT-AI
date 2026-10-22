@@ -1,0 +1,76 @@
+{
+  "status": "verified_for_git_delivery",
+  "scope": "English development prose for voice agent Skills, related backend/frontend integration, configuration comments and developer documentation; existing bilingual UI/utterance fixtures retained.",
+  "base_commit": "7ff49f967748129074a471a16d3ee53acfb9f98f",
+  "source_audit": "source-audit.json",
+  "backend_tests": {
+    "total": 367,
+    "passed": 359,
+    "skipped": 8,
+    "local_log": "backend-tests.log"
+  },
+  "final_agent_tests": {
+    "passed": 49,
+    "local_log": "agent-tests-final.log"
+  },
+  "frontend_tests": {
+    "passed": 366,
+    "local_log": "frontend-tests.log"
+  },
+  "django_check": "passed",
+  "migration_check": "no changes",
+  "pip_check": "passed",
+  "ruff_selected_files": "passed",
+  "ruff_full": {
+    "status": "failed on unchanged pre-existing notebook",
+    "file": "backend/benchmarks/2026-10-04/kaggle-v11/gpu-rebenchmark.ipynb",
+    "codes": [
+      "I001",
+      "E501"
+    ],
+    "local_log": "ruff-full-final.log"
+  },
+  "docs_review": {
+    "project_checker_present": false,
+    "manual_comments_and_indexes": "reviewed",
+    "atomic_delivery": "Implementation, comments, indexes, tests and docs are included in the enclosing commit."
+  },
+  "live_browser": {
+    "report": "browser-local-final.json",
+    "complete": true,
+    "checks": [
+      "non_action_route_system",
+      "non_action_route_general",
+      "non_action_route_unsupported",
+      "non_action_route_clarify",
+      "missing_slot_hits_navigation_then_clarifies",
+      "followup_inherits_navigation",
+      "selected_store_real_route_navigation",
+      "status_and_stop_do_not_restart",
+      "phonetic_candidates_require_confirmation",
+      "mall_name_does_not_confirm_adjacent_bridge",
+      "explicitly_accepted_provider_bridge_real_navigation",
+      "combined_request_loads_mapped_skills",
+      "output_skill_changes_existing_language_control"
+    ],
+    "turns": 14,
+    "errors": [],
+    "median_seconds": 20.3,
+    "scope": "Real Qwen/ORS/MCP/UI; typed text and synthetic Singapore GPS; no native camera, audio or vibration verification"
+  },
+  "retained_failure": {
+    "report": "browser-local.json",
+    "prompt": "navigation-initial.md",
+    "issue": "Named-chain store listing used category-only search and lost the name constraint. Clarified generic name/address precedence in English Skill, then reran unchanged fixtures/model/limits."
+  },
+  "unchanged_contracts": [
+    "intent catalog JSON",
+    "tool policies",
+    "active .env.example values",
+    "bilingual UI and test utterances",
+    "device permission boundaries",
+    "execution limits and provider configuration"
+  ],
+  "internal_memory_translation": "Two cancellation/unexpected-failure history messages now use English; localized UI events retain their prior text.",
+  "deployment": "This delivery updates Git; the active web deployment is unchanged."
+}

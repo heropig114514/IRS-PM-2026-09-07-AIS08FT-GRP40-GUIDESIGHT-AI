@@ -3,7 +3,7 @@
  * correlated commands execute once and return snapshots/device acknowledgements/errors;
  * no automatic reconnect.
  * Related Modules: core.ai_bridge/ai_mcp, index.html, maps.html, camera/maps controllers,
- * vibration.js, speech-output.js, navigation-ui.js.
+ * vibration.js, speech-output.js, navigation-ui.js, agent-device.js, agent-client.js.
  * Declaration Index: selectorFor — exact CSS paths; visible — rendered state;
  * uniqueElement — unambiguous selection; snapshot — live DOM description;
  * waitForState — bounded observation; performVibration — shared structured vibration calls;
@@ -14,13 +14,16 @@
  * connectControl.onMessage — correlated command handler;
  * connectControl.startHeartbeat — idle keepalive; connectControl.stopHeartbeat — timer cleanup.
  * Variable Index: SESSION_KEY — tab identity storage key; CONTROL_SELECTOR — discoverable controls;
- * connectControl sessionId/socket/heartbeat — tab transport state; base — application mount URL.
+ * connectControl sessionId/socket/heartbeat — tab transport state; base — application mount URL;
+ * AGENT_TOKEN_KEY — tab-local ownership secret, never part of a snapshot.
  */
 import {tester} from "./vibration.js";
 import {speechOutput} from "./speech-output.js";
 import {navigation} from "./navigation-ui.js";
+import {performDevice} from "./agent-device.js";
 
 const SESSION_KEY = "prs.ai.session";
+const AGENT_TOKEN_KEY = "prs.agent.token";
 const CONTROL_SELECTOR = "button,a[href],input,select,textarea,[role=button],[contenteditable=true]";
 
 /* Functionality: Generate an exact CSS selector for a DOM element.
@@ -60,11 +63,13 @@ export function uniqueElement(doc, selector) {
 
 /* Functionality: Describe current UI controls, values, status and visible page text.
  * Inputs: Browser document. Outputs: JSON-compatible snapshot with explicit truncation flags.
- * Logic: Read live DOM values rather than cached markup; include select options and pixel bounds.
+ * Logic: Read live values/options/bounds; exclude assistant dialogue/controls/status to avoid
+ * recursively feeding its own conversation back as independent page evidence.
  * Constraints: Limit controls to 500 and text to 30000 characters; does not capture media pixels. */
 export function snapshot(doc = document) {
-  const text = doc.body.innerText;
-  const controls = [...doc.querySelectorAll(CONTROL_SELECTOR)];
+  const panelText = doc.querySelector("#agent-panel")?.innerText;
+  const text = panelText ? doc.body.innerText.replace(panelText, "") : doc.body.innerText;
+  const controls = [...doc.querySelectorAll(CONTROL_SELECTOR)].filter(element => !element.closest("#agent-panel"));
   return {
     url: doc.location.href, title: doc.title, language: doc.documentElement.lang,
     text: text.slice(0, 30000), text_truncated: text.length > 30000,
@@ -86,7 +91,7 @@ export function snapshot(doc = document) {
         bounds: {x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height},
       };
     }),
-    status: [...doc.querySelectorAll("[role=status],[aria-live],.status")].map(element => ({
+    status: [...doc.querySelectorAll("[role=status],[aria-live],.status")].filter(element => !element.closest("#agent-panel")).map(element => ({
       selector: selectorFor(element), text: element.innerText, visible: visible(element),
     })),
   };
@@ -120,6 +125,15 @@ export async function waitForState(doc, args) {
  * Constraints: Async work may still be running; synthetic keyboard events do not type characters
  * or grant browser permissions. Disabled/read-only/hidden controls fail instead of being bypassed. */
 export async function performAction(action, args, doc = document) {
+  if (["maps_status", "maps_locate", "maps_plan", "agent_navigation_status",
+    "camera_status", "camera_start", "camera_stop"].includes(action)) return performDevice(action, args, doc);
+  if (action === "agent_ui_action") {
+    const element = uniqueElement(doc, args.selector);
+    if (element.closest("#agent-panel") ||
+        ["speech-enabled", "vibration-enabled", "navigation-speech-enabled"].includes(element.id))
+      throw new Error("This control requires direct user interaction");
+    return performAction(args.action, args, doc);
+  }
   if (["navigation_status", "navigation_start", "navigation_stop"].includes(action))
     return performNavigation(action, doc === globalThis.document ? navigation : null);
   if (["speech_status", "speech_voices", "speech_speak", "speech_stop"].includes(action))
@@ -246,6 +260,8 @@ export function connectControl(win = window, doc = document) {
     win.sessionStorage.setItem(SESSION_KEY, sessionId);
   }
   const base = new URL(doc.documentElement.dataset.apiBase || "../", win.location.href);
+  if (!win.sessionStorage.getItem(AGENT_TOKEN_KEY))
+    win.sessionStorage.setItem(AGENT_TOKEN_KEY, win.crypto.randomUUID());
   const address = new URL("ws/control/", base);
   address.protocol = address.protocol === "https:" ? "wss:" : "ws:";
   const socket = new win.WebSocket(address);
@@ -263,7 +279,17 @@ export function connectControl(win = window, doc = document) {
     let command;
     try {
       command = JSON.parse(event.data);
+      if (command.type === "welcome") {
+        doc.documentElement.dataset.aiConnected = "true";
+        win.dispatchEvent(new CustomEvent("prs-ai-ready"));
+        return;
+      }
       if (command.type !== "command") return;
+      if (command.action === "agent_identity") {
+        send({type: "result", id: command.id, ok: true,
+          result: {token: win.sessionStorage.getItem(AGENT_TOKEN_KEY)}});
+        return;
+      }
       if (command.action === "navigate") {
         const destination = {camera: "live/", maps: "maps/"}[command.arguments.page];
         if (!destination) throw new Error("Unknown page destination");
@@ -301,6 +327,7 @@ export function connectControl(win = window, doc = document) {
   socket.addEventListener("message", onMessage);
   socket.addEventListener("error", () => console.error("PRS AI control transport failed; refresh to reconnect"));
   socket.addEventListener("close", () => {
+    doc.documentElement.dataset.aiConnected = "false";
     stopHeartbeat();
     win.dispatchEvent(new CustomEvent("prs-ai-disconnected"));
   });

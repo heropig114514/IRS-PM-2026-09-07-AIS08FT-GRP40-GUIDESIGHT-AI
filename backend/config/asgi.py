@@ -1,9 +1,9 @@
-"""Responsibilities: 分派 Django、MCP HTTP、摄像头/HF/AI 控制 WebSocket。
-Implementation: Django 初始化后装配处理器；ASGI lifespan 管理 MCP 的任务组。
+"""Responsibilities: Dispatch Django, MCP HTTP and camera/HF/AI control/voice agent WebSockets.
+Implementation: Initialize Django before assembling handlers; ASGI lifespan owns MCP task groups.
 Related Modules: config.settings/camera_server/production;
-core.echo/hf_video_relay/ai_bridge/ai_mcp。
-Declaration Index: application — 按协议类型和路径分派，保持既有 HTTP/媒体契约。
-Variable Index: django_application — Django ASGI HTTP 应用。
+core.echo/hf_video_relay/ai_bridge/ai_mcp/agent.transport.
+Declaration Index: application — dispatch by protocol and path, preserving HTTP/media contracts.
+Variable Index: django_application — Django ASGI HTTP application.
 """
 
 import os
@@ -13,6 +13,7 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django_application = get_asgi_application()
 
+from core.agent.transport import agent_socket  # noqa: E402
 from core.ai_bridge import hub  # noqa: E402
 from core.ai_mcp import mcp_application  # noqa: E402
 from core.echo import echo_socket  # noqa: E402
@@ -20,11 +21,12 @@ from core.hf_video_relay import relay  # noqa: E402
 
 
 async def application(scope, receive, send):
-    """Functionality: 为 HTTP、MCP 和三种 WebSocket 提供唯一入口。
-    Inputs: ASGI scope、receive、send；设置由环境选择。
-    Outputs: HTTP 响应或 WebSocket 消息；无 Python 返回值。
-    Logic: MCP HTTP/lifespan 委派官方 SDK；控制 WS 使用共享 hub；媒体路径保持原处理器。
-    Constraints: Uvicorn 必须启用 lifespan；仅单 worker，连接/AI tab 状态均为进程内共享。
+    """Functionality: Provide one entry point for HTTP, MCP and four WebSocket paths.
+    Inputs: ASGI scope, receive and send; settings are selected through the environment.
+    Outputs: HTTP responses or WebSocket messages; no Python return value.
+    Logic: Delegate MCP HTTP/lifespan to the SDK, control sockets to hub, agent sockets to bound
+    conversations and media paths to their existing handlers.
+    Constraints: Uvicorn requires lifespan and one worker; connection/tab state is process-local.
     """
     if scope["type"] == "lifespan":
         await mcp_application(scope, receive, send)
@@ -37,6 +39,8 @@ async def application(scope, receive, send):
             await relay(scope, receive, send)
         elif scope["path"] == "/ws/control/":
             await hub.socket(scope, receive, send)
+        elif scope["path"] == "/ws/agent/":
+            await agent_socket(scope, receive, send)
         else:
             await send({"type": "websocket.close", "code": 1008})
     else:

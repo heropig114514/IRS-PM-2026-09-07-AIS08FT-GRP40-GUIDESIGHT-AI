@@ -1,11 +1,13 @@
-/* Responsibilities: Leaflet/OSM 地图、设备位置、步行路线和共享持续导航接入。
- * Implementation: 初始化一次地图；串行用户操作；错误和底图状态分别呈现；无隐式重试。
- * Related Modules: maps-client.js, navigation-ui.js, maps.html, i18n.js, core.maps/services。
- * Declaration Index: setCoordinates — 填坐标；setBusy — 操作锁；clearRoute — 清旧路线；
- * showFailure — 错误展示；initialize — 配置/地图；locate — 设备起点；useExample — 显式示例；plan — 请求路线。
- * Variable Index: button/planButton/exampleButton/status/message — 状态 DOM；map/tiles — Leaflet 实例；
- * routeLayer/startMarker/endMarker — 唯一可替换图层；busy — 操作锁；configured — 后端配置状态；
- * tileFailed — 本轮底图失败；navigationMarker — 实时位置图层；NUS_START/NUS_END — 固定测试点。
+/* Responsibilities: Integrate Leaflet/OSM, device location, walking routes and shared continuous navigation.
+ * Implementation: Initialize one map; serialize user actions; report errors and tile state separately; no implicit retries.
+ * Related Modules: maps-client.js, navigation-ui.js, maps.html, i18n.js, core.maps/services.
+ * Declaration Index: setCoordinates — fill coordinates; setBusy — action lock; clearRoute — discard stale routes;
+ * showFailure — display errors; initialize — configuration/map; locate — device origin; useExample — explicit sample;
+ * plan — request a route; describeMap — structured state; planDestination — agent inputs to existing route controls.
+ * Variable Index: button/planButton/exampleButton/status/message — state DOM; map/tiles — Leaflet instances;
+ * routeLayer/startMarker/endMarker — replaceable layers; busy — action lock; configured — backend configuration;
+ * tileFailed — current tile failure; navigationMarker — live position; NUS_START/NUS_END — fixed test points;
+ * lastFailure — latest error; startSource — origin provenance; mapsControl — semantic MCP interface.
  */
 import {
   getDevicePosition,
@@ -25,19 +27,21 @@ let map, tiles, routeLayer, startMarker, endMarker, navigationMarker;
 let busy = false,
   configured = false,
   tileFailed = false;
+let lastFailure = null, startSource = null;
 
-/* Functionality: 填写起点或终点，不调用外部服务。
- * Inputs: prefix(start/end)、point [经度,纬度]；Outputs: input 值。
- * Logic: 显示六位小数；Constraints: 调用者必须明确坐标来源。
+/* Functionality: Fill origin/destination without external calls.
+ * Inputs: prefix (start/end), point [longitude,latitude]; Outputs: Input values.
+ * Logic: Display six decimal places; Constraints: Callers must know the coordinate source.
  */
 function setCoordinates(prefix, point) {
   document.querySelector(`#${prefix}-longitude`).value = point[0].toFixed(6);
   document.querySelector(`#${prefix}-latitude`).value = point[1].toFixed(6);
 }
 
-/* Functionality: 串行操作，防止异步定位和路线相互覆盖。
- * Inputs: value 布尔值、configured；Outputs: 按钮和字段 disabled。
- * Logic: 配置只限制路线按钮；地图点选也读取 busy；Constraints: 不排队或重试。
+/* Functionality: Serialize actions to prevent location and route updates from overwriting each other.
+ * Inputs: Boolean value and configured state; Outputs: Disabled state of buttons/fields.
+ * Logic: Configuration restricts only the route button; map selection also checks busy.
+ * Constraints: No queueing or retries.
  */
 function setBusy(value) {
   busy = value;
@@ -47,9 +51,10 @@ function setBusy(value) {
     input.disabled = value;
 }
 
-/* Functionality: 停止导航并清除旧路线和起终点图层，避免展示过期结果。
- * Inputs: 当前图层/DOM；Outputs: 成功返回 true 并清图层/列表；失败返回 false 并显示诊断。
- * Logic: 先清除共享导航路线，再移除图层；Constraints: 停止失败中止新操作，不重试，不锁死表单。
+/* Functionality: Stop navigation and remove stale route/origin/destination layers.
+ * Inputs: Current layers/DOM; Outputs: true with cleared layers/list, or false with diagnostics.
+ * Logic: Clear the shared navigation route before removing layers.
+ * Constraints: Stop failure aborts the new operation without retrying or leaving the form locked.
  */
 function clearRoute() {
   try { navigation.setRoute(null); }
@@ -61,20 +66,22 @@ function clearRoute() {
   return true;
 }
 
-/* Functionality: 报告失败，不输出位置或密钥到日志。
- * Inputs: error；Outputs: 状态文本和固定诊断日志。
- * Logic: textContent 插入安全文本；Constraints: 不宣称成功、不使用示例降级。
+/* Functionality: Report failures without logging positions or keys.
+ * Inputs: error; Outputs: Status text and fixed diagnostic log.
+ * Logic: Insert safe text through textContent; Constraints: Do not claim success or substitute sample data.
  */
 function showFailure(error) {
+  lastFailure = error.message;
   status.textContent = "未完成";
   message.textContent = error.message;
   console.error("[PRS routes] Operation failed; see page diagnostic.");
 }
 
-/* Functionality: 检查后端配置并初始化 OSM 底图。
- * Inputs: 同源配置、固定 SRI 的 Leaflet；Outputs: 地图/配置状态/事件。
- * Logic: 初始 NUS 视图标为区域预览；真实位置须用户点击；底图 load 与 tileerror 独立报告。
- * Constraints: 不预下载、不覆盖瓦片缓存、不隐藏署名；加载失败需用户手动刷新。
+/* Functionality: Check backend configuration and initialize OSM tiles.
+ * Inputs: Same-origin configuration and pinned/SRI Leaflet; Outputs: Map, configuration state and events.
+ * Logic: Mark the NUS view as a preview; actual location requires a user/agent request;
+ * report tile load/tileerror separately.
+ * Constraints: No tile prefetch, cache overrides or hidden attribution; failed loading requires manual refresh.
  */
 async function initialize() {
   try {
@@ -137,13 +144,17 @@ async function initialize() {
   }
 }
 
-/* Functionality: 将一次设备定位作为路线起点。
- * Inputs: 用户点击、浏览器权限；Outputs: 坐标/精度/来源和起点图层。
- * Logic: 操作期间禁用输入；失败不采用缓存位置或示例。
- * Constraints: 此动作不上传位置；只有后续规划请求才发送 PRS/ORS。
+/* Functionality: Use one device location fix as the route origin.
+ * Inputs: User click or bound MCP request and browser permission; Outputs: Coordinates, accuracy,
+ * provenance, origin layer and structured result.
+ * Logic: Disable input during the operation; failures never use cached/sample locations.
+ * Constraints: A click does not upload location; MCP returns results to the agent; planning sends them to PRS/ORS.
  */
 async function locate() {
-  if (!clearRoute()) return;
+  if (busy || !map) return {accepted: false, reason: busy ? "busy" : "map_not_ready"};
+  lastFailure = null;
+  if (!clearRoute()) return {accepted: false, reason: "stop_failed"};
+  startSource = null;
   setBusy(true);
   status.textContent = "定位中";
   message.textContent = "请允许浏览器使用设备位置。";
@@ -154,6 +165,7 @@ async function locate() {
   ).value = "";
   try {
     const { coords } = await getDevicePosition();
+    startSource = "device";
     setCoordinates("start", [coords.longitude, coords.latitude]);
     document.querySelector("#location-source").textContent = "设备当前位置";
     document.querySelector("#accuracy").textContent =
@@ -173,14 +185,16 @@ async function locate() {
   } finally {
     setBusy(false);
   }
+  return {accepted: !lastFailure, ...describeMap()};
 }
 
-/* Functionality: 明确填入固定 NUS 测试坐标。
- * Inputs: 用户点击和 NUS_START/NUS_END；Outputs: 表单、来源标签、地图视图。
- * Logic: 不申请定位、不请求路线；Constraints: 绝不将示例标为设备当前位置。
+/* Functionality: Explicitly fill fixed NUS test coordinates.
+ * Inputs: User click and NUS_START/NUS_END; Outputs: Form, provenance labels and map view.
+ * Logic: No location permission or route request; Constraints: Never label the sample as the device location.
  */
 function useExample() {
   if (!clearRoute()) return;
+  startSource = "example";
   setCoordinates("start", NUS_START);
   setCoordinates("end", NUS_END);
   document.querySelector("#location-source").textContent =
@@ -191,14 +205,17 @@ function useExample() {
   message.textContent = "点击规划步行路线，真实调用 ORS 验证这组示例起终点。";
 }
 
-/* Functionality: 显示真实 ORS 路线和步骤，并将其交给共享导航控制器。
- * Inputs: 用户 submit event、四个输入值；Outputs: 路线图层、汇总、指令列表。
- * Logic: 明确提交后清旧数据；经纬度顺序转换为 Leaflet 纬经度；用 DOM 文本和 data-language-original 标记保留英文原指令。
- * Constraints: 规划成功不自动开始导航；未包含语音调度或避障；失败无自动重试。
+/* Functionality: Render actual ORS routes/steps and pass them to the shared navigation controller.
+ * Inputs: User submit event (absent for MCP) and four form values; Outputs: Route layer, summary,
+ * instructions and result. Logic: Clear old data after explicit submission; convert longitude/latitude
+ * to Leaflet latitude/longitude; preserve English instructions with DOM text and data-language-original.
+ * Constraints: Successful planning does not start navigation; no speech scheduling, obstacle avoidance or retries.
  */
 async function plan(event) {
-  event.preventDefault();
-  if (!clearRoute()) return;
+  event?.preventDefault();
+  if (busy || !map) return {accepted: false, reason: busy ? "busy" : "map_not_ready"};
+  lastFailure = null;
+  if (!clearRoute()) return {accepted: false, reason: "stop_failed"};
   setBusy(true);
   status.textContent = "请求路线中";
   message.textContent = "起终点将发送 PRS 服务端和 ORS，等待步行路线。";
@@ -245,11 +262,52 @@ async function plan(event) {
   } finally {
     setBusy(false);
   }
+  return {accepted: !lastFailure, ...describeMap()};
 }
 
+/* Functionality: Expose form/shared navigation state for missing-input decisions.
+ * Inputs: DOM/busy/configured/startSource; Outputs: Valid coordinates or null, provenance and route.
+ * Logic: Do not convert empty fields to zero; Constraints: Read-only, no location request or default coordinates. */
+export function describeMap() {
+  const coordinates = {};
+  for (const prefix of ["start", "end"]) {
+    const longitude = document.querySelector(`#${prefix}-longitude`).value;
+    const latitude = document.querySelector(`#${prefix}-latitude`).value;
+    try { coordinates[prefix] = parseCoordinateInputs(longitude, latitude); }
+    catch { coordinates[prefix] = null; }
+  }
+  return {available: true, ready: Boolean(map), busy, configured, origin: coordinates.start,
+    destination: coordinates.end, origin_source: startSource, error: lastFailure,
+    navigation: navigation.describe()};
+}
+
+/* Functionality: Fill an explicit destination and use the same planning workflow.
+ * Inputs: Optional destination/origin [longitude,latitude]; Outputs: plan Promise.
+ * Logic: Validate every argument before writing; omitted values retain current fields.
+ * Constraints: No inferred coordinates or automatic navigation; busy/uninitialized states leave forms unchanged. */
+export async function planDestination({destination = null, origin = null} = {}) {
+  if (busy || !map) return {accepted: false, reason: busy ? "busy" : "map_not_ready"};
+  for (const point of [destination, origin]) {
+    if (point !== null) {
+      if (!Array.isArray(point) || point.length !== 2) throw new Error("坐标须为经度、纬度。");
+      parseCoordinateInputs(...point);
+    }
+  }
+  if (destination) setCoordinates("end", destination);
+  if (origin) {
+    setCoordinates("start", origin);
+    startSource = "user";
+    document.querySelector("#location-source").textContent = "手动输入起点";
+    document.querySelector("#accuracy").textContent = "不适用";
+  }
+  return plan();
+}
+
+export const mapsControl = {describe: describeMap, locate, plan: planDestination};
+
 button.addEventListener("click", locate);
-// Functionality: 显示共享导航位置；Inputs: 控制器事件；Outputs: 单一位置图层。
-// Logic: 活跃/到达时更新标记，停止/清路线时移除；Constraints: 不改路线，不自动移动视图。
+// Functionality: Render shared navigation position; Inputs: Controller events; Outputs: One position layer.
+// Logic: Update while active/arrived, remove on stop/route clear; Constraints: No route edits or automatic panning.
 document.addEventListener("prs-navigation-change", ({detail}) => {
   if (!map) return;
   if (!detail.position || (!detail.active && detail.state !== "arrived")) {
@@ -269,6 +327,7 @@ for (const input of document.querySelectorAll("#route-form input"))
     if (!clearRoute()) return;
     status.textContent = "待规划";
     if (input.id.startsWith("start-")) {
+      startSource = "user";
       document.querySelector("#location-source").textContent = "手动输入起点";
       document.querySelector("#accuracy").textContent = "不适用";
     }

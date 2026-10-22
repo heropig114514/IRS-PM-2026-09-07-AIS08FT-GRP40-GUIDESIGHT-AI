@@ -1,0 +1,4 @@
+{"tools": [
+  "ui_snapshot", "ui_navigate", "ui_action", "speech_status", "speech_voices",
+  "speech_speak", "speech_stop", "vibration_status", "vibration_test", "vibration_stop"
+], "requires": {}, "limits": {}, "result_counts": {}}

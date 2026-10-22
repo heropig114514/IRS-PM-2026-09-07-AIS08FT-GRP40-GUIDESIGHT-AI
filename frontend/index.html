@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Responsibilities: 手机摄像头原样/ZeroGPU 标注回传工作台的语义结构。
-Implementation: 本地 video 与返回 img 分开；原样模式仍为默认；local模式仅独立integration入口启用，保留既有测试区块。
-Related Modules: i18n.js, translations.js, camera.css, camera.js, echo-client.js,
-live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js, scene-client.js；HF视频用同源持久连接。
-Declaration Index: None。
-Variable Index: None；区域 id 分别由 CameraApp、VibrationTester、SpeechOutput 和 SceneClient 引用；scene-result 带 data-language-original，模型输出不经界面词典翻译。
-speech-text maxlength=2000容纳1000个双码元字符，实际1000个Unicode码点上限由SpeechOutput校验；
-speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或摄像头数据。 -->
+<!-- Responsibilities: Define the semantic phone camera echo/ZeroGPU annotated-return workbench.
+Implementation: Separate local video from returned images; echo stays default; local mode is enabled only by the separate integration entry; retain existing test sections.
+Related Modules: agent-client.js/agent.css (voice/text assistant), i18n.js, translations.js, camera.css, camera.js, echo-client.js,
+live-detection-client.js, frame-pipeline.js, maps.html, ai-control.js, vibration.js, speech-output.js, scene-client.js; HF video uses a persistent same-origin connection.
+Declaration Index: None.
+Variable Index: None; element IDs are referenced by CameraApp, VibrationTester, SpeechOutput and SceneClient; scene-result uses data-language-original to preserve model output.
+speech-text maxlength=2000 accommodates 1000 two-code-unit characters; SpeechOutput enforces the actual 1000-code-point limit.
+speech-rate/speech-volume min/max/step define manual UI ranges. Embed no keys or camera data. -->
 <html lang="zh-CN" data-api-base="../">
   <head>
     <meta charset="utf-8" />
@@ -17,6 +17,8 @@ speech-rate/speech-volume的min/max/step为手动UI范围。不嵌入密钥或�
     <meta name="theme-color" content="#f4f7fa" />
     <title>PRS · 摄像头回传</title>
     <link rel="stylesheet" href="./assets/camera.css" />
+    <link rel="stylesheet" href="./assets/agent.css" />
+    <script type="module" src="./assets/agent-client.js"></script>
     <script type="module" src="./assets/camera.js"></script>
     <script type="module" src="./assets/i18n.js"></script>
     <script type="module" src="./assets/ai-control.js"></script>
