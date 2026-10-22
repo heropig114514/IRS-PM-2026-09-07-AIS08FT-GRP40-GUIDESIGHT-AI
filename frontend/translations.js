@@ -166,7 +166,7 @@ export const translations = {
   "检测服务正在处理图像，请稍后手动开始。": "Detection is busy processing an image. Start again manually later.",
   "图像检测失败，请检查服务端诊断日志。": "Image detection failed. Check server diagnostic logs.",
   "图像为空或超过 1 MiB。": "Image is empty or exceeds 1 MiB.",
-  "仅接受最大边不超过 640 的 JPEG。": "Only JPEG images with a maximum edge of 640 pixels are accepted.",
+  "仅接受最大边不超过 1280 的 JPEG。": "Only JPEG images with a maximum edge of 1280 pixels are accepted.",
   "JPEG 图像损坏或无法解码。": "JPEG image is damaged or cannot be decoded.",
   "模型输出格式无效。": "Invalid model output format.",
   "模型类别或置信度无效。": "Invalid model class or confidence.",

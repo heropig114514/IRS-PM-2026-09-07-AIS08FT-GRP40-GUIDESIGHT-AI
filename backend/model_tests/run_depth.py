@@ -67,9 +67,10 @@ def write_manifest(output, report):
 
 
 def build_detector(weights, manifest_path, depth_weights, *, tracking_config=None,
-                   risk_config=None, distance_config=None):
+                   risk_config=None, distance_config=None, roi=False):
     """Functionality: Initialize selected existing models once before the image loop.
-    Inputs: explicit weights/manifest; optional distance/tracking/risk profiles for one sequence.
+    Inputs: explicit weights/manifest; optional distance/tracking/risk profiles for one sequence;
+    roi=True adds the centre-top traffic-light pass.
     Outputs: ResidentDetector on actual CUDA. Logic: reuse pinned loader and explicit FP32 control.
     Constraints: detector remains original YOLO26n; no GPU fallback/download/experiment changes.
     """
@@ -84,6 +85,8 @@ def build_detector(weights, manifest_path, depth_weights, *, tracking_config=Non
     depth = (DepthEstimator(depth_weights, manifest["build"]["ultralytics"])
              if distance_config.distance_mode != "geometry" else None)
     options = {"risk_config": risk_config} if risk_config is not None else {}
+    if roi:
+        options["roi"] = True
     return ResidentDetector(weights, manifest_path, depth_estimator=depth,
                             tracking_config=tracking_config, distance_config=distance_config,
                             **options)
@@ -105,6 +108,7 @@ def run(args):
 
     from PIL import Image
 
+    from core.detector import CLASS_CONF
     from realtime.distance_config import DEFAULT_DISTANCE_CONFIG, read_distance_config
     from realtime.risk import read_risk_config
     from realtime.tracking import read_tracking_config
@@ -123,6 +127,9 @@ def run(args):
         raise ValueError("Output already exists; choose a new run directory")
     if args.repeat < 1:
         raise ValueError("repeat must be positive")
+    roi, max_edge = getattr(args, "roi", False), getattr(args, "max_edge", 640)
+    if not 1 <= max_edge <= 1280:
+        raise ValueError("max-edge must be between 1 and 1280")
     if args.input.is_dir() and output.is_relative_to(root):
         raise ValueError("Output must be outside the input image directory")
     tracking = (read_tracking_config(getattr(args, "tracking_config", None))
@@ -138,7 +145,9 @@ def run(args):
               "scope": "Native CUDA image inference; no ground-truth accuracy or video FPS claim",
               "input_root": str(root), "repeat": args.repeat, "images": [], "frames": 0,
               "settings": {"detector_config": {}, "detection_edge": 640,
-                           "confidence_threshold": 0.25, "jpeg_quality": 80,
+                           "confidence_threshold": 0.25,
+                           "class_confidence_thresholds": dict(CLASS_CONF),
+                           "jpeg_quality": 80,
                            "depth_edge": 768, "depth_precision": "FP32",
                            "object_distance": "median of positive finite bbox ROI depths"},
               "models": {"detection_sha256": file_digest(args.weights),
@@ -158,6 +167,8 @@ def run(args):
     for path in images:
         report["images"].append({"path": path.relative_to(root).as_posix(),
                                  "source_sha256": file_digest(path)})
+    if roi or max_edge != 640:
+        report["settings"].update(frame_max_edge=max_edge, roi=roi)
     if tracking is not None:
         report["settings"]["tracking"] = asdict(tracking)
         report["settings"]["risk"] = asdict(risk)
@@ -171,10 +182,13 @@ def run(args):
             options["risk_config"] = risk
         if distance_config != DEFAULT_DISTANCE_CONFIG:
             options["distance_config"] = distance_config
+        if roi:
+            options["roi"] = True
         detector = build_detector(args.weights, args.manifest, args.depth_weights, **options)
         with (output / "results.jsonl").open("w", encoding="utf-8") as records:
             for path, identity in zip(images, report["images"], strict=True):
-                frame, size = fixture_bytes(path)
+                frame, size = (fixture_bytes(path) if max_edge == 640
+                               else fixture_bytes(path, max_edge))
                 with Image.open(path) as source_image:
                     source_size = list(source_image.size)
                 input_hash = hashlib.sha256(frame).hexdigest()
@@ -248,6 +262,10 @@ def main(argv=None):
                         help="Explicit JSON motion profile; needs --track")
     parser.add_argument("--risk-config", type=Path,
                         help="Explicit JSON TTC/rule profile; needs --track")
+    parser.add_argument("--roi", action="store_true",
+                        help="Extra centre-top native-resolution traffic-light pass")
+    parser.add_argument("--max-edge", type=int, default=640,
+                        help="Frame long-edge cap, 1-1280; default 640 (old behaviour)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO)
     try:

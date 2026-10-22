@@ -19,6 +19,7 @@
 状态归属、配置、测试、性能和局限见 [TRACKING.md](TRACKING.md)。
 运动估计后计算无状态 TTC 与可配置规则风险，返回分数、等级、告警需求和优先级；
 公式、完整默认权重、配置及验证边界见 [RISK.md](RISK.md)。算法仅输出风险字段；本地页面Guidance在用户明确启用后消费这些字段并调度共享浏览器语音/振动，不修改评分规则。
+红绿灯单独阈值、中央 ROI 二次检测、正前方灯标记，以及人行灯颜色分类器的实验结果和接入约定见 [TRAFFIC-LIGHT.md](TRAFFIC-LIGHT.md)。
 
 Qwen2.5-VL 场景描述（`POST /scene/describe/`）的接口、提示词、配置、部署与限制见 [VLM.md](VLM.md)。
 本地模型测试统一放在 [model_tests](model_tests/README.md)，包括运行入口、示例、素材说明和运行输出约定。
