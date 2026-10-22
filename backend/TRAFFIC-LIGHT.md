@@ -96,8 +96,8 @@ class LightStateClassifier:
 - 在这些框上新增 `light_state`（`red` / `green` / `unknown`）和 `light_prob`。
 - metadata 新增 `light_model`、`light_ms`。
 - 规则：`p_green ≥ τ (0.95)` → `green`；否则 `argmax == red` → `red`；否则 `unknown`。
-- 权重：`light_crop.pt`（6.2 MB）。仓库按 `.gitignore` 不提交 `models/*.pt`，需单独分发；
-  放入 `backend/models/` 并参照 `yolo26n.json` 增加 SHA256 清单。
+- 权重：`models/light_crop.pt`（6.2 MB）。虽然 `.gitignore` 默认忽略 `models/*.pt`，这个文件体积小，
+  经组内同意直接用 `git add -f` 提交。输入、类别、阈值和 SHA256 见 `models/light_crop.json`，加载时应校验哈希。
 - 在分类器训练好之前，可以先接一个总是返回 `unknown` 的空实现，不影响其他模块。
 
 ## 4. 局限（汇报时必须说明）
