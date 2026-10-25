@@ -1,11 +1,14 @@
-"""Responsibilities: Run local GPU/Web services behind the public HTTPS phone relay.
-Implementation: One pinned interactive SSH connection, one reverse loopback bind, explicit optional
-Nginx guest-relay install, existing isolated child processes and honest readiness/failure supervision.
-Related Modules: integration.phone_deploy/mobile_asgi/relay; tools.run_local_mvp; PHONE-MVP.md.
-Declaration Index: public_ready; check_remote_binding; supervise; run; main.
-Variable Index: ROOT/STOP_REQUESTED and local child helpers are reused from the existing launcher;
-client/relay/children/log_handles own only this run's resources; private SSH/ORS values never enter
-arguments, reports or logs. runtime.json is ignored, finite operational evidence.
+"""Responsibilities: Run only the laptop-hosted CUDA worker behind an app-server tunnel.
+Implementation: Verify pinned local dependencies/checkpoints, confirm the separate app-server Web
+service, start the inference ASGI process, then reverse-forward its loopback port for on-demand use.
+Related Modules: integration.inference.asgi; integration.phone_deploy/relay; tools.run_local_mvp;
+deploy/prs-mvp-web.service; PHONE-MVP.md.
+Declaration Index: public_ready; check_remote_binding; check_remote_health; check_web_service;
+verify_inference_port; supervise; run; main.
+Variable Index: ROOT/STOP_REQUESTED and child helpers are reused from the local launcher;
+WEB_PORT/INFERENCE_REMOTE_PORT separate the permanent app-server Web listener from the laptop
+inference tunnel; client/relay/children/log_handles own only this run's resources; secrets stay in
+memory.
 """
 
 import argparse
@@ -13,22 +16,21 @@ import getpass
 import http.client
 import json
 import signal
+import socket
 import sys
 import time
 from pathlib import Path
 from uuid import uuid4
 
 from integration.phone_deploy import (
+    INFERENCE_REMOTE_PORT,
     MOUNT,
     PUBLIC_ORIGIN,
-    REMOTE_PORT,
     SERVER,
+    WEB_PORT,
     PhoneDeploymentError,
     connect_server,
-    install_relay,
-    read_ors,
     remote_command,
-    verify_relay,
 )
 from integration.relay import RelayError, RelayForward
 from tools.run_local_mvp import (
@@ -43,19 +45,18 @@ from tools.run_local_mvp import (
     launch,
     python_path,
     read_health,
-    read_or_create_key,
     stop_children,
     verify_models,
-    verify_ports,
     wait_listener,
 )
 
 
 def public_ready():
-    """Functionality: Verify one trusted HTTPS request across the actual server relay.
-    Inputs: Fixed public relay target. Outputs: Public guest-readiness metadata.
-    Logic: Native CA/IP verification, unauthenticated request, bounded HTML and explicit CSP/media gates.
-    Constraints: No redirects, retries, TLS bypass, device requests or page-body logs.
+    """Functionality: Verify the public product page on the independent app-server service.
+    Inputs: Fixed public HTTPS target. Outputs: Nonsecret status and permission metadata.
+    Logic: One CA-verified unauthenticated GET checks page identity, WSS policy and device policy.
+    Constraints: No redirects, retries, TLS bypass, device requests or page-body logging; this
+    check does not exercise the inference worker.
     """
     connection = http.client.HTTPSConnection(SERVER, timeout=15)
     try:
@@ -72,7 +73,7 @@ def public_ready():
             or "camera=(self)" not in policy
             or "geolocation=(self)" not in policy
         ):
-            raise StartupError("Public phone relay did not pass HTTPS/page/permission readiness.")
+            raise StartupError("The application-server page failed HTTPS readiness checks.")
         return {
             "https_verified": True,
             "public_page_status": response.status,
@@ -83,127 +84,175 @@ def public_ready():
 
 
 def check_remote_binding(client):
-    """Functionality: Confirm the reverse listener is server-loopback only.
-    Inputs: Pinned SSH client. Outputs: None or fixed failure.
-    Logic: Inspect one selected listening port; refuse wildcard, IPv6 or duplicate bindings.
-    Constraints: No firewall change, broad listener enumeration or remote process termination.
+    """Functionality: Confirm the inference tunnel binds only to server loopback.
+    Inputs: Pinned SSH client. Outputs: None or a fixed binding failure.
+    Logic: Inspect the one assigned SSH reverse-forward port.
+    Constraints: No firewall changes, broad process enumeration or remote process termination.
     """
-    _, raw = remote_command(client, "ss -H -ltn 'sport = :18766'")
+    _, raw = remote_command(client, f"ss -H -ltn 'sport = :{INFERENCE_REMOTE_PORT}'")
     rows = [line.split() for line in raw.decode("ascii").splitlines() if line.strip()]
-    if len(rows) != 1 or len(rows[0]) < 4 or rows[0][3] != "127.0.0.1:18766":
-        raise StartupError("Remote relay listener is not the dedicated loopback binding.")
+    if (len(rows) != 1 or len(rows[0]) < 4
+            or rows[0][3] != f"127.0.0.1:{INFERENCE_REMOTE_PORT}"):
+        raise StartupError("The inference tunnel is not bound to its dedicated loopback port.")
+
+
+def check_remote_health(client):
+    """Functionality: Validate one inference health response through the live SSH tunnel.
+    Inputs: Pinned SSH client and fixed loopback health path. Outputs: Safe worker state summary.
+    Logic: Make one bounded remote curl request, then validate provider and boolean state fields.
+    Constraints: Health may report an unloaded model; no frame is submitted and no load is claimed.
+    """
+    status, raw = remote_command(
+        client,
+        f"curl --fail --silent --show-error --max-time 5 "
+        f"http://127.0.0.1:{INFERENCE_REMOTE_PORT}/health/",
+        check=False,
+    )
+    if status:
+        raise StartupError("The application server could not read inference health through SSH.")
+    try:
+        health = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise StartupError("The tunneled inference health response is invalid.") from None
+    if (
+        not isinstance(health, dict)
+        or health.get("status") != "ok"
+        or health.get("provider") != "local"
+        or any(type(health.get(name)) is not bool for name in ("loaded", "ready", "busy"))
+    ):
+        raise StartupError(
+            "The tunneled endpoint does not satisfy the local inference health contract."
+        )
+    return {"health_status": "ok", "model_loaded": health["loaded"], "model_ready": health["ready"]}
+
+
+def check_web_service(client):
+    """Functionality: Require the application-server service before starting local inference.
+    Inputs: Pinned SSH client. Outputs: None for an active dedicated Web unit.
+    Logic: Check only the named prs-mvp-web unit state.
+    Constraints: Does not restart, modify or inspect the independent prs-camera unit.
+    """
+    status, _ = remote_command(client, "systemctl is-active --quiet prs-mvp-web", check=False)
+    if status:
+        raise StartupError("The application-server prs-mvp-web service is not active.")
+
+
+def verify_inference_port(port):
+    """Functionality: Reject invalid or occupied local inference ports before startup.
+    Inputs: Explicit local TCP port. Outputs: None or a safe startup error.
+    Logic: Bind a short-lived IPv4 loopback probe without selecting an alternative.
+    Constraints: No process termination, wildcard listener or automatic port fallback.
+    """
+    if type(port) is not int or not 1024 <= port <= 65535:
+        raise StartupError("Choose an inference port between 1024 and 65535.")
+    try:
+        with socket.socket() as probe:
+            if sys.platform == "win32":
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            probe.bind(("127.0.0.1", port))
+    except OSError:
+        raise StartupError(
+            f"Loopback inference port {port} is unavailable; no process was stopped."
+        ) from None
 
 
 def supervise(relay, children):
-    """Functionality: Observe owned services until explicit stop or one fatal relay failure.
-    Inputs: Started relay and owned children. Outputs: None for manual stop or a fixed failure.
-    Logic: Check the relay after the shared stop event wakes, since a fatal relay sets that event.
-    Constraints: No retry, process restart or SSH reconnect; manual cancellation remains successful.
+    """Functionality: Observe only the local inference child and its owned SSH tunnel.
+    Inputs: Started relay and child handles. Outputs: None for manual stop or fixed failure.
+    Logic: Check tunnel state while polling owned processes.
+    Constraints: No retry, process restart or SSH reconnect; cancellation remains explicit.
     """
     while not STOP_REQUESTED.wait(0.25):
         relay.check_active()
         if any(child.poll() is not None for child in children):
-            raise StartupError("An owned local service exited; no automatic restart.")
+            raise StartupError(
+                "The owned inference process exited; no automatic restart was attempted."
+            )
     relay.check_active()
 
 
 def run(args):
-    """Functionality: Check prerequisites or supervise one explicitly requested phone deployment.
-    Inputs: Check/install flag, local ports and log path. Outputs: Live service
+    """Functionality: Preflight or supervise laptop inference through the app-server tunnel.
+    Inputs: Local check flag, inference port and log path. Outputs: bounded readiness then service
     until explicit stop, child exit or SSH failure.
-    Logic: Preflight once; optional additive server install; launch GPU/Web, bind reverse SSH and
-    validate actual HTTPS. Finally release only owned forwarding/channels/processes/client.
-    Constraints: No reconnect/restart, external GPU, PRS restart, SSH password or ORS persistence.
+    Logic: Verify the Web unit first, launch only the CUDA worker, bind remote loopback 18767, and
+    validate tunneled health plus the already-running public page.
+    Constraints: No local Web process, Nginx changes, ORS transfer, GPU fallback, retry or restart.
     """
-    if args.check and args.install_relay:
-        raise StartupError("--check and --install-relay cannot be combined.")
     web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
     inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0"})
     inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
     verify_models()
-    verify_ports(args.web_port, args.inference_port)
-    parent = args.log_dir.resolve()
-    if not parent.is_relative_to(ROOT):
-        raise StartupError("Phone logs must stay inside backend.")
+    verify_inference_port(args.inference_port)
+    directory_root = args.log_dir.resolve()
+    if not directory_root.is_relative_to(ROOT):
+        raise StartupError("Inference logs must stay inside backend.")
     if args.check:
         print(
-            "Phone prerequisites verified; no services, SSH or configuration changes.", flush=True
+            "Laptop inference prerequisites verified; no services or SSH were started.", flush=True
         )
         return
+
+    directory = directory_root / (time.strftime("%Y%m%d-%H%M%S") + "-" + uuid4().hex[:8])
+    directory.mkdir(parents=True)
     client = relay = None
     children, log_handles = [], []
     report = {
         "running": False,
-        "url": PUBLIC_ORIGIN + MOUNT + "/maps/",
-        "remote_binding": "127.0.0.1:" + str(REMOTE_PORT),
-        "cloud_inference": False,
-        "ssh_password_saved": False,
-        "ors_key_saved": False,
-        "committed": False,
+        "product_url": PUBLIC_ORIGIN + MOUNT + "/maps/",
+        "test_url": PUBLIC_ORIGIN + MOUNT + "/maps/test",
+        "remote_inference_binding": f"127.0.0.1:{INFERENCE_REMOTE_PORT}",
+        "web_service_on_application_server": True,
+        "credential_saved": False,
     }
-    directory = parent / (time.strftime("%Y%m%d-%H%M%S") + "-" + uuid4().hex[:8])
-    directory.mkdir(parents=True)
     STOP_REQUESTED.clear()
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
     try:
-        password = getpass.getpass("SSH password (not saved): ")
+        password = getpass.getpass("Application-server SSH password (not saved): ")
         try:
             client = connect_server(password)
         finally:
             password = None
-        if args.install_relay:
-            report["relay_install"] = install_relay(client)
-        else:
-            report["relay_configuration"] = verify_relay(client)
-        ors_key = read_ors(client)
-        key = read_or_create_key(ROOT / ".env.local-mvp")
-        for name, python, module, port, web, health_path in (
-            (
-                "inference",
-                inference_python,
-                "integration.inference.asgi:application",
-                args.inference_port,
-                False,
-                "/health/",
-            ),
-            (
-                "web",
-                web_python,
-                "integration.mobile_asgi:application",
-                args.web_port,
-                True,
-                "/integration/status/",
-            ),
-        ):
-            environment = child_environment(
-                key, args.web_port, args.inference_port, web=web, assist=True, ors_key=ors_key
-            )
-            if web:
-                environment["MOBILE_PUBLIC_ORIGIN"] = PUBLIC_ORIGIN
-            output = (directory / (name + ".log")).open("ab")
-            log_handles.append(output)
-            child = launch(python, module, port, environment, output)
-            children.append(child)
-            wait_listener(child, port)
-            health = read_health(port, health_path)
-            report[name] = {"listener_ready": True, "model_loaded": health.get("loaded", False)}
-            print(name + " loopback listener/health ready.", flush=True)
-        key = ors_key = None
+        check_web_service(client)
+        environment = child_environment(
+            "", WEB_PORT, args.inference_port, web=False, assist=True, ors_key=""
+        )
+        log_handle = (directory / "inference.log").open("ab")
+        log_handles.append(log_handle)
+        child = launch(
+            inference_python,
+            "integration.inference.asgi:application",
+            args.inference_port,
+            environment,
+            log_handle,
+        )
+        children.append(child)
+        wait_listener(child, args.inference_port)
+        health = read_health(args.inference_port, "/health/")
+        report["local_inference_health"] = {
+            "status": health["status"],
+            "model_loaded": bool(health.get("loaded", False)),
+        }
         relay = RelayForward(
-            client, local_port=args.web_port, remote_port=REMOTE_PORT, stop_event=STOP_REQUESTED
+            client,
+            local_port=args.inference_port,
+            remote_port=INFERENCE_REMOTE_PORT,
+            stop_event=STOP_REQUESTED,
         ).start()
         check_remote_binding(client)
+        report["remote_inference_health"] = check_remote_health(client)
         report.update(public_ready())
         report["running"] = True
         (directory / "runtime.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-        print("Phone URL: " + report["url"], flush=True)
-        print("Website access: public guest mode; no username or password required.", flush=True)
-        print("Runtime report: " + str(directory / "runtime.json"), flush=True)
+        print("Product URL: " + report["product_url"], flush=True)
+        print("Test URL: " + report["test_url"], flush=True)
         print(
-            "Keep this computer running; Ctrl+C stops only this relay and its two children.",
+            "The application-server pages remain available independently of this laptop.",
             flush=True,
         )
+        print("Ctrl+C stops only this inference process and its SSH tunnel.", flush=True)
+        print("Runtime report: " + str(directory / "runtime.json"), flush=True)
         supervise(relay, children)
     except RelayError as error:
         report["failure_code"] = error.code
@@ -213,7 +262,7 @@ def run(args):
             try:
                 relay.stop()
             except Exception:
-                report["relay_cleanup_confirmed"] = False
+                report["tunnel_cleanup_confirmed"] = False
         if client is not None:
             client.close()
         stop_children(children)
@@ -224,31 +273,29 @@ def run(args):
 
 
 def main():
-    """Functionality: Parse the dedicated phone-relay CLI and report safe failures.
-    Inputs: Local CLI flags; interactive SSH password only when running. Outputs: Exit status.
-    Logic: Explicit installation is separate from normal startup; errors disclose type only.
-    Constraints: No password argument, credential stdout, automatic port changes or restart.
+    """Functionality: Parse the laptop inference supervisor CLI and report safe failures.
+    Inputs: Explicit local flags and a hidden SSH password prompt. Outputs: process exit status.
+    Logic: The check mode performs preflight only; normal mode owns one worker and one tunnel.
+    Constraints: No password argument, Nginx installer, public Web process or automatic restart.
     """
     parser = argparse.ArgumentParser(
-        description="Serve the local assist MVP through the owned HTTPS server."
+        description="Run laptop CUDA inference through the application's loopback SSH tunnel."
     )
     parser.add_argument("--check", action="store_true")
-    parser.add_argument(
-        "--install-relay",
-        action="store_true",
-        help="Explicitly install the public guest relay and remove its legacy access hash",
-    )
-    parser.add_argument("--web-port", type=int, default=8766)
     parser.add_argument("--inference-port", type=int, default=8767)
     parser.add_argument("--log-dir", type=Path, default=ROOT / ".venv/tmp/phone-mvp")
     args = parser.parse_args()
     try:
         run(args)
     except (StartupError, PhoneDeploymentError, RelayError) as error:
-        print("Phone startup failed: " + str(error), file=sys.stderr, flush=True)
+        print("Phone inference startup failed: " + str(error), file=sys.stderr, flush=True)
         return 1
     except Exception as error:
-        print("Phone startup failed: " + type(error).__name__, file=sys.stderr, flush=True)
+        print(
+            "Phone inference startup failed: " + type(error).__name__,
+            file=sys.stderr,
+            flush=True,
+        )
         return 1
     return 0
 

@@ -1,12 +1,13 @@
-"""Responsibilities: Provision only the dedicated public HTTPS guest relay configuration.
-Implementation: Pinned server, bounded SFTP reads, one additive Nginx include, and explicit cleanup
-of the retired access hash; syntax-check before reload and preserve existing app/service identity.
+"""Responsibilities: Manage the isolated public guest relay and pinned app-server SSH operations.
+Implementation: Bound remote reads/commands, install only the additive Nginx include when requested,
+remove its retired access hash, and preserve the independent application-service identity.
 Related Modules: tools.run_phone_mvp; tools.deploy_phone_live; deploy/phone-relay.locations.conf.
 Declaration Index: PhoneDeploymentError; read_remote; write_remote;
 remote_command; connect_server; read_ors; prepare_vhost; verify_relay; install_relay.
-Variable Index: SERVER/PUBLIC_ORIGIN/REMOTE_PORT/MOUNT are explicit inspected deployment targets;
-VHOST/INCLUDE/LEGACY_AUTH/ANCHOR/INCLUDE_LINE select only relay-owned files and one additive
-include; ROOT is backend. SSH/ORS values must never appear in logs or exception messages.
+Variable Index: SERVER/PUBLIC_ORIGIN/WEB_PORT/INFERENCE_REMOTE_PORT/MOUNT are explicit deployment
+targets; WEB_PORT is the app-server service and INFERENCE_REMOTE_PORT is the laptop reverse tunnel;
+VHOST/INCLUDE/LEGACY_AUTH/ANCHOR/INCLUDE_LINE select only relay-owned Nginx files; ROOT is backend.
+SSH/ORS values must never appear in logs or exception messages.
 """
 
 import hashlib
@@ -25,7 +26,8 @@ from tools.deploy_phone_live import FINGERPRINT, PinnedHost
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = "47.239.50.129"
 PUBLIC_ORIGIN = "https://" + SERVER
-REMOTE_PORT = 18766
+WEB_PORT = 18766
+INFERENCE_REMOTE_PORT = 18767
 MOUNT = "/mvp"
 VHOST = "/etc/nginx/sites-enabled/ai-interviewer"
 INCLUDE = "/etc/nginx/prs-phone-relay.locations.conf"
@@ -120,10 +122,11 @@ def connect_server(password):
 
 
 def read_ors(client):
-    """Functionality: Read only the existing server ORS key for the local Web child.
-    Inputs: Authenticated SSH client. Outputs: Credential string in memory.
+    """Functionality: Read the existing ORS key for an isolated app-server MVP environment.
+    Inputs: Authenticated SSH client. Outputs: Credential string in caller memory.
     Logic: Read one bounded config; select exactly one valid ORS assignment without interpolation.
-    Constraints: No remote writes, key printing, copying other external keys or local persistence.
+    Constraints: No remote writes, key printing, laptop transfer, other credentials or local
+    storage.
     """
     with client.open_sftp() as sftp:
         sftp.get_channel().settimeout(25)
@@ -153,7 +156,7 @@ def prepare_vhost(raw):
 
 
 def verify_relay(client):
-    """Functionality: Verify the public guest relay template and absence of the retired password hash.
+    """Functionality: Verify the public guest relay and absence of its retired password hash.
     Inputs: Pinned SSH client. Outputs: Safe template and guest-access metadata.
     Logic: Compare exact owned template and one include; fail while the legacy hash remains.
     Constraints: Does not reload Nginx, read private keys or contact the GPU.
@@ -248,7 +251,8 @@ def install_relay(client):
             remote_command(client, "rm -f -- " + shlex.quote(LEGACY_AUTH))
         except Exception:
             raise PhoneDeploymentError(
-                "Guest relay is active, but legacy password-hash cleanup could not be confirmed; inspect the server file and relay backup."
+                "Guest relay is active, but password-hash cleanup could not be confirmed; "
+                "inspect the server file and relay backup."
             ) from None
     _, pid_after = remote_command(client, "systemctl show prs-camera --property=MainPID --value")
     if pid_before != pid_after:

@@ -1,0 +1,39 @@
+# Responsibilities: Run the public two-page MVP Web application as an isolated app-server service.
+# Implementation: One loopback-only ASGI worker serves product/test pages and proxies inference via
+# the separately owned loopback SSH tunnel; this unit never loads or owns a GPU model.
+# Related Modules: config.mvp_server; integration.mobile_asgi/assist_asgi; PHONE-MVP.md.
+# Declaration Index: None.
+# Variable Index: User/Group — dedicated service identity; EnvironmentFile — MVP-only settings and
+# ORS key; WorkingDirectory — versioned isolated release; ExecStart — bounded one-worker ASGI entry;
+# StateDirectory/MemoryMax/CPUQuota/TasksMax — isolated state and service resource budgets.
+[Unit]
+Description=PRS phone MVP public Web service
+After=network.target
+
+[Service]
+Type=simple
+User=prs-mvp-web
+Group=prs-mvp-web
+WorkingDirectory=/opt/prs-practice/mvp/current/backend
+EnvironmentFile=/etc/prs-mvp-web/app.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=OPENBLAS_NUM_THREADS=1
+ExecStart=/opt/prs-practice/runtimes/outputs-c6eb9264bd29b084/bin/python -B -m uvicorn integration.mobile_asgi:application --host 127.0.0.1 --port 18766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1310728 --ws-max-queue 5 --ws-per-message-deflate false --no-proxy-headers
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=prs-mvp-web
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/prs-mvp-web
+MemoryMax=384M
+CPUQuota=30%
+TasksMax=48
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

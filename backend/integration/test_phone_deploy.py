@@ -2,7 +2,8 @@
 Implementation: Exact synthetic templates and mock remote boundary;
 no existing virtualenv directories, private configuration, server or GPU required.
 Related Modules: integration.phone_deploy; tools.run_phone_mvp; deploy/phone-relay.locations.conf.
-Declaration Index: PhoneDeployTests; PhoneDeployTests.test_guest_relay_verification_requires_no_hash;
+Declaration Index: PhoneDeployTests;
+PhoneDeployTests.test_guest_relay_verification_requires_no_hash;
 PhoneDeployTests.test_guest_relay_verification_rejects_legacy_hash;
 PhoneDeployTests.test_vhost_is_additive_idempotent_and_rejects_changed_anchor;
 PhoneDeployTests.test_remote_binding_requires_exact_loopback;
@@ -99,7 +100,10 @@ class PhoneDeployTests(SimpleTestCase):
             LEGACY_AUTH: b"phone:synthetic-hash",
         }
 
-        with patch("integration.phone_deploy.read_remote", side_effect=lambda _owner, path, limit=65536: files[path]):
+        with patch(
+            "integration.phone_deploy.read_remote",
+            side_effect=lambda _owner, path, limit=65536: files[path],
+        ):
             with self.assertRaises(PhoneDeploymentError):
                 verify_relay(client)
 
@@ -125,10 +129,10 @@ class PhoneDeployTests(SimpleTestCase):
         Logic: Inspect actual parsed local-address field, not the wildcard peer field.
         Constraints: No real listener or SSH commands.
         """
-        good = b"LISTEN 0 128 127.0.0.1:18766 0.0.0.0:*\n"
+        good = b"LISTEN 0 128 127.0.0.1:18767 0.0.0.0:*\n"
         with patch("tools.run_phone_mvp.remote_command", return_value=(0, good)):
             check_remote_binding(Mock())
-        for bad in [b"", good + good, good.replace(b"127.0.0.1:18766", b"0.0.0.0:18766")]:
+        for bad in [b"", good + good, good.replace(b"127.0.0.1:18767", b"0.0.0.0:18767")]:
             with patch("tools.run_phone_mvp.remote_command", return_value=(0, bad)):
                 with self.assertRaises(StartupError):
                     check_remote_binding(Mock())
@@ -136,7 +140,7 @@ class PhoneDeployTests(SimpleTestCase):
     def test_public_ready_verifies_tls_and_bounded_media_policy(self):
         """Functionality: Require a real HTTPS client contract and explicit public media policy.
         Inputs: Synthetic HTTP response metadata. Outputs: Safe readiness, then rejected bad page.
-        Logic: Inspect the unauthenticated HTTPS adapter while keeping response content outside logs.
+        Logic: Inspect the unauthenticated HTTPS adapter while keeping response content out of logs.
         Constraints: Does not claim certificate or browser verification from a mock.
         """
         response = Mock(status=200)

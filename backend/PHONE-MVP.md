@@ -1,61 +1,60 @@
 # Phone Navigation and Local Inference MVP
 
-The phone uses the existing server's trusted HTTPS endpoint to access the public guest version of the local unified MVP; the phone and computer do not need to share a local network. Entry: [Phone Navigation and Detection](https://47.239.50.129/mvp/maps/). The relay does not require a website username or password. Detection, depth, tracking, and risk inference continue to run on the local GPU. The server's original `/prs/` app/service, navigation core, and algorithms remain independent.
+The phone uses the existing server's trusted HTTPS endpoint to access the public guest version of the unified MVP; the phone and laptop do not need to share a local network. The official page is [Phone Navigation and Detection](https://47.239.50.129/mvp/maps/); the diagnostic page is [Phone MVP Tests](https://47.239.50.129/mvp/maps/test). Neither page requires a username or password. The application server permanently hosts both pages and their map APIs. Detection, depth, tracking, and risk inference run only on the laptop GPU while its inference worker and SSH tunnel are active. The existing `/prs/` service, navigation core, and algorithms remain independent.
 
 ## Connection and Responsibilities
 
 ```text
 iPhone Safari: https://47.239.50.129/mvp/maps/
   └─ Existing HTTPS Nginx: public /mvp/ guest relay with a fixed path allowlist
-       └─ Server 127.0.0.1:18766
-            └─ Reverse SSH tunnel with pinned server identity
-                 └─ Local 127.0.0.1:8766: integration.mobile_asgi
-                      ├─ Original map, device GPS, navigation, unified speech scheduling
-                      └─ Local 127.0.0.1:8767: isolated CUDA inference process
+       └─ App server 127.0.0.1:18766: prs-mvp-web.service
+            ├─ Official and diagnostic pages, maps API, navigation and speech scheduling
+            └─ App server 127.0.0.1:18767: inference-only reverse SSH tunnel
+                 └─ Laptop 127.0.0.1:8767: isolated CUDA inference process
 ```
 
-The server exposes the tunnel port only on loopback; it does not expose the local Web or GPU ports directly. `MobileApplication` checks the exact Host, Origin, proxy marker, and allowed path at the outer boundary, then maps admitted requests to the original local contract. This is a public guest route, not user identity authentication. The page, assets, and both browser WebSockets retain the `/mvp/` prefix. Public MCP, admin, and other APIs are not exposed. The computer controls the same phone page's navigation controller through the original localhost MCP; no location watcher is added.
+The permanent Web service and the inference tunnel use separate loopback ports. Port 18766 remains available on the application server when the laptop is off; only detection requires the laptop's tunnel on port 18767. Neither laptop Web port nor GPU port is publicly exposed. `MobileApplication` checks the exact Host, Origin, proxy marker, and allowed path at the outer boundary, then maps admitted requests to the original local contract. This is a public guest route, not user identity authentication. The page, assets, and both browser WebSockets retain the `/mvp/` prefix. Public MCP, admin, and other APIs are not exposed. No second navigation controller or location watcher is added.
 
-The relay forwards public page assets unchanged. Map requests omit browser credentials and use the existing same-origin route; no login cookie, browser password or access token is injected. The relay path and HTTP/WebSocket allowlists remain fixed, and its listener remains loopback-only.
+The Nginx relay forwards public page assets unchanged to the app-server Web service. Map requests omit browser credentials and use the existing same-origin route; no login cookie, browser password or access token is injected. The relay path and HTTP/WebSocket allowlists remain fixed. The inference-only SSH listener is also loopback-only and carries no browser traffic.
 
 The browser sends only JPEG frames used for detection; when a local video is selected, the original video remains in the browser. Media is processed in memory and is not recorded or saved. Mobile networks, the server relay, and local inference all affect result age; the original expiry, capture time, model parameters, and risk rules do not change for phone deployment.
 
-## Environment Setup and Checks
+## Application Server Web Service
 
-First prepare `.venv`, `.venv-inference`, CUDA, and the weights required by the selected algorithm as described in [Local MVP](LOCAL-MVP.md#environment-and-model-setup). Install phone-relay dependencies in the Web environment. Run from `backend`:
+The app-server service is defined by [`deploy/prs-mvp-web.service`](deploy/prs-mvp-web.service), runs as the dedicated `prs-mvp-web` user, and serves only the fixed MVP ASGI allowlist on `127.0.0.1:18766`. Its environment file is `/etc/prs-mvp-web/app.env`; it contains a separate Django key, the existing ORS key for maps, `LOCAL_WEB_ORIGIN=http://127.0.0.1:18766`, and `LOCAL_INFERENCE_URL=ws://127.0.0.1:18767/ws/infer/`. Do not copy application credentials to the laptop. Store the SQLite state in `/var/lib/prs-mvp-web/db.sqlite3`.
+
+Deploy each source revision to a versioned directory under `/opt/prs-practice/mvp/releases/`, update only `/opt/prs-practice/mvp/current`, and install the unit file to `/etc/systemd/system/prs-mvp-web.service`. Then run `systemctl daemon-reload` and `systemctl enable --now prs-mvp-web`. Check `systemctl status prs-mvp-web` and request both public page URLs. This deployment does not switch `/opt/prs-practice/current`, restart `prs-camera`, or change the Nginx virtual host. The existing `/mvp/` Nginx include continues to proxy only to 18766.
+
+## Laptop Inference Setup and Startup
+
+The laptop needs Python 3.12, a supported NVIDIA driver, the pinned CUDA environment, and the exact configured model weights. This repository's current default distance mode uses the official YOLO26n depth checkpoint, so both detection and depth weights are required. From `backend`, provision a fresh inference environment as follows; the CUDA 12.6 wheels are compatible with the inspected CUDA 12.7 laptop driver:
+
+```powershell
+python -m venv .venv-inference
+.\.venv-inference\Scripts\python.exe -m pip install torch==2.8.0 torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cu126
+.\.venv-inference\Scripts\python.exe -m pip install -r requirements-inference.txt --retries 0
+Invoke-WebRequest https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n-depth.pt -OutFile models/yolo26n-depth.pt
+Get-FileHash -Algorithm SHA256 models/yolo26n.pt, models/yolo26n-depth.pt
+```
+
+The depth checkpoint must have SHA-256 `befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9`; `yolo26n.pt` must match `models/yolo26n.json`. These files are not downloaded implicitly by the launcher. Install relay-client dependencies in `.venv`, then run from `backend`:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-phone.txt --retries 0
 .\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --check
 ```
 
-`requirements-phone.txt` reuses the existing development dependencies. `--check` verifies both environments, direct dependencies, CUDA, models, and local ports. It does not connect over SSH, write server configuration, start services, or run model predictions. It does not verify public access, iPhone permissions, or actual phone speech output, and cannot be used together with `--install-relay`.
+`requirements-phone.txt` reuses the Web/deployment dependencies. `--check` verifies both laptop environments, direct dependency pins, CUDA, model hashes, and the local inference port. It does not connect over SSH, write server configuration, start services, load a model, or submit frames. It does not verify iPhone permissions, camera behavior, actual phone speech output, or detection quality.
 
-Default Web and inference ports are 8766 and 8767. An occupied port fails explicitly; the launcher does not kill processes or search for another port. Stop the corresponding instance in its original terminal, or explicitly select different ports with `--web-port` and `--inference-port`. The server's dedicated reverse port is fixed at 18766.
+The permanent Web port is 18766 on the application server. The laptop worker defaults to `127.0.0.1:8767`; the pinned SSH connection maps that worker to server loopback port 18767. An occupied local port fails explicitly. The launcher does not kill processes, start a Web service, edit Nginx, or select another port.
 
-## Install the Relay and Start Daily
-
-Run this for the initial installation or an explicit update to this project's relay configuration:
-
-```powershell
-.\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --install-relay
-```
-
-This option adds the isolated public `/mvp/` include to the existing HTTPS virtual host, backs up the original configuration, checks Nginx syntax, and reloads it. After the guest route is active, it removes the active `/mvp/` Basic Auth hash file; a permission-restricted backup is retained for manual recovery. It does not upload algorithm or software source, replace certificates, or restart the original `prs-camera` service. If syntax validation or reload fails, the previous configuration and any existing hash file are restored on disk. After successful installation, the launcher continues with this run's local services and tunnel.
-
-For daily startup after the public guest relay configuration has been installed, run:
+After `prs-mvp-web.service` is active, run the following on the laptop to start inference and connect it to the app server:
 
 ```powershell
 .\.venv\Scripts\python.exe -B -m tools.run_phone_mvp
 ```
 
-Daily startup checks the installed guest template and one virtual-host include, and confirms that the legacy access hash is absent. It does not rewrite configuration or reload Nginx. A mismatch fails explicitly; review it and run the installation option to update the relay. There is no automatic repair or entry-point switch.
-
-The launcher prompts for the SSH administration password in the terminal and verifies the pinned server host fingerprint. This protects relay installation and is separate from website access: visitors do not enter a username or password. The SSH password is not placed in the command line, a file, or a run report. From `/etc/prs-camera/app.env` on the server, it reads only `ORS_API_KEY`, which is used only in memory by the local supervisor and Web child process. It does not save another configuration copy or provide the key to the inference process or browser. HF and DashScope remain disabled.
-
-The launcher does not create or read `PHONE_ACCESS_USER`/`PHONE_ACCESS_PASSWORD` or `.env.phone-mvp`. Any old local access file is unused. The relay installation removes the active server-side password hash after successfully activating the public guest configuration; its restricted backup is retained only for manual recovery.
-
-Wait for the launcher to display the phone URL and complete its HTTPS page check, then open the entry in Safari. Installed dependencies or an open listening port do not mean the model is loaded; initialization still occurs on the first real input. Run details are stored in the locally ignored `.venv/tmp/phone-mvp/` subdirectory; use `--log-dir` to select a directory under `backend`.
+The launcher prompts for the app-server SSH password in the terminal and verifies the pinned server fingerprint. The password is not placed in command arguments, saved, or written to the run report. It checks that `prs-mvp-web.service` is already active, starts only `integration.inference.asgi` on the laptop, and establishes the loopback-only reverse tunnel. It reports model state from health without loading the model; native initialization begins only on the first real input. Logs and run details stay under the locally ignored `.venv/tmp/phone-mvp/` directory; `--log-dir` may select another directory under `backend`.
 
 ## iPhone Operation
 
@@ -97,8 +96,8 @@ Safari camera access requires an HTTPS secure context; see [WebKit media-access 
 
 ## Shutdown and Failure Boundaries
 
-The computer must remain powered on, connected to the network, and running the launcher; the model runs on the computer, and the server relay cannot replace it. Press `Ctrl+C` in the launch terminal. The launcher closes only the tunnel, SSH connection, and two local child processes it owns for this run. SSH interruption, forwarding failure, or child-process exit ends this run; there is no automatic reconnect, restart, or service switch.
+The laptop must remain powered on, connected to the network, and running the inference launcher for detection. Press `Ctrl+C` in that terminal to stop only the GPU worker and tunnel. The app-server Web service continues serving both pages and map APIs. Without the laptop tunnel, page requests still work, while detection reports an unavailable inference connection; there is no provider fallback, reconnect or retry.
 
-After shutdown, the public guest relay configuration remains installed. Without the tunnel, `/mvp/` requests return 502; requests do not fall back to `/prs/` or another inference service. Rerun the daily startup command to restore the path. For 502, check the local launcher and tunnel. Resolve permission or speech errors while the phone is in the foreground; repeatedly restarting the server does not grant permission.
+A 502 for either page means the app-server Nginx upstream at `127.0.0.1:18766` or `prs-mvp-web.service` is unavailable; the laptop GPU ports do not cause a page 502. An inference connection error while the pages load means the loopback tunnel at server port 18767 is unavailable. Check the corresponding service only. `/mvp/` does not fall back to `/prs/` or another inference provider.
 
 The user must still verify the physical iPhone camera, precise location, audible speaker output, and navigation/detection integration over a mobile network. HTTPS page checks, synthetic location, model results, and native speech events do not replace acceptance on an actual phone.

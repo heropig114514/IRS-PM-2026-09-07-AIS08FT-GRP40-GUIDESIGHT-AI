@@ -1,8 +1,10 @@
 # PRS camera deployment
 
-Phone access to the local GPU uses a separate public guest `/mvp/` HTTPS relay and does not replace
-the `/prs/` service described here. Reverse SSH, the relay allowlist and explicit installation are
-documented in the [phone MVP guide](../PHONE-MVP.md).
+Phone access uses a separate public guest `/mvp/` HTTPS relay and does not replace the `/prs/`
+service described here. The dedicated `prs-mvp-web.service` owns the two public Web pages on
+127.0.0.1:18766. A laptop-hosted GPU worker may connect through a distinct reverse SSH inference
+port, 127.0.0.1:18767; Web availability does not depend on that tunnel. Its service template,
+deployment boundary, and operator steps are documented in the [phone MVP guide](../PHONE-MVP.md).
 
 The [MCP control interface](../MCP.md) uses `/prs/mcp` in the production template. Voice assistance
 requires a complete release of Skills, runtime and browser recording assets. To retain the restricted
