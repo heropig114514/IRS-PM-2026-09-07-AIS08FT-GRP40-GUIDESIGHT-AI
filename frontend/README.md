@@ -4,7 +4,7 @@
 
 Start the backend launcher in explicit --assist mode and open http://127.0.0.1:8766/maps/. The entry uses integration/assist-product.html and dedicated product styles with the existing maps-page.js, navigation-ui.js, camera.js, VideoReplay, speech/vibration drivers, and MCP integration. It does not change navigation or algorithm calculations. Setup and startup differences from the offline entry are documented in backend/LOCAL-MVP.md.
 
-An iPhone on another network can reach the same entry through the separate HTTPS relay at /mvp/. Access authentication, mobile permissions, and runtime requirements are in backend/PHONE-MVP.md.
+An iPhone on another network can reach the same entry through the public guest HTTPS relay at /mvp/. Mobile permissions and runtime requirements are in backend/PHONE-MVP.md.
 
 The product page provides walking navigation, the device camera, press-and-hold speech input submitted on release, and a stop-all action. The user sets the origin with “Use my location” and selects a destination on the map; sample and coordinate-testing controls are hidden. The perception area shows only the Detection Results annotated image and current target list. Raw camera video is used internally for inference. Common controls are sized for touch input.
 

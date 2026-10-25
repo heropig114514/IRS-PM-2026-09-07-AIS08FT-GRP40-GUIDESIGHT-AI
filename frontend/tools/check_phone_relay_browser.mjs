@@ -1,10 +1,10 @@
-/* Responsibilities: Verify the authenticated public diagnostic relay with real Chrome/ORS/local GPU transport.
- * Implementation: Strict TLS, private-file browser credentials, native fake-video capture and explicit
+/* Responsibilities: Verify the public guest diagnostic relay with real Chrome/ORS/local GPU transport.
+ * Implementation: Strict TLS, native fake-video capture and explicit
  * synthetic NUS watch callbacks; verify default-on controls without startup acquisition/output,
  * then a genuine start-click/native-TTS activation before automatic guidance.
  * Related Modules: integration/assist-mvp.js, camera.js, navigation-ui.js, ai-control.js, speech-output.js;
  * backend/integration/assist.py and the separately deployed /mvp/ reverse proxy.
- * Declaration Index: requireGate; validateArguments; parseAccess; readAccess; requireNew; safeFailure;
+ * Declaration Index: requireGate; validateArguments; requireNew; safeFailure;
  * classifyRequest; verifyModelEvidence; verifySpeechActivation; guardMedia;
  * guardMedia.checkedVideo; guardMedia.observedSpeak; installGPS;
  * installGPS.emit; installGPS.describe; installGPS.watchPosition; installGPS.clearWatch;
@@ -13,13 +13,12 @@
  * monitorSocket; monitorSocket.received; monitorSocket.sent; selectSpeech; planNavigation;
  * startCamera; waitCameraFrames; waitCapacity; stopAll; syntheticSpeech; run; main.
  * Variable Index: PHONE_ORIGIN/PREFIX — explicitly approved deployment target; NUS — synthetic GPS,
- * not a phone measurement; report — body-free evidence without credentials, pixels or positions;
- * credentials — private browser-only authentication, never attached to report/error objects.
+ * not a phone measurement; report — body-free evidence without credentials, pixels or positions.
  * Constraints: Chrome with a phone viewport is not Safari/iPhone validation. Never disable TLS,
  * start services, download fixtures, use a physical camera/microphone, mock ORS/models, retry or commit.
  */
 import {createRequire} from "node:module";
-import {access, mkdir, open, writeFile} from "node:fs/promises";
+import {access, mkdir, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 
@@ -33,65 +32,21 @@ export function requireGate(condition, code) {
   if (!condition) throw Object.assign(new Error(code), {code});
 }
 
-/* Functionality: Validate the exact approved HTTPS relay and new JSON report arguments.
- * Inputs: CLI triple and runtime environment. Outputs: normalized public/private paths and runtime.
- * Logic: pin origin/mount before credentials can be read; no userinfo/query/fragment or extra args.
+/* Functionality: Validate the exact public HTTPS relay and new JSON report arguments.
+ * Inputs: CLI URL/report pair and runtime environment. Outputs: normalized URL and report/runtime paths.
+ * Logic: pin origin/mount; no userinfo/query/fragment, credential-file input or extra arguments.
  * Constraints: no implicit local target, alternate server, TLS bypass or browser installation. */
 export function validateArguments(argv, environment) {
-  const [url, privateEnv, output, ...extra] = argv;
-  requireGate(Boolean(url && privateEnv && output && !extra.length && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
+  const [url, output, ...extra] = argv;
+  requireGate(Boolean(url && output && !extra.length && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
   let address;
   try { address = new URL(url); } catch { requireGate(false, "INVALID_PHONE_URL"); }
   requireGate(address.origin === PHONE_ORIGIN && address.pathname === `${PREFIX}maps/test` &&
     !address.username && !address.password && !address.search && !address.hash, "INVALID_PHONE_URL");
   const report = resolve(output);
-  requireGate(report.toLowerCase().endsWith(".json") && report !== resolve(privateEnv), "INVALID_REPORT_PATH");
-  return {url: address.href, privateEnv: resolve(privateEnv), output: report,
+  requireGate(report.toLowerCase().endsWith(".json"), "INVALID_REPORT_PATH");
+  return {url: address.href, output: report,
     screenshot: report.slice(0, -5) + ".png", runtime: resolve(environment.PRS_PLAYWRIGHT_PATH)};
-}
-
-/* Functionality: Parse only the two private access fields without evaluation or interpolation.
- * Inputs: bounded UTF-8 Buffer. Outputs: browser httpCredentials. Logic: strict line/quote parsing,
- * duplicate rejection and fixed user phone; unrelated assignments are ignored, never imported.
- * Constraints: errors contain only fixed codes; no process-env mutation or credential serialization. */
-export function parseAccess(raw) {
-  requireGate(Buffer.isBuffer(raw) && raw.length > 0 && raw.length <= 16384, "INVALID_ACCESS_FILE");
-  let source;
-  try { source = new TextDecoder("utf-8", {fatal: true}).decode(raw); }
-  catch { requireGate(false, "INVALID_ACCESS_FILE"); }
-  const values = new Map();
-  for (const line of source.replace(/^\uFEFF/, "").split(/\r?\n/)) {
-    if (!line.trim() || /^\s*#/.test(line)) continue;
-    const assignment = line.match(/^\s*(?:export\s+)?([A-Za-z_]\w*)\s*=\s*(.*)$/);
-    requireGate(Boolean(assignment), "INVALID_ACCESS_FILE");
-    if (!["PHONE_ACCESS_USER", "PHONE_ACCESS_PASSWORD"].includes(assignment[1])) continue;
-    requireGate(!values.has(assignment[1]), "INVALID_ACCESS_FILE");
-    let value = assignment[2];
-    if (value.startsWith('"')) {
-      const quoted = value.match(/^"((?:[^"\\]|\\.)*)"\s*(?:#.*)?$/);
-      requireGate(Boolean(quoted), "INVALID_ACCESS_FILE");
-      try { value = JSON.parse('"' + quoted[1] + '"'); }
-      catch { requireGate(false, "INVALID_ACCESS_FILE"); }
-    } else if (value.startsWith("'")) {
-      const quoted = value.match(/^'([^']*)'\s*(?:#.*)?$/);
-      requireGate(Boolean(quoted), "INVALID_ACCESS_FILE"); value = quoted[1];
-    } else value = value.replace(/\s+#.*$/, "").trim();
-    requireGate(value.length > 0 && value.length <= 8192 && !/[\r\n\0]/.test(value), "INVALID_ACCESS_FILE");
-    values.set(assignment[1], value);
-  }
-  requireGate(values.get("PHONE_ACCESS_USER") === "phone" && values.has("PHONE_ACCESS_PASSWORD"), "INVALID_ACCESS_FILE");
-  return {username: "phone", password: values.get("PHONE_ACCESS_PASSWORD"), origin: PHONE_ORIGIN};
-}
-
-/* Functionality: Read a bounded prefix of the explicitly supplied private access file.
- * Inputs: private file path. Outputs: validated browser credentials. Logic: at most16385 bytes read.
- * Constraints: no automatic discovery, whole oversized-file allocation, key printing or rewriting. */
-export async function readAccess(path) {
-  const source = await open(path, "r");
-  try {
-    const bytes = Buffer.alloc(16385), {bytesRead} = await source.read(bytes, 0, bytes.length, 0);
-    return parseAccess(bytes.subarray(0, bytesRead));
-  } finally { await source.close(); }
 }
 
 /* Functionality: Preserve existing evidence and private configuration.
@@ -384,7 +339,7 @@ async function waitNode(predicate, milliseconds, code) {
 /* Functionality: Observe real public WSS handshake/clock data without binary media or command bodies.
  * Inputs: Playwright socket and report. Outputs: public endpoint, hello/PRF2/control lifecycle.
  * Logic: permit only the mounted control and local inference paths; no authorization-header capture.
- * Constraints: read-only observation, never a replacement client or authentication workaround. */
+ * Constraints: read-only observation, never a replacement client or access-control workaround. */
 function monitorSocket(socket, report) {
   const address = new URL(socket.url());
   const item = {path: address.pathname, secure: address.protocol === "wss:", closed: false,
@@ -467,11 +422,11 @@ async function planNavigation(page, url) {
 }
 
 /* Functionality: Explicitly select the native Chrome fake-video device and use CameraApp.start.
- * Inputs: real page controls, authorization-needed flag. Outputs: actual camera detection session.
+ * Inputs: real page controls and optional camera-permission grant flag. Outputs: actual detection session.
  * Logic: native video-only permission inventory and exact fake device ID. Constraints: no physical camera. */
-async function startCamera(page, authorize = false) {
+async function startCamera(page, grantCamera = false) {
   await page.selectOption("#assist-source", "camera");
-  if (authorize) {
+  if (grantCamera) {
     await page.click("#assist-devices-authorize");
     await page.waitForFunction(() => !document.getElementById("assist-devices-authorize").disabled &&
       [...document.querySelectorAll("#assist-device option")].some(option => option.value));
@@ -497,7 +452,7 @@ async function waitCameraFrames(page, minimum = 3) {
 }
 
 /* Functionality: Observe real worker drain before the next separately requested camera start.
- * Inputs: authenticated context and approved page URL. Outputs: bounded stable-idle health evidence.
+ * Inputs: public guest context and approved page URL. Outputs: bounded stable-idle health evidence.
  * Logic: read the original health endpoint until loaded/ready and not busy for250ms, at most15s.
  * Constraints: never repeat a start/inference operation, change capacity or fake GPU completion. */
 async function waitCapacity(context, url) {
@@ -557,10 +512,11 @@ async function syntheticSpeech(page) {
 
 /* Functionality: Execute one public-relay acceptance and preserve safe success/failure evidence.
  * Inputs: validated options and existing deployed relay. Outputs: report; no credential fields.
- * Logic: camera-first/no-acquisition DOM gate, auth boundaries, real ORS/WSS/model, two lifecycles and TTS.
+ * Logic: guest-access boundary, camera-first/no-acquisition DOM gate, real ORS/WSS/model,
+ * two lifecycles and TTS.
  * Constraints: no service launch/deployment, TLS override, HTTP/model mocks, automatic retry or phone access. */
 export async function run(options) {
-  const report = {complete: false, phase: "credentials", target: options.url,
+  const report = {complete: false, phase: "public_guest_access", target: options.url,
     browser: "Chrome with phone viewport; not Safari or a real iPhone", tls_validation: "enabled",
     fixtures: {camera: "Chrome native fake-video device; no physical camera or microphone",
       gps: "Explicit synthetic NUS watchPosition callbacks with Date.now timestamps; not native/phone GPS"},
@@ -569,19 +525,18 @@ export async function run(options) {
     requests: [], responses: [], sockets: [], frames: [], failures: [], checks: {}};
   let browser, context, page, navigationVerified = false;
   try {
-    const credentials = await readAccess(options.privateEnv);
     const {chromium, request} = createRequire(import.meta.url)(options.runtime);
-    report.phase = "unauthenticated_boundary";
-    const unauthenticated = await request.newContext();
+    report.phase = "public_guest_boundary";
+    const guest = await request.newContext();
     try {
-      const response = await unauthenticated.get(options.url, {maxRedirects: 0, timeout: 15000});
-      requireGate(response.status() === 401 && /^Basic\b/i.test(response.headers()["www-authenticate"] ?? ""), "HTTP_AUTH_BOUNDARY");
-      report.checks.unauthenticated_http_status = response.status();
-    } finally { await unauthenticated.dispose(); }
+      const response = await guest.get(options.url, {maxRedirects: 0, timeout: 15000});
+      requireGate(response.status() === 200 && !response.headers()["www-authenticate"], "PUBLIC_GUEST_ENTRY_FAILED");
+      report.checks.guest_http_status = response.status();
+    } finally { await guest.dispose(); }
     report.phase = "browser_and_tls";
     browser = await chromium.launch({channel: "chrome", headless: true,
       args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]});
-    context = await browser.newContext({httpCredentials: credentials, viewport: {width: 390, height: 844},
+    context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.grantPermissions(["geolocation"], {origin: PHONE_ORIGIN});
     await context.addInitScript(guardMedia);
@@ -605,7 +560,7 @@ export async function run(options) {
     });
     page.on("websocket", socket => monitorSocket(socket, report));
     const response = await page.goto(options.url, {waitUntil: "domcontentloaded", timeout: 30000});
-    requireGate(response.status() === 200, "AUTHENTICATED_PAGE_FAILED");
+    requireGate(response.status() === 200, "PUBLIC_PAGE_FAILED");
     report.checks.permissions_policy = response.headers()["permissions-policy"];
     requireGate(/camera=\(self\)/.test(report.checks.permissions_policy) &&
       /geolocation=\(self\)/.test(report.checks.permissions_policy), "PHONE_PERMISSIONS_POLICY");
@@ -644,7 +599,9 @@ export async function run(options) {
     report.phase = "explicit_speech_configuration"; report.speech_configuration = await selectSpeech(page);
     report.phase = "real_ors_and_synthetic_gps";
     try {
-      requireGate(!report.responses.some(item => item.path === `${PREFIX}maps/config/` && item.status === 401), "PAGE_CONFIG_AUTH_FAILED");
+      requireGate(report.responses.some(item => item.path === `${PREFIX}maps/config/` && item.status === 200) &&
+        !report.responses.some(item => item.path === `${PREFIX}maps/config/` && item.status >= 400),
+      "PUBLIC_MAP_CONFIG_FAILED");
       report.route = await planNavigation(page, options.url);
       report.real_ors_verified = navigationVerified = true;
       await page.waitForFunction(() => window.__phoneControllers.glue.speechActivation.describe().ready, null, {timeout: 10000});
@@ -758,7 +715,7 @@ export async function run(options) {
 }
 
 /* Functionality: Save one exclusive success/failure artifact with credential-free console output.
- * Inputs: PHONE_URL PRIVATE_ACCESS_ENV NEW_REPORT.json plus PRS_PLAYWRIGHT_PATH.
+ * Inputs: PHONE_URL NEW_REPORT.json plus PRS_PLAYWRIGHT_PATH.
  * Outputs: new JSON and optional masked failure screenshot. Logic: validate paths before browser work.
  * Constraints: no overwrite, secret logging, deployment/service commands, TLS bypass or automatic retry. */
 export async function main(argv = process.argv.slice(2), environment = process.env) {

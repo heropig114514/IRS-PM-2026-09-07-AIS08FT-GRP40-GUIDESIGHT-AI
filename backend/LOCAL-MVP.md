@@ -1,6 +1,6 @@
 # Local MVP Integration and Deployment
 
-When the phone and computer are not on the same local network, the phone can reach the same local unified entry through the existing HTTPS server. See [Phone MVP](PHONE-MVP.md) for preparation, isolated access authentication, startup, and shutdown.
+When the phone and computer are not on the same local network, the phone can reach the same local unified entry through the existing public HTTPS guest relay. See [Phone MVP](PHONE-MVP.md) for preparation, startup, and shutdown.
 
 ## Unified Navigation and Perception Entry
 

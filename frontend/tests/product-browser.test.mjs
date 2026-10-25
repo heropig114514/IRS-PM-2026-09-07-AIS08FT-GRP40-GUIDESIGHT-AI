@@ -26,19 +26,19 @@ function surface() {
     visible_test_text: [], voice_hold_label: "按住说话", diagnostic_link: null};
 }
 
-/* Functionality: Reject authentication scope expansion. Inputs: synthetic URL/paths.
+/* Functionality: Reject guest checker scope expansion. Inputs: synthetic URL/report paths.
  * Outputs: accepted or fixed rejection. Logic: exercise independent gates. Constraints: no file/network access. */
-test("product checker pins credentials to exact HTTPS product entry and new report shape", function testURL() {
-  assert.equal(validateArguments([URL, "private.env", "new.json"], ENV).url, URL);
-  assert.equal(validateArguments([URL, "private.env", "new.json", "--boundaries"], ENV).boundaries, true);
-  assert.equal(validateArguments([URL, "private.env", "new.json", "--camera-boundaries"], ENV).cameraBoundaries, true);
-  assert.throws(() => validateArguments([URL, "private.env", "new.json", "--boundaries", "--camera-boundaries"], ENV), /INVALID_ARGUMENTS/);
+test("product checker pins public guest access to exact HTTPS entry and report shape", function testURL() {
+  assert.equal(validateArguments([URL, "new.json"], ENV).url, URL);
+  assert.equal(validateArguments([URL, "new.json", "--boundaries"], ENV).boundaries, true);
+  assert.equal(validateArguments([URL, "new.json", "--camera-boundaries"], ENV).cameraBoundaries, true);
+  assert.throws(() => validateArguments([URL, "new.json", "--boundaries", "--camera-boundaries"], ENV), /INVALID_ARGUMENTS/);
   for (const value of [URL.replace("https:", "http:"), URL.replace("47.239.50.129", "example.org"),
     URL + "test", URL + "?secret=value", URL + "#fragment", URL.replace("https://", "https://phone:secret@")]) {
-    assert.throws(() => validateArguments([value, "private.env", "new.json"], ENV), /INVALID_PRODUCT_URL/);
+    assert.throws(() => validateArguments([value, "new.json"], ENV), /INVALID_PRODUCT_URL/);
   }
-  assert.throws(() => validateArguments([URL, "same.json", "same.json"], ENV), /INVALID_REPORT_PATH/);
-  assert.throws(() => validateArguments([URL, "private.env", "new.json", "extra"], ENV), /INVALID_ARGUMENTS/);
+  assert.throws(() => validateArguments([URL, "private.env", "new.json"], ENV), /INVALID_ARGUMENTS/);
+  assert.throws(() => validateArguments([URL, "new.json", "extra"], ENV), /INVALID_ARGUMENTS/);
 });
 
 /* Functionality: Reject implicit startup side effects. Inputs: one changed sensor/output count.

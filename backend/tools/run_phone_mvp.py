@@ -1,15 +1,14 @@
-"""Responsibilities: Run local GPU/Web services behind the existing server's HTTPS phone relay.
+"""Responsibilities: Run local GPU/Web services behind the public HTTPS phone relay.
 Implementation: One pinned interactive SSH connection, one reverse loopback bind, explicit optional
-Nginx relay install, existing isolated child processes and honest readiness/failure supervision.
+Nginx guest-relay install, existing isolated child processes and honest readiness/failure supervision.
 Related Modules: integration.phone_deploy/mobile_asgi/relay; tools.run_local_mvp; PHONE-MVP.md.
 Declaration Index: public_ready; check_remote_binding; supervise; run; main.
 Variable Index: ROOT/STOP_REQUESTED and local child helpers are reused from the existing launcher;
-client/relay/children/log_handles own only this run's resources; private SSH/ORS/access values never
-enter arguments, reports or logs. runtime.json is ignored, finite operational evidence.
+client/relay/children/log_handles own only this run's resources; private SSH/ORS values never enter
+arguments, reports or logs. runtime.json is ignored, finite operational evidence.
 """
 
 import argparse
-import base64
 import getpass
 import http.client
 import json
@@ -27,7 +26,6 @@ from integration.phone_deploy import (
     PhoneDeploymentError,
     connect_server,
     install_relay,
-    private_access,
     read_ors,
     remote_command,
     verify_relay,
@@ -53,18 +51,15 @@ from tools.run_local_mvp import (
 )
 
 
-def public_ready(user, password):
+def public_ready():
     """Functionality: Verify one trusted HTTPS request across the actual server relay.
-    Inputs: Private access credential. Outputs: Public non-secret readiness metadata.
-    Logic: Native CA/IP verification and Basic auth, bounded HTML and explicit CSP/media gates.
-    Constraints: No redirects, retries, TLS bypass, device requests, credential or page-body logs.
+    Inputs: Fixed public relay target. Outputs: Public guest-readiness metadata.
+    Logic: Native CA/IP verification, unauthenticated request, bounded HTML and explicit CSP/media gates.
+    Constraints: No redirects, retries, TLS bypass, device requests or page-body logs.
     """
     connection = http.client.HTTPSConnection(SERVER, timeout=15)
-    authorization = base64.b64encode((user + ":" + password).encode()).decode()
     try:
-        connection.request(
-            "GET", MOUNT + "/maps/", headers={"Authorization": "Basic " + authorization}
-        )
+        connection.request("GET", MOUNT + "/maps/")
         response = connection.getresponse()
         raw = response.read(1048577)
         csp = response.getheader("Content-Security-Policy", "")
@@ -114,7 +109,7 @@ def supervise(relay, children):
 
 def run(args):
     """Functionality: Check prerequisites or supervise one explicitly requested phone deployment.
-    Inputs: Check/install flag, local ports and private access/log paths. Outputs: Live service
+    Inputs: Check/install flag, local ports and log path. Outputs: Live service
     until explicit stop, child exit or SSH failure.
     Logic: Preflight once; optional additive server install; launch GPU/Web, bind reverse SSH and
     validate actual HTTPS. Finally release only owned forwarding/channels/processes/client.
@@ -123,7 +118,7 @@ def run(args):
     if args.check and args.install_relay:
         raise StartupError("--check and --install-relay cannot be combined.")
     web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
-    inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0", "bcrypt": "5.0.0"})
+    inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0"})
     inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
     verify_models()
     verify_ports(args.web_port, args.inference_port)
@@ -135,14 +130,11 @@ def run(args):
             "Phone prerequisites verified; no services, SSH or configuration changes.", flush=True
         )
         return
-    user, access_password = private_access(args.access_env, create=True)
     client = relay = None
     children, log_handles = [], []
     report = {
         "running": False,
         "url": PUBLIC_ORIGIN + MOUNT + "/maps/",
-        "access_file": str(args.access_env.resolve()),
-        "access_user": user,
         "remote_binding": "127.0.0.1:" + str(REMOTE_PORT),
         "cloud_inference": False,
         "ssh_password_saved": False,
@@ -161,9 +153,9 @@ def run(args):
         finally:
             password = None
         if args.install_relay:
-            report["relay_install"] = install_relay(client, user, access_password)
+            report["relay_install"] = install_relay(client)
         else:
-            report["relay_configuration"] = verify_relay(client, user, access_password)
+            report["relay_configuration"] = verify_relay(client)
         ors_key = read_ors(client)
         key = read_or_create_key(ROOT / ".env.local-mvp")
         for name, python, module, port, web, health_path in (
@@ -202,13 +194,11 @@ def run(args):
             client, local_port=args.web_port, remote_port=REMOTE_PORT, stop_event=STOP_REQUESTED
         ).start()
         check_remote_binding(client)
-        report.update(public_ready(user, access_password))
-        access_password = None
+        report.update(public_ready())
         report["running"] = True
         (directory / "runtime.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print("Phone URL: " + report["url"], flush=True)
-        print("Access username: " + user + "; password is in the private access file.", flush=True)
-        print("Private access file: " + str(args.access_env.resolve()), flush=True)
+        print("Website access: public guest mode; no username or password required.", flush=True)
         print("Runtime report: " + str(directory / "runtime.json"), flush=True)
         print(
             "Keep this computer running; Ctrl+C stops only this relay and its two children.",
@@ -246,11 +236,10 @@ def main():
     parser.add_argument(
         "--install-relay",
         action="store_true",
-        help="Explicitly install the additive server proxy and access hash once",
+        help="Explicitly install the public guest relay and remove its legacy access hash",
     )
     parser.add_argument("--web-port", type=int, default=8766)
     parser.add_argument("--inference-port", type=int, default=8767)
-    parser.add_argument("--access-env", type=Path, default=ROOT / ".env.phone-mvp")
     parser.add_argument("--log-dir", type=Path, default=ROOT / ".venv/tmp/phone-mvp")
     args = parser.parse_args()
     try:
