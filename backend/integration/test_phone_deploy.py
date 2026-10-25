@@ -1,9 +1,9 @@
-"""Responsibilities: Guard private phone access configuration and additive relay configuration.
-Implementation: Fresh temporary backend roots, real bcrypt limits and mock remote boundary;
+"""Responsibilities: Guard public guest phone relay configuration and its deployment boundary.
+Implementation: Exact synthetic templates and mock remote boundary;
 no existing virtualenv directories, private configuration, server or GPU required.
 Related Modules: integration.phone_deploy; tools.run_phone_mvp; deploy/phone-relay.locations.conf.
-Declaration Index: PhoneDeployTests; PhoneDeployTests.test_access_creation_preserves_existing;
-PhoneDeployTests.test_access_rejects_ambiguity_without_secret_errors;
+Declaration Index: PhoneDeployTests; PhoneDeployTests.test_guest_relay_verification_requires_no_hash;
+PhoneDeployTests.test_guest_relay_verification_rejects_legacy_hash;
 PhoneDeployTests.test_vhost_is_additive_idempotent_and_rejects_changed_anchor;
 PhoneDeployTests.test_remote_binding_requires_exact_loopback;
 PhoneDeployTests.test_public_ready_verifies_tls_and_bounded_media_policy;
@@ -15,15 +15,12 @@ PhoneDeployTests.test_install_failure_restores_all_selected_files.write;
 PhoneDeployTests.test_install_failure_restores_all_selected_files.remove;
 PhoneDeployTests.test_install_failure_restores_all_selected_files.rename;
 PhoneDeployTests.test_install_failure_restores_all_selected_files.command.
-Variable Index: None; fixture credentials are synthetic and never production credentials.
+Variable Index: None; relay hashes, when present in fixtures, are synthetic recovery fixtures only.
 """
 
-import tempfile
 import threading
-from pathlib import Path
 from unittest.mock import Mock, patch
 
-import bcrypt
 from django.test import SimpleTestCase
 
 from tools.run_local_mvp import StartupError
@@ -31,15 +28,16 @@ from tools.run_phone_mvp import check_remote_binding, public_ready, supervise
 
 from .phone_deploy import (
     ANCHOR,
-    AUTH,
     INCLUDE,
     INCLUDE_LINE,
+    LEGACY_AUTH,
+    ROOT,
     VHOST,
     PhoneDeploymentError,
     install_relay,
     prepare_vhost,
-    private_access,
     remote_command,
+    verify_relay,
 )
 from .relay import RelayError
 
@@ -67,57 +65,43 @@ class PhoneDeployTests(SimpleTestCase):
         stdout.channel.recv_exit_status.assert_not_called()
         client.close.assert_not_called()
 
-    def test_access_creation_preserves_existing(self):
-        """Functionality: Verify exclusive creation, stable credentials and the bcrypt boundary.
-        Inputs: Fresh temporary backend root and a synthetic 72-byte password. Outputs: Preserved
-        identity, a usable boundary hash and rejection of creation outside the allowed root.
-        Logic: Patch only the configured root; use real filesystem operations and bcrypt.
-        Constraints: No existing virtualenv or private files; fast hash cost is test-only.
+    def test_guest_relay_verification_requires_no_hash(self):
+        """Functionality: Verify a public guest relay without an access credential.
+        Inputs: Exact template/include fixture and one absent legacy-hash path.
+        Outputs: Safe guest-access metadata. Logic: compare only owned public configuration.
+        Constraints: No private access file, remote server or browser request.
         """
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory).resolve() / "backend"
-            root.mkdir()
-            with patch("integration.phone_deploy.ROOT", root):
-                path = root / "phone.env"
-                first = private_access(path, create=True)
-                original = path.read_bytes()
-                self.assertEqual(first[0], "phone")
-                self.assertGreaterEqual(len(first[1]), 20)
-                self.assertEqual(private_access(path, create=True), first)
-                self.assertEqual(path.read_bytes(), original)
-                boundary = "x" * 72
-                path.write_text(
-                    f"PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD={boundary}\n", encoding="utf-8"
-                )
-                self.assertEqual(private_access(path), ("phone", boundary))
-                digest = bcrypt.hashpw(boundary.encode(), bcrypt.gensalt(rounds=4))
-                self.assertTrue(bcrypt.checkpw(boundary.encode(), digest))
-                outside = root.parent / "outside.env"
-                with self.assertRaises(PhoneDeploymentError):
-                    private_access(outside, create=True)
-                self.assertFalse(outside.exists())
+        client = Mock()
+        template = (ROOT / "deploy/phone-relay.locations.conf").read_bytes()
+        files = {INCLUDE: template, VHOST: (ANCHOR + "\n    " + INCLUDE_LINE).encode()}
 
-    def test_access_rejects_ambiguity_without_secret_errors(self):
-        """Functionality: Refuse duplicate/unsafe credentials without echoing contents.
-        Inputs: Synthetic malformed files, including a 73-byte password. Outputs: Fixed errors.
-        Logic: Reject bcrypt-incompatible lengths before hashing.
-        Constraints: No production password material.
+        def read(_sftp, path, limit=65536):
+            if path == LEGACY_AUTH:
+                raise FileNotFoundError
+            return files[path]
+
+        with patch("integration.phone_deploy.read_remote", side_effect=read):
+            result = verify_relay(client)
+        self.assertTrue(result["guest_access"])
+        self.assertTrue(result["legacy_access_hash_removed"])
+        self.assertNotIn("password", str(result))
+
+    def test_guest_relay_verification_rejects_legacy_hash(self):
+        """Functionality: Refuse an installation that still enforces or retains the old login.
+        Inputs: Exact current template plus a synthetic legacy hash file.
+        Outputs: Fixed install-required error. Logic: fail before local service startup.
+        Constraints: Fixture hash is synthetic; no authentication attempt or secret disclosure.
         """
-        secret = "synthetic-private-credential-value"
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "phone.env"
-            for raw in [
-                f"PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD={secret}\n"
-                f"PHONE_ACCESS_PASSWORD={secret}\n",
-                f"PHONE_ACCESS_USER=phone:bad\nPHONE_ACCESS_PASSWORD={secret}\n",
-                "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=short\n",
-                "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=" + "x" * 73 + "\n",
-            ]:
-                path.write_text(raw, encoding="utf-8")
-                with self.assertRaises(PhoneDeploymentError) as caught:
-                    private_access(path)
-                self.assertNotIn(secret, str(caught.exception))
-                self.assertEqual(str(caught.exception), "Invalid dedicated phone access file.")
+        client = Mock()
+        files = {
+            INCLUDE: (ROOT / "deploy/phone-relay.locations.conf").read_bytes(),
+            VHOST: (ANCHOR + "\n    " + INCLUDE_LINE).encode(),
+            LEGACY_AUTH: b"phone:synthetic-hash",
+        }
+
+        with patch("integration.phone_deploy.read_remote", side_effect=lambda _owner, path, limit=65536: files[path]):
+            with self.assertRaises(PhoneDeploymentError):
+                verify_relay(client)
 
     def test_vhost_is_additive_idempotent_and_rejects_changed_anchor(self):
         """Functionality: Preserve unrelated server bytes and insert exactly once.
@@ -152,7 +136,7 @@ class PhoneDeployTests(SimpleTestCase):
     def test_public_ready_verifies_tls_and_bounded_media_policy(self):
         """Functionality: Require a real HTTPS client contract and explicit public media policy.
         Inputs: Synthetic HTTP response metadata. Outputs: Safe readiness, then rejected bad page.
-        Logic: Inspect adapter boundary while keeping credential outside result/errors.
+        Logic: Inspect the unauthenticated HTTPS adapter while keeping response content outside logs.
         Constraints: Does not claim certificate or browser verification from a mock.
         """
         response = Mock(status=200)
@@ -163,13 +147,14 @@ class PhoneDeployTests(SimpleTestCase):
         }.get(name, default)
         with patch("tools.run_phone_mvp.http.client.HTTPSConnection") as factory:
             factory.return_value.getresponse.return_value = response
-            result = public_ready("phone", "synthetic-private-password")
+            result = public_ready()
             self.assertTrue(result["https_verified"])
             self.assertNotIn("password", str(result))
             self.assertEqual(factory.call_args.args, ("47.239.50.129",))
+            factory.return_value.request.assert_called_once_with("GET", "/mvp/maps/")
             response.read.return_value = b"unrelated page"
             with self.assertRaises(StartupError):
-                public_ready("phone", "synthetic-private-password")
+                public_ready()
 
     def test_supervisor_reports_fatal_event_but_accepts_manual_stop(self):
         """Functionality: Distinguish a fatal relay wakeup from manual cancellation.
@@ -199,14 +184,14 @@ class PhoneDeployTests(SimpleTestCase):
         Constraints: No remote operations, credentials, reload retry or unrelated-file mutation.
         """
         for existing in (False, True):
-            for point in ("include", "auth", "chown", "rename", "syntax", "status", "reload"):
+            for point in ("include", "rename", "syntax", "status", "reload"):
                 with self.subTest(existing=existing, failure=point):
                     original = b"server {\n " + ANCHOR.encode() + b"\n}\n"
                     if existing:
                         original = prepare_vhost(original)
                     files = {VHOST: original, "/etc/nginx/unrelated.conf": b"unchanged"}
                     if existing:
-                        files.update({INCLUDE: b"old relay", AUTH: b"old access hash"})
+                        files.update({INCLUDE: b"old relay", LEGACY_AUTH: b"old access hash"})
                     before = dict(files)
                     failed, commands = [], []
                     client, sftp = Mock(), Mock()
@@ -230,8 +215,7 @@ class PhoneDeployTests(SimpleTestCase):
                         Constraints: Backup and restoration writes remain independently observable.
                         """
                         files[path] = raw
-                        if not failed and ((point == "include" and path == INCLUDE)
-                                           or (point == "auth" and path == AUTH)):
+                        if not failed and point == "include" and path == INCLUDE:
                             failed.append(True)
                             raise OSError("synthetic-private-error")
 
@@ -263,8 +247,7 @@ class PhoneDeployTests(SimpleTestCase):
                         Constraints: No shell, network, real password or automatic command retry.
                         """
                         commands.append(value)
-                        selected = ((point == "chown" and value.startswith("chown "))
-                                    or (point == "syntax" and value == "nginx -t")
+                        selected = ((point == "syntax" and value == "nginx -t")
                                     or (point == "reload" and value == "systemctl reload nginx"))
                         if selected and not failed:
                             failed.append(True)
@@ -278,12 +261,10 @@ class PhoneDeployTests(SimpleTestCase):
                     with (patch("integration.phone_deploy.read_remote", side_effect=read),
                           patch("integration.phone_deploy.write_remote", side_effect=write),
                           patch("integration.phone_deploy.remote_command", side_effect=command),
-                          patch("bcrypt.hashpw", return_value=b"synthetic-hash"),
                           self.assertRaises(PhoneDeploymentError) as caught):
-                        install_relay(client, "phone", "synthetic-private-password")
+                        install_relay(client)
                     self.assertIn("Previous files restored", str(caught.exception))
-                    self.assertNotIn("synthetic-private", str(caught.exception))
-                    for path in (VHOST, INCLUDE, AUTH, "/etc/nginx/unrelated.conf"):
+                    for path in (VHOST, INCLUDE, LEGACY_AUTH, "/etc/nginx/unrelated.conf"):
                         self.assertEqual(files.get(path), before.get(path), path)
                     self.assertLessEqual(commands.count("systemctl reload nginx"), 1)
                     self.assertFalse(any("restart" in value for value in commands))

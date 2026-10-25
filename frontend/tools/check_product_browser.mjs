@@ -1,8 +1,8 @@
-/* Responsibilities: Verify the released assist surface and isolated diagnostic page through Chrome.
- * Implementation: Trusted public HTTPS with bounded private credentials, native fake camera and TTS;
+/* Responsibilities: Verify the released public guest assist surface and diagnostic page through Chrome.
+ * Implementation: Trusted public HTTPS, native fake camera and TTS;
  * rear constraints, permission results, route and GPS use explicit fixtures; model frames are genuine.
  * Related Modules: integration/assist-product.html, product-ui.js, assist-mvp.js, speech-activation.js;
- * check_phone_relay_browser.mjs provides the existing credential and evidence privacy helpers.
+ * check_phone_relay_browser.mjs provides shared evidence privacy helpers.
  * Declaration Index: validateArguments; verifyInitial; verifyProductSurface; verifyCameraRequest;
  * verifyCameraDisplay; installProbe; installProbe.supportedConstraints;
  * installProbe.observedSpeak; installProbe.checkedVideo; installProbe.getCurrentPosition;
@@ -13,7 +13,7 @@
  * installCameraBoundary.supportedConstraints; installCameraBoundary.resolvePermission;
  * installCameraBoundary.rejectPermission; runCameraBoundaries; runBoundaries; main.
  * Variable Index: ORIGIN/PREFIX — approved relay; ROUTE/POINT — explicit synthetic fixtures;
- * report — body-free evidence; credentials — browser-only BasicAuth, never serialized.
+ * report — body-free evidence without login credentials, pixels or positions.
  * Constraints: No device/route/model changes, physical camera/GPS, synthesized speech start/end, retries,
  * installation, TLS bypass, actual audibility claim, service control or commits.
  */
@@ -21,7 +21,7 @@ import {createRequire} from "node:module";
 import {mkdir, stat, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
-import {readAccess, requireNew, requireGate, safeFailure, verifySpeechActivation} from "./check_phone_relay_browser.mjs";
+import {requireNew, requireGate, safeFailure, verifySpeechActivation} from "./check_phone_relay_browser.mjs";
 
 const ORIGIN = "https://47.239.50.129", PREFIX = "/mvp/";
 const POINT = {longitude: 103.7766, latitude: 1.2971, accuracy: 5};
@@ -34,20 +34,21 @@ const ROUTE = {provider: "openrouteservice", profile: "foot-walking", request_id
     {type: 10, instruction: "Arrive (synthetic)", distance_m: 0, duration_s: 0, way_points: [2, 2]},
   ]};
 
-/* Functionality: Pin private authentication to the approved product URL before file access.
- * Inputs: CLI arguments/runtime environment. Outputs: normalized file paths and public URL.
- * Logic: exact origin/path, new JSON artifact and one explicit boundary mode. Constraints: no URL secrets. */
+/* Functionality: Pin the public guest product URL and output artifact before browser work.
+ * Inputs: CLI URL/report arguments, optional boundary mode, and runtime environment.
+ * Outputs: normalized artifact paths and public URL. Logic: exact origin/path and one explicit boundary mode.
+ * Constraints: no credential-file input, URL secrets, local target or TLS override. */
 export function validateArguments(argv, environment) {
-  const [url, privateEnv, output, ...extra] = argv;
+  const [url, output, ...extra] = argv;
   const boundaries = extra.length === 1 && extra[0] === "--boundaries";
   const cameraBoundaries = extra.length === 1 && extra[0] === "--camera-boundaries";
-  requireGate(Boolean(url && privateEnv && output && (!extra.length || boundaries || cameraBoundaries) && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
+  requireGate(Boolean(url && output && (!extra.length || boundaries || cameraBoundaries) && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
   let address; try { address = new URL(url); } catch { requireGate(false, "INVALID_PRODUCT_URL"); }
   requireGate(address.origin === ORIGIN && address.pathname === `${PREFIX}maps/` &&
     !address.username && !address.password && !address.search && !address.hash, "INVALID_PRODUCT_URL");
   const report = resolve(output);
-  requireGate(report.endsWith(".json") && report !== resolve(privateEnv), "INVALID_REPORT_PATH");
-  return {url, boundaries, cameraBoundaries, privateEnv: resolve(privateEnv), output: report, screenshot: report.slice(0, -5) + ".png",
+  requireGate(report.endsWith(".json"), "INVALID_REPORT_PATH");
+  return {url, boundaries, cameraBoundaries, output: report, screenshot: report.slice(0, -5) + ".png",
     desktopScreenshot: report.slice(0, -5) + "-desktop.png", diagnosticScreenshot: report.slice(0, -5) + "-diagnostic.png",
     runtime: resolve(environment.PRS_PLAYWRIGHT_PATH),
     fakeCameraFile: environment.PRS_FAKE_CAMERA_VIDEO ? resolve(environment.PRS_FAKE_CAMERA_VIDEO) : null};
@@ -245,8 +246,8 @@ async function waitVoice(page, family) {
   return page.evaluate(initialEvidence);
 }
 
-/* Functionality: Run product and diagnostic acceptance against the existing authenticated service.
- * Inputs: pinned URL/private access/new evidence paths. Outputs: JSON and product screenshot.
+/* Functionality: Run product and diagnostic acceptance against the public guest service.
+ * Inputs: pinned URL/new evidence paths. Outputs: JSON and product screenshot.
  * Logic: product layout/defaults, interface language, real-click TTS, original nav and real GPU, cleanup,
  * then isolated diagnostic UI. Constraints: route/GPS fixtures remain explicitly identified throughout. */
 export async function run(options) {
@@ -261,12 +262,11 @@ export async function run(options) {
     actual_iphone_verified: false, actual_gps_verified: false, actual_ors_verified: false, physical_audibility_verified: false};
   let browser, context, page;
   try {
-    const credentials = await readAccess(options.privateEnv);
     const {chromium} = createRequire(import.meta.url)(options.runtime);
     if (options.fakeCameraFile) requireGate(options.fakeCameraFile.endsWith(".y4m") && (await stat(options.fakeCameraFile)).isFile(), "INVALID_FAKE_CAMERA_FILE");
     browser = await chromium.launch({channel: "chrome", headless: true, args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
       ...(options.fakeCameraFile ? [`--use-file-for-fake-video-capture=${options.fakeCameraFile}`] : [])]});
-    context = await browser.newContext({httpCredentials: credentials, viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true, locale: "zh-CN"});
+    context = await browser.newContext({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.addInitScript(installProbe, POINT);
     await context.route(`${ORIGIN}${PREFIX}maps/route/`, route => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(ROUTE)}));
     page = await context.newPage();
@@ -429,7 +429,7 @@ function installCameraBoundary() {
 }
 
 /* Functionality: Verify single-click acquisition, pending cancellation and actionable failures.
- * Inputs: approved public product URL/private browser authentication/new report.
+ * Inputs: approved public product URL and new report.
  * Outputs: body-free browser evidence. Logic: declared permission fixtures exercise original controllers.
  * Constraints: no actual camera/GPS/route/model, stream playback, implicit retry or service control. */
 export async function runCameraBoundaries(options) {
@@ -441,9 +441,9 @@ export async function runCameraBoundaries(options) {
     model_verified: false, physical_audibility_verified: false};
   let browser, context, page; let modelConnections = 0;
   try {
-    const credentials = await readAccess(options.privateEnv), {chromium} = createRequire(import.meta.url)(options.runtime);
+    const {chromium} = createRequire(import.meta.url)(options.runtime);
     browser = await chromium.launch({channel: "chrome", headless: true});
-    context = await browser.newContext({httpCredentials: credentials, viewport: {width: 390, height: 844},
+    context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.addInitScript({content: `(${installProbe.toString()})(${JSON.stringify(POINT)});(${installCameraBoundary.toString()})();`});
     page = await context.newPage(); page.on("pageerror", error => report.failures.push(safeFailure(error, report.phase)));
@@ -507,7 +507,7 @@ export async function runCameraBoundaries(options) {
 }
 
 /* Functionality: Test delayed voice lists, incomplete route selection and visibility without repeating inference.
- * Inputs: pinned product/private access/new report paths. Outputs: boundary JSON and ready-map screenshots.
+ * Inputs: pinned public product/new report paths. Outputs: boundary JSON and ready-map screenshots.
  * Logic: explicit inventory/route/GPS/visibility fixtures surround unchanged controllers and native TTS.
  * Constraints: no camera acquisition, actual GPS/ORS, GPU session, native speech-event simulation or retry. */
 export async function runBoundaries(options) {
@@ -521,9 +521,9 @@ export async function runBoundaries(options) {
     actual_iphone_verified: false, actual_gps_verified: false, actual_ors_verified: false, physical_audibility_verified: false};
   let browser, context, page;
   try {
-    const credentials = await readAccess(options.privateEnv), {chromium} = createRequire(import.meta.url)(options.runtime);
+    const {chromium} = createRequire(import.meta.url)(options.runtime);
     browser = await chromium.launch({channel: "chrome", headless: true});
-    context = await browser.newContext({httpCredentials: credentials, viewport: {width: 390, height: 844},
+    context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.addInitScript(installProbe, POINT); await context.addInitScript(installDelayedVoices);
     await context.route(`${ORIGIN}${PREFIX}maps/route/`, route => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(ROUTE)}));

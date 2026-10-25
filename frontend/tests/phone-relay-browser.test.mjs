@@ -1,5 +1,5 @@
-/* Responsibilities: Verify public-relay checker authentication, privacy and model-clock gates offline.
- * Implementation: Pure URL/env/evidence fixtures and temporary private artifacts; no browser or APIs.
+/* Responsibilities: Verify public guest-relay checker boundaries, privacy and model-clock gates offline.
+ * Implementation: Pure URL/evidence fixtures and temporary report artifacts; no browser or APIs.
  * Related Modules: tools/check_phone_relay_browser.mjs; original PRF2 local model contract.
  * Declaration Index: fixture; rejectsCode.
  * Variable Index: URL/RUNTIME are explicit synthetic test inputs; fixture metadata is never model evidence.
@@ -11,7 +11,7 @@ import {mkdtemp, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {basename, dirname, join, resolve} from "node:path";
 import {runInNewContext} from "node:vm";
-import {validateArguments, parseAccess, readAccess, requireNew, safeFailure,
+import {validateArguments, requireNew, safeFailure,
   classifyRequest, verifyModelEvidence, verifySpeechActivation, installGPS} from "../tools/check_phone_relay_browser.mjs";
 
 const URL = "https://47.239.50.129/mvp/maps/test", RUNTIME = {PRS_PLAYWRIGHT_PATH: "synthetic-playwright"};
@@ -48,46 +48,24 @@ function fixture() {
   return {frames, sockets};
 }
 
-test("relay credentials are pinned to the exact approved HTTPS mount before file access", () => {
-  const options = validateArguments([URL, "private.env", "new-evidence.json"], RUNTIME);
+test("guest checker pins the exact approved HTTPS mount and accepts no credential input", () => {
+  const options = validateArguments([URL, "new-evidence.json"], RUNTIME);
   assert.equal(options.url, URL);
+  assert.equal(options.output, resolve("new-evidence.json"));
+  assert.equal("privateEnv" in options, false);
   for (const url of ["http://47.239.50.129/mvp/maps/test", "https://other.example/mvp/maps/test",
     "https://47.239.50.129/maps/test", "https://phone:private@47.239.50.129/mvp/maps/test",
     URL + "?access=private", URL + "#private", "https://47.239.50.129:8443/mvp/maps/test", "not a URL"])
-    rejectsCode(() => validateArguments([url, "private.env", "new.json"], RUNTIME), "INVALID_PHONE_URL");
-  rejectsCode(() => validateArguments([URL, "same.json", "same.json"], RUNTIME), "INVALID_REPORT_PATH");
-  rejectsCode(() => validateArguments([URL, "private.env", "new.json", "extra"], RUNTIME), "INVALID_ARGUMENTS");
-  rejectsCode(() => validateArguments([URL, "private.env", "new.json"], {}), "INVALID_ARGUMENTS");
+    rejectsCode(() => validateArguments([url, "new.json"], RUNTIME), "INVALID_PHONE_URL");
+  rejectsCode(() => validateArguments([URL, "new.json", "unexpected-private.env"], RUNTIME), "INVALID_ARGUMENTS");
+  rejectsCode(() => validateArguments([URL, "new.json"], {}), "INVALID_ARGUMENTS");
+  rejectsCode(() => validateArguments([URL, "report.txt"], RUNTIME), "INVALID_REPORT_PATH");
 });
 
-test("safe access parser reads only fixed credentials without expansion or process mutation", () => {
-  const before = {...process.env};
-  const value = parseAccess(Buffer.from("# Explicit synthetic credentials\nHF_TOKEN=ignore-private\n" +
-    "export PHONE_ACCESS_USER='phone'\nPHONE_ACCESS_PASSWORD=\"${NOT_EXPANDED}#literal\" # comment\n"));
-  assert.deepEqual(value, {username: "phone", password: "${NOT_EXPANDED}#literal", origin: "https://47.239.50.129"});
-  assert.deepEqual({...process.env}, before);
-});
-
-test("malformed, duplicated, nonphone, empty and oversized secrets fail without content disclosure", () => {
-  const values = ["PHONE_ACCESS_USER=other\nPHONE_ACCESS_PASSWORD=private-value",
-    "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=private-one\nPHONE_ACCESS_PASSWORD=private-two",
-    "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=\"private-broken",
-    "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=",
-    "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=\"private\\nvalue\"",
-    "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=private\nmalformed private",
-    "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=" + "x".repeat(17000)];
-  for (const input of values) rejectsCode(() => parseAccess(Buffer.from(input)), "INVALID_ACCESS_FILE");
-  rejectsCode(() => parseAccess(Buffer.from([255])), "INVALID_ACCESS_FILE");
-});
-
-test("private file reads are bounded and report preservation is exclusive", async () => {
+test("report preservation is exclusive without reading private access files", async () => {
   const directory = await mkdtemp(join(tmpdir(), "prs-phone-checker-"));
   try {
-    const privateEnv = join(directory, "private.env"), output = join(directory, "evidence.json");
-    await writeFile(privateEnv, "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD=synthetic-private");
-    assert.equal((await readAccess(privateEnv)).username, "phone");
-    await writeFile(privateEnv, Buffer.alloc(100000, 97));
-    await assert.rejects(readAccess(privateEnv), error => error.code === "INVALID_ACCESS_FILE");
+    const output = join(directory, "evidence.json");
     await requireNew(output); await writeFile(output, "preserved");
     await assert.rejects(requireNew(output), error => error.code === "REPORT_ALREADY_EXISTS");
   } finally {

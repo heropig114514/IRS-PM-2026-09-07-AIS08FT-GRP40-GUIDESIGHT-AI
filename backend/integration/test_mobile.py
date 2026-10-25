@@ -12,17 +12,16 @@ MobileTests.test_public_websocket_admission; MobileTests.test_no_path_guessing_o
 MobileTests.test_redirect_csp_and_local_response_isolation; MobileTests.test_real_assist_template;
 MobileTests.test_real_asset_allowlist; MobileTests.test_real_route_uses_original_origin_gate;
 MobileTests.test_lifespan_delegates; MobileTests.test_video_endpoint_mount_resolution;
-MobileTests.test_public_map_credentials_are_delivery_only;
-MobileTests.test_map_credentials_contract_fails_explicitly.
+MobileTests.test_public_map_assets_are_forwarded_unchanged.
 Variable Index: PUBLIC/LOCAL — explicit synthetic deployment origins; RecordingApplication.scopes
 contains in-memory synthetic request evidence only, never browser media, real locations or secrets.
-Constraints: Passing tests does not verify the public certificate, phone permissions, Nginx access
-gate, reverse tunnel, real GPS/ORS, GPU model output, physical audio or mobile-network latency.
+Constraints: Passing tests does not verify the public certificate, phone permissions, Nginx guest
+include, reverse tunnel, real GPS/ORS, GPU model output, physical audio or mobile-network latency.
 """
 
 import json
 import re
-from unittest.mock import AsyncMock, mock_open, patch
+from unittest.mock import AsyncMock, patch
 from urllib.parse import urljoin
 
 from asgiref.testing import ApplicationCommunicator
@@ -30,7 +29,7 @@ from django.core.asgi import get_asgi_application
 from django.test import SimpleTestCase, override_settings
 
 from .assist import AssistApplication
-from .mobile import MAX_ASSET_BYTES, MOUNT, MobileApplication, mobile_origin
+from .mobile import MOUNT, MobileApplication, mobile_origin
 from .services import FRONTEND
 
 PUBLIC = "https://47.239.50.129"
@@ -530,30 +529,21 @@ class MobileTests(SimpleTestCase):
         self.assertEqual(json.loads(result)["fixture"], "original_route_called")
         route.assert_called_once()
 
-    async def test_public_map_credentials_are_delivery_only(self):
-        """Functionality: Adapt only two public asset responses for same-origin proxy auth.
-        Inputs: actual map sources and public/local GET/HEAD operations.
-        Outputs: one exact literal substitution, correct JS headers, unchanged source/local bytes.
-        Logic: compare whole bodies and real core resource delivery, including unrelated modules.
-        Constraints: no authentication token, source mutation, navigation calculation or browser.
+    async def test_public_map_assets_are_forwarded_unchanged(self):
+        """Functionality: Forward public map assets through the original guest application.
+        Inputs: actual map sources and public/local GET operations. Outputs: unchanged asset bytes.
+        Logic: compare whole responses and source files for public and localhost scopes.
+        Constraints: no user credential, source mutation, navigation calculation or browser.
         """
         app = MobileApplication(AssistApplication(get_asgi_application()))
         for name in ("maps-page.js", "maps-client.js"):
             original = (FRONTEND / name).read_bytes()
-            self.assertEqual(original.count(b'credentials: "omit"'), 1)
-            expected = original.replace(b'credentials: "omit"', b'credentials: "same-origin"', 1)
             start, body = await http_call(app, "/assets/" + name)
             self.assertEqual(start["status"], 200)
-            self.assertEqual(body, expected)
+            self.assertEqual(body, original)
             headers = dict(start["headers"])
             self.assertEqual(headers[b"content-type"], b"text/javascript; charset=utf-8")
-            self.assertEqual(headers[b"cache-control"], b"no-store")
-            self.assertEqual(headers[b"x-content-type-options"], b"nosniff")
-            self.assertEqual(int(headers[b"content-length"]), len(expected))
-            head, empty = await http_call(app, "/assets/" + name, "HEAD")
-            self.assertEqual(head["status"], 200)
-            self.assertEqual(empty, b"")
-            self.assertEqual(int(dict(head["headers"])[b"content-length"]), len(expected))
+            self.assertEqual(int(headers[b"content-length"]), len(original))
             local, local_body = await http_call(app, "/assets/" + name,
                                                headers=[(b"host", b"127.0.0.1:8766")])
             self.assertEqual(local["status"], 200)
@@ -563,30 +553,6 @@ class MobileTests(SimpleTestCase):
             start, body = await http_call(app, "/assets/" + name)
             self.assertEqual(start["status"], 200)
             self.assertEqual(body, (FRONTEND / name).read_bytes())
-
-    async def test_map_credentials_contract_fails_explicitly(self):
-        """Functionality: Refuse source drift, excess bytes or read failure without a fallback.
-        Inputs: explicit zero/two-slot/oversized/read-error byte fixtures for both fixed paths.
-        Outputs: safe503 and no downstream call. Logic: check bounded read argument independently.
-        Constraints: file fixtures are in memory; no original file, credential or provider changes.
-        """
-        inner = RecordingApplication()
-        app = MobileApplication(inner)
-        slot = b'credentials: "omit"'
-        for name in ("maps-page.js", "maps-client.js"):
-            for original in (b"private fixture without expected slot", slot + b";" + slot,
-                             slot + b"x" * (MAX_ASSET_BYTES + 1 - len(slot))):
-                opener = mock_open(read_data=original)
-                with patch("pathlib.Path.open", opener):
-                    start, body = await http_call(app, "/assets/" + name)
-                self.assertEqual(start["status"], 503)
-                self.assertEqual(json.loads(body), {"code": "mobile_asset_contract_invalid"})
-                opener().read.assert_called_once_with(MAX_ASSET_BYTES + 1)
-            with patch("pathlib.Path.open", side_effect=OSError("private fixture diagnostic")):
-                start, body = await http_call(app, "/assets/" + name)
-            self.assertEqual(start["status"], 503)
-            self.assertNotIn(b"private fixture", body)
-        self.assertEqual(inner.scopes, [])
 
     async def test_lifespan_delegates(self):
         """Functionality: Preserve original MCP lifespan ownership with no HTTP gate or extra
