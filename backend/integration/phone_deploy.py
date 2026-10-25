@@ -156,7 +156,8 @@ def prepare_vhost(raw):
 
 
 def verify_relay(client):
-    """Functionality: Verify the public guest relay and absence of its retired password hash.
+    """Functionality: Verify the public guest relay template and absence of the retired password
+    hash.
     Inputs: Pinned SSH client. Outputs: Safe template and guest-access metadata.
     Logic: Compare exact owned template and one include; fail while the legacy hash remains.
     Constraints: Does not reload Nginx, read private keys or contact the GPU.
@@ -251,7 +252,7 @@ def install_relay(client):
             remote_command(client, "rm -f -- " + shlex.quote(LEGACY_AUTH))
         except Exception:
             raise PhoneDeploymentError(
-                "Guest relay is active, but password-hash cleanup could not be confirmed; "
+                "Guest relay is active, but legacy password-hash cleanup could not be confirmed; "
                 "inspect the server file and relay backup."
             ) from None
     _, pid_after = remote_command(client, "systemctl show prs-camera --property=MainPID --value")

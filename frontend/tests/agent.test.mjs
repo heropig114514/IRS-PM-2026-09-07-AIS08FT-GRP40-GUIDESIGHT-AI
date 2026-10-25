@@ -82,20 +82,33 @@ test("semantic tools never construct controllers on the wrong page", async () =>
 // Logic: Exercise actual connect close handler; Constraints: no network or native media API.
 test("agent socket disconnect cancels capture and preserves offline UI", t => {
   const socket = new EventTarget();
-  t.mock.method(globalThis, "WebSocket", function () { return socket; });
+  // Node builds need not expose this browser global; install and restore an explicit fixture.
+  const previousSocket = Object.getOwnPropertyDescriptor(globalThis, "WebSocket");
+  Object.defineProperty(globalThis, "WebSocket", {configurable: true, writable: true,
+    value: function () { return socket; }});
+  t.after(() => {
+    if (previousSocket) Object.defineProperty(globalThis, "WebSocket", previousSocket);
+    else delete globalThis.WebSocket;
+  });
   Object.defineProperty(globalThis, "document", {configurable: true,
     value: {documentElement: {dataset: {}}}});
   Object.defineProperty(globalThis, "location", {configurable: true,
     value: {href: "http://localhost/live/", protocol: "http:"}});
   t.after(() => { delete globalThis.document; delete globalThis.location; });
   let cancelled = 0, rendered = 0;
-  const owner = {recording: true, connected: true, voice: {cancel: async () => { cancelled++; }},
+  const owner = {recording: true, connected: true, holdActive: true, holdToken: 5,
+    activePointerId: 7, root: {dataset: {pressing: "true"}},
+    voice: {cancel: async () => { cancelled++; }},
     render: () => { rendered++; }};
   AgentPanel.prototype.connect.call(owner);
   socket.dispatchEvent(new Event("close"));
   assert.equal(cancelled, 1);
   assert.equal(owner.recording, false);
   assert.equal(owner.connected, false);
+  assert.equal(owner.holdActive, false);
+  assert.equal(owner.holdToken, 6);
+  assert.equal(owner.activePointerId, null);
+  assert.equal(owner.root.dataset.pressing, "false");
   assert.equal(owner.stage, "offline");
   assert.equal(rendered, 1);
 });

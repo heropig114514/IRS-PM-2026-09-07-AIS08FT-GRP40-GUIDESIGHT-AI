@@ -4,9 +4,11 @@ Related Modules: realtime.distance_config/depth/detector/tracking.
 Declaration Index: distance_box; GeometryDistanceEstimator; GeometryDistanceEstimator.__init__;
 GeometryDistanceEstimator.estimate; GeometryDistanceEstimator.fuse; TemporalDepthEntry;
 TemporalDepthCache; TemporalDepthCache.__init__; TemporalDepthCache.reset;
-TemporalDepthCache.apply; DistanceStrategy; DistanceStrategy.__init__; DistanceStrategy.apply.
+TemporalDepthCache.apply; DistanceStrategy; DistanceStrategy.__init__; DistanceStrategy.fuse;
+DistanceStrategy.apply.
 Variable Index: logger — stream lifecycle diagnostics; cache.entries — scalar history only;
 strategy.frame_index/stream_key — first-frame schedule and tracker epoch/geometry identity.
+strategy.fast_roi — explicit A-only host partition toggle; false retains original GPU medians.
 """
 
 import logging
@@ -138,10 +140,23 @@ class DistanceStrategy:
         Constraints: no models are loaded here; geometry cannot call a supplied depth model.
         """
         self.config = config
+        self.fast_roi = False
         self.geometry = (GeometryDistanceEstimator(config)
                          if config.distance_mode == "geometry" else None)
         self.cache = TemporalDepthCache() if config.distance_mode == "temporal_depth" else None
         self.frame_index, self.stream_key = 0, None
+
+    def fuse(self, depth_map, boxes, image_size):
+        """Functionality: Select the unchanged A median or opt-in exact host partition.
+        Inputs: aligned depth, detections and original size. Outputs: canonical distances.
+        Logic: fast mode downloads the depth plane once, then partitions valid ROI values.
+        Constraints: A only; B/C keep their original path, no approximation or class filtering.
+        """
+        if self.fast_roi:
+            from realtime.depth_fast import fuse_depth_host
+
+            return fuse_depth_host(depth_map, boxes, image_size)
+        return fuse_object_depth(depth_map, boxes, image_size)
 
     def apply(self, image, boxes, depth_estimator, *, timestamp, epoch=0):
         """Functionality: Execute only the selected distance stage for one associated frame.
@@ -154,7 +169,7 @@ class DistanceStrategy:
         if mode == "geometry":
             return self.geometry.fuse(boxes, image.size), False
         if mode == "depth":
-            return (fuse_object_depth(depth_estimator.predict(image), boxes, image.size), True
+            return (self.fuse(depth_estimator.predict(image), boxes, image.size), True
                     ) if depth_estimator is not None else (boxes, False)
         if depth_estimator is None:
             raise ValueError("temporal_depth requires a depth estimator")

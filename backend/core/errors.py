@@ -1,5 +1,7 @@
-"""Responsibilities: Preserve DRF error responses, log unhandled exceptions, and expose a fixed error code.
-Implementation: Delegate known DRF exceptions to its default handler; keep unknown exceptions as HTTP 500 without retrying.
+"""Responsibilities: Preserve DRF error responses, log unhandled exceptions, and expose a fixed
+error code.
+Implementation: Delegate known DRF exceptions to its default handler; keep unknown exceptions as
+HTTP 500 without retrying.
 Related Modules: config.base.REST_FRAMEWORK; called by DRF APIView.
 Declaration Index: api_exception_handler — maps unknown API exceptions and logs their location.
 Variable Index: logger — API exception logger.
@@ -18,7 +20,8 @@ def api_exception_handler(exc, context):
     Inputs: exc is the exception; context is DRF context and may include the current view.
     Outputs: A standard DRF Response or a fixed internal_error HTTP 500 Response.
     Logic: Prefer DRF's default mapping; when unmapped, log the view type and original traceback.
-    Constraints: Do not log request bodies, query parameters, cookies, or credentials; never convert failure to success.
+    Constraints: Do not log request bodies, query parameters, cookies, or credentials; never convert
+    failure to success.
     """
     response = exception_handler(exc, context)
     if response is not None:

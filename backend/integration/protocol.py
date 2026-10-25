@@ -44,7 +44,9 @@ def pack_request(index, timestamp, jpeg):
     if type(index) is not int or not 0 <= index <= 0xFFFFFFFF:
         raise IntegrationError("invalid_frame", "The frame sequence number is invalid.", 400)
     if isinstance(timestamp, bool) or not isinstance(timestamp, int | float):
-        raise IntegrationError("invalid_timestamp", "Capture timestamps must be finite, increasing seconds.", 400)
+        raise IntegrationError(
+            "invalid_timestamp", "Capture timestamps must be finite, increasing seconds.", 400
+        )
     if not isinstance(jpeg, bytes):
         raise IntegrationError("invalid_frame", "The image must be JPEG bytes.", 400)
     packet = REQUEST_HEADER.pack(REQUEST_MAGIC, index, timestamp) + jpeg
@@ -62,13 +64,17 @@ def unpack_request(packet, expected_index, previous_timestamp=None):
         raise IntegrationError("invalid_frame", "The image is empty or exceeds 1 MiB.", 400)
     magic, index, timestamp = REQUEST_HEADER.unpack_from(packet)
     if magic != REQUEST_MAGIC or index != expected_index:
-        raise IntegrationError("invalid_sequence", "The frame protocol or sequence number does not match.", 400)
+        raise IntegrationError(
+            "invalid_sequence", "The frame protocol or sequence number does not match.", 400
+        )
     if (
         not math.isfinite(timestamp)
         or timestamp < 0
         or (previous_timestamp is not None and timestamp <= previous_timestamp)
     ):
-        raise IntegrationError("invalid_timestamp", "Capture timestamps must be finite, increasing seconds.", 400)
+        raise IntegrationError(
+            "invalid_timestamp", "Capture timestamps must be finite, increasing seconds.", 400
+        )
     jpeg = packet[REQUEST_HEADER.size :]
     if not jpeg.startswith(b"\xff\xd8") or not jpeg.endswith(b"\xff\xd9"):
         raise IntegrationError("invalid_frame", "Only complete JPEG images are accepted.", 400)
@@ -96,7 +102,9 @@ def read_manifest(path=None):
             raise ValueError("Invalid manifest")
         return manifest
     except (OSError, ValueError, TypeError, AttributeError):
-        raise IntegrationError("local_manifest_invalid", "The local detection-model manifest is missing or invalid.") from None
+        raise IntegrationError(
+            "local_manifest_invalid", "The local detection-model manifest is missing or invalid."
+        ) from None
 
 
 def local_session_seconds():
@@ -107,7 +115,9 @@ def local_session_seconds():
     """
     mode = os.environ.get("LOCAL_MVP_MODE", "offline")
     if mode not in {"offline", "assist"}:
-        raise IntegrationError("local_configuration_invalid", "The local runtime-mode configuration is invalid.")
+        raise IntegrationError(
+            "local_configuration_invalid", "The local runtime-mode configuration is invalid."
+        )
     return None if mode == "assist" else SESSION_SECONDS
 
 
@@ -146,10 +156,14 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
         "capabilities": {"detection": True, "depth": True, "tracking": True, "risk": True},
     }
     if distance_mode not in DISTANCE_MODES or type(depth_interval) is not int or depth_interval < 1:
-        raise IntegrationError("local_contract_invalid", "The distance mode or depth interval is invalid.")
+        raise IntegrationError(
+            "local_contract_invalid", "The distance mode or depth interval is invalid."
+        )
     if session_seconds is not None and (
             type(session_seconds) is not int or session_seconds != SESSION_SECONDS):
-        raise IntegrationError("local_contract_invalid", "The local session timing configuration is invalid.")
+        raise IntegrationError(
+            "local_contract_invalid", "The local session timing configuration is invalid."
+        )
     if distance_mode != "depth":
         contract.update(distance_mode=distance_mode, distance_units="m",
                         depth_interval=depth_interval if distance_mode == "temporal_depth" else 0)
@@ -169,7 +183,9 @@ def validate_contract(message):
     no accepting HF validation, alternative precision, or missing tracking/risk.
     """
     if not isinstance(message, dict):
-        raise IntegrationError("local_contract_invalid", "The local inference-session configuration is invalid.")
+        raise IntegrationError(
+            "local_contract_invalid", "The local inference-session configuration is invalid."
+        )
     names = message.get("names")
     mode = message.get("distance_mode", "depth")
     expected = model_contract("fixture", {"names": [], "source_sha256": ""},
@@ -188,7 +204,9 @@ def validate_contract(message):
         or "validation" in message
         or (mode == "geometry" and ("depth_model" in message or "depth_units" in message))
     ):
-        raise IntegrationError("local_contract_invalid", "The local inference-session configuration is invalid.")
+        raise IntegrationError(
+            "local_contract_invalid", "The local inference-session configuration is invalid."
+        )
     return message
 
 
@@ -220,14 +238,19 @@ def validate_result(metadata, contract, index, timestamp):
     if contract.get("distance_mode") == "geometry":
         keys += ("distance_estimator",)
         if "depth_model" in metadata:
-            raise IntegrationError("local_result_invalid", "Geometric distance mode must not declare a depth model.")
+            raise IntegrationError(
+                "local_result_invalid", "Geometric distance mode must not declare a depth model."
+            )
     if (
         any(metadata.get(key) != contract[key] for key in keys)
         or metadata.get("index") != index
         or metadata.get("capture_time_s") != timestamp
         or metadata.get("timestamp_source") != "browser_capture"
     ):
-        raise IntegrationError("local_result_invalid", "The local inference-result identity or capture time does not match.")
+        raise IntegrationError(
+            "local_result_invalid",
+            "The local inference-result identity or capture time does not match.",
+        )
 
 
 def is_loopback(host):

@@ -4,6 +4,7 @@ no existing virtualenv directories, private configuration, server or GPU require
 Related Modules: integration.phone_deploy; tools.run_phone_mvp; deploy/phone-relay.locations.conf.
 Declaration Index: PhoneDeployTests;
 PhoneDeployTests.test_guest_relay_verification_requires_no_hash;
+PhoneDeployTests.test_guest_relay_verification_requires_no_hash.read;
 PhoneDeployTests.test_guest_relay_verification_rejects_legacy_hash;
 PhoneDeployTests.test_vhost_is_additive_idempotent_and_rejects_changed_anchor;
 PhoneDeployTests.test_remote_binding_requires_exact_loopback;
@@ -20,7 +21,7 @@ Variable Index: None; relay hashes, when present in fixtures, are synthetic reco
 """
 
 import threading
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from django.test import SimpleTestCase
 
@@ -72,11 +73,15 @@ class PhoneDeployTests(SimpleTestCase):
         Outputs: Safe guest-access metadata. Logic: compare only owned public configuration.
         Constraints: No private access file, remote server or browser request.
         """
-        client = Mock()
+        client = MagicMock()
         template = (ROOT / "deploy/phone-relay.locations.conf").read_bytes()
         files = {INCLUDE: template, VHOST: (ANCHOR + "\n    " + INCLUDE_LINE).encode()}
 
         def read(_sftp, path, limit=65536):
+            """Functionality: Model a relay with public configuration and no retired credential.
+            Inputs: unused SFTP owner, path and byte limit. Outputs: fixture bytes or missing file.
+            Logic: only the legacy credential path is absent. Constraints: no filesystem or SSH.
+            """
             if path == LEGACY_AUTH:
                 raise FileNotFoundError
             return files[path]
@@ -86,6 +91,7 @@ class PhoneDeployTests(SimpleTestCase):
         self.assertTrue(result["guest_access"])
         self.assertTrue(result["legacy_access_hash_removed"])
         self.assertNotIn("password", str(result))
+        client.open_sftp.return_value.__exit__.assert_called_once()
 
     def test_guest_relay_verification_rejects_legacy_hash(self):
         """Functionality: Refuse an installation that still enforces or retains the old login.
@@ -93,7 +99,7 @@ class PhoneDeployTests(SimpleTestCase):
         Outputs: Fixed install-required error. Logic: fail before local service startup.
         Constraints: Fixture hash is synthetic; no authentication attempt or secret disclosure.
         """
-        client = Mock()
+        client = MagicMock()
         files = {
             INCLUDE: (ROOT / "deploy/phone-relay.locations.conf").read_bytes(),
             VHOST: (ANCHOR + "\n    " + INCLUDE_LINE).encode(),
@@ -106,6 +112,7 @@ class PhoneDeployTests(SimpleTestCase):
         ):
             with self.assertRaises(PhoneDeploymentError):
                 verify_relay(client)
+        client.open_sftp.return_value.__exit__.assert_called_once()
 
     def test_vhost_is_additive_idempotent_and_rejects_changed_anchor(self):
         """Functionality: Preserve unrelated server bytes and insert exactly once.
@@ -140,7 +147,8 @@ class PhoneDeployTests(SimpleTestCase):
     def test_public_ready_verifies_tls_and_bounded_media_policy(self):
         """Functionality: Require a real HTTPS client contract and explicit public media policy.
         Inputs: Synthetic HTTP response metadata. Outputs: Safe readiness, then rejected bad page.
-        Logic: Inspect the unauthenticated HTTPS adapter while keeping response content out of logs.
+        Logic: Inspect the unauthenticated HTTPS adapter while keeping response content outside
+        logs.
         Constraints: Does not claim certificate or browser verification from a mock.
         """
         response = Mock(status=200)
