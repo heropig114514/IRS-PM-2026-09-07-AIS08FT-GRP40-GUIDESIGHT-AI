@@ -1,12 +1,22 @@
 /** Responsibilities: Bilingual UI dictionary for dynamic status, errors, and accessibility text.
- * Implementation: Chinese source text is used as the key; {n} marks runtime values that remain untranslated.
- * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js, integration/maps-navigation-speech.js。
- * Declaration Index: None。
+ * Implementation: Chinese source text is the key; {n} marks interpolated text that is translated
+ * only when it matches a known entry, while unknown content remains verbatim.
+ * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js,
+ * frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js,
+ * integration/maps-navigation-speech.js, integration/assist-mvp.js, backend/integration/assist.py.
+ * Declaration Index: None.
  * Variable Index: translations — fixed Chinese-to-English UI dictionary; contains no coordinates or image data.
  */
 export const translations = {
   "导航语音": "Navigation speech",
   "启用导航播报（默认关闭）": "Enable navigation speech (off by default)",
+  "启用导航播报（默认开启）": "Enable navigation announcements (on by default)",
+  "导航与风险播报声音": "Navigation and risk alert audio",
+  "语音输出默认开启，首次请点击启动语音。": "Speech output is enabled by default. Tap Activate voice before using it for the first time.",
+  "返回导航": "Back to navigation",
+  "PRS · 集成测试": "PRS · Integration test",
+  "本页可同时运行本地感知与导航播报。": "This page can run local perception and navigation announcements together.",
+  "导航与感知由本页统一调度输出。": "Navigation and perception output are coordinated on this page.",
   "播报语言": "Announcement language",
   "本地声音": "Local voice",
   "请选择本地声音": "Select a local voice explicitly",
