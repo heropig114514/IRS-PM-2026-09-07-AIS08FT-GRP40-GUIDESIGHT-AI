@@ -8,9 +8,9 @@ Declaration Index: mobile_origin; reject; MobileApplication; MobileApplication._
 MobileApplication.__call__; MobileApplication.public_path; MobileApplication.forward;
 MobileApplication.forward.public_send.
 Variable Index: MOUNT — fixed public /mvp prefix; HTTP_METHODS — exact public endpoint methods;
-WS_PATHS — two original browser sockets; STRIPPED_HEADERS — proxy/relay headers never trusted
-downstream; logger — body-free admission diagnostics. Public origin is an explicit routing boundary,
-not user identity. No MCP/admin/API route is exposed through the guest relay.
+WS_PATHS — exact control, assistant, and local-detection sockets; STRIPPED_HEADERS — proxy/relay
+headers never trusted downstream; logger — body-free admission diagnostics. Public origin is an
+explicit routing boundary, not user identity. No MCP/admin or general API route is exposed.
 """
 
 import json
@@ -29,7 +29,7 @@ HTTP_METHODS = {
     "/maps/route/": frozenset({"POST"}),
     "/integration/status/": frozenset({"GET"}),
 }
-WS_PATHS = frozenset({"/ws/control/", "/ws/detect/local/"})
+WS_PATHS = frozenset({"/ws/control/", "/ws/agent/", "/ws/detect/local/"})
 STRIPPED_HEADERS = frozenset(
     {
         b"host",
@@ -118,8 +118,8 @@ class MobileApplication:
     """Functionality: Isolate one public mobile relay from original localhost capabilities.
     Logic: validate original peer/headers before mapping admitted public traffic to canonical local
     inputs. Same process/hub remains available to the computer's original local MCP client.
-    Constraints: one worker, proxy-stripped path contract; no public MCP/admin/API, user identity,
-    trusted forwarded headers, algorithm changes or extra controllers.
+    Constraints: one worker and proxy-stripped path contract; no public MCP/admin/general API routes,
+    account authentication, trusted forwarded headers, algorithm changes or extra controllers.
     """
 
     def __init__(self, application, *, public_origin=None):
@@ -184,8 +184,8 @@ class MobileApplication:
     def public_path(self, path, kind):
         """Functionality: Resolve exact allowed public endpoint methods.
         Inputs: already stripped decoded path and protocol. Outputs: permitted method set or None.
-        Logic: two original WS paths and fixed HTTP routes; asset serving retains assist's exact
-        allowlist.
+        Logic: three exact browser WS paths and fixed HTTP routes; asset serving retains assist's
+        exact allowlist.
         Constraints: prefixed/double-prefixed paths, traversal, empty segments and backslashes
         rejected;
         this layer never invents an asset filename or delegates unrelated software routes.

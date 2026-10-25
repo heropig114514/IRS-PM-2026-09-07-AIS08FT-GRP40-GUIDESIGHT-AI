@@ -1,6 +1,6 @@
 """Responsibilities: Verify the explicit mobile relay without listeners, SSH, TLS or CUDA.
 Implementation: Real ASGI packets and assist/Django handlers exercise exact public admission,
-canonical forwarding, mount-relative resources and original localhost/MCP isolation.
+the guest assistant socket, canonical forwarding, mount-relative resources and localhost/MCP isolation.
 Related Modules: integration.mobile/assist/asgi; core.maps/camera;
 frontend/integration/assist-mvp.js.
 Declaration Index: http_call; websocket_call; RecordingApplication; RecordingApplication.__init__;
@@ -365,20 +365,27 @@ class MobileTests(SimpleTestCase):
             self.assertEqual((await http_call(app, path, method))[0]["status"], 405)
 
     async def test_public_websocket_admission(self):
-        """Functionality: Admit only exact same-origin control/local inference sockets.
-        Inputs: two original sockets and hostile/absent-origin/foreign-path variants.
-        Outputs: preserved acceptance/normalized headers or1008. Logic: original hub remains a
+        """Functionality: Admit exact same-origin control, assistant, and local inference sockets.
+        Inputs: three explicitly allowed sockets and hostile/absent-origin/foreign-path variants.
+        Outputs: preserved acceptance/normalized headers or 1008. Logic: original hub remains a
         singleton.
         Constraints: no socket listener, native frame or extra control implementation.
         """
         inner = RecordingApplication()
         app = MobileApplication(inner)
-        for path in ("/ws/control/", "/ws/detect/local/"):
+        for path in ("/ws/control/", "/ws/agent/", "/ws/detect/local/"):
             self.assertEqual((await websocket_call(app, path))["type"], "websocket.accept")
             self.assertEqual(inner.scopes[-1]["root_path"], MOUNT)
             self.assertEqual(inner.scopes[-1]["scheme"], "wss")
             self.assertEqual(dict(inner.scopes[-1]["headers"])[b"origin"], LOCAL.encode())
-        for path in ("/ws/echo/", "/ws/detect/hf/", "/ws/infer/", "/mcp", "/mvp/ws/control/"):
+        for path in (
+            "/ws/echo/",
+            "/ws/agent",
+            "/ws/detect/hf/",
+            "/ws/infer/",
+            "/mcp",
+            "/mvp/ws/control/",
+        ):
             self.assertEqual((await websocket_call(app, path))["code"], 1008)
         for headers in (
             [(b"host", b"47.239.50.129")],
@@ -391,7 +398,7 @@ class MobileTests(SimpleTestCase):
         self.assertEqual(
             (await websocket_call(app, "/ws/control/", query_string=b"token=fixture"))["code"], 1008
         )
-        self.assertEqual(len(inner.scopes), 2)
+        self.assertEqual(len(inner.scopes), 3)
 
     async def test_no_path_guessing_or_traversal(self):
         """Functionality: Enforce the one stripped-path contract without traversal or query aliases.

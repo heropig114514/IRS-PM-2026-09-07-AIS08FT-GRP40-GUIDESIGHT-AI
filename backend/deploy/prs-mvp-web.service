@@ -3,8 +3,8 @@
 # the separately owned loopback SSH tunnel; this unit never loads or owns a GPU model.
 # Related Modules: config.mvp_server; integration.mobile_asgi/assist_asgi; PHONE-MVP.md.
 # Declaration Index: None.
-# Variable Index: User/Group — dedicated service identity; EnvironmentFile — MVP-only settings and
-# ORS key; WorkingDirectory — versioned isolated release; ExecStart — bounded one-worker ASGI entry;
+# Variable Index: User/Group — dedicated service identity; EnvironmentFile — MVP-only Django, ORS,
+# and optional agent settings; WorkingDirectory — versioned isolated release; ExecStart — bounded one-worker ASGI entry;
 # StateDirectory/MemoryMax/CPUQuota/TasksMax — isolated state and service resource budgets.
 [Unit]
 Description=PRS phone MVP public Web service

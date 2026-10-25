@@ -9,11 +9,12 @@ iPhone Safari: https://47.239.50.129/mvp/maps/
   └─ Existing HTTPS Nginx: public /mvp/ guest relay with a fixed path allowlist
        └─ App server 127.0.0.1:18766: prs-mvp-web.service
             ├─ Official and diagnostic pages, maps API, navigation and speech scheduling
+            ├─ Guest voice/text assistant over the exact /ws/agent/ path
             └─ App server 127.0.0.1:18767: inference-only reverse SSH tunnel
                  └─ Laptop 127.0.0.1:8767: isolated CUDA inference process
 ```
 
-The permanent Web service and the inference tunnel use separate loopback ports. Port 18766 remains available on the application server when the laptop is off; only detection requires the laptop's tunnel on port 18767. Neither laptop Web port nor GPU port is publicly exposed. `MobileApplication` checks the exact Host, Origin, proxy marker, and allowed path at the outer boundary, then maps admitted requests to the original local contract. This is a public guest route, not user identity authentication. The page, assets, and both browser WebSockets retain the `/mvp/` prefix. Public MCP, admin, and other APIs are not exposed. No second navigation controller or location watcher is added.
+The permanent Web service and the inference tunnel use separate loopback ports. Port 18766 remains available on the application server when the laptop is off; only detection requires the laptop's tunnel on port 18767. Neither laptop Web port nor GPU port is publicly exposed. `MobileApplication` checks the exact Host, Origin, proxy marker, and allowed path at the outer boundary, then maps admitted requests to the original local contract. This is a public guest route, not user identity authentication. The page, assets, and three exact browser WebSockets retain the `/mvp/` prefix: control, assistant, and local detection. Assistant tab ownership is verified through the control socket; this does not add account authentication. Public MCP, admin, and general API routes remain closed. Assistant requests use the provider settings isolated to `prs-mvp-web` and remain subject to the documented per-task limits. No second navigation controller or location watcher is added.
 
 The Nginx relay forwards public page assets unchanged to the app-server Web service. Map requests omit browser credentials and use the existing same-origin route; no login cookie, browser password or access token is injected. The relay path and HTTP/WebSocket allowlists remain fixed. The inference-only SSH listener is also loopback-only and carries no browser traffic.
 
@@ -21,7 +22,7 @@ The browser sends only JPEG frames used for detection; when a local video is sel
 
 ## Application Server Web Service
 
-The app-server service is defined by [`deploy/prs-mvp-web.service`](deploy/prs-mvp-web.service), runs as the dedicated `prs-mvp-web` user, and serves only the fixed MVP ASGI allowlist on `127.0.0.1:18766`. Its environment file is `/etc/prs-mvp-web/app.env`; it contains a separate Django key, the existing ORS key for maps, `LOCAL_WEB_ORIGIN=http://127.0.0.1:18766`, and `LOCAL_INFERENCE_URL=ws://127.0.0.1:18767/ws/infer/`. Do not copy application credentials to the laptop. Store the SQLite state in `/var/lib/prs-mvp-web/db.sqlite3`.
+The app-server service is defined by [`deploy/prs-mvp-web.service`](deploy/prs-mvp-web.service), runs as the dedicated `prs-mvp-web` user, and serves only the fixed MVP ASGI allowlist on `127.0.0.1:18766`. Its environment file is `/etc/prs-mvp-web/app.env`; it contains a separate Django key, the existing ORS key for maps, `LOCAL_WEB_ORIGIN=http://127.0.0.1:18766`, and `LOCAL_INFERENCE_URL=ws://127.0.0.1:18767/ws/infer/`. When the guest assistant is enabled, the same file holds only the allowlisted `PRS_AGENT_*` and `PRS_ASR_MODEL` provider settings. These credentials remain scoped to the MVP service and are never copied to the laptop or committed. Store the SQLite state in `/var/lib/prs-mvp-web/db.sqlite3`.
 
 Deploy each source revision to a versioned directory under `/opt/prs-practice/mvp/releases/`, update only `/opt/prs-practice/mvp/current`, and install the unit file to `/etc/systemd/system/prs-mvp-web.service`. Then run `systemctl daemon-reload` and `systemctl enable --now prs-mvp-web`. Check `systemctl status prs-mvp-web` and request both public page URLs. This deployment does not switch `/opt/prs-practice/current`, restart `prs-camera`, or change the Nginx virtual host. The existing `/mvp/` Nginx include continues to proxy only to 18766.
 
