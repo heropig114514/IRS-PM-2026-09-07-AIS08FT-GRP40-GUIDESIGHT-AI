@@ -1,12 +1,12 @@
-"""Responsibilities: 有资源边界的内存 WebSocket 回传，不解析、存储或转发图像。
-Implementation: 验证同源及连接上限；二进制原样回传，JSON ping 返回匹配 id 的 pong。
-Related Modules: config.asgi；frontend/echo-client.js 提供单个在途请求与字节校验。
+"""Responsibilities: Resource-bounded in-memory WebSocket echo; images are not parsed, stored, or forwarded.
+Implementation: Validate origin and connection limits; echo binary payloads unchanged and answer JSON pings with a matching pong ID.
+Related Modules: config.asgi; frontend/echo-client.js enforces one in-flight request and byte equality.
 Declaration Index:
-- echo_socket — 管理一条连接的准入、回传、超时和释放。
+- echo_socket — Admit, echo, time out, and release one connection.
 Variable Index:
-- MAX_FRAME_BYTES — 1 MiB 单帧上限；MAX_TEXT_BYTES — 1024 字节控制消息上限。
-- MAX_CONNECTIONS — 单 worker 最多 4 条回传连接；IDLE_SECONDS — 15 秒无输入关闭。
-- active_connections — 当前已准入连接数；logger — 协议生命周期及错误日志。
+- MAX_FRAME_BYTES — 1 MiB per-frame limit; MAX_TEXT_BYTES — 1,024-byte control-message limit.
+- MAX_CONNECTIONS — At most four echo connections per worker; IDLE_SECONDS — Close after 15 seconds without input.
+- active_connections — Current admitted connection count; logger — Protocol lifecycle and error logs.
 """
 
 import asyncio
@@ -27,11 +27,11 @@ logger = logging.getLogger(__name__)
 
 
 async def echo_socket(scope, receive, send):
-    """Functionality: 原样回传二进制帧，响应应用级 ping，并限制单实例资源占用。
-    Inputs: ASGI scope/receive/send；读取 CAMERA_ALLOWED_ORIGINS 和进程连接计数。
-    Outputs: 二进制回传、JSON pong 或明确关闭码；日志只含连接标识和统计。
-    Logic: 在首次 await 后无 await 地检查并增加连接数；finally 保证释放。
-    Constraints: 仅单 worker；匿名诊断接口，同源校验不等于用户认证；不记录媒体正文。
+    """Functionality: Echo binary frames, answer application-level pings, and bound per-process resource use.
+    Inputs: ASGI scope/receive/send; reads CAMERA_ALLOWED_ORIGINS and process connection count.
+    Outputs: Binary echo, JSON pong, or explicit close code; logs contain only connection IDs and counts.
+    Logic: Check and increment the connection count without an await after the first await; finally always releases the slot.
+    Constraints: Single worker only; this is an anonymous diagnostic endpoint, and same-origin validation is not user authentication; never log media bodies.
     """
     global active_connections
     first = await receive()

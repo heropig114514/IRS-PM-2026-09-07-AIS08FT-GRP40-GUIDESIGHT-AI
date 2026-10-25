@@ -1,8 +1,8 @@
-/** Responsibilities: 中英文界面词典，包括动态状态、错误和无障碍文字。
- * Implementation: 中文原文作为键；{n} 表示运行时字段，字段内容不翻译。
+/** Responsibilities: Bilingual UI dictionary for dynamic status, errors, and accessibility text.
+ * Implementation: Chinese source text is used as the key; {n} marks runtime values that remain untranslated.
  * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js, integration/maps-navigation-speech.js。
  * Declaration Index: None。
- * Variable Index: translations — 中文到英文的固定界面词典；不包含坐标或图像数据。
+ * Variable Index: translations — fixed Chinese-to-English UI dictionary; contains no coordinates or image data.
  */
 export const translations = {
   "导航语音": "Navigation speech",

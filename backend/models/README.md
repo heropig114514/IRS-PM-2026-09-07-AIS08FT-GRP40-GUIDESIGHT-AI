@@ -1,28 +1,19 @@
-# YOLO26n 模型工件
+# YOLO26n Model Artifacts
 
-首版使用 Ultralytics 官方 YOLO26n COCO 80 类预训练权重，无需额外训练；这不属于任意类别的零样本识别。台阶、坑洞及道路安全判断不由这 80 类检测器保证。
+The initial release uses the official Ultralytics YOLO26n pretrained weights for 80 COCO classes and requires no additional training. This is not zero-shot recognition of arbitrary classes. The detector does not guarantee stair, pothole, or road-safety judgments.
 
-`yolo26n.json` 跟踪模型、类别顺序、原始权重来源、构建版本和 SHA256。权重与 ONNX 文件不提交 Git。官方来源：[YOLO26](https://docs.ultralytics.com/models/yolo26/)、[导出说明](https://docs.ultralytics.com/modes/export/)。该模型及 Ultralytics 构建工具遵循其 AGPL-3.0 条款；这里不改变本仓库其他文件的授权。
+`yolo26n.json` tracks the model, class order, original weight source, build version, and SHA-256. Weights and ONNX files are not committed to Git. Official references: [YOLO26](https://docs.ultralytics.com/models/yolo26/) and [export mode](https://docs.ultralytics.com/modes/export/). The model and Ultralytics build tools are subject to their AGPL-3.0 terms; this does not change the licensing of other repository files.
 
-在独立构建虚拟环境安装 `requirements-vision-build.txt`，从 backend 运行：
+Install `requirements-vision-build.txt` in an isolated build virtual environment, then run from `backend`:
 
 ```powershell
 python tools/export_yolo26.py --output models
 ```
 
-脚本从清单中的官方 HTTPS 发布下载原始权重，固定 CPU FP32、640、batch=1、opset=17、静态形状、`nms=False`、`simplify=False`、max_det=300。使用 one-to-one 端到端输出 `[1,300,6]`，服务端不执行额外 NMS。重新导出可能改变工件哈希，必须把新工件和新清单一起发布；服务端不自动下载、转换或替换模型。
+The script downloads the original weights from the official HTTPS release in the manifest. It fixes CPU FP32, image size 640, batch size 1, opset 17, static shapes, `nms=False`, `simplify=False`, and `max_det=300`. It uses one-to-one end-to-end output `[1,300,6]`; the server performs no additional NMS. Re-exporting may change artifact hashes, so publish the new artifact and manifest together. The server never downloads, converts, or replaces a model automatically.
 
-当前摄像头只使用 HF 上经 SHA256 校验的 PyTorch YOLO26n 原权重；CPU ONNX 服务和
-`YOLO_MODEL_PATH` 配置已删除。上方导出脚本仅用于离线工件复现，不构成可选择的处理模式。
-输入为 RGB 居中 letterbox、Pillow bilinear、114填充、FP32/255、640、阈值0.25，原尺寸
-标注 JPEG80。GPU任务内复用 CUDA Graph；不会自动更换权重或切换后端。
+The current camera uses only the original PyTorch YOLO26n weights hosted on HF and verified with SHA-256. The CPU ONNX service and `YOLO_MODEL_PATH` setting have been removed. The export script above is for offline artifact reproduction only; it is not a selectable processing mode. Inputs use centered RGB letterboxing, Pillow bilinear interpolation, padding value 114, FP32/255, size 640, and confidence threshold 0.25. Annotations use original-size JPEG quality 80. GPU tasks reuse CUDA Graphs; weights and backends are never switched automatically.
 
-`inference-plan.json` 是必需的部署工件，记录实际计算精度、融合/缓冲/Graph/AOT/JIT配置、
-同一Notebook版本的源报告SHA与三个完整5000图COCO结果；每个AP降幅须≤0.5个百分点。
-输入归一化保持FP32，进入GPU时按明确配置转换，返回数组保持FP32。计划读取/配置/质量
-检查失败会中止启动，不使用默认方案。AOT在HF实际GPU启动编译，保留原/兼容包及每个
-共享库SHA。缓存JIT则保留官方compiler artifacts和Inductor/Triton目录；新分配要求FX命中，
-禁止后端新代码生成及后续重编译。两者均核对硬件/版本/配置；Kaggle二进制不跨GPU发布。
+`inference-plan.json` is a required deployment artifact. It records actual compute precision, fusion/buffering/Graph/AOT/JIT configuration, source-report SHA for the same Notebook version, and three complete 5,000-image COCO results. Each AP decrease must be at most 0.5 percentage points. Input normalization remains FP32, values are converted only at GPU entry according to explicit configuration, and returned arrays remain FP32. Startup fails if plan loading, configuration, or quality checks fail; there is no default plan. AOT compilation runs at startup on the actual HF GPU and preserves original/compatible packages and each shared-library SHA. Cached JIT preserves official compiler artifacts and the Inductor/Triton directories; a new allocation must hit FX, and backend code generation and later recompilation are prohibited. Both methods validate hardware, versions, and configuration. Kaggle binaries are not published across GPUs.
 
-`frontend/tools/fixtures/detection-sample.jpg` 为 Ultralytics8.4.171 包的 bus.jpg 480×640 JPEG80
-版本，只在开发浏览器测试中使用，不再作为公开部署资源；原图片字节和来源许可保留。
+`frontend/tools/fixtures/detection-sample.jpg` is the 480×640 JPEG quality 80 version of `bus.jpg` from Ultralytics 8.4.171. It is used only in development browser tests and is no longer a public deployment asset. The original image bytes and source license are preserved.

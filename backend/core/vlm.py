@@ -1,26 +1,25 @@
-"""Responsibilities: 场景描述的输入校验、提示词构造、DashScope 调用、容量限制与响应解析。
-Implementation: 固定 HTTPS + OpenAI 兼容 chat/completions；20 秒网络 I/O 超时、256 KiB 响应上限；
-不重试、不重定向、不降级；密钥仅出现在 Authorization 头。
-Related Modules: core.scene（HTTP 适配）、core.services（ORS 同构的限流/错误结构）、
-tools.describe_image（CLI）；frontend/scene-client.js（boxes_to_objects 与其 mapObjects 规则一致）。
-Declaration Index: SceneError/SceneError.__init__ — 公开错误；vlm_settings — 读取环境配置；
-_is_number — 有限非布尔数判断；_validate_object — 单个检测对象校验；
-validate_scene_request — 请求体校验与规范化；build_messages — 提示词与消息；
-parse_completion — 上游响应解析；describe_scene — 限流并调用 DashScope；
-new_request_id — 生成 request_id；_map_box — 单个检测框转对象；
-boxes_to_objects — 检测框列表转 objects；
-_prepare_scene — 高层入口的共用校验；describe — 异步一行接入；describe_sync — 脚本用同步版本。
-Variable Index: DEFAULT_HOST/DEFAULT_MODEL — 环境缺省；CHAT_PATH — 唯一上游路径；
-TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — 传输边界；MAX_TOKENS/TEMPERATURE/ENABLE_THINKING — 生成参数
-（Qwen3 混合思考模型的思考 token 不受 max_tokens 约束，实测开启时 14–16 秒、常超时，故显式关闭）；
-MAX_IMAGE_BYTES/MAX_BASE64_CHARS — 图像边界；
-MAX_OBJECTS/MAX_QUESTION_CHARS/MAX_LABEL_CHARS — 输入边界；
-MAX_REQUESTS_PER_MINUTE — 单 worker 总额度；vlm_slots — 两个并发；
-MAX_SAFE_INTEGER — 与前端 Number.isSafeInteger 对齐的 track_id 上限；
-request_times/request_lock — 限流状态；LANGUAGES — 支持语言与提示词名称；
-OBJECT_KEYS/DIRECTIONS/RISK_LEVELS/MOTION_STATES — 对象字段白名单；
-HOST_PATTERN/MODEL_PATTERN — host 与模型名格式；
-SYSTEM_PROMPT — 系统提示词模板；logger — 无图像/问题/回答/密钥日志。
+"""Responsibilities: Validate scene-description input, construct prompts, call DashScope, bound capacity, and parse responses.
+Implementation: Fixed HTTPS OpenAI-compatible chat/completions; 20-second network-I/O timeout and 256 KiB response limit;
+no retries, redirects, or fallback; the key appears only in the Authorization header.
+Related Modules: core.scene (HTTP adapter), core.services (parallel ORS rate-limit/error structure),
+tools.describe_image (CLI), and frontend/scene-client.js (boxes_to_objects follows the mapObjects rule).
+Declaration Index: SceneError/SceneError.__init__ — public error; vlm_settings — read environment configuration;
+_is_number — finite non-boolean check; _validate_object — validate one detection object;
+validate_scene_request — validate and normalize request body; build_messages — construct prompt/messages;
+parse_completion — parse upstream response; describe_scene — rate-limit and call DashScope;
+new_request_id — generate request_id; _map_box — map one detection box to an object;
+boxes_to_objects — map a detection-box list; _prepare_scene — shared high-level validation;
+describe — asynchronous one-call entry; describe_sync — synchronous script entry.
+Variable Index: DEFAULT_HOST/DEFAULT_MODEL — environment defaults; CHAT_PATH — sole upstream path;
+TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — transport bounds; MAX_TOKENS/TEMPERATURE/ENABLE_THINKING — generation settings
+(Qwen3 hybrid reasoning tokens are not bounded by max_tokens; enabling reasoning measured 14–16 seconds and often timed out, so it is explicitly disabled);
+MAX_IMAGE_BYTES/MAX_BASE64_CHARS — image bounds; MAX_OBJECTS/MAX_QUESTION_CHARS/MAX_LABEL_CHARS — input bounds;
+MAX_REQUESTS_PER_MINUTE — per-worker quota; vlm_slots — two concurrent slots;
+MAX_SAFE_INTEGER — track_id limit aligned with frontend Number.isSafeInteger;
+request_times/request_lock — rate-limit state; LANGUAGES — supported languages and prompt names;
+OBJECT_KEYS/DIRECTIONS/RISK_LEVELS/MOTION_STATES — object-field allowlists;
+HOST_PATTERN/MODEL_PATTERN — host/model-name formats;
+SYSTEM_PROMPT — system prompt template; logger — logs without images/questions/answers/keys.
 """
 
 import asyncio
@@ -53,7 +52,7 @@ MAX_QUESTION_CHARS = 200
 MAX_LABEL_CHARS = 40
 MAX_REQUESTS_PER_MINUTE = 10
 MAX_SAFE_INTEGER = 2**53 - 1
-LANGUAGES = {"zh-CN": "Simplified Chinese (简体中文)", "en-US": "English"}
+LANGUAGES = {"zh-CN": "Simplified Chinese", "en-US": "English"}
 OBJECT_KEYS = {
     "label",
     "confidence",
@@ -107,71 +106,71 @@ logger = logging.getLogger(__name__)
 
 
 class SceneError(Exception):
-    """Functionality: 传递可公开的场景描述错误，不携带上游正文或凭据。
-    Logic: 固定 code/detail/status 供 HTTP 适配层使用。
-    Constraints: detail 由本模块生成，禁止放入外部异常字符串。
+    """Functionality: Carry public scene-description errors without upstream bodies or credentials.
+    Logic: Provide stable code/detail/status fields to the HTTP adapter.
+    Constraints: detail is authored by this module and must not contain external exception text.
     """
 
     def __init__(self, code, detail, status):
-        """Functionality: 初始化诊断错误。
-        Inputs: self、公开 code/detail 和 HTTP status；Outputs: 异常实例状态。
-        Logic: Exception 正文为安全 detail；Constraints: 无日志和网络副作用。
+        """Functionality: Initialize a diagnostic error.
+        Inputs: self, public code/detail, and HTTP status; Outputs: exception state.
+        Logic: Exception text is the safe detail; Constraints: no logging or network side effects.
         """
         super().__init__(detail)
         self.code, self.detail, self.status = code, detail, status
 
 
 def vlm_settings():
-    """Functionality: 读取并校验 DashScope 环境配置。
-    Inputs: DASHSCOPE_API_KEY/DASHSCOPE_HOST/VLM_MODEL 环境；Outputs: (key, host, model)。
-    Logic: 缺 key、host 或 model 格式非法均视为未配置并抛 503；host 只允许主机名，不含端口/路径。
-    Constraints: 不回退到默认 host 以掩盖错误配置；不记录 key。
+    """Functionality: Read and validate DashScope environment configuration.
+    Inputs: DASHSCOPE_API_KEY/DASHSCOPE_HOST/VLM_MODEL environment; Outputs: (key, host, model).
+    Logic: Missing key or invalid host/model format is treated as unconfigured and raises 503; host must be a hostname without port/path.
+    Constraints: Do not fall back to a default host to hide configuration errors; never log the key.
     """
     key = os.environ.get("DASHSCOPE_API_KEY", "").strip()
     host = os.environ.get("DASHSCOPE_HOST", "").strip() or DEFAULT_HOST
     model = os.environ.get("VLM_MODEL", "").strip() or DEFAULT_MODEL
     if not key:
-        raise SceneError("vlm_not_configured", "服务端尚未配置 DASHSCOPE_API_KEY。", 503)
+        raise SceneError("vlm_not_configured", "DASHSCOPE_API_KEY is not configured on the server.", 503)
     if not HOST_PATTERN.fullmatch(host) or not MODEL_PATTERN.fullmatch(model):
-        raise SceneError("vlm_not_configured", "DASHSCOPE_HOST 或 VLM_MODEL 配置格式无效。", 503)
+        raise SceneError("vlm_not_configured", "The DASHSCOPE_HOST or VLM_MODEL configuration format is invalid.", 503)
     return key, host, model
 
 
 def _is_number(value):
-    """Functionality: 判断有限的非布尔数值。
-    Inputs: 任意 JSON 值；Outputs: bool；Logic: 排除 bool、NaN、Inf；Constraints: 无副作用。
+    """Functionality: Determine whether a value is a finite non-boolean number.
+    Inputs: Any JSON value; Outputs: bool; Logic: Exclude bool, NaN, and Inf; Constraints: no side effects.
     """
     return type(value) in (int, float) and math.isfinite(value)
 
 
 def _validate_object(item):
-    """Functionality: 校验并规范化单个检测对象。
-    Inputs: 请求中的对象项；Outputs: 仅含已提供非空白名单字段的字典，非法抛 ValueError。
-    Logic: 未知键、类型和范围错误一律拒绝；距离与置信度均保留 3 位小数（仅限制精度，不抬高数值）。
-    Constraints: null 字段视为未提供并省略，避免向模型暗示距离等信息。
+    """Functionality: Validate and normalize one detection object.
+    Inputs: One object from the request; Outputs: A dict containing only provided allowlisted fields, or ValueError.
+    Logic: Reject unknown keys and invalid types/ranges; retain three decimal places for distance/confidence without rounding values upward.
+    Constraints: Treat null as absent and omit it so the model is not given implied distance or other information.
     """
     if not isinstance(item, dict) or not set(item) <= OBJECT_KEYS:
-        raise ValueError("对象含未知字段或不是对象。")
+        raise ValueError("The object is not a mapping or contains unknown fields.")
     label = item.get("label")
     if not isinstance(label, str):
-        raise ValueError("label 必须为字符串。")
+        raise ValueError("label must be a string.")
     label = label.strip()
     if not 1 <= len(label) <= MAX_LABEL_CHARS or any(
         unicodedata.category(char).startswith("C") for char in label
     ):
-        raise ValueError("label 长度或字符无效。")
+        raise ValueError("label length or characters are invalid.")
     result = {"label": label}
     confidence = item.get("confidence")
     if confidence is not None:
         if not _is_number(confidence) or not 0 <= confidence <= 1:
-            raise ValueError("confidence 必须在 0..1。")
+            raise ValueError("confidence must be in the range 0..1.")
         result["confidence"] = round(confidence, 3)
     distance = item.get("distance_m")
     if distance is not None:
         if not _is_number(distance) or distance <= 0:
-            raise ValueError("distance_m 必须为正有限数。")
+            raise ValueError("distance_m must be a positive finite number.")
         if round(distance, 3) <= 0:
-            raise ValueError("distance_m 小于 0.0005 无法保留精度。")
+            raise ValueError("distance_m is too small to remain positive at the supported precision.")
         result["distance_m"] = round(distance, 3)
     for name, allowed in (
         ("direction", DIRECTIONS),
@@ -181,26 +180,25 @@ def _validate_object(item):
         value = item.get(name)
         if value is not None:
             if not isinstance(value, str) or value not in allowed:
-                raise ValueError(f"{name} 取值无效。")
+                raise ValueError(f"{name} is invalid.")
             result[name] = value
     track_id = item.get("track_id")
     if track_id is not None:
         if type(track_id) is not int or track_id < 0:
-            raise ValueError("track_id 必须为非负整数。")
+            raise ValueError("track_id must be a non-negative integer.")
         result["track_id"] = track_id
     return result
 
 
 def validate_scene_request(body):
-    """Functionality: 校验请求 JSON 并规范化为内部结构。
-    Inputs: 已解码 JSON 值；Outputs: {image, language, question, objects}，失败抛 SceneError(400)。
-    Logic: 先校验键集合与图像（invalid_image），再校验 language/question/objects
-    （invalid_scene_input）；
-    图像以长度上限先行、严格 base64 解码、JPEG SOI/EOI 标记检查，不解码像素。
-    Constraints: 不验证图像内容是否可被模型理解；question 非空白时保留 strip 后原文。
+    """Functionality: Validate request JSON and normalize its internal representation.
+    Inputs: Decoded JSON value; Outputs: {image, language, question, objects}, or SceneError(400).
+    Logic: Validate the key set and image first (invalid_image), then language/question/objects
+    (invalid_scene_input); check image length before strict base64 decoding and JPEG SOI/EOI markers; do not decode pixels.
+    Constraints: Do not validate whether the model can understand image content; retain a nonblank question after stripping.
     """
-    bad_input = SceneError("invalid_scene_input", "场景请求字段缺失、未知或取值非法。", 400)
-    bad_image = SceneError("invalid_image", "图像必须为 1 字节至 1 MiB 的标准 base64 JPEG。", 400)
+    bad_input = SceneError("invalid_scene_input", "Scene request fields are missing, unknown, or invalid.", 400)
+    bad_image = SceneError("invalid_image", "The image must be a standard base64 JPEG from 1 byte to 1 MiB.", 400)
     if not isinstance(body, dict) or not set(body) <= {
         "image_jpeg_base64",
         "language",
@@ -242,11 +240,11 @@ def validate_scene_request(body):
 
 
 def build_messages(scene):
-    """Functionality: 由规范化请求生成 system + user 消息（图像在前，文本在后）。
-    Inputs: validate_scene_request 的输出；Outputs: OpenAI 兼容 messages 列表。
-    Logic: 对象以紧凑 JSON（ensure_ascii=False、无空格）附在文本中；仅含调用方提供的字段，
-    未提供距离的对象在 JSON 中没有 distance_m，提示词禁止补数字。
-    Constraints: 不改写问题；提示词为英文以稳定遵循规则，回复语言由 language 指定。
+    """Functionality: Build system and user messages from a normalized request, with image before text.
+    Inputs: Output from validate_scene_request; Outputs: OpenAI-compatible messages list.
+    Logic: Append objects as compact JSON (ensure_ascii=False, no spaces), including only caller-provided fields.
+    Omit distance_m when no distance was supplied; the prompt prohibits inventing one.
+    Constraints: Do not rewrite the question; keep the prompt in English for rule stability and select reply language from language.
     """
     question = scene["question"] or "Describe the scene ahead."
     if scene["objects"]:
@@ -274,10 +272,10 @@ def build_messages(scene):
 
 
 def parse_completion(data):
-    """Functionality: 从 OpenAI 兼容响应提取文本与 token 用量。
-    Inputs: 已解码 JSON；Outputs: (text, input_tokens|None, output_tokens|None)。
-    Logic: 要求 choices[0].message.content 为非空字符串；usage 字段非非负整数则为 None。
-    Constraints: 不生成替代文本；结构异常抛 vlm_invalid_response(502)。
+    """Functionality: Extract text and token usage from an OpenAI-compatible response.
+    Inputs: Decoded JSON; Outputs: (text, input_tokens|None, output_tokens|None).
+    Logic: Require non-empty choices[0].message.content; use None for usage fields that are not non-negative integers.
+    Constraints: Do not generate replacement text; malformed structure raises vlm_invalid_response(502).
     """
     try:
         text = data["choices"][0]["message"]["content"]
@@ -285,7 +283,7 @@ def parse_completion(data):
             raise ValueError
     except (KeyError, IndexError, TypeError, ValueError) as error:
         raise SceneError(
-            "vlm_invalid_response", "视觉模型返回的数据不符合接口契约。", 502
+            "vlm_invalid_response", "The vision model returned data that violates the API contract.", 502
         ) from error
     usage = data.get("usage") if isinstance(data, dict) else None
     usage = usage if isinstance(usage, dict) else {}
@@ -297,12 +295,12 @@ def parse_completion(data):
 
 
 def describe_scene(scene, request_id):
-    """Functionality: 限流后调用 DashScope 并返回规范场景描述。
-    Inputs: 已校验场景、非敏感 request_id、DASHSCOPE_* 环境；Outputs: 契约成功字段或 SceneError。
-    Logic: 单 worker 10 次/分钟、最多 2 并发；凭据只置 Authorization；finally 释放连接和槽位；
-    日志只含 request_id、状态码、耗时、token 数、对象数。
-    Constraints: 单 worker 限流非认证；超时为单次 socket I/O 而非总时长；不重试、不重定向、不降级；
-    不存储或记录图像、问题、回答与密钥。
+    """Functionality: Call DashScope under rate limits and return a normalized scene description.
+    Inputs: Validated scene, non-sensitive request_id, and DASHSCOPE_* environment; Outputs: contract fields or SceneError.
+    Logic: Limit each worker to 10 requests/minute and two concurrent calls; put credentials only in Authorization;
+    finally release the connection and slot. Logs contain only request_id, status, duration, token counts, and object count.
+    Constraints: Per-worker rate limits are not authentication; timeout applies to one socket I/O operation, not total duration;
+    no retries, redirects, or fallback; never store or log images, questions, answers, or keys.
     """
     key, host, model = vlm_settings()
     started = time.monotonic()
@@ -311,10 +309,10 @@ def describe_scene(scene, request_id):
             request_times.popleft()
         if len(request_times) >= MAX_REQUESTS_PER_MINUTE:
             raise SceneError(
-                "vlm_rate_limit", "场景描述达到每分钟 10 次上限，请稍后手动尝试。", 429
+                "vlm_rate_limit", "The scene-description limit of 10 requests per minute was reached; try again manually later.", 429
             )
         if not vlm_slots.acquire(blocking=False):
-            raise SceneError("vlm_capacity", "已有两次场景描述正在处理，请稍后手动尝试。", 429)
+            raise SceneError("vlm_capacity", "Two scene descriptions are already in progress; try again manually later.", 429)
         request_times.append(started)
     connection = None
     try:
@@ -350,25 +348,25 @@ def describe_scene(scene, request_id):
         if response.status in (401, 403):
             raise SceneError(
                 "vlm_authentication_failed",
-                "DashScope 拒绝凭据，请检查服务端 key 或账号权限。",
+                "DashScope rejected the credentials; check the server key or account permissions.",
                 502,
             )
         if response.status == 429:
             raise SceneError(
-                "vlm_quota_exceeded", "DashScope 配额或限流已达上限，请检查账号额度。", 503
+                "vlm_quota_exceeded", "DashScope quota or rate limit was reached; check the account quota.", 503
             )
         if response.status != 200:
-            raise SceneError("vlm_upstream_error", "DashScope 服务返回非成功状态。", 502)
+            raise SceneError("vlm_upstream_error", "DashScope returned a non-success status.", 502)
         raw = response.read(MAX_RESPONSE_BYTES + 1)
         if len(raw) > MAX_RESPONSE_BYTES:
             raise SceneError(
-                "vlm_response_too_large", "DashScope 响应超过本原型的 256 KiB 上限。", 502
+                "vlm_response_too_large", "The DashScope response exceeds this prototype's 256 KiB limit.", 502
             )
         try:
             text, input_tokens, output_tokens = parse_completion(json.loads(raw))
         except (ValueError, UnicodeDecodeError) as error:
             raise SceneError(
-                "vlm_invalid_response", "DashScope 响应无法解码为 JSON。", 502
+                "vlm_invalid_response", "The DashScope response could not be decoded as JSON.", 502
             ) from error
         elapsed_ms = int((time.monotonic() - started) * 1000)
         logger.info(
@@ -388,14 +386,14 @@ def describe_scene(scene, request_id):
         }
     except TimeoutError as error:
         raise SceneError(
-            "vlm_timeout", "DashScope 网络 I/O 超时，请检查网络后手动尝试。", 504
+            "vlm_timeout", "DashScope network I/O timed out; check the network and try again manually.", 504
         ) from error
     except (OSError, http.client.HTTPException) as error:
         logger.warning(
             "VLM transport failed id=%s exception_type=%s", request_id, type(error).__name__
         )
         raise SceneError(
-            "vlm_upstream_error", "无法连接 DashScope，请检查服务器网络或 TLS。", 502
+            "vlm_upstream_error", "Could not connect to DashScope; check server networking or TLS.", 502
         ) from error
     finally:
         try:
@@ -406,20 +404,20 @@ def describe_scene(scene, request_id):
 
 
 def new_request_id():
-    """Functionality: 生成与 HTTP 视图同格式的非敏感 request_id。
-    Inputs: 无；Outputs: 12 位小写十六进制字符串。
-    Logic: uuid4 前 12 位；Constraints: 仅用于日志关联，不可作为凭据。
+    """Functionality: Generate a non-sensitive request_id in the HTTP view's format.
+    Inputs: None; Outputs: 12 lowercase hexadecimal characters.
+    Logic: Use the first 12 characters of uuid4; Constraints: for log correlation only, never a credential.
     """
     return uuid.uuid4().hex[:12]
 
 
 def _map_box(box):
-    """Functionality: 把一个 PRS1 检测框映射为接口 object（规则同前端 mapBox）。
-    Inputs: metadata.boxes 中的一项；Outputs: object 字典或 None（框被丢弃）。
-    Logic: label 与 score(0..1，映射为 confidence)必需；其余字段仅在值合法时携带，缺失即省略；
-    distance_m 只读原始值，不读平滑值。与前端的两处差异均为避免整次请求被 validate 拒绝：
-    label 须 strip 后 1..40 字符且无控制字符，distance_m 舍入到 3 位后须仍为正。
-    Constraints: 不编造距离/方向；非 dict 输入返回 None。
+    """Functionality: Map one PRS1 detection box to an API object, following the frontend mapBox rules.
+    Inputs: One item from metadata.boxes; Outputs: Object dict or None when the box is discarded.
+    Logic: Require label and score (0..1, mapped to confidence); include other fields only when valid and omit missing values.
+    Read raw distance_m, not smoothed distance. Two frontend differences prevent rejecting the whole request:
+    stripped label must have 1..40 characters and no control characters; distance_m must stay positive after rounding to three decimals.
+    Constraints: Do not invent distance/direction; return None for non-dict input.
     """
     if not isinstance(box, dict):
         return None
@@ -453,11 +451,11 @@ def _map_box(box):
 
 
 def boxes_to_objects(boxes):
-    """Functionality: 选取并映射最重要的 <=50 个检测对象，供 describe 的 objects 使用。
-    Inputs: PRS1 检测结果 metadata.boxes（list/tuple，每项 dict）；Outputs: objects 列表。
-    Logic: 丢弃非法框后稳定排序：alert_priority 降序 -> 原始 distance_m 升序(非有限数最后) ->
-    score 降序 -> 原顺序；截断 MAX_OBJECTS。与 frontend/scene-client.js mapObjects 同规则。
-    Constraints: 不修改输入；非 list/tuple 视为空；排序不会因缺失距离而编造距离。
+    """Functionality: Select and map up to 50 most important detections for describe's objects.
+    Inputs: PRS1 metadata.boxes (list/tuple of dicts); Outputs: objects list.
+    Logic: Drop invalid boxes, then stable-sort by alert_priority descending, raw distance_m ascending (non-finite last),
+    score descending, then original order; truncate to MAX_OBJECTS. Matches frontend/scene-client.js mapObjects.
+    Constraints: Do not modify input; treat non-list/tuple as empty; never invent distance when absent.
     """
     if not isinstance(boxes, list | tuple):
         return []
@@ -476,13 +474,13 @@ def boxes_to_objects(boxes):
 
 
 def _prepare_scene(jpeg_bytes, boxes, question, language):
-    """Functionality: 把高层参数组装并校验为 describe_scene 所需的规范场景。
-    Inputs: JPEG 字节、检测框(可 None)、问题(可 None)、语言；Outputs: 规范化场景或 SceneError。
-    Logic: base64 编码后走与 HTTP 相同的 validate_scene_request，因此限制与错误码完全一致；
-    objects 为空时不携带该键。Constraints: 非 bytes 图像按 invalid_image 报错；不记录内容。
+    """Functionality: Assemble and validate high-level arguments into a normalized scene for describe_scene.
+    Inputs: JPEG bytes, optional boxes/question, and language; Outputs: normalized scene or SceneError.
+    Logic: Base64-encode and pass through validate_scene_request so limits and error codes match HTTP;
+    omit objects when empty. Constraints: Non-bytes images raise invalid_image; never log content.
     """
     if not isinstance(jpeg_bytes, bytes | bytearray | memoryview):
-        raise SceneError("invalid_image", "图像必须为 1 字节至 1 MiB 的标准 base64 JPEG。", 400)
+        raise SceneError("invalid_image", "The image must be a standard base64 JPEG from 1 byte to 1 MiB.", 400)
     body = {"image_jpeg_base64": base64.b64encode(bytes(jpeg_bytes)).decode("ascii"),
             "language": language}
     if question is not None:
@@ -494,12 +492,12 @@ def _prepare_scene(jpeg_bytes, boxes, question, language):
 
 
 async def describe(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, request_id=None):
-    """Functionality: 一行接入的异步场景描述，返回与 HTTP 成功响应相同的字段。
-    Inputs: JPEG 字节、metadata.boxes(可 None)、问题(可 None)、language(zh-CN/en-US)、
-    可选关键字 request_id；Outputs: {text, model, language, elapsed_ms, usage, request_id}。
-    Logic: _prepare_scene 校验，阻塞的 describe_scene 经 asyncio.to_thread 执行（不阻塞事件循环）。
-    Constraints: 失败原样抛 SceneError(code/detail/status)；不重试、不降级；共用本进程每分钟
-    10 次/2 并发限流；不记录图像、问题与回答。
+    """Functionality: Describe a scene through a one-call async API and return the HTTP success fields.
+    Inputs: JPEG bytes, optional metadata.boxes/question, language (zh-CN/en-US), and optional request_id;
+    Outputs: {text, model, language, elapsed_ms, usage, request_id}.
+    Logic: Validate with _prepare_scene and run blocking describe_scene through asyncio.to_thread.
+    Constraints: Propagate SceneError(code/detail/status); no retries or fallback; share per-process limits of
+    10 requests/minute and two concurrent calls; never log images, questions, or answers.
     """
     scene = _prepare_scene(jpeg_bytes, boxes, question, language)
     request_id = request_id or new_request_id()
@@ -508,17 +506,17 @@ async def describe(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, r
 
 
 def describe_sync(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, request_id=None):
-    """Functionality: describe 的同步版本，供脚本/CLI 使用。
-    Inputs/Outputs: 同 describe。Logic: 同样的校验与 describe_scene，直接在当前线程阻塞调用。
-    Constraints: 不得在运行中的事件循环线程里调用（会冻结循环），检测到则抛 RuntimeError；
-    错误语义同 describe，不重试、不降级。
+    """Functionality: Synchronous describe entry for scripts/CLI.
+    Inputs/Outputs: Same as describe. Logic: Apply the same validation and call describe_scene synchronously in the current thread.
+    Constraints: Do not run on an active event-loop thread (it would block the loop); raise RuntimeError when detected.
+    Error semantics match describe; no retries or fallback.
     """
     try:
         asyncio.get_running_loop()
     except RuntimeError:
         pass
     else:
-        raise RuntimeError("describe_sync 不能在事件循环中调用，请改用 await describe(...)。")
+        raise RuntimeError("describe_sync cannot run in an event-loop thread; use await describe(...) instead.")
     scene = _prepare_scene(jpeg_bytes, boxes, question, language)
     request_id = request_id or new_request_id()
     return {**describe_scene(scene, request_id), "request_id": request_id}

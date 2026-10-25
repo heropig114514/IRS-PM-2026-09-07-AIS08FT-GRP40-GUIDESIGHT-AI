@@ -1,8 +1,8 @@
-"""Responsibilities: Django 同步 HTTP 部署入口。
-Implementation: 默认使用开发设置，生产通过环境显式选择配置。
-Related Modules: config.settings/production；本项目日常启动使用 config.asgi。
+"""Responsibilities: Provide the Django synchronous HTTP deployment entry point.
+Implementation: Use development settings by default; production configuration must be selected explicitly through the environment.
+Related Modules: config.settings/production; routine project startup uses config.asgi.
 Declaration Index: None。
-Variable Index: application — Django WSGI 应用。
+Variable Index: application — the Django WSGI application.
 """
 
 import os

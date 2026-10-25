@@ -1,7 +1,7 @@
-/** Responsibilities: 浏览器语音输出共用接口、测试UI、状态事件及明确失败反馈。
- * Implementation: 默认关闭；手动UI与MCP共享speak/stop，保留前台和用户激活要求；
- * 只提交一个utterance，按start/end/error记录引擎状态，停止及后台取消，不重试或替换语音；
- * 广播前固定请求事件快照，每个订阅者收到独立副本，隔离同步重入与订阅者修改。
+/** Responsibilities: Provide shared browser speech output, test UI, lifecycle events, and explicit failure feedback.
+ * Implementation: Off by default; manual UI and MCP share speak/stop while preserving foreground and user-activation requirements.
+ * Submit one utterance, record engine start/end/error states, cancel on stop/background, and never retry or replace voices.
+ * Snapshot request events before broadcasting and give each subscriber a copy to isolate synchronous reentry or mutation.
  * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js; core.ai_mcp/core.camera。
  * Declaration Index: SpeechOutput; SpeechOutput.constructor; SpeechOutput.feedback;
  * SpeechOutput.render; SpeechOutput.refreshVoices; SpeechOutput.describe; SpeechOutput.voiceList;
@@ -9,13 +9,13 @@
  * SpeechOutput.handleEnable; SpeechOutput.handleSample; SpeechOutput.handleStart;
  * SpeechOutput.handleEnd; SpeechOutput.handleError; SpeechOutput.handleVisibility;
  * SpeechOutput.handlePageHide; SpeechOutput.subscribe; SpeechOutput.notify; SpeechOutput.stopOwned。
- * Variable Index: MAX_TEXT_LENGTH — 1000个Unicode码点；LANGUAGES — 显式中英文语言；
- * SAMPLES — 不会自动播放的测试文本；PHASE_LABELS — 引擎状态对应UI；ERROR_CODES — 标准错误白名单；
- * speechOutput — 摄像头页共享实例，其他页为null。实例engine/doc/win为浏览器依赖；
- * current保留utterance并隔离旧事件，canceling隔离取消过程事件，sequence标识请求；
- * phase/lastRequest/lastError/nativeVoices/voiceReadError为有限状态；listeners订阅非正文生命周期；
- * notify的局部event固定本次phase/request_id/reason/at，快照监听器各收独立副本；
- * localOnly仅由独立integration页面明确声明，拒绝默认/远程声音而不影响原页面。
+ * Variable Index: MAX_TEXT_LENGTH — 1,000 Unicode code points; LANGUAGES — explicit Chinese/English languages;
+ * SAMPLES — test text that is never played automatically; PHASE_LABELS — UI labels for engine states; ERROR_CODES — standard error allowlist;
+ * speechOutput — shared camera-page instance, null on other pages. engine/doc/win — browser dependencies;
+ * current retains the utterance and isolates stale events; canceling isolates events during cancellation; sequence identifies requests;
+ * phase/lastRequest/lastError/nativeVoices/voiceReadError — bounded state; listeners observe lifecycle without utterance text;
+ * notify's local event fixes phase/request_id/reason/at for the current event and gives each snapshotted listener a copy;
+ * localOnly is explicitly set only by the standalone integration page, which rejects default/remote voices without changing the original page.
  */
 export const MAX_TEXT_LENGTH = 1000;
 const LANGUAGES = ["zh-CN", "en-US"];
@@ -26,17 +26,17 @@ const ERROR_CODES = ["canceled", "interrupted", "audio-busy", "audio-hardware", 
   "synthesis-unavailable", "synthesis-failed", "language-unavailable", "voice-unavailable",
   "text-too-long", "invalid-argument", "not-allowed"];
 
-/** Functionality: 管理单个浏览器语音请求及独立的手动/MCP输出接口。
- * Logic: 使用SpeechSynthesisUtterance的真实事件，不把speak的void返回值当成播放完成；
- * 以对象身份隔离已取消请求的迟到事件。Constraints: 不录音、不开摄像头、不保存正文，
- * 无自动排队、重试、语音替换或音频文件生成；远程语音是否联网由浏览器语音服务决定。
+/** Functionality: Manage one browser speech request and separate manual/MCP output interfaces.
+ * Logic: Use actual SpeechSynthesisUtterance events; a void return from speak does not mean playback completed.
+ * Isolate late events from cancelled requests by object identity. Constraints: No recording, camera access, or text storage;
+ * no automatic queueing, retry, voice replacement, or audio-file generation. Browser speech service determines whether a remote voice uses the network.
  */
 export class SpeechOutput {
-  /** Functionality: 绑定语音UI和浏览器生命周期，读取初始语音列表。
-   * Inputs: doc/win，默认当前文档/窗口；页面必须包含speech-test控件。
-   * Outputs: 实例、状态提示、事件注册；不自动朗读或请求传感器权限。
-   * Logic: 当前请求为空且开关关闭；voiceschanged更新异步语音列表，保留显式选择。
-   * Constraints: 支持状态只证明接口存在；列表可能稍后加载，错误明确记录而不自动重试。
+  /** Functionality: Bind speech UI and browser lifecycle, then read the initial voice list.
+   * Inputs: doc/win, defaulting to current document/window; page must contain speech-test controls.
+   * Outputs: Instance, status message, and event handlers; no automatic speech or sensor permission request.
+   * Logic: Begin with no current request and output disabled; voiceschanged refreshes the async voice list while preserving explicit selection.
+   * Constraints: Support status proves only API presence; voices may load later, and errors are recorded without automatic retry.
    */
   constructor(doc = document, win = window) {
     this.doc = doc;
@@ -111,21 +111,21 @@ export class SpeechOutput {
     return this.stop();
   }
 
-  /** Functionality: 发布可翻译的语音提示。
-   * Inputs: text为固定UI原文，kind为idle/live/error。Outputs: textContent及颜色状态。
-   * Logic: 现有i18n观察器处理显示；从不显示朗读正文或外部异常消息。
-   * Constraints: 引擎事件和请求接受均不证明扬声器实际出声。
+  /** Functionality: Publish a translatable speech status message.
+   * Inputs: Fixed UI source text and kind (idle/live/error). Outputs: textContent and visual state.
+   * Logic: Existing i18n observer translates display; never show utterance text or external exception messages.
+   * Constraints: Engine events and request acceptance do not prove physical speaker output.
    */
   feedback(text, kind = "idle") {
     this.message.textContent = text;
     this.message.dataset.kind = kind;
   }
 
-  /** Functionality: 根据接口、用户开关和当前请求刷新控件。
-   * Inputs: supported/enabled/current/phase、range值及lastRequest。
-   * Outputs: disabled、状态、数值标签和实际请求元数据摘要。
-   * Logic: 一次只允许一个请求；停止始终可用于支持接口，设置在当前请求期间锁定。
-   * Constraints: 文本输入不被翻译或自动改写；不根据已翻译的状态文字推断程序状态。
+  /** Functionality: Refresh controls from API support, user toggle, and current request.
+   * Inputs: supported/enabled/current/phase, range values, and lastRequest.
+   * Outputs: disabled states, status, value labels, and a summary of actual request metadata.
+   * Logic: Allow one request at a time; keep stop available when supported and lock settings during a request.
+   * Constraints: Do not translate/rewrite text input or infer program state from translated status text.
    */
   render() {
     const active = this.current !== null;
@@ -145,11 +145,11 @@ export class SpeechOutput {
       "尚无语音请求。";
   }
 
-  /** Functionality: 读取语音列表并维护稳定的显式选择。
-   * Inputs: engine.getVoices、voice.value和doc。Outputs: 原生列表、选项及读取错误状态。
-   * Logic: 注册异步列表事件；仅值确实改变时记录计数。已选ID消失时保留禁用占位选项，
-   * 不自动选用其他声音。名称/语言/local/remote标记保留原生身份以便MCP精确选择。
-   * Constraints: 只捕获原生列表调用的异常；默认语音是显式选项，不是失败后的替代路径。
+  /** Functionality: Read available voices and preserve explicit selection.
+   * Inputs: engine.getVoices, voice.value, and doc. Outputs: Native list, options, and read-error state.
+   * Logic: Register async list events and record a count only when values change. Preserve a disabled placeholder when the selected ID disappears;
+   * never select another voice automatically. Keep native name/language/local/remote identity for exact MCP selection.
+   * Constraints: Catch only native list-call errors; browser default is an explicit option, not a failure fallback.
    */
   refreshVoices() {
     if (!this.supported) return;
@@ -189,10 +189,10 @@ export class SpeechOutput {
     if (changed) this.win.console.info("[PRS speech] Voices changed", {count: voices.length});
   }
 
-  /** Functionality: 查询状态及最近一次请求的非正文元数据。
-   * Inputs: 控件、当前utterance、原生状态和有限请求/错误记录。Outputs: JSON兼容状态。
-   * Logic: 区分排队、开始、完成与取消；不读取或返回当前文本输入。
-   * Constraints: audio_output_verified始终false；speaking/pending/paused不是设备可听见的证明。
+  /** Functionality: Query state and non-text metadata for the latest request.
+   * Inputs: Controls, current utterance, native state, and bounded request/error records. Outputs: JSON-compatible state.
+   * Logic: Distinguish queued, started, completed, and cancelled; never read or return current text input.
+   * Constraints: audio_output_verified is always false; speaking/pending/paused do not prove the device is audible.
    */
   describe() {
     return {available: true, supported: this.supported, enabled: this.enabled.checked,
@@ -206,10 +206,10 @@ export class SpeechOutput {
       audio_output_verified: false};
   }
 
-  /** Functionality: 返回此设备可用语音的结构化身份。
-   * Inputs: 当前原生语音服务。Outputs: 状态、完整语音列表或明确voice_query_failed。
-   * Logic: 一次列表查询；暴露URI/名称/语言/本地性/default供显式选择。
-   * Constraints: 不朗读、不启用；失败不返回旧缓存为当前有效列表。
+  /** Functionality: Return structured identities for voices available on this device.
+   * Inputs: Current native speech service. Outputs: Status, full voice list, or explicit voice_query_failed.
+   * Logic: Query once and expose URI/name/language/locality/default for explicit selection.
+   * Constraints: Do not speak or enable output; on failure, do not report stale cache as current.
    */
   voiceList() {
     this.refreshVoices();
@@ -219,24 +219,24 @@ export class SpeechOutput {
         name: voice.name, language: voice.lang, local_service: voice.localService, default: voice.default}))};
   }
 
-  /** Functionality: 构造操作应答，明确提交/取消与实际声音的区别。
-   * Inputs: operation、accepted和reason。Outputs: 当前状态和机器可读结果。
-   * Logic: 返回有限状态快照；拒绝只记录操作/原因，不记录正文。
-   * Constraints: 无重试，无隐式启用或声音切换，结果不保证start/end事件会到达。
+  /** Functionality: Build an operation response that distinguishes submission/cancellation from audible output.
+   * Inputs: operation, accepted, and reason. Outputs: Current state and machine-readable result.
+   * Logic: Return a bounded state snapshot; rejection records operation/reason only, never text.
+   * Constraints: No retry, implicit enabling, or voice switch; the result does not guarantee start/end events.
    */
   result(operation, accepted, reason = null) {
     if (!accepted) this.win.console.info("[PRS speech] Request refused", {operation, reason});
     return {...this.describe(), operation, accepted, reason};
   }
 
-  /** Functionality: 提交一次受控文本朗读请求。
-   * Inputs: text；options.language(zh-CN/en-US)、voice_id(null/空字符串表示浏览器默认)、
-   * rate(0.5..2，默认1)、volume(0..1，默认1)；用户开关、前台、真实激活与引擎状态。
-   * Outputs: 提交是否完成及结构化原因；成功先为queued，由原生事件更新状态。
-   * Logic: 校验Unicode长度和参数，再检查前提/繁忙状态；指定声音必须唯一存在且主语言匹配。
-   * 保留utterance强引用后绑定start/end/error并只调用一次speak。
-   * Constraints: 不排队或自动中断旧请求；原生异常/事件错误不重试，不改写或记录正文；
-   * 原页面默认声音由浏览器按明确language选择；本地MVP只接受显式localService声音；失效不替换。
+  /** Functionality: Submit one controlled text-to-speech request.
+   * Inputs: text; options.language (zh-CN/en-US), voice_id (null/empty selects the browser default),
+   * rate (0.5..2, default 1), volume (0..1, default 1), plus user toggle, foreground, real activation, and engine state.
+   * Outputs: Submission status and structured reason; accepted requests begin as queued and native events update the phase.
+   * Logic: Validate Unicode length and options, then check prerequisites and busy state; an explicit voice must be unique and match the primary language.
+   * Retain the utterance strongly, bind start/end/error handlers, and call speak exactly once.
+   * Constraints: Do not queue or interrupt older requests automatically; do not retry native exceptions/events or rewrite/store text.
+   * The main page lets the browser select its default voice for the explicit language; local MVP accepts only explicitly localService voices and never substitutes a missing voice.
    */
   speak(text, {language = "zh-CN", voice_id = null, rate = 1, volume = 1} = {}) {
     const length = typeof text === "string" ? [...text].length : 0;
@@ -320,12 +320,12 @@ export class SpeechOutput {
     }
   }
 
-  /** Functionality: 请求取消本页面语音引擎的当前/排队输出。
-   * Inputs: 当前engine/current；不要求启用开关、前台或仍有本模块请求。
-   * Outputs: 取消调用是否返回；成功清除当前引用并标记stopped，异常保留请求记录。
-   * Logic: canceling期间忽略同步取消事件，成功后的旧事件以对象身份隔离。
-   * Constraints: cancel的void返回不证明实际声音已停止；失败保持状态可继续观察并手动停止，
-   * 不自动重试；本页面语音引擎由此共用接口统一管理。
+  /** Functionality: Request cancellation of current or queued output from this page's speech engine.
+   * Inputs: Current engine and request; does not require the toggle, foreground, or an active module-owned request.
+   * Outputs: Whether the cancellation call returned; on success clear the current reference and mark stopped, while errors preserve the request record.
+   * Logic: Ignore synchronous cancellation events while canceling and isolate later stale events by object identity.
+   * Constraints: A void return from cancel does not prove playback stopped; retain observable state after failure for manual follow-up,
+   * do not retry automatically, and manage the page's shared speech engine through this common interface.
    */
   stop() {
     if (!this.supported) return this.result("stop", false, "unsupported");
@@ -350,19 +350,19 @@ export class SpeechOutput {
     } finally { this.canceling = false; }
   }
 
-  /** Functionality: 用测试UI的明确配置调用共用输出入口。
-   * Inputs: 用户文本、language/voice/rate/volume控件。Outputs: speak结果及相同状态事件。
-   * Logic: 仅range值转为number；不改写文本。Constraints: 不自动启用或替换语音。
+  /** Functionality: Submit the test UI's explicit settings through the shared output entry point.
+   * Inputs: User text and language/voice/rate/volume controls. Outputs: speak result and the same lifecycle events.
+   * Logic: Convert range values to numbers only; preserve text. Constraints: Do not enable output or replace a voice automatically.
    */
   handlePlay() {
     return this.speak(this.text.value, {language: this.language.value, voice_id: this.voice.value || null,
       rate: Number(this.rate.value), volume: Number(this.volume.value)});
   }
 
-  /** Functionality: 应用用户的启用/关闭选择。
-   * Inputs: enabled.checked和current。Outputs: 状态/控件；关闭时取消当前输出。
-   * Logic: 开关本身不朗读，关闭后的取消失败不被成功提示覆盖。
-   * Constraints: 不持久化开关，MCP接口不会自动开启它。
+  /** Functionality: Apply the user's enable/disable choice.
+   * Inputs: enabled.checked and current. Outputs: Status and controls; disabling requests cancellation of current output.
+   * Logic: Toggling does not speak; a cancellation failure after disabling is not overwritten by a success message.
+   * Constraints: Do not persist the toggle; the MCP interface does not enable it automatically.
    */
   handleEnable() {
     if (!this.enabled.checked && this.current) this.stop();
@@ -371,10 +371,10 @@ export class SpeechOutput {
     this.win.console.info("[PRS speech] Setting changed", {enabled: this.enabled.checked});
   }
 
-  /** Functionality: 填入明确的中英文示例而不播放。
-   * Inputs: event.currentTarget.dataset.speechSample。Outputs: 文本/语言控件。
-   * Logic: 只接受固定语言键，保留当前声音和速度供用户检查。
-   * Constraints: 不隐式开始朗读或更换所选声音。
+  /** Functionality: Populate an explicit Chinese or English sample without speaking it.
+   * Inputs: event.currentTarget.dataset.speechSample. Outputs: Text and language controls.
+   * Logic: Accept only fixed language keys and preserve the selected voice and rate for user review.
+   * Constraints: Do not start speech implicitly or change the selected voice.
    */
   handleSample(event) {
     const language = event.currentTarget.dataset.speechSample;
@@ -383,9 +383,9 @@ export class SpeechOutput {
     this.language.value = language;
   }
 
-  /** Functionality: 记录语音引擎的开始事件。
-   * Inputs: event.target和current/canceling。Outputs: speaking状态和非正文日志。
-   * Logic: 仅当前对象生效。Constraints: 开始事件不证明用户听到了声音。
+  /** Functionality: Record the speech engine's start event.
+   * Inputs: event.target, current, and canceling. Outputs: speaking phase and a log without utterance text.
+   * Logic: Apply only to the current object. Constraints: A start event does not prove the user heard audio.
    */
   handleStart(event) {
     if (event.target !== this.current || this.canceling) return;
@@ -396,9 +396,9 @@ export class SpeechOutput {
     this.notify("start");
   }
 
-  /** Functionality: 记录语音引擎的结束事件并释放当前引用。
-   * Inputs: event.target/current/canceling。Outputs: completed状态及控件恢复。
-   * Logic: 旧对象或取消期间的事件不修改状态。Constraints: 只报告引擎完成，不验证音频硬件。
+  /** Functionality: Record the speech engine's end event and release the current reference.
+   * Inputs: event.target, current, and canceling. Outputs: completed phase and restored controls.
+   * Logic: Ignore events from stale objects or during cancellation. Constraints: Report engine completion only; do not verify audio hardware.
    */
   handleEnd(event) {
     if (event.target !== this.current || this.canceling) return;
@@ -410,10 +410,10 @@ export class SpeechOutput {
     this.notify("end");
   }
 
-  /** Functionality: 明确报告当前请求的异步原生错误。
-   * Inputs: event.target/error；current/canceling。Outputs: error状态、白名单错误码和资源释放。
-   * Logic: 只接受当前对象；未知外部错误内容不回显，日志只包含请求ID和标准代码。
-   * Constraints: 取消及旧事件被隔离；不自动重试、合成替代声音或记录正文。
+  /** Functionality: Report an asynchronous native error for the current request.
+   * Inputs: event.target/error, current, and canceling. Outputs: error phase, allowlisted error code, and released resources.
+   * Logic: Accept only the current object; do not echo unknown external error text, and log only the request ID and standard code.
+   * Constraints: Isolate cancellation and stale events; do not retry, synthesize a substitute voice, or log the utterance.
    */
   handleError(event) {
     if (event.target !== this.current || this.canceling) return;
@@ -426,16 +426,17 @@ export class SpeechOutput {
     this.notify("error", this.lastError);
   }
 
-  /** Functionality: 页面转入后台时取消本模块的当前输出。
-   * Inputs: doc.visibilityState/current。Outputs: 必要时一次取消请求。
-   * Logic: 只在存在当前请求时取消；回到前台不恢复。Constraints: 失败明确反馈，不自动重试。
+  /** Functionality: Cancel this module's current output when the page becomes hidden.
+   * Inputs: doc.visibilityState and current. Outputs: At most one cancellation request when needed.
+   * Logic: Cancel only when a request exists; do not resume when the page returns to foreground.
+   * Constraints: Report failure explicitly and do not retry automatically.
    */
   handleVisibility() { if (this.doc.visibilityState !== "visible" && this.current) this.stop(); }
 
-  /** Functionality: 离页时请求取消当前语音。
-   * Inputs: current。Outputs: 必要时一次cancel。
-   * Logic: 已成功取消则不会因第二个生命周期事件重复调用。
-   * Constraints: 不依赖卸载后的异步工作，不自动恢复。
+  /** Functionality: Request cancellation of current speech when leaving the page.
+   * Inputs: current. Outputs: At most one cancel call when needed.
+   * Logic: A prior successful cancellation prevents a second lifecycle event from calling cancel again.
+   * Constraints: Do not depend on asynchronous work after unload or resume automatically.
    */
   handlePageHide() { if (this.current) this.stop(); }
 }

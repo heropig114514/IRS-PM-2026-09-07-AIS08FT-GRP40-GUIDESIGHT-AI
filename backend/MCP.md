@@ -1,26 +1,16 @@
-# PRS 的 AI 操作接口
+# PRS AI Control Interface
 
-系统使用 [官方 MCP Python SDK](https://py.sdk.modelcontextprotocol.io/) 2.3.0，提供
-Streamable HTTP MCP 服务。它与 Django、摄像头和地图共用一个 ASGI 进程和数据库。
-当前按需求不增加 MCP 鉴权或 SQL 权限限制。
-上述完整接口使用默认 `PRS_MCP_PROFILE=full`。设备输出配置使用
-`PRS_MCP_PROFILE=outputs`，包括 `ui_sessions`、震动/语音及三项导航工具，
-共11项；保留配置名，不增加通用 DOM 或数据库工具。
-导航状态包含设备位置；此处说明源码契约，修改代码不代表已发布到公网。
-其余函数保留供本地完整配置使用，不注册到该公网工具目录；无效配置停止启动，不回退。
-公网入口为 `https://47.239.50.129/prs/mcp`，使用相同的 Streamable HTTP 客户端协议。
-在具有相应输出控件的摄像头页或地图页真实点击并启用输出后，调用会话发现选择该 tab；
-震动仍仅在摄像头页提供，公网输出配置不提供自动启用开关的工具。
+The system uses version 2.3.0 of the [official MCP Python SDK](https://py.sdk.modelcontextprotocol.io/) to provide an MCP Streamable HTTP service. It shares one ASGI process and database with Django, the camera, and maps. MCP authentication and SQL permission restrictions have not been added, as currently requested.
 
-本机统一 `--assist` 入口同样使用 `outputs` 配置，`/maps/` 中导航MCP和页面按钮共用
-原导航实例，语音MCP和自动提醒共用原语音驱动。感知、导航及自动输出开关由用户明确操作；
-`navigation_start` 不自动开启摄像头或声音。统一风险仲裁属于页面连接层，不新增导航工具
-或修改MCP参数；请求 `navigation_status` 仍可能返回设备位置。统一模式仅在显式本地启动时
-生效，不能据本地源码或测试推断公网已更新。
+The full interface described below uses the default `PRS_MCP_PROFILE=full`. Device-output configuration uses `PRS_MCP_PROFILE=outputs`, which includes `ui_sessions`, vibration/speech tools, and three navigation tools (11 tools total). Preserve the profile name; do not add generic DOM or database tools to this profile. Navigation status includes device location. This document describes the source contract; code changes do not mean the public service has been updated. Other functions remain available for the local full profile but are not registered in the public tool catalog. Invalid configuration stops startup and does not fall back.
 
-## 启动和连接
+The public entry is `https://47.239.50.129/prs/mcp` and uses the same Streamable HTTP client protocol. A caller discovers the tab by session after a real click and enabling output on a camera or map page with the corresponding controls. Vibration remains available only on the camera page. The public outputs profile has no tool that automatically enables the switch.
 
-在 `backend` 执行，已有 `.env` 中的 `DJANGO_SECRET_KEY` 和数据库配置继续使用：
+The local unified `--assist` entry also uses the `outputs` profile. Navigation MCP and page buttons on `/maps/` share the original navigation instance; speech MCP and automatic alerts share the original speech driver. Users explicitly control perception, navigation, and automatic-output switches. `navigation_start` does not automatically enable the camera or speech. Unified risk arbitration belongs to the page integration layer; it adds no navigation tools and changes no MCP parameters. `navigation_status` may still return device location. Unified mode applies only when started locally and does not prove that the public service has been updated.
+
+## Startup and Connection
+
+Run from `backend`; the existing `DJANGO_SECRET_KEY` and database configuration in `.env` remain in use:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
@@ -28,13 +18,13 @@ Streamable HTTP MCP 服务。它与 Django、摄像头和地图共用一个 ASGI
 .\.venv\Scripts\python.exe -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1310728 --ws-per-message-deflate false
 ```
 
-给支持 Streamable HTTP 的 AI/MCP 客户端配置地址：
+Configure this endpoint in an AI/MCP client that supports Streamable HTTP:
 
 ```text
 http://127.0.0.1:8766/mcp
 ```
 
-使用 `mcpServers` 配置格式的 HTTP 客户端可以参考：
+For an HTTP client using the `mcpServers` configuration format, use:
 
 ```json
 {
@@ -47,52 +37,47 @@ http://127.0.0.1:8766/mcp
 }
 ```
 
-不同客户端的配置文件格式可能不同，服务地址和传输类型相同。本次没有修改任何个人 AI 客户端配置。
-客户端在别的设备上时，需要能访问服务所在机器，`127.0.0.1` 指向客户端自身。
+Configuration-file formats vary by client, but the service address and transport type are the same. No personal AI-client configuration was modified. A client on another device must be able to reach the service host; `127.0.0.1` refers to the client itself.
 
-在浏览器打开 `http://127.0.0.1:8766/live/` 或 `/maps/`。两个页面自动注册 AI 控制连接。
-AI 先调用 `ui_sessions`，选择返回的 `session_id`，再调用 `ui_snapshot` 读取页面和可用控件。
-AI 控制的是这个已打开的页面，不需要单独安装浏览器扩展。
+Open `http://127.0.0.1:8766/live/` or `/maps/` in a browser. Both pages register an AI-control connection automatically. The AI first calls `ui_sessions`, selects a returned `session_id`, then calls `ui_snapshot` to read the page and available controls. The AI controls this open page; no browser extension is required.
 
-必须启用 ASGI lifespan，并使用一个 worker。Django `runserver` 仍仅用于独立的本地管理后台，
-不提供 MCP 或 WebSocket。多个 worker 会把浏览器连接和工具请求分散到不同进程。
+Enable ASGI lifespan and use one worker. Django `runserver` remains for a separate local administration backend only; it does not provide MCP or WebSocket support. Multiple workers would distribute browser connections and tool requests across different processes.
 
-## 工具
+## Tools
 
-| 工具 | 操作 |
+| Tool | Operation |
 |---|---|
-| `system_status` | 实际数据库探测、已连接页面、ORS/HF 配置存在状态 |
-| `system_routes` | 发现 Django 路由、页面目的地和 ASGI 路径 |
-| `system_request` | 调用既有 HTTP 接口，保留中间件、校验和 HTTP 状态 |
-| `ui_sessions` | 列出已打开并连接的 PRS 页面 |
-| `ui_snapshot` | 读取当前 URL、文字、状态、控件选择器、值、选项和坐标 |
-| `ui_navigate` | 跳转到 `camera` 或 `maps`，等待新页面连接后返回快照 |
-| `ui_action` | 点击、填值、选择、勾选、键盘事件、提交、滚动、等待状态 |
-| `vibration_status` | 读取指定摄像头页的震动支持、启用开关、可见性和用户激活状态 |
-| `vibration_test` | 调用一次短震、长震或双震，返回浏览器接受/拒绝及原因 |
-| `vibration_stop` | 调用一次取消震动，不要求启用开关仍开启 |
-| `speech_status` | 查询语音输出前提、排队/朗读/完成/停止/错误及最近请求元数据 |
-| `speech_voices` | 查询设备语音ID、语言、本地/远程服务与默认标记 |
-| `speech_speak` | 提交一次受控文本朗读，不自动排队或替换指定声音 |
-| `speech_stop` | 调用一次取消当前页面的语音输出 |
-| `navigation_start` | 在指定地图 tab 的已规划路线启动持续定位导航 |
-| `navigation_stop` | 停止导航并释放定位监听，保留路线供明确重启 |
-| `navigation_status` | 读取导航状态、位置/精度/时间戳、进度、当前/下一指令与路线摘要 |
-| `database_schema` | 实际数据库表、字段和 Django 模型结构 |
-| `database_query` | ORM 查询、Django 条件表达式、排序和分页 |
-| `database_write` | ORM 创建、更新、删除，返回受影响数量 |
-| `database_sql` | 执行一条 SQL，支持读写和 DDL、绑定参数 |
+| `system_status` | Probe the actual database, connected pages, and presence of ORS/HF configuration. |
+| `system_routes` | Discover Django routes, page destinations, and ASGI paths. |
+| `system_request` | Call an existing HTTP endpoint while preserving middleware, validation, and HTTP status. |
+| `ui_sessions` | List open PRS pages with an active connection. |
+| `ui_snapshot` | Read the current URL, text, state, selectors, values, options, and coordinates. |
+| `ui_navigate` | Navigate to `camera` or `maps`, wait for the new page to connect, and return a snapshot. |
+| `ui_action` | Click, fill, select, check, send keyboard events, submit, scroll, or wait for state. |
+| `vibration_status` | Read vibration support, enable switch, visibility, and user-activation state for a specified camera page. |
+| `vibration_test` | Request one short, long, or double vibration and return browser acceptance/rejection and reason. |
+| `vibration_stop` | Request one vibration cancellation; the enable switch need not remain on. |
+| `speech_status` | Read speech prerequisites, queued/speaking/completed/stopped/error state, and recent request metadata. |
+| `speech_voices` | Read device voice IDs, languages, local/remote service, and default markers. |
+| `speech_speak` | Submit one controlled text-to-speech request without queuing or replacing a selected voice. |
+| `speech_stop` | Request cancellation of current-page speech once. |
+| `navigation_start` | Start continuous location-based navigation on a planned route in the specified map tab. |
+| `navigation_stop` | Stop navigation and release the location watcher while preserving the route for explicit restart. |
+| `navigation_status` | Read navigation state, position/accuracy/timestamp, progress, current/next instructions, and route summary. |
+| `database_schema` | Read actual database tables, columns, and Django model structure. |
+| `database_query` | Run ORM queries with Django conditions, sorting, and pagination. |
+| `database_write` | Create, update, or delete through the ORM and return affected row counts. |
+| `database_sql` | Execute one SQL statement with bound parameters; supports reads, writes, and DDL. |
 
-页面上的语言切换、摄像头选择、Echo/HF 模式、连接测试、开始/停止、设备定位、示例坐标、
-地图终点和路线提交均可通过这些控件触发。原有路线服务、HF 推理条件、图像参数和错误处理不变。
-新增后端 HTTP 路由会自动出现在路由发现结果中；新增页面若需要 DOM 控制，应加载
-`ai-control.js` 并正确设置 `data-api-base` 为同源应用根目录的相对路径。
+`ui_action` can operate only controls that are visible and enabled on the current page. The unified product page `/maps/` sets the origin through “Use current location”, selects the destination on the map, and then plans the route. It does not show the NUS example or manual coordinate input; hidden coordinate fields cannot be filled with `ui_action`. Agent semantic tools `maps_locate/maps_plan` still use the same map controller and support actual location, an existing map destination, or explicit coordinates. The standard map and diagnostic pages may retain their own test controls. Existing route service, HF inference conditions, image parameters, and error handling are unchanged.
 
-## 操作示例
+New backend HTTP routes appear automatically in route discovery. A new page that needs DOM control should load `ai-control.js` and set `data-api-base` to a same-origin relative path from the application root.
 
-以下 JSON 是工具参数；`session_id` 替换为 `ui_sessions` 返回值。
+## Usage Examples
 
-导航先在 `/maps/` 规划步行路线，再选择该地图页的 session：
+The following JSON values are tool arguments; replace `session_id` with a value returned by `ui_sessions`.
+
+For navigation, first plan a walking route on `/maps/`, then select that map page's session:
 
 ```text
 navigation_status({"session_id":"..."})
@@ -101,37 +86,26 @@ navigation_status({"session_id":"..."})
 navigation_stop({"session_id":"..."})
 ```
 
-三项工具在 `full` 和 `outputs` 均可用，复用 `WalkingNavigation`，不依赖 DOM 选择器。
-`outputs` 下路线由用户在地图页规划；`full` 还可用现有 `ui_action` 填写并提交路线。
-开始成功返回 `operation=start, accepted=true, state=locating`，不等于已经获得位置。
-浏览器仍可能要求用户批准定位；拒绝、超时或不可用会转为 `error`，不自动重试。
-开始重复返回 `already_active`；未规划返回 `route_required`；非地图页返回
-`available=false, accepted=false, reason=page_unavailable`；隐藏页面拒绝开始。
-停止也可取消等待定位的会话，成功后 `active=false`；`stop_failed` 表示原生取消未确认，
-须检查页面并明确停止/关闭页面。断连和 MCP 超时保留原错误语义，完成情况未知，不自动重复。
+The three tools are available in both `full` and `outputs`. They reuse `WalkingNavigation` and do not depend on DOM selectors. In `outputs`, users plan routes on the map page; `full` can use `ui_action` on visible map controls. On the unified product page, MCP may click `#locate` to get the origin, select a destination on `#map` using pixel offsets, then click `#plan` or submit `#route-form`; read the snapshot and confirm control state first. The Agent route workflow should prefer `maps_locate/maps_plan`, then call the same `navigation_start`. The three navigation MCP tools still handle only state/start/stop for a planned route.
 
-`navigation_status` 为只读，无定位/路线请求，返回以下结构：
+A successful start returns `operation=start, accepted=true, state=locating`; this does not mean a position has been obtained. The browser may still require user approval for location. Denial, timeout, or unavailable location changes state to `error`; no retry occurs. A duplicate start returns `already_active`; no planned route returns `route_required`; a non-map page returns `available=false, accepted=false, reason=page_unavailable`; a hidden page rejects start. Stop can also cancel a session waiting for location; after success, `active=false`. `stop_failed` means native cancellation was not confirmed; inspect the page and explicitly stop or close it. Disconnection and MCP timeout retain their original error semantics; completion is unknown and the action is not repeated automatically.
 
-| 字段 | 含义 |
+`navigation_status` is read-only and makes no location/route request. It returns:
+
+| Field | Meaning |
 |---|---|
-| `state`, `active`, `reason` | idle/ready/locating/navigating/off_route/arrived/stopped/error、是否运行导航及原因码；stop_failed 时原生监听释放未确认 |
-| `supported`, `visible` | 持续定位接口是否存在、页面是否前台 |
-| `position` | 最近坐标 longitude/latitude、accuracy_m、Unix 毫秒 timestamp、age_ms；尚未取得时为 null |
-| `route` | request_id、provider/profile、ORS summary、geometry_distance_m、start/destination、step_count、attribution |
-| `progress` | along_m、cross_track_m、remaining_distance_m、remaining_duration_s、distance_to_next_m、step_index、current_step、next_step |
-| `policy` | max_accuracy_m=30、off_route_m=40、arrival_m=15、max_fix_age_ms=15000 |
+| `state`, `active`, `reason` | State (`idle/ready/locating/navigating/off_route/arrived/stopped/error`), whether navigation is active, and reason code; on `stop_failed`, release of the native watcher is unconfirmed. |
+| `supported`, `visible` | Whether continuous location is available and whether the page is in the foreground. |
+| `position` | Latest longitude/latitude, `accuracy_m`, Unix-millisecond `timestamp`, and `age_ms`; `null` before the first fix. |
+| `route` | `request_id`, provider/profile, ORS summary, `geometry_distance_m`, start/destination, step count, and attribution. |
+| `progress` | `along_m`, `cross_track_m`, `remaining_distance_m`, `remaining_duration_s`, `distance_to_next_m`, `step_index`, `current_step`, and `next_step`. |
+| `policy` | `max_accuracy_m=30`, `off_route_m=40`, `arrival_m=15`, `max_fix_age_ms=15000`. |
 
-低精度或停止/错误时 `progress=null`；偏航时仅返回 `cross_track_m` 和为空的当前/下一指令，
-不提供剩余距离/时间。到达自动释放定位，保留到达状态和最后位置；停止后的最后位置仍可能返回，
-必须同时查看 `active/state` 与 `age_ms`，不能当作持续更新的位置。
-步骤保留 ORS 的 `type/instruction/way_points/distance_m/duration_s`，索引从0开始。
-预计时间按 ORS 原时长与剩余几何比例计算，无实时速度估计；精度、偏航和到达边界详见
-[前端说明](../frontend/README.md)。不自动重规划、播音、震动或推断道路安全。
-导航位置不写数据库/本地存储，不进入应用日志；工具响应会将坐标经控制 WebSocket/MCP 返回调用者。
-浏览器隐藏/离页即停止，返回前台须显式重启。本次不提供后台/锁屏导航保证。
+`progress=null` when accuracy is low or navigation is stopped/errored. During off-route state, only `cross_track_m` is returned and current/next instructions are empty; remaining distance/time are omitted. Arrival releases location automatically while preserving arrival state and the last position. A stopped session may still return its last position; check `active/state` and `age_ms` together rather than treating it as a live fix. Steps retain ORS `type/instruction/way_points/distance_m/duration_s`, with zero-based indexes. Estimated time uses the ORS duration scaled by the remaining geometry; there is no live speed estimate. See the [frontend guide](../frontend/README.md) for accuracy, off-route, and arrival boundaries. The system does not replan, speak, vibrate, or infer road safety automatically.
 
-震动调用必须选择已打开的摄像头页。用户先在该页真实点击并启用“震动测试”，
-随后 AI 可以调用以下工具；MCP 不会自动启用开关、制造可信用户激活或重复调用。
+Navigation position is not written to the database/local storage or application logs; the tool response returns coordinates to the caller through the control WebSocket/MCP. Hiding or leaving the browser page stops navigation; explicitly restart after returning to the foreground. Background/lock-screen navigation is not guaranteed.
+
+Vibration calls must target an open camera page. The user must first click on that page and enable “Vibration test”; the AI can then call these tools. MCP does not enable the switch, fabricate trusted user activation, or call the API repeatedly.
 
 ```text
 vibration_status({"session_id":"..."})
@@ -139,106 +113,74 @@ vibration_test({"session_id":"...","pattern":"double"})
 vibration_stop({"session_id":"..."})
 ```
 
-`pattern` 只接受 `short`（200ms）、`long`（800ms）、`double`（150ms/暂停100ms/150ms），
-省略时默认为 `short`。三者均复用前端按钮的 `VibrationTester`，不执行检测或申请摄像头权限。
-查询返回 `available/supported/enabled/visible/user_activated/request_pending/hardware_verified`；
-浏览器未提供 User Activation 信息时 `user_activated` 为 null。
-测试/停止另返回 `operation/accepted/reason`，测试还包含 `pattern`。
-`request_pending` 只是已接受且未成功取消的请求记录，不表示马达仍在运行。
-`accepted: true` 仅为浏览器接口接受，`hardware_verified` 始终为 false。
+`pattern` accepts only `short` (200 ms), `long` (800 ms), or `double` (150 ms/pause 100 ms/150 ms); if omitted it defaults to `short`. All three reuse the frontend button's `VibrationTester`; they do not run detection or request camera permission. Status returns `available/supported/enabled/visible/user_activated/request_pending/hardware_verified`; `user_activated` is `null` if the browser does not expose User Activation information. Test/stop also return `operation/accepted/reason`, and test includes `pattern`. `request_pending` records only a request that was accepted and not successfully cancelled; it does not mean the motor is still running. `accepted: true` means only that the browser API accepted the request; `hardware_verified` is always false.
 
-设备前提不足或原生接口失败会返回明确的 `accepted: false`，不依赖中英文显示文字：
+Missing device prerequisites or native API failures return explicit `accepted: false`, independent of localized display text:
 
-| `reason` | 含义 |
+| `reason` | Meaning |
 |---|---|
-| `page_unavailable` | 所选页面没有震动 UI，请明确选择或导航到摄像头页 |
-| `unsupported` | 浏览器没有震动接口 |
-| `disabled` | 用户尚未启用测试 |
-| `page_hidden` | 测试页面不在前台 |
-| `activation_required` | 浏览器尚未记录真实用户交互 |
-| `native_rejected` | 原生接口返回 false |
-| `native_error` | 原生调用抛出异常，详情已记录于浏览器控制台 |
+| `page_unavailable` | Selected page has no vibration UI; explicitly select or navigate to a camera page. |
+| `unsupported` | Browser has no vibration API. |
+| `disabled` | User has not enabled the test. |
+| `page_hidden` | Test page is not in the foreground. |
+| `activation_required` | Browser has not recorded a real user interaction. |
+| `native_rejected` | Native API returned false. |
+| `native_error` | Native call threw; details are recorded in the browser console. |
 
-无效参数、未连接会话和传输超时/断开仍为 MCP 错误；超时后的动作完成状态未知，
-必须先查询页面状态，不能自动重放。停止可以独立于开关发送取消请求，但浏览器仍可能拒绝。
-安卓 Chrome 等可测试；iPhone Safari 不支持该接口。[浏览器限制说明](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/vibrate)
+Invalid parameters, disconnected sessions, and transport timeout/disconnection remain MCP errors. After a timeout, action completion is unknown; query page state first and do not replay automatically. Stop can send a cancellation independently of the switch, but the browser may still reject it. Android Chrome and similar browsers can be tested; iPhone Safari does not support this API. See [browser limitations](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/vibrate).
 
-真实 HTTP/WS/Chrome 联调命令见前端说明。测试明确替换原生震动 API，不代表实际手机马达验证。
+See the frontend guide for real HTTP/WS/Chrome integration commands. Tests explicitly replace the native vibration API and do not verify a physical phone motor.
 
-语音输出需要用户在摄像头页或带语音控件的地图页真实点击并启用开关。浏览器共用接口为
-`frontend/speech-output.js` 导出的 `speechOutput`（其他页面为null）：
-`describe()`、`voiceList()`、`speak(text, options)`、`stop()`。
-UI按钮、浏览器控制桥和以下MCP工具使用这一实例，不申请麦克风/摄像头权限。
+Speech output requires a real click and an enabled switch on the camera page or a map page with speech controls. The shared browser interface is `speechOutput`, exported by `frontend/speech-output.js` (null on other pages): `describe()`, `voiceList()`, `speak(text, options)`, and `stop()`. UI buttons, the browser-control bridge, and the MCP tools below use this instance and do not request microphone/camera permission.
 
 ```text
 speech_status({"session_id":"..."})
 speech_voices({"session_id":"..."})
-speech_speak({"session_id":"...","text":"你好，这是语音输出测试。","language":"zh-CN","rate":1.0,"volume":0.8})
+speech_speak({"session_id":"...","text":"Hello, this is a speech output test.","language":"en-US","rate":1.0,"volume":0.8})
 speech_stop({"session_id":"..."})
 ```
 
-`text`必须有非空白内容且最多1000个Unicode码点，保持原文不改写。
-`language`只接受`zh-CN/en-US`（默认`zh-CN`）；`rate`为0.5至2（默认1），
-`volume`为0至1（默认1，0为明确静音）。省略/空`voice_id`明确使用浏览器默认声音，
-也可使用`speech_voices`返回的精确ID，最多1024个字符。指定ID失效、歧义、查询失败或
-主语言不匹配均明确拒绝，不改用默认声音；语音列表可能通过`voiceschanged`稍后加载。
-语音条目的`local_service`来自浏览器，false表示远程服务，可能联网；默认声音是否本地
-在提交前未必可知，不声称所有语音离线。[语音服务属性](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice/localService)
+`text` must contain non-whitespace content, may be at most 1,000 Unicode code points, and is preserved without rewriting. `language` accepts only `zh-CN/en-US` (default `zh-CN`); `rate` is 0.5–2 (default 1); `volume` is 0–1 (default 1, where 0 means explicitly muted). An omitted/empty `voice_id` explicitly selects the browser default voice; otherwise use an exact ID returned by `speech_voices`, up to 1,024 characters. An invalid/ambiguous ID, query failure, or primary-language mismatch is rejected explicitly; there is no fallback to the default voice. The voice list may load later through `voiceschanged`. Each voice's `local_service` comes from the browser; false indicates a remote service that may use the network. Whether the default voice is local may not be known before submission, so the system does not claim all speech is offline. See [voice service property](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice/localService).
 
-提交成功只说明构造请求并调用`speechSynthesis.speak()`未同步抛出异常，
-不是已开始或已播放完成。必须继续读取`state`：`queued/speaking/completed/stopped/error`；
-初始为`idle`，`start/end/error`事件更新引擎状态。
-`audio_output_verified`始终false；即使引擎报告完成，实际声音也受设备/系统音量影响。
-接口返回请求ID、Unicode长度、语言、声音ID、语速和音量等元数据，不回显朗读正文，
-应用日志也不记录正文。原生错误只回显标准码，未知外部内容规范为`unknown`。
+Successful submission means only that the request was constructed and `speechSynthesis.speak()` did not throw synchronously; it does not mean playback started or completed. Continue reading `state`: `queued/speaking/completed/stopped/error`. Initial state is `idle`; `start/end/error` events update the engine state. `audio_output_verified` is always false; actual audio still depends on device/system volume even when the engine reports completion. The interface returns request ID, Unicode length, language, voice ID, rate, volume, and other metadata but does not echo speech text; application logs also omit the text. Native errors return standard codes only, and unknown external content is normalized to `unknown`.
 
-停止发送一次`cancel()`，成功后隔离旧请求迟到事件；取消异常保留当前请求供诊断，
-返回`cancel_failed`。关闭开关、页面隐藏/离开时取消当前输出，回前台不自动恢复。
-已有请求或原生引擎繁忙时返回`busy`，不自动排队、打断或重试。
-其余明确原因包括`page_unavailable/unsupported/disabled/page_hidden/activation_required`、
-`invalid_text/invalid_parameters/voice_query_failed/voice_unavailable/voice_ambiguous/voice_language_mismatch/native_error`。
-MCP参数违反类型/范围、无会话或传输失败仍是工具错误；异步合成错误见`last_error`。
-此接口朗读当前浏览器设备，不生成MP3/WAV文件，不绑定检测结果。
-[输出及事件语义](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis)
+Stop calls `cancel()` once and isolates late events from the old request after successful cancellation. If cancellation throws, the current request remains available for diagnosis and the result is `cancel_failed`. Disabling the switch or hiding/leaving the page cancels current output; returning to the foreground does not resume automatically. An existing request or busy native engine returns `busy`; nothing is queued, interrupted, or retried automatically. Other explicit reasons include `page_unavailable/unsupported/disabled/page_hidden/activation_required`, `invalid_text/invalid_parameters/voice_query_failed/voice_unavailable/voice_ambiguous/voice_language_mismatch/native_error`. MCP type/range violations, missing sessions, and transport failures remain tool errors; asynchronous synthesis errors appear in `last_error`. This interface speaks on the current browser device, does not create MP3/WAV files, and is not tied to detection results.
+[Output and Event Semantics](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis)
 
 ```json
 {"session_id":"...","page":"maps"}
 ```
 
-上面调用 `ui_navigate`。在地图初始化完成前用 `ui_action` 等待示例按钮可用：
+The call above uses `ui_navigate`. After the unified product page initializes, wait for the location button to become enabled, then use page controls to choose a point and plan:
 
 ```json
-{"session_id":"...","action":"wait","selector":"#example","state":"enabled","timeout":20}
+{"session_id":"...","action":"wait","selector":"#locate","state":"enabled","timeout":20}
 ```
 
-然后使用相同工具点击示例、填写终点、提交表单：
+Clicking location requires browser permission. After reading a new snapshot, choose the destination on the map using `#map` `x/y` offsets, then submit the route form. Do not call `fill` on hidden coordinate fields in the product page:
 
 ```json
-{"session_id":"...","action":"click","selector":"#example"}
-{"session_id":"...","action":"fill","selector":"#end-longitude","value":"103.7735"}
+{"session_id":"...","action":"click","selector":"#locate"}
+{"session_id":"...","action":"click","selector":"#map","x":160,"y":120}
 {"session_id":"...","action":"submit","selector":"#route-form"}
 ```
 
-地图选点可以使用 `click` 的 `x/y`，它们是元素左上角起算的像素偏移。
-`scroll` 将控件滚动到视野中央；`check` 接受布尔值；`select/fill/key` 接受字符串。
-`key` 发送 DOM 键盘事件，不执行浏览器默认打字或系统快捷键；输入文字使用 `fill`，
-提交使用 `submit`。不唯一的选择器、隐藏/禁用控件、无效选项会明确失败。
+Example buttons and fillable coordinate fields are available only on standard/diagnostic map pages where those controls remain visible; they do not apply to the unified product page.
 
-点击成功表示事件已触发，摄像头或路线请求可能还在执行。继续调用 `wait` 或 `ui_snapshot`
-观察完成状态，不能仅凭点击响应断言业务成功。快照文字最多 30000 字符、控件最多 500 个，
-超过时返回明确的截断标志。快照不包含摄像头图像像素。
+For map selection, `click` accepts `x/y` pixel offsets measured from the element's top-left corner. `scroll` centers a control in the viewport; `check` accepts a boolean; `select/fill/key` accept strings. `key` dispatches a DOM keyboard event and does not perform browser-default typing or system shortcuts. Use `fill` to enter text and `submit` to submit. Non-unique selectors, hidden/disabled controls, and invalid options fail explicitly.
 
-调用 `system_request` 检查原有后端：
+Successful click means the event was dispatched; camera or route requests may still be running. Continue with `wait` or `ui_snapshot` to observe completion; a click response alone does not establish business success. Snapshots contain at most 30,000 text characters and 500 controls; truncation is marked explicitly. Snapshots do not include camera-image pixels.
+
+Use `system_request` to check existing backend endpoints:
 
 ```json
 {"path":"/api/health/"}
 {"path":"/maps/route/","method":"POST","body":{"start":[103.7766,1.2971],"end":[103.7735,1.2991]}}
 ```
 
-接口路径不带部署前缀 `/prs`。默认 Host/Origin 使用系统配置的页面源。
-接口响应保留原始 HTTP 状态，不重试或跟随重定向；既有认证接口可明确提供所需请求头。
+Endpoint paths omit the deployment prefix `/prs`. Default Host/Origin use the page origin from system configuration. Responses preserve the original HTTP status and do not retry or follow redirects; existing authenticated endpoints may be given required headers explicitly.
 
-先通过 `database_schema` 获取模型标签和字段，再进行 ORM 操作：
+Use `database_schema` to retrieve model labels and fields before ORM operations:
 
 ```json
 {"model":"auth.Group","fields":["id","name"],"limit":20}
@@ -247,63 +189,69 @@ MCP参数违反类型/范围、无会话或传输失败仍是工具错误；异�
 {"action":"delete","model":"auth.Group","filters":{"name":"renamed-group"}}
 ```
 
-更新/删除要求显式传 `filters`；`{}` 表示匹配全部。外键使用 schema 中的 `attname`
-（例如 `user_id`）。创建/更新执行 `full_clean` 和 `save`，整批操作失败会回滚。
-删除沿用 Django 的级联规则。密码字段不会自动哈希；这不是账号注册接口。
-当前没有产品业务模型，ORM 工具操作已有 Django 模型，SQL 可以操作实际表。
+Updates/deletes require explicit `filters`; `{}` means match all rows. Foreign keys use the schema's `attname` (for example, `user_id`). Create/update calls run `full_clean` and `save`; the batch rolls back on failure. Deletes follow Django cascade rules. Password fields are not automatically hashed; this is not an account-registration API. There are currently no product business models. ORM tools operate on existing Django models, and SQL can operate on actual tables.
 
-SQL 参数使用 Django 的 `%s` 占位符，不自行拼接输入：
+SQL parameters use Django `%s` placeholders; do not concatenate input:
 
 ```json
 {"sql":"SELECT id, name FROM auth_group WHERE id >= %s ORDER BY id","parameters":[1],"limit":20}
 ```
 
-SQL 和 ORM 查询返回量最多 1000 行；SQL 的 `limit` 只限制返回量，不限制写入数量。
-SQL 不附加权限过滤，可以执行 INSERT/UPDATE/DELETE/DDL，实际支持范围由数据库决定。
-数据库失败返回异常类型、必要的校验字段/代码，不在日志中输出 SQL、数据值或凭据。
+SQL and ORM queries return at most 1,000 rows. SQL `limit` constrains returned rows only; it does not limit write volume. SQL adds no permission filtering and can execute INSERT/UPDATE/DELETE/DDL; actual support depends on the database. Database failures return the exception type and necessary validation fields/codes; logs do not include SQL, data values, or credentials.
 
-## 连接及运行边界
+## Connection and Runtime Boundaries
 
-浏览器必须保持页面打开。跳转保留 tab 的 sessionStorage ID；新连接替换同 ID 的旧连接。
-复制 tab 时浏览器可能复制 sessionStorage，出现相同 ID 时以最新连接为准；独立新 tab
-使用自己的 ID。关闭或刷新会终止未完成的控制请求。断线后手动刷新，不自动重连。
-浏览器控制通道每 15 秒发送心跳，避免空闲 Nginx 连接断开。
+The browser page must remain open. Navigation preserves the tab's `sessionStorage` ID, and a
+new connection replaces the previous connection with the same ID. Browsers may copy
+`sessionStorage` when duplicating a tab; if IDs collide, the newest connection wins. A separate
+new tab receives its own ID. Closing or refreshing a tab terminates unfinished control requests.
+After disconnection, refresh manually; the client does not reconnect automatically. The browser
+control channel sends a heartbeat every 15 seconds to prevent idle Nginx connections from closing.
 
-摄像头、定位仍需要浏览器权限和实际可用设备。MCP 的 DOM 点击不能授予浏览器权限，
-不能产生系统认可的可信用户手势，也不提供文件选择弹窗、浏览器外系统快捷键或其他网站控制。
-该实现覆盖当前 PRS 页面和后端功能；这些浏览器/设备边界不能称为已消除。
-标准工具超时、断开和浏览器动作错误会明确返回；超时后动作可能已经执行，应先查看状态。
-服务没有自动重试、隐式更换镜头/推理模式或自动数据库写入重放。
+Camera and location access still require browser permission and usable hardware. MCP DOM clicks
+cannot grant browser permissions or create a trusted user gesture recognized by the operating
+system. The interface does not provide file-picker dialogs, system shortcuts outside the browser,
+or control of other websites. The implementation covers the current PRS pages and backend
+features; it does not remove these browser and device limitations. Standard tool timeouts,
+disconnections, and browser-action failures are returned explicitly. An action may have completed
+after a timeout, so inspect the current state before deciding what to do. The service does not
+retry automatically, silently switch cameras or inference modes, or replay database writes.
 
-## 部署与验证
+## Deployment and Verification
 
-生产模板使用 `/prs/mcp`，启用 lifespan。MCP 代理读超时 70 秒，媒体路径原预算保持。
-发布工具的 allowlist 包含新后端模块、依赖文件和前端桥接模块；staging 校验依赖及 ASGI 导入。
-服务器需事先明确安装 `requirements.txt` 中的新依赖，发布脚本不会隐式修改运行环境。
-部署验证应分别检查协议、浏览器控制和实际设备；本地通过不代表公网代理或外部服务可用。
+The production template uses `/prs/mcp` with lifespan enabled. The MCP proxy read timeout is 70
+seconds, and the existing media-path budget is retained. The release tool allowlist includes the
+new backend modules, dependency files, and frontend bridge module; staging validates dependencies
+and the ASGI import. Install the new dependencies from `requirements.txt` on the server explicitly
+before deployment; the release script does not modify the runtime environment implicitly.
+Deployment verification should separately cover the protocol, browser control, and physical
+devices. Passing locally does not establish that the public proxy or external services work.
 
-只读协议验证：
+Read-only protocol verification:
 
 ```powershell
 .\.venv\Scripts\python.exe -m tools.check_mcp --url http://127.0.0.1:8766/mcp --output .venv/tmp/mcp-readonly.json
 ```
 
-增加 `--exercise-db` 会创建/读写/删除唯一命名的测试 Group；结束后清理自己的测试行。
-`--exercise-ui` 用于专用测试 tab，会操作语言、摄像头和地图。
-完整 Chrome 联调从 `frontend` 执行，`PYTHON` 指向 backend 的 `.venv/Scripts/python.exe`，
-`PRS_PLAYWRIGHT_PATH` 指向已有 Playwright 包：
+Adding `--exercise-db` creates, reads, updates, and deletes a uniquely named test Group, then
+cleans up its own test row. `--exercise-ui` targets a dedicated test tab and changes the language,
+camera, and map controls. Run full Chrome integration from `frontend`; set `PYTHON` to the
+backend's `.venv/Scripts/python.exe` and `PRS_PLAYWRIGHT_PATH` to the existing Playwright package:
 
 ```powershell
 node tools/check_mcp_browser.mjs http://127.0.0.1:8766/live/ ../backend/.venv/tmp/mcp-browser.json --synthetic-facing
 ```
 
-Chrome 原生模拟摄像头无法满足 `facingMode.exact=environment`。
-显式 `--synthetic-facing` 仅在测试浏览器中移除这一模拟设备不支持的条件，保留尺寸/audio
-约束；实际系统严格镜头条件不变。地图配置/路线也使用明确合成的夹具，真实 DOM、JS、JPEG、
-WebSocket、MCP HTTP、数据库及页面跳转均执行；不代表真实摄像头、GPS、ORS 或 GPU验证。
+Chrome's native simulated camera cannot satisfy `facingMode.exact=environment`. The explicit
+`--synthetic-facing` option removes only this condition, which the simulated device does not
+support, in the test browser; width and audio constraints remain, and strict camera selection is
+unchanged in the real system. Map configuration and routes also use explicit synthetic fixtures.
+The check exercises the real DOM, JavaScript, JPEG, WebSocket, MCP HTTP, database, and page
+navigation paths; it does not verify a physical camera, GPS, ORS, or GPU.
 
-交付前执行 Django check、迁移差异检查、后端与前端测试、完整 `ruff check .`，
-并人工核对变更文件的注释与声明/变量索引。协议检查覆盖 initialize、tools/list 和
-tools/call；工具清单应与所选 MCP profile 一致。运行详情保存为结构化报告。
-公网代理/systemd、PostgreSQL、真实摄像头/GPS及 ORS/HF 上游须在对应环境单独验证，
-不能由本地测试或合成夹具结果推断。
+Before delivery, run Django checks, migration-drift checks, backend and frontend tests, and full
+`ruff check .`, then manually review comments and declaration/variable indexes in changed files.
+Protocol checks cover `initialize`, `tools/list`, and `tools/call`; the tool list must match the
+selected MCP profile. Runtime details are saved as a structured report. Verify the public proxy,
+systemd, PostgreSQL, physical cameras/GPS, and ORS/HF upstreams separately in their target
+environments; local tests and synthetic fixtures cannot establish those results.

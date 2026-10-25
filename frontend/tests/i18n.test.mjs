@@ -1,20 +1,20 @@
-/** Responsibilities: 验证语言解析、词典参数、原文保护及 DOM 双向切换。
- * Implementation: 使用明确 DOM/存储/事件替身；不请求摄像头、GPS 或服务。
+/** Responsibilities: Verify language resolution, dictionary placeholders, source-text protection, and bidirectional DOM switching.
+ * Implementation: Use explicit DOM/storage/event fixtures; do not request camera, GPS, or services.
  * Related Modules: i18n.js, translations.js。
  * Declaration Index: testResolution; testCatalog; testDom; testDom.element;
  * testDom.element.matches; testDom.element.hasAttribute; testDom.element.getAttribute;
  * testDom.element.setAttribute; testDom.element.addEventListener;
  * testDom.Observer; testDom.Observer.constructor; testDom.Observer.observe。
- * Variable Index: None；测试局部变量保存受控 DOM、存储和窗口事件。
+ * Variable Index: None; test-local variables hold controlled DOM, storage, and window events.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveLanguage, translate, localizePage, STORAGE_KEY } from '../i18n.js';
 import { translations } from '../translations.js';
 
-/** Functionality: 验证系统首选语言及显式覆盖。Inputs: 固定语言枚举/列表。
- * Outputs: 解析断言。Logic: 覆盖中文地区、英文、其他语言与空列表。
- * Constraints: 不声称已验证真实操作系统设置界面。 */
+/** Functionality: Verify browser-preferred language and explicit overrides. Inputs: Fixed language enums/lists.
+ * Outputs: Resolution assertions. Logic: Cover Chinese locales, English, other languages, and empty lists.
+ * Constraints: Does not claim to verify real operating-system settings UI. */
 test('language resolution uses browser preference and honors explicit choices', function testResolution() {
   for (const locale of ['zh-CN', 'zh-TW', 'zh-HK', 'ZH']) assert.equal(resolveLanguage('system', [locale]), 'zh-CN');
   for (const languages of [[], ['en-US'], ['fr-FR', 'zh-CN']]) assert.equal(resolveLanguage('system', languages), 'en');
@@ -22,10 +22,10 @@ test('language resolution uses browser preference and honors explicit choices', 
   assert.equal(resolveLanguage('zh-CN', ['en-US']), 'zh-CN');
 });
 
-/** Functionality: 验证全部词典项和动态字段。Inputs: 实际词典与固定参数。
- * Outputs: 英文无遗漏、中文原文及标识保留断言。
- * Logic: 逐项替换模板字段，再执行实际翻译函数。
- * Constraints: 未知第三方文字保留原文，不代表翻译审校或外部服务验证。 */
+/** Functionality: Verify all dictionary entries and dynamic fields. Inputs: Actual dictionary and fixed values.
+ * Outputs: Assertions for complete English coverage, preserved Chinese source text, and diagnostic identifiers.
+ * Logic: Substitute each template field, then call the real translation function.
+ * Constraints: Unknown third-party text remains unchanged; this does not review translation quality or verify external services. */
 test('catalog translates all entries and preserves diagnostic identifiers', function testCatalog() {
   for (const [source, target] of Object.entries(translations)) {
     const sample = source.replace(/\{(\d+)\}/g, (_, index) => `value-${index}`);
@@ -39,26 +39,26 @@ test('catalog translates all entries and preserves diagnostic identifiers', func
   assert.equal(translate('Unknown provider diagnostic', 'en'), 'Unknown provider diagnostic');
 });
 
-/** Functionality: 验证保存、即时切换、动态状态及系统/跨标签页事件。
- * Inputs: 明确的最小 DOM、存储与 MutationObserver 替身。
- * Outputs: 文本、属性、lang 与存储断言。Logic: 直接派发实际注册的回调。
- * Constraints: 无真实浏览器布局/事件调度；替身不能替代真机验证。 */
+/** Functionality: Verify persistence, immediate switching, dynamic status, and system/cross-tab events.
+ * Inputs: Explicit minimal DOM, storage, and MutationObserver fixtures.
+ * Outputs: Text, attribute, lang, and storage assertions. Logic: Dispatch registered callbacks directly.
+ * Constraints: No real browser layout/event scheduling; fixtures do not replace real-device verification. */
 test('DOM switching retains source strings and follows system and storage events', function testDom() {
-  /** Functionality: 创建本测试使用的元素替身。Inputs: children 和 attrs。
-   * Outputs: 可写元素。Logic: 实现翻译用到的 DOM 方法。
-   * Constraints: 不解析 HTML，不模拟浏览器渲染。 */
+  /** Functionality: Create an element fixture for this test. Inputs: children and attrs.
+   * Outputs: Writable element. Logic: Implement DOM methods used by translation.
+   * Constraints: Does not parse HTML or simulate browser rendering. */
   function element(children = [], attrs = {}) {
     return { nodeType: 1, childNodes: children, attrs, handlers: {},
-      /** Functionality: 判断原文保护标记。Inputs: selector。Outputs: boolean。
-       * Logic: 替身只使用保护标记。Constraints: 不实现完整 CSS。 */
+      /** Functionality: Check the source-text protection marker. Inputs: selector. Outputs: Boolean.
+       * Logic: The fixture recognizes only this protection marker. Constraints: Does not implement full CSS. */
       matches(selector) { return selector.includes('[data-language-original]') && Object.hasOwn(attrs, 'data-language-original'); },
-      /** Functionality: 查询属性。Inputs: key。Outputs: boolean。Logic: 检查自有键。Constraints: 无继承属性。 */
+      /** Functionality: Check for an attribute. Inputs: key. Outputs: Boolean. Logic: Check own keys only. Constraints: No inherited properties. */
       hasAttribute(key) { return Object.hasOwn(attrs, key); },
-      /** Functionality: 读取属性。Inputs: key。Outputs: value。Logic: 直接读取。Constraints: 测试限定属性。 */
+      /** Functionality: Read an attribute. Inputs: key. Outputs: Value. Logic: Read directly. Constraints: Test uses a fixed attribute set. */
       getAttribute(key) { return attrs[key]; },
-      /** Functionality: 写入属性。Inputs: key/value。Outputs: attrs 更新。Logic: 直接赋值。Constraints: 不自动派发观察事件。 */
+      /** Functionality: Write an attribute. Inputs: key/value. Outputs: Updated attrs. Logic: Assign directly. Constraints: Does not dispatch observer events automatically. */
       setAttribute(key, value) { attrs[key] = value; },
-      /** Functionality: 保存事件。Inputs: name/handler。Outputs: handlers 更新。Logic: 单监听器。Constraints: 测试直接调用。 */
+      /** Functionality: Store an event handler. Inputs: name/handler. Outputs: Updated handlers. Logic: One listener per name. Constraints: Tests invoke handlers directly. */
       addEventListener(name, handler) { this.handlers[name] = handler; },
     };
   }
@@ -68,12 +68,12 @@ test('DOM switching retains source strings and follows system and storage events
   const root = element([text, select, element([original], {'data-language-original': ''})], {'aria-label': '摄像头回传工作台'});
   const events = {}, saved = new Map();
   let observe;
-  /** Functionality: 捕获实际观察回调。Logic: 显式手动派发变更。
-   * Constraints: 不模拟浏览器微任务队列。 */
+  /** Functionality: Capture the actual observer callback. Logic: Dispatch changes explicitly by hand.
+   * Constraints: Does not simulate the browser microtask queue. */
   class Observer {
-    /** Functionality: 保存回调。Inputs: callback。Outputs: observe 更新。Logic: 保存引用。Constraints: 不自动调用。 */
+    /** Functionality: Store the callback. Inputs: callback. Outputs: Updated observe reference. Logic: Retain the reference. Constraints: Do not call automatically. */
     constructor(callback) { observe = callback; }
-    /** Functionality: 接受观察配置。Inputs: None 使用隐式注册。Outputs: 无。Logic: 不执行观察。Constraints: 测试手动派发。 */
+    /** Functionality: Accept observer configuration. Inputs: None; registration is implicit. Outputs: None. Logic: Do not observe. Constraints: Tests dispatch manually. */
     observe() {}
   }
   const win = { navigator: { languages: ['en-US'] }, MutationObserver: Observer,

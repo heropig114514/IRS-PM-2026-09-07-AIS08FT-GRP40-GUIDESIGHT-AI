@@ -1,20 +1,27 @@
 /* Responsibilities: Shared voice/text assistant panel, progress and cross-page conversation.
- * Implementation: One bound WebSocket, ordered replay, visible intent routing and tool activity,
- * explicit submission/cancel/reset;
+ * Implementation: One bound WebSocket, ordered replay and explicit request ownership; the product
+ * view uses press-and-hold voice capture while the diagnostic view retains click-to-toggle capture.
  * safe DOM text rendering and in-memory audio; disconnect releases microphone. No auto reconnect.
- * Related Modules: ai-control.js, voice-input.js, agent.css; backend/core/agent/transport.
+ * Related Modules: ai-control.js, voice-input.js, agent.css, integration/assist-mvp.js;
+ * backend/core/agent/transport.
  * Declaration Index: label; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
- * AgentPanel.send; AgentPanel.submit; AgentPanel.record; AgentPanel.cancel;
+ * AgentPanel.send; AgentPanel.submit; AgentPanel.record; AgentPanel.startRecording;
+ * AgentPanel.finishRecording; AgentPanel.handlePressStart; AgentPanel.handlePressEnd;
+ * AgentPanel.handlePressCancel; AgentPanel.cancel;
  * AgentPanel.receive; AgentPanel.append; AgentPanel.render; AgentPanel.fail.
  * Variable Index: COPY — bilingual interface text; TOOLS — discovery/action labels;
- * panel — singleton.
+ * panel — singleton; AgentPanel.productMode selects the formal press-to-talk interaction;
+ * holdActive/holdToken/activePointerId isolate the active pointer or keyboard press from stale events.
  */
 import {VoiceInput} from "./voice-input.js";
 
 const COPY = {
   title: ["语音助手", "Voice assistant"], help: ["说出或输入你想做的事，例如：开启导航、关闭摄像头。", "Say or type a request, such as start navigation or close the camera."],
+  productHelp: ["按住按钮说话，松开后发送；也可以输入文字指令。", "Hold the button while speaking, then release to send. You can also type a request."],
   privacy: ["录音最长20秒；音频与对话发送 Qwen 处理，应用不保存录音。定位和设备权限仍由你授权。", "Up to 20 seconds. Audio and conversation are processed by Qwen; this app does not save recordings. Device permissions remain yours."],
   send: ["发送", "Send"], record: ["点击说话", "Speak"], finish: ["结束并发送", "Finish & send"],
+  hold: ["按住说话", "Hold to speak"], release: ["松开发送", "Release to send"],
+  recordingProduct: ["正在录音，松开按钮发送（最长20秒）", "Recording. Release to send within 20 seconds."],
   cancel: ["取消", "Cancel"], clear: ["清空对话", "Clear conversation"], input: ["输入指令或补充信息", "Enter a request or missing information"],
   connecting: ["正在连接助手…", "Connecting…"], ready: ["可以说话或输入指令", "Ready for your request"],
   thinking: ["正在处理指令…", "Processing your request…"], transcribing: ["正在识别语音…", "Transcribing…"],
@@ -49,16 +56,21 @@ function label(pair) { return pair[document.documentElement.lang.startsWith("zh"
 
 /* Functionality: Own assistant UI and one page-bound transport.
  * Logic: Correlated events reflect actual backend work; page navigation reattaches same identity.
- * State: busy/connected/recording/stage drive controls; seen deduplicates replay;
- * voice/socket/heartbeat own resources; root/input/status/dialogue/activity reference the DOM.
+ * State: productMode selects the formal hold gesture; busy/connected/recording/stage drive controls;
+ * holdActive/holdToken/activePointerId isolate gestures; seen deduplicates replay; voice/socket/heartbeat own resources.
  * Constraints: No unsolicited microphone access, automatic reply speech or command replay. */
 export class AgentPanel {
-  /* Functionality: Build panel and bind explicit user controls. Inputs: page DOM.
-   * Outputs: UI/listeners; Logic: static markup then safe text; Constraints: no model HTML. */
+  /* Functionality: Build the page-specific assistant panel and bind explicit controls.
+   * Inputs: document view marker, main element and browser event targets. Outputs: inserted panel/listeners.
+   * Logic: Product mode places hold-to-send after the intro; other pages keep click-to-toggle.
+   * Constraints: Static markup only; no microphone request until a user gesture. */
   constructor() {
+    this.productMode = document.documentElement.dataset.assistView === "product";
     this.root = document.createElement("section");
     this.root.id = "agent-panel";
     this.root.className = "agent-panel";
+    this.root.dataset.view = this.productMode ? "product" : "diagnostic";
+    this.root.dataset.pressing = "false";
     this.root.setAttribute("data-language-original", "");
     this.root.innerHTML = `<div class="agent-heading"><h2 data-copy="title"></h2><span class="agent-badge">MVP</span></div>
       <p data-copy="help"></p><p id="agent-status" role="status"></p>
@@ -71,7 +83,15 @@ export class AgentPanel {
       <button id="agent-clear" type="button" data-copy="clear"></button></div></form>
       <details><summary data-copy="trace"></summary><ol id="agent-activity"></ol></details>
       <p class="agent-privacy" data-copy="privacy"></p>`;
-    document.querySelector("main").prepend(this.root);
+    const main = document.querySelector("main");
+    const intro = this.productMode ? main.querySelector(".product-intro") : null;
+    if (intro) intro.after(this.root);
+    else main.prepend(this.root);
+    if (this.productMode) {
+      this.root.querySelector(".agent-badge").hidden = true;
+      this.root.querySelector("#agent-clear").hidden = true;
+      this.root.querySelector("details").hidden = true;
+    }
     this.input = this.root.querySelector("#agent-input");
     this.status = this.root.querySelector("#agent-status");
     this.dialogue = this.root.querySelector("#agent-dialogue");
@@ -79,25 +99,46 @@ export class AgentPanel {
     this.busy = false;
     this.connected = false;
     this.recording = false;
+    this.holdActive = false;
+    this.holdToken = 0;
+    this.activePointerId = null;
     this.seen = 0;
     this.stage = "connecting";
     this.voice = new VoiceInput(() => this.record());
+    this.handlePressStart = this.handlePressStart.bind(this);
+    this.handlePressEnd = this.handlePressEnd.bind(this);
+    this.handlePressCancel = this.handlePressCancel.bind(this);
     this.root.querySelector("#agent-form").addEventListener("submit", event => {
       event.preventDefault();
       const text = this.input.value.trim();
       if (text && !this.busy && !this.recording) { this.submit({text}); this.input.value = ""; }
     });
-    this.root.querySelector("#agent-record").addEventListener("click", () => this.record());
+    const recordButton = this.root.querySelector("#agent-record");
+    if (this.productMode) {
+      recordButton.addEventListener("pointerdown", this.handlePressStart);
+      recordButton.addEventListener("keydown", event => {
+        if (!["Space", "Enter"].includes(event.code) || event.repeat) return;
+        event.preventDefault(); this.handlePressStart(event);
+      });
+      recordButton.addEventListener("keyup", event => {
+        if (!["Space", "Enter"].includes(event.code)) return;
+        event.preventDefault(); this.handlePressEnd(event);
+      });
+      recordButton.addEventListener("contextmenu", event => event.preventDefault());
+      window.addEventListener("pointerup", this.handlePressEnd);
+      window.addEventListener("pointercancel", this.handlePressCancel);
+    } else recordButton.addEventListener("click", () => this.record());
     this.root.querySelector("#agent-cancel").addEventListener("click", () => this.cancel());
     this.root.querySelector("#agent-clear").addEventListener("click", () => this.send({type: "clear"}));
     window.addEventListener("prs-ai-ready", () => this.connect());
     window.addEventListener("pagehide", () => {
       clearInterval(this.heartbeat);
+      this.holdActive = false; this.holdToken++; this.activePointerId = null;
       this.socket?.close();
       this.voice.cancel().catch(error => console.error("Voice cleanup failed", error.name));
     });
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden && (this.recording || this.stage === "permission")) this.cancel();
+      if (document.hidden && (this.holdActive || this.recording || this.stage === "permission")) this.cancel();
     });
     new MutationObserver(() => this.render()).observe(document.documentElement, {attributes: true, attributeFilter: ["lang"]});
     this.render();
@@ -121,7 +162,9 @@ export class AgentPanel {
     });
     this.socket.addEventListener("close", () => {
       clearInterval(this.heartbeat);
-      this.connected = this.recording = false; this.stage = "offline";
+      this.connected = this.recording = this.holdActive = false;
+      this.holdToken++; this.activePointerId = null; this.root.dataset.pressing = "false";
+      this.stage = "offline";
       this.voice.cancel().catch(error => console.error("Voice cleanup failed", error.name));
       this.render();
     });
@@ -141,32 +184,116 @@ export class AgentPanel {
       this.busy = true; this.stage = input.audio ? "transcribing" : "thinking"; this.render();
     }
   }
-  /* Functionality: Toggle user recording. Inputs: click or explicit 20s cap callback.
-   * Outputs: capture or WAV submission; Logic: flush before submit, show native failure.
-   * Constraints: Text input remains a separate explicit option, never an automatic fallback. */
+  /* Functionality: Preserve click-to-toggle recording for diagnostics and finish capped captures.
+   * Inputs: diagnostic click or the recorder's 20-second limit callback. Outputs: capture or submit.
+   * Logic: Delegate permission, flush, encoding and error transitions to the shared lifecycle methods.
+   * Constraints: Product recording begins and ends only through a held pointer/key; text is separate. */
   async record() {
     if (this.busy || !this.connected) return;
+    if (this.recording) return this.finishRecording();
+    if (this.stage === "permission") return;
+    return this.startRecording();
+  }
+  /* Functionality: Request the microphone and begin one recorder generation.
+   * Inputs: Optional holdToken from the product press that owns this capture. Outputs: recording state.
+   * Logic: A stale/released press cancels a late permission result before it can start recording.
+   * Constraints: Permission follows an explicit gesture; failures are shown without retries/fallback. */
+  async startRecording(holdToken = null) {
+    if (this.busy || !this.connected) return;
+    this.stage = "permission"; this.render();
     try {
-      if (this.recording) {
-        this.recording = false; this.busy = true; this.stage = "transcribing"; this.render();
-        const audio = await this.voice.finish();
-        if (this.connected) this.submit({audio});
-      } else {
-        this.stage = "permission"; this.render();
-        this.recording = await this.voice.start();
-        this.stage = !this.connected ? "offline" : this.recording ? "recording" : "ready"; this.render();
+      const started = await this.voice.start();
+      if (holdToken !== null && (holdToken !== this.holdToken || !this.holdActive)) {
+        if (started) await this.voice.cancel();
+        this.recording = false;
+        if (this.stage === "permission") this.stage = this.connected ? "ready" : "offline";
+        this.render();
+        return;
       }
+      this.recording = started;
+      this.stage = !this.connected ? "offline" : this.recording ? "recording" : "ready";
+      this.render();
+    } catch (error) {
+      if (holdToken !== null && (holdToken !== this.holdToken || !this.holdActive)) {
+        this.recording = false; this.stage = this.connected ? "ready" : "offline"; this.render();
+        return;
+      }
+      this.busy = this.recording = false; this.stage = this.connected ? "ready" : "offline";
+      this.fail(`录音失败（${error.name}）。${error.name === "NotAllowedError" ? "请允许麦克风权限。" : error.message}`);
+      console.error("Voice capture failed", {type: error.name});
+    }
+  }
+  /* Functionality: Flush, encode and submit the current recording once.
+   * Inputs: Active VoiceInput state and current WebSocket connection. Outputs: one audio request or error.
+   * Logic: Release input state before encoding, then submit only while the socket remains connected.
+   * Constraints: Short/invalid capture errors remain visible; no re-recording, queue or automatic retry. */
+  async finishRecording() {
+    if (!this.recording) return;
+    this.holdActive = false; this.holdToken++; this.activePointerId = null;
+    this.root.dataset.pressing = "false";
+    this.recording = false; this.busy = true; this.stage = "transcribing"; this.render();
+    try {
+      const audio = await this.voice.finish();
+      this.busy = false; this.stage = this.connected ? "ready" : "offline"; this.render();
+      if (this.connected) this.submit({audio});
     } catch (error) {
       this.busy = this.recording = false; this.stage = this.connected ? "ready" : "offline";
       this.fail(`录音失败（${error.name}）。${error.name === "NotAllowedError" ? "请允许麦克风权限。" : error.message}`);
       console.error("Voice capture failed", {type: error.name});
     }
   }
-  /* Functionality: Cancel recording/future agent steps. Inputs: button/visibility event.
-   * Outputs: cleanup and optional cancel; Logic: microphone generation invalidated first.
+  /* Functionality: Start formal-view capture on a primary pointer or keyboard press.
+   * Inputs: Pointer/keydown event, connection and current request state. Outputs: one owned capture.
+   * Logic: Capture pointer identity, expose pressed state and bind permission to this exact hold.
+   * Constraints: Ignore nonprimary/repeated presses; microphone access is never requested at page load. */
+  handlePressStart(event) {
+    if (!this.productMode || this.busy || !this.connected || this.holdActive || this.stage === "permission") return;
+    if (event.type === "pointerdown" && event.button !== 0) return;
+    event.preventDefault();
+    this.holdActive = true;
+    this.activePointerId = Number.isInteger(event.pointerId) ? event.pointerId : null;
+    const holdToken = ++this.holdToken;
+    this.root.dataset.pressing = "true";
+    this.render();
+    void this.startRecording(holdToken);
+  }
+  /* Functionality: Finish a held recording on release or discard an unfinished permission request.
+   * Inputs: Matching pointerup/keyup event and current hold/recorder state. Outputs: submitted audio or idle state.
+   * Logic: A released button during permission invalidates the generation; only active recording is sent.
+   * Constraints: Secondary pointers and unrelated key releases cannot finish this capture. */
+  handlePressEnd(event) {
+    if (!this.productMode || !this.holdActive) return;
+    if (event.type === "pointerup" && this.activePointerId !== event.pointerId) return;
+    if (event.type === "keyup" && this.activePointerId !== null) return;
+    event.preventDefault();
+    this.holdActive = false; this.activePointerId = null; this.holdToken++;
+    this.root.dataset.pressing = "false";
+    if (this.recording) {
+      const finishing = this.finishRecording();
+      window.dispatchEvent(new Event("prs-assist-voice-gesture"));
+      void finishing;
+      return;
+    }
+    if (this.stage === "permission") { void this.cancel(); return; }
+    this.stage = this.connected ? "ready" : "offline";
+    this.render();
+  }
+  /* Functionality: Discard recording when the browser cancels an active pointer gesture.
+   * Inputs: Matching pointercancel event. Outputs: released microphone and ready/offline state.
+   * Logic: Reuse explicit local cancellation, never submit a gesture the browser interrupted.
+   * Constraints: An unrelated pointer cancellation cannot stop the active recording. */
+  handlePressCancel(event) {
+    if (!this.productMode || !this.holdActive || this.activePointerId !== event.pointerId) return;
+    event.preventDefault();
+    void this.cancel();
+  }
+  /* Functionality: Cancel a held capture or pending agent request. Inputs: button/visibility event.
+   * Outputs: microphone cleanup or one backend cancellation. Logic: invalidate the active hold before async cleanup.
    * Constraints: backend cancellation cannot undo already dispatched device operations. */
   async cancel() {
-    const local = this.recording || this.stage === "permission";
+    const local = this.holdActive || this.recording || this.stage === "permission";
+    this.holdActive = false; this.holdToken++; this.activePointerId = null;
+    this.root.dataset.pressing = "false";
     this.recording = false;
     try { await this.voice.cancel(); }
     catch (error) { console.error("Voice cleanup failed", error.name); }
@@ -222,17 +349,26 @@ export class AgentPanel {
     while (this.dialogue.children.length > 40) this.dialogue.firstChild.remove();
     this.dialogue.scrollTop = this.dialogue.scrollHeight;
   }
-  /* Functionality: Render language/status/control availability. Inputs: current panel state.
-   * Outputs: accessible text/disabled flags; Logic: no device work; Constraints: preserve input. */
+  /* Functionality: Render language, hold-to-send status and control availability.
+   * Inputs: current panel mode, connection, request, press and recorder state. Outputs: accessible text/disabled flags.
+   * Logic: Product mode reports release-to-send while recording; diagnostics preserve click labels.
+   * Constraints: Rendering never requests media, submits a command or changes the user's text. */
   render() {
     for (const element of this.root.querySelectorAll("[data-copy]")) element.textContent = label(COPY[element.dataset.copy]);
-    this.status.textContent = label(COPY[this.connected ? this.stage : this.stage === "offline" ? "offline" : "connecting"] || COPY.ready);
-    this.input.disabled = !this.connected || this.busy || this.recording || this.stage === "permission";
+    this.root.querySelector('[data-copy="help"]').textContent = label(this.productMode ? COPY.productHelp : COPY.help);
+    const status = this.productMode && this.recording ? COPY.recordingProduct
+      : COPY[this.connected ? this.stage : this.stage === "offline" ? "offline" : "connecting"] || COPY.ready;
+    this.status.textContent = label(status);
+    this.input.disabled = !this.connected || this.busy || this.recording || this.holdActive || this.stage === "permission";
     this.root.querySelector("#agent-send").disabled = this.input.disabled;
     const record = this.root.querySelector("#agent-record");
-    record.textContent = label(COPY[this.recording ? "finish" : "record"]);
-    record.disabled = !this.connected || this.busy || this.stage === "permission";
-    this.root.querySelector("#agent-cancel").disabled = !this.connected || (!this.busy && !this.recording && this.stage !== "permission");
+    record.textContent = label(this.productMode
+      ? this.recording ? COPY.release : this.stage === "permission" && this.holdActive ? COPY.permission : COPY.hold
+      : COPY[this.recording ? "finish" : "record"]);
+    if (this.productMode) record.setAttribute("aria-pressed", String(this.holdActive));
+    record.disabled = !this.connected || this.busy || !this.productMode && this.stage === "permission";
+    this.root.querySelector("#agent-cancel").disabled = !this.connected ||
+      (!this.busy && !this.recording && !this.holdActive && this.stage !== "permission");
     this.root.querySelector("#agent-clear").disabled = this.input.disabled;
     this.root.dataset.busy = String(this.busy);
     this.root.dataset.connected = String(this.connected);

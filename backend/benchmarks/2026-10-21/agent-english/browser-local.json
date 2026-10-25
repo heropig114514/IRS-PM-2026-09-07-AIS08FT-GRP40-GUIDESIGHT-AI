@@ -6,7 +6,7 @@
       "input": "你能做什么？",
       "elapsed_ms": 4373,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n支持的操作：启动导航、规划路线、查找地点、停止导航、查询地图或导航状态、获取当前位置、打开地图页、打开摄像头、关闭摄像头、切换摄像头或处理模式、查询摄像头状态、描述摄像头画面、测试摄像头连接、打开摄像头页、朗读文字、停止朗读、查询朗读状态或声音、请求震动、停止震动、查询震动支持、切换界面语言。说出操作和必要信息即可。",
+      "reply": "Assistant\nSupported operations: start navigation, plan a route, find places, stop navigation, check map or navigation status, get current location, open the map page, open or close the camera, change camera or processing mode, check camera status, describe a camera scene, test the camera connection, open the camera page, speak text, stop speech, check speech status or voices, request or stop vibration, check vibration support, and change the interface language. State the action and any required details.",
       "activity": "Recognized operations: List supported operations",
       "tools": [],
       "diagnostic": [
@@ -34,7 +34,7 @@
       "input": "为什么天空是蓝色的？",
       "elapsed_ms": 2919,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n当前请求不属于已启用的能力范围，未执行系统操作。可说“你能做什么”查看支持的操作。",
+      "reply": "Assistant\nThis request is outside the enabled capabilities. No system action was taken. Ask \"What can you do?\" to list supported operations.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilities",
       "tools": [],
       "diagnostic": [
@@ -55,7 +55,7 @@
       "input": "帮我打开微信并给朋友发消息",
       "elapsed_ms": 2449,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n当前请求不属于已启用的能力范围，未执行系统操作。可说“你能做什么”查看支持的操作。",
+      "reply": "Assistant\nThis request is outside the enabled capabilities. No system action was taken. Ask \"What can you do?\" to list supported operations.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilities",
       "tools": [],
       "diagnostic": [
@@ -76,7 +76,7 @@
       "input": "停止",
       "elapsed_ms": 2941,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n请明确要操作的功能，例如导航、摄像头、朗读或震动；一次最多3项。",
+      "reply": "Assistant\nPlease specify the feature you want to use, such as navigation, camera, speech, or vibration; up to 3 per request.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarification",
       "tools": [],
       "diagnostic": [
@@ -97,7 +97,7 @@
       "input": "嗯，帮我开启导航。",
       "elapsed_ms": 26929,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n请告诉我您想去哪里？",
+      "reply": "Assistant\nPlease tell me where you would like to go.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device location",
       "tools": [
         {
@@ -162,7 +162,7 @@
       "input": "Sheng Siong 超市，先列出可选门店。",
       "elapsed_ms": 30628,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n附近2公里内未找到超市。请提供具体的 Sheng Siong 门店名称或地址，以便我为您搜索。",
+      "reply": "Assistant\nNo supermarkets were found within 2 km. Provide the exact Sheng Siong branch name or address so I can search.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowDiscovering place categoriesSearching nearby places",
       "tools": [
         {
@@ -409,5 +409,6 @@
   "routes": [],
   "errors": [
     "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at main (file:///D:/my_files/NUS_teamwork/PRS-PracticeModule/development/frontend/tools/check_agent_intents.mjs:85:12)\n    at async file:///D:/my_files/NUS_teamwork/PRS-PracticeModule/development/frontend/tools/check_agent_intents.mjs:143:1"
-  ]
+  ],
+  "translation_note": "Chinese assistant replies are English translations for repository consistency. Chinese user utterances and zh intent labels remain as bilingual test data; timings, routes, tool events, checks, and outcomes are unchanged."
 }

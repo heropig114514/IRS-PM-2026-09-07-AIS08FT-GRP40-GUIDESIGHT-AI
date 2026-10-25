@@ -1,5 +1,5 @@
-/** Responsibilities: 验证手动震动的用户边界、拒绝反馈、生命周期取消及词典覆盖。
- * Implementation: 用 EventTarget 派发真实注册回调并覆盖重入广播快照/观察者隔离；仅替换 DOM 和原生震动函数，不调用硬件或网络。
+/** Responsibilities: Verify manual-vibration user boundaries, rejection feedback, lifecycle cancellation, and dictionary coverage.
+ * Implementation: Use EventTarget to dispatch registered callbacks and test reentrant event snapshots/observer isolation; replace only DOM and native vibration, with no hardware or network access.
  * Related Modules: vibration.js, ai-control.js, index.html, translations.js, i18n.js。
  * Declaration Index: TestControl; TestControl.constructor; TestDocument; TestDocument.constructor;
  * TestDocument.getElementById; TestDocument.querySelectorAll; TestWindow; TestWindow.constructor;
@@ -8,7 +8,7 @@
  * testLifecycle; testLifecycle.native; testCancelRejected; testCancelRejected.native; testTranslations。
  * testMcpShared; testMcpShared.native; testMcpFailures; testMcpFailures.native; testGuidanceOwnership;
  * testReentrantBroadcast。
- * Variable Index: None；每个测试的calls记录固定请求，logs记录非敏感诊断，response控制原生替身结果。
+ * Variable Index: None; each test's calls records fixed requests, logs stores non-sensitive diagnostics, and response controls the native fixture.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -65,14 +65,14 @@ test("reentrant vibration cancellation retains its original request and timestam
   unsubscribeFirst(); unsubscribeLater(); f.tester.stop();
 });
 
-/** Functionality: 提供可派发点击/变更事件的独立控件。
- * Logic: EventTarget维护监听器，字段仅表示测试所需DOM状态。
- * Constraints: 不实现浏览器布局或disabled事件拦截，测试需显式验证disabled属性。
+/** Functionality: Provide an independent control that dispatches click/change events.
+ * Logic: EventTarget maintains listeners; fields represent only DOM state needed by tests.
+ * Constraints: Does not implement browser layout or disabled-event interception; tests must check disabled explicitly.
  */
 class TestControl extends EventTarget {
-  /** Functionality: 初始化控件字段。
-   * Inputs: pattern 可选测试类型。Outputs: 可派发事件的实例。
-   * Logic: dataset保存固定类型；默认未勾选。Constraints: 无HTML解析或物理震动。
+  /** Functionality: Initialize control fields.
+   * Inputs: Optional test pattern. Outputs: Event-dispatching instance.
+   * Logic: dataset stores the fixed pattern; start unchecked. Constraints: No HTML parsing or physical vibration.
    */
   constructor(pattern) {
     super();
@@ -83,13 +83,13 @@ class TestControl extends EventTarget {
   }
 }
 
-/** Functionality: 提供震动区域与可控页面可见性。
- * Logic: 固定节点映射配合EventTarget事件。Constraints: 不是浏览器文档，不提供媒体或网络API。
+/** Functionality: Provide the vibration region and controllable page visibility.
+ * Logic: Fixed node map with EventTarget events. Constraints: Not a browser document; no media or network APIs.
  */
 class TestDocument extends EventTarget {
-  /** Functionality: 创建固定测试节点。
-   * Inputs: None。Outputs: 节点映射、按钮数组及visible初态。
-   * Logic: 与HTML控件id对应。Constraints: 只验证控制器契约，不证明HTML实际包含节点。
+  /** Functionality: Create fixed test nodes.
+   * Inputs: None. Outputs: Node map, button array, and initial visible state.
+   * Logic: Match HTML control IDs. Constraints: Verifies controller contracts only, not that HTML contains the nodes.
    */
   constructor() {
     super();
@@ -98,12 +98,12 @@ class TestDocument extends EventTarget {
       .map(id => [id, new TestControl()]));
     this.buttons = ["short", "long", "double"].map(name => new TestControl(name));
   }
-  /** Functionality: 查找固定节点。Inputs: id。Outputs: 控件或undefined。
-   * Logic: 直接查询映射。Constraints: 不按需制造缺失节点。
+  /** Functionality: Find a fixed node. Inputs: id. Outputs: Control or undefined.
+   * Logic: Read the map directly. Constraints: Do not create missing nodes on demand.
    */
   getElementById(id) { return this.nodes.get(id); }
-  /** Functionality: 返回节奏按钮。Inputs: selector。Outputs: 固定按钮数组。
-   * Logic: 核对控制器使用的选择器。Constraints: 不实现通用CSS查询。
+  /** Functionality: Return pattern buttons. Inputs: selector. Outputs: Fixed button array.
+   * Logic: Check the selector used by the controller. Constraints: Does not implement general CSS queries.
    */
   querySelectorAll(selector) {
     assert.equal(selector, "[data-vibration-pattern]");
@@ -111,13 +111,15 @@ class TestDocument extends EventTarget {
   }
 }
 
-/** Functionality: 提供显式原生接口和页面事件边界。
- * Logic: 测试注入原生返回值/异常并捕获诊断。Constraints: 不代表操作系统权限或设备马达。
+/** Functionality: Provide explicit native API and page-event boundaries.
+ * Logic: Tests inject native return values/errors and capture diagnostics.
+ * Constraints: Does not represent operating-system permissions or a device motor.
  */
 class TestWindow extends EventTarget {
-  /** Functionality: 安装可选原生接口及诊断接收器。
-   * Inputs: native 可选震动替身。Outputs: navigator/console/logs和窗口事件实例。
-   * Logic: 不传native即模拟接口缺失；交互激活默认为true。Constraints: 不注入任何媒体API。
+  /** Functionality: Install an optional native API and diagnostic receivers.
+   * Inputs: Optional native vibration fixture. Outputs: navigator/console/logs and window-event instance.
+   * Logic: Omit native to simulate a missing API; interaction activation defaults to true.
+   * Constraints: Does not inject any media API.
    */
   constructor(native) {
     super();
@@ -126,42 +128,43 @@ class TestWindow extends EventTarget {
     this.logs = [];
     this.console = {info: this.info.bind(this), error: this.error.bind(this)};
   }
-  /** Functionality: 捕获状态日志。Inputs: args。Outputs: logs追加。
-   * Logic: 保留原参数供断言。Constraints: 测试数据无凭据或媒体。
+  /** Functionality: Capture info logs. Inputs: args. Outputs: Append to logs.
+   * Logic: Preserve original arguments for assertions. Constraints: Test data contains no credentials or media.
    */
   info(...args) { this.logs.push({level: "info", args}); }
-  /** Functionality: 捕获异常日志。Inputs: args。Outputs: logs追加。
-   * Logic: 保留错误层级。Constraints: 不把日志存在等同于硬件验证。
+  /** Functionality: Capture error logs. Inputs: args. Outputs: Append to logs.
+   * Logic: Preserve error details. Constraints: Log presence is not hardware verification.
    */
   error(...args) { this.logs.push({level: "error", args}); }
 }
 
-/** Functionality: 创建隔离测试控制器。
- * Inputs: native 可选原生替身。Outputs: doc/win/tester。
- * Logic: 运行实际构造器并注册实际处理器。Constraints: 不替换控制器实现。
+/** Functionality: Create an isolated test controller.
+ * Inputs: Optional native API fixture. Outputs: doc/win/tester.
+ * Logic: Run the actual constructor and register actual handlers. Constraints: Do not replace the controller implementation.
  */
 function setup(native) {
   const doc = new TestDocument(), win = new TestWindow(native);
   return {doc, win, tester: new VibrationTester(doc, win)};
 }
 
-/** Functionality: 派发用户启用选择。
- * Inputs: doc。Outputs: checkbox字段和change事件。
- * Logic: 触发已注册处理器。Constraints: 不模拟浏览器信任标记，激活状态另行控制。
+/** Functionality: Dispatch the user's enable choice.
+ * Inputs: doc. Outputs: Checkbox state and change event.
+ * Logic: Trigger the registered handler. Constraints: Does not simulate browser trust flags; activation is controlled separately.
  */
 function enable(doc) {
   doc.getElementById("vibration-enabled").checked = true;
   doc.getElementById("vibration-enabled").dispatchEvent(new Event("change"));
 }
 
-/** Functionality: 验证加载/启用不震动、按钮节奏、显式停止及硬件措辞边界。
- * Inputs: 成功原生替身和实际事件。Outputs: 调用、开关和文字断言。
- * Logic: 逐次手动点击后比较预定产品节奏。Constraints: 无物理震动或媒体权限验证。
+/** Functionality: Verify loading/enabling does not vibrate, button patterns, explicit stop, and hardware-claim boundaries.
+ * Inputs: Successful native fixture and actual events. Outputs: Call, toggle, and text assertions.
+ * Logic: Compare each manual click with the fixed product pattern.
+ * Constraints: No physical vibration or media-permission verification.
  */
-test("默认关闭且每次仅手动发出所选节奏", function testManual() {
+test("Default off; send the selected pattern only on manual action", function testManual() {
   const calls = [];
-  /** Functionality: 记录一次请求。Inputs: pattern。Outputs: true并追加calls。
-   * Logic: 合成接受结果。Constraints: 返回true不能证明硬件存在。
+  /** Functionality: Record one request. Inputs: pattern. Outputs: true and appended calls entry.
+   * Logic: Simulate acceptance. Constraints: Returning true does not prove hardware exists.
    */
   function native(pattern) { calls.push(pattern); return true; }
   const {doc, tester} = setup(native);
@@ -178,11 +181,11 @@ test("默认关闭且每次仅手动发出所选节奏", function testManual() {
   assert.equal(tester.requested, false);
 });
 
-/** Functionality: 验证接口不存在时给出明确支持诊断且禁用控件。
- * Inputs: 无vibrate的navigator。Outputs: disabled及文字断言。
- * Logic: 运行实际初始化。Constraints: 仅接口缺失替身，不代表所有iPhone行为。
+/** Functionality: Verify explicit capability feedback and disabled controls when the API is absent.
+ * Inputs: navigator without vibrate. Outputs: disabled and message assertions.
+ * Logic: Run actual initialization. Constraints: Missing-API fixture only; does not represent all iPhone behavior.
  */
-test("接口缺失时禁用测试和停止并说明原因", function testUnavailable() {
+test("Missing API disables test and stop controls with an explanation", function testUnavailable() {
   const {doc, tester} = setup();
   assert.equal(tester.enabled.disabled, true);
   assert.equal(tester.stopButton.disabled, true);
@@ -190,14 +193,14 @@ test("接口缺失时禁用测试和停止并说明原因", function testUnavail
   assert.match(tester.message.textContent, /未提供震动接口/);
 });
 
-/** Functionality: 验证关闭、后台和未激活的页面都不能提交测试请求。
- * Inputs: 显式navigator激活和文档可见性。Outputs: 零原生调用及诊断。
- * Logic: 直接派发事件验证处理器本身的边界。Constraints: 不依赖替身禁用拦截。
+/** Functionality: Verify disabled, backgrounded, and inactive pages cannot submit a test request.
+ * Inputs: Explicit navigator activation and document visibility. Outputs: Zero native calls and diagnostics.
+ * Logic: Dispatch events directly to test handler boundaries. Constraints: Does not rely on fixture disabled-event interception.
  */
-test("开关、可见性和用户激活阻止非主动请求", function testActivation() {
+test("Toggle, visibility, and user activation block non-explicit requests", function testActivation() {
   const calls = [];
-  /** Functionality: 捕获不应发生的调用。Inputs: pattern。Outputs: true/calls。
-   * Logic: 记录请求。Constraints: 无原生接口。
+  /** Functionality: Capture a call that must not occur. Inputs: pattern. Outputs: true/calls.
+   * Logic: Record the request. Constraints: No native API.
    */
   function native(pattern) { calls.push(pattern); return true; }
   const {doc, win, tester} = setup(native);
@@ -213,15 +216,16 @@ test("开关、可见性和用户激活阻止非主动请求", function testActi
   assert.deepEqual(calls, []);
 });
 
-/** Functionality: 验证原生拒绝/异常均显式失败且不自动重试。
- * Inputs: false或抛出NotAllowedError的原生替身。Outputs: 单次调用、错误文字、错误日志。
- * Logic: 两次独立setup覆盖返回值和异常分支。Constraints: 不是浏览器真实权限测试。
+/** Functionality: Verify native rejection and exceptions fail explicitly without automatic retry.
+ * Inputs: Native fixture returning false or throwing NotAllowedError. Outputs: One call, error text, and error log.
+ * Logic: Use two independent setups for return-value and exception branches.
+ * Constraints: Not a real browser permission test.
  */
-test("拒绝与异常不会宣称接受、重试或触发替代提醒", function testFailures() {
+test("Rejection and exceptions do not claim acceptance, retry, or trigger substitute alerts", function testFailures() {
   for (const throws of [false, true]) {
     let calls = 0;
-    /** Functionality: 模拟明确失败。Inputs: pattern和当前throws。
-     * Outputs: false或异常；调用计数递增。Logic: 保留本次失败。Constraints: 不重试。
+    /** Functionality: Simulate explicit failure. Inputs: pattern and current throws setting.
+     * Outputs: false or exception; increment call count. Logic: Preserve this failure. Constraints: No retry.
      */
     function native(pattern) {
       assert.deepEqual(pattern, [200]);
@@ -240,15 +244,16 @@ test("拒绝与异常不会宣称接受、重试或触发替代提醒", function
   }
 });
 
-/** Functionality: 验证关闭、后台和离页发送取消且返回前台不恢复震动。
- * Inputs: 成功原生替身与三个独立生命周期场景。Outputs: 仅[800]和0的调用断言。
- * Logic: 实际事件处理器共享取消路径。Constraints: 不代表锁屏或浏览器后台调用支持。
+/** Functionality: Verify cancellation on disable/background/page exit and no vibration resume on foreground return.
+ * Inputs: Successful native fixture and three independent lifecycle scenarios. Outputs: Calls limited to [800] and 0.
+ * Logic: Actual event handlers share the cancellation path.
+ * Constraints: Does not represent lock-screen or browser-background support.
  */
-test("关闭、隐藏或离页取消请求，回到前台不自动震动", function testLifecycle() {
+test("Disable, hide, or leave cancels requests without foreground vibration resume", function testLifecycle() {
   for (const reason of ["disabled", "hidden", "pagehide"]) {
     const calls = [];
-    /** Functionality: 记录测试和取消。Inputs: pattern。Outputs: true/calls。
-     * Logic: 合成接受。Constraints: 不反馈马达状态。
+    /** Functionality: Record test and cancellation calls. Inputs: pattern. Outputs: true/calls.
+     * Logic: Simulate acceptance. Constraints: Does not report motor state.
      */
     function native(pattern) { calls.push(pattern); return true; }
     const {doc, win, tester} = setup(native);
@@ -270,14 +275,17 @@ test("关闭、隐藏或离页取消请求，回到前台不自动震动", funct
   }
 });
 
-/** Functionality: 验证取消拒绝不被关闭开关的成功提示覆盖。
- * Inputs: 首次接受、取消拒绝的原生替身。Outputs: 明确失败、保留请求记录和可点击停止。
- * Logic: 关闭后允许用户显式再点停止。Constraints: 不自动重试，不能确定先前节奏是否仍在运行。
+/** Functionality: Verify cancellation rejection is not overwritten by the toggle's success message.
+ * Inputs: Native fixture that accepts the first call and rejects cancellation.
+ * Outputs: Explicit failure, retained request record, and clickable Stop.
+ * Logic: Allow the user to click Stop explicitly after disabling.
+ * Constraints: No automatic retry; prior pattern may still be running.
  */
-test("取消被拒绝时保留诊断并允许手动停止", function testCancelRejected() {
+test("Cancellation rejection preserves diagnostics and allows manual stop", function testCancelRejected() {
   const calls = [];
-  /** Functionality: 接受节奏但拒绝取消。Inputs: pattern。
-   * Outputs: 非0为true并记录calls。Logic: 合成取消失败。Constraints: 非实际设备状态。
+  /** Functionality: Accept a pattern but reject cancellation. Inputs: pattern.
+   * Outputs: Nonzero patterns return true and are recorded in calls. Logic: Simulate cancellation failure.
+   * Constraints: Not actual device state.
    */
   function native(pattern) { calls.push(pattern); return pattern !== 0; }
   const {doc, tester} = setup(native);
@@ -292,12 +300,12 @@ test("取消被拒绝时保留诊断并允许手动停止", function testCancelR
   assert.equal(tester.message.dataset.kind, "error");
 });
 
-/** Functionality: 验证震动区域及动态中文提示都有英文词典项。
- * Inputs: 真实模块源码和HTML。Outputs: 翻译无中文残留断言。
- * Logic: 检查模块中文字符串及区域文本/aria-label；不修改词典或业务参数。
- * Constraints: 静态检查不是浏览器MutationObserver、布局或翻译质量验证。
+/** Functionality: Verify English dictionary entries for the vibration region and dynamic Chinese messages.
+ * Inputs: Actual module source and HTML. Outputs: Assertion that translation leaves no Chinese text.
+ * Logic: Check module strings and region text/aria-label without modifying the dictionary or business parameters.
+ * Constraints: Static checking does not verify browser MutationObserver behavior, layout, or translation quality.
  */
-test("震动控件及所有动态提示均有英文翻译", async function testTranslations() {
+test("Vibration controls and all dynamic messages have English translations", async function testTranslations() {
   const source = await readFile(new URL("../vibration.js", import.meta.url), "utf8");
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   const section = html.match(/<section id="vibration-test"[\s\S]*?<\/section>/)[0];
@@ -308,16 +316,16 @@ test("震动控件及所有动态提示均有英文翻译", async function testT
   for (const text of strings) assert.doesNotMatch(translate(text, "en"), /\p{Script=Han}/u, text);
 });
 
-/** Functionality: 验证MCP分派复用真实控制器，保持人工启用和激活要求。
- * Inputs: 控制器的DOM/原生替身，显式激活状态和固定协议命令。
- * Outputs: 状态、明确拒绝原因、节奏和取消的唯一调用序列。
- * Logic: 未启用或未激活不调用原生API；查询无副作用，启用后通过同一testPattern入口。
- * Constraints: 这里只验证命令分派和状态，不证明真实MCP网络、可信交互或物理马达。
+/** Functionality: Verify MCP dispatch reuses the real controller and preserves manual enablement/activation requirements.
+ * Inputs: Controller DOM/native fixtures, explicit activation state, and fixed protocol commands.
+ * Outputs: State, explicit rejection reasons, pattern, and unique cancellation call sequence.
+ * Logic: Do not call native APIs while disabled or inactive; queries have no side effects, and enabled tests use testPattern.
+ * Constraints: Verifies command dispatch and state only, not real MCP networking, trusted interaction, or physical motor behavior.
  */
-test("MCP查询和测试复用控制器且不自动启用或伪造激活", function testMcpShared() {
+test("MCP query and test share the controller without auto-enable or fabricated activation", function testMcpShared() {
   const calls = [];
-  /** Functionality: 捕获单次测试或取消。Inputs: pattern。
-   * Outputs: true并更新calls。Logic: 显式接受替身。Constraints: 无实际硬件。
+  /** Functionality: Capture one test or cancellation. Inputs: pattern.
+   * Outputs: true and updated calls. Logic: Explicitly accepting fixture. Constraints: No real hardware.
    */
   function native(pattern) { calls.push(pattern); return true; }
   const {doc, win, tester} = setup(native);
@@ -348,21 +356,22 @@ test("MCP查询和测试复用控制器且不自动启用或伪造激活", funct
   assert.deepEqual(calls, [[200], [800], [150, 100, 150], 0]);
 });
 
-/** Functionality: 验证缺失页面、接口缺失、后台及原生拒绝/异常的结构化区分。
- * Inputs: 受控接口返回值/异常、文档可见性；实际MCP浏览器分派函数。
- * Outputs: 明确reason和accepted=false，取消拒绝保留未取消记录；无自动重试。
- * Logic: 只改变测试边界，不改变生产控制器逻辑。Constraints: 无操作系统权限验证。
+/** Functionality: Verify structured distinctions among missing page/API, background state, native rejection, and exceptions.
+ * Inputs: Controlled API return/exception, document visibility, and actual MCP browser dispatch function.
+ * Outputs: Explicit reason and accepted=false; cancellation rejection retains the uncanceled record; no automatic retry.
+ * Logic: Change only test boundaries, not production controller logic.
+ * Constraints: No operating-system permission verification.
  */
-test("MCP明确返回设备拒绝和异常并保留取消失败状态", function testMcpFailures() {
+test("MCP reports native rejection and exceptions and preserves failed-cancellation state", function testMcpFailures() {
   assert.equal(performVibration("vibration_status", {}, null).reason, "page_unavailable");
   const unavailable = setup();
   assert.equal(performVibration("vibration_test", {pattern: "short"}, unavailable.tester).reason, "unsupported");
   assert.equal(performVibration("vibration_stop", {}, unavailable.tester).reason, "unsupported");
   let outcome = "accepted";
   const calls = [];
-  /** Functionality: 返回预设接受/拒绝/异常。
-   * Inputs: pattern/outcome。Outputs: bool或异常，记录单次调用。
-   * Logic: 不执行实际震动。Constraints: 原生拒绝不能证明马达状态。
+  /** Functionality: Return a preset acceptance, rejection, or exception.
+   * Inputs: pattern/outcome. Outputs: Boolean or exception; record one call.
+   * Logic: Do not perform actual vibration. Constraints: Native rejection does not prove motor state.
    */
   function native(pattern) {
     calls.push(pattern);

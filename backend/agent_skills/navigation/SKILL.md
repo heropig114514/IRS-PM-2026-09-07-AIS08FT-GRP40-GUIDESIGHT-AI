@@ -18,8 +18,9 @@ nearby category result also ends the action phase.
 
 1. Read ui_snapshot. Navigation requires the maps page; use ui_navigate(page="maps") if needed,
    then maps_status. Changing pages stops the previous page's camera but preserves the conversation.
-   The page's NUS example is not the user's selected origin/destination. A page-only request ends
-   here; a location-only request uses maps_locate and reports its result without requiring a destination.
+   On the product page, maps_locate supplies the origin and map selection supplies the destination;
+   never infer either point from a map preview or diagnostic sample. A page-only request ends here;
+   a location-only request uses maps_locate and reports its result without requiring a destination.
 2. For "stop navigation", call navigation_stop and report returned active/state. For remaining
    distance or current status, use navigation_status and progress distance/time; never replan
    a route merely to answer a status query.

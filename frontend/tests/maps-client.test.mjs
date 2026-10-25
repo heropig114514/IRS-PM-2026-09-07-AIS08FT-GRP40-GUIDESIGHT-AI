@@ -1,8 +1,8 @@
-/* Responsibilities: 定位权限、坐标顺序、路线传输和返回契约测试。
- * Implementation: 注入定位/fetch fake；真实外部服务另做联调。
+/* Responsibilities: Test location permissions, coordinate order, route transport, and response contracts.
+ * Implementation: Inject geolocation/fetch fixtures; live external-service integration is separate.
  * Related Modules: ../maps-client.js。
- * Declaration Index: routeFixture — 合成业务路线；responseFixture — 合成 HTTP 响应。
- * Variable Index: None；测试局部计数器不修改生产配置。
+ * Declaration Index: routeFixture — synthetic route; responseFixture — synthetic HTTP response.
+ * Variable Index: None; test-local counters do not change production configuration.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -14,8 +14,8 @@ import {
   turnLabel,
 } from "../maps-client.js";
 
-/* Functionality: 创建独立合成路线；Inputs: None；Outputs: 有效路线对象。
- * Logic: 两个测试点和出发/到达步骤；Constraints: 不代表设备位置或真实 ORS。
+/* Functionality: Create an independent synthetic route. Inputs: None. Outputs: Valid route object.
+ * Logic: Two fixture points and departure/arrival steps. Constraints: Does not represent device location or real ORS.
  */
 function routeFixture() {
   return {
@@ -50,15 +50,15 @@ function routeFixture() {
   };
 }
 
-/* Functionality: 合成 HTTP 响应；Inputs: data、status；Outputs: fetch 响应 fake。
- * Logic: 按状态确定 ok，json 异步返回 data；Constraints: 不模拟真实网络/TLS。
+/* Functionality: Create a synthetic HTTP response. Inputs: data/status. Outputs: fetch response fixture.
+ * Logic: Derive ok from status and return data asynchronously from json. Constraints: Does not simulate real network/TLS.
  */
 function responseFixture(data, status = 200) {
   return { ok: status >= 200 && status < 300, status, json: async () => data };
 }
 
-// Functionality: 保留定位参数；Inputs: navigator fake；Outputs: 原位置断言。
-// Logic: 单次成功回调；Constraints: 不申请真实权限或验证 GPS。
+// Functionality: Preserve location options. Inputs: navigator fixture. Outputs: Original-position assertion.
+// Logic: One successful callback. Constraints: Does not request real permission or verify GPS.
 test("location preserves device coordinates and constraints", async () => {
   const position = {
     coords: { latitude: 1.3, longitude: 103.8, accuracy: 12 },
@@ -78,8 +78,9 @@ test("location preserves device coordinates and constraints", async () => {
   assert.equal(result, position);
 });
 
-// Functionality: 定位失败不替代；Inputs: 各错误码 fake；Outputs: 拒绝及调用次数。
-// Logic: 逐个触发失败；Constraints: 无自动重试和示例/IP 位置。
+// Functionality: Do not substitute after location failure. Inputs: Fixtures for each error code.
+// Outputs: Rejection and call-count assertions. Logic: Trigger failures individually.
+// Constraints: No automatic retry or sample/IP location.
 test("location errors preserve failure semantics", async () => {
   for (const [code, text] of [
     [1, /权限被拒绝/],
@@ -103,8 +104,9 @@ test("location errors preserve failure semantics", async () => {
   await assert.rejects(getDevicePosition({}), /不支持/);
 });
 
-// Functionality: 经纬度顺序与边界；Inputs: 文本/非法值；Outputs: 精确转换/抛错。
-// Logic: 缺失不能变成零，真实零点有效；Constraints: 不改变生产默认值。
+// Functionality: Coordinate order and bounds. Inputs: Text/invalid values. Outputs: Exact conversions or exceptions.
+// Logic: Missing values must not become zero; a real zero coordinate is valid.
+// Constraints: Do not change production defaults.
 test("coordinates preserve longitude first and reject missing values", () => {
   assert.deepEqual(parseCoordinateInputs("103.7", "1.3"), [103.7, 1.3]);
   assert.deepEqual(parseCoordinateInputs(0, 0), [0, 0]);
@@ -121,8 +123,9 @@ test("coordinates preserve longitude first and reject missing values", () => {
     assert.throws(() => parseCoordinateInputs(...values), /有效经纬度/);
 });
 
-// Functionality: 同源 POST 契约和凭据边界；Inputs: fetch fake；Outputs: body/headers/路线断言。
-// Logic: 检查坐标顺序和无 Cookie；Constraints: 仅证明客户端传输参数。
+// Functionality: Same-origin POST contract and credential boundary. Inputs: fetch fixture.
+// Outputs: Body/headers/route assertions. Logic: Check coordinate order and absence of cookies.
+// Constraints: Proves client transport parameters only.
 test("walking route uses same-origin POST without a browser key", async () => {
   const route = routeFixture();
   let calls = 0;
@@ -146,8 +149,9 @@ test("walking route uses same-origin POST without a browser key", async () => {
   assert.equal(calls, 1);
 });
 
-// Functionality: 非成功状态可诊断；Inputs: HTTP 403/429/503 fake；Outputs: code/id 与单次调用。
-// Logic: 失败不重试；Constraints: 无真实配额或认证验证。
+// Functionality: Keep non-success statuses diagnosable. Inputs: HTTP 403/429/503 fixtures.
+// Outputs: code/id and single-call assertions. Logic: Do not retry failures.
+// Constraints: No real quota or authentication verification.
 test("HTTP errors expose safe code and request id without retry", async () => {
   for (const status of [403, 429, 503]) {
     let calls = 0;
@@ -167,8 +171,9 @@ test("HTTP errors expose safe code and request id without retry", async () => {
   }
 });
 
-// Functionality: 超时终止及非 JSON 诊断；Inputs: 阻塞/非法响应 fake；Outputs: 拒绝。
-// Logic: fake 仅在 abort 时拒绝，短超时用于测试；Constraints: 不修改生产 25 秒默认值。
+// Functionality: Verify timeout cancellation and non-JSON diagnostics. Inputs: Blocking/invalid-response fixtures.
+// Outputs: Rejection. Logic: Fixture rejects only on abort; use a short test timeout.
+// Constraints: Preserve the production 25-second default.
 test("abort and malformed response fail explicitly", async () => {
   let calls = 0;
   await assert.rejects(
@@ -206,8 +211,9 @@ test("abort and malformed response fail explicitly", async () => {
   );
 });
 
-// Functionality: 非法路线不得进入地图；Inputs: 每次独立合成对象；Outputs: 拒绝。
-// Logic: 分别破坏 provider/坐标/步骤索引/数值；Constraints: 不修改或修复返回内容。
+// Functionality: Reject invalid routes before map use. Inputs: Independent synthetic object for each case.
+// Outputs: Rejection. Logic: Corrupt provider, coordinates, step indexes, and numeric fields separately.
+// Constraints: Do not modify or repair returned data.
 test("route validation rejects invalid geometry and instructions", () => {
   assert.equal(validateRoute(routeFixture()).steps.length, 2);
   for (const mutate of [
@@ -242,8 +248,9 @@ test("route validation rejects invalid geometry and instructions", () => {
   assert.throws(() => turnLabel("1"), /未知/);
 });
 
-// Functionality: 同点请求在联网前失败；Inputs: 两个相同坐标；Outputs: 无 fetch 调用。
-// Logic: 输入校验在创建请求前执行；Constraints: 不推断替代终点。
+// Functionality: Reject identical-point requests before network access. Inputs: Two identical coordinates.
+// Outputs: No fetch call. Logic: Validate input before creating the request.
+// Constraints: Do not infer a substitute endpoint.
 test("identical endpoints never call the backend", async () => {
   let calls = 0;
   await assert.rejects(

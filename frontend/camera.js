@@ -1,9 +1,9 @@
 /**
- * Responsibilities: 摄像头授权、显式Echo/HF/本地CUDA传输、阶段计时和可订阅生命周期。
- * Implementation: 最大边640、JPEG0.8；HF/本地首帧单独完成后30FPS采集、12帧上限、顺序显示；任何错误停止。
+ * Responsibilities: Manage camera permission, explicit Echo/HF/local-CUDA transport, phase timing, and observable lifecycle.
+ * Implementation: 640-pixel maximum edge and JPEG 0.8; after the first HF/local frame completes, capture at up to 30 FPS with a 12-frame limit and ordered display; any error stops processing.
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
  * frame-pipeline.js, scene-client.js, integration/local-mvp.js；core.echo/hf_video_relay/integration.asgi；
- * tools/benchmark_phone_browser.mjs 验证真实页面；测试图流不代表手机实拍。
+ * tools/benchmark_phone_browser.mjs validates the real page; fixture input is not physical phone-camera evidence.
  * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.apiUrl; CameraApp.setStatus; CameraApp.handleDisconnect;
@@ -14,17 +14,17 @@
  * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide。
- * Variable Index: MAX_EDGE/JPEG_QUALITY 为采集参数；METRICS_LOG_INTERVAL_MS 为汇总日志间隔；
- * PROCESSING_PATHS 为三个显式WS模式路径；app 为页面控制器；实例 frameTimings 保存首帧和有限聚合统计，
- * pacingFrames/pacingLateTotalMs/pacingLateMaxMs及creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
- * 仅聚合带有流水线调度观测的稳态帧，不把串行Echo缺失的观测计为零；
- * SCENE_MAX_AGE_MS 为场景描述复用最近帧/检测结果的最大年龄；实例 lastFrame/lastDetection 仅在内存保存最近一次
- * 已编码JPEG与检测元数据供 scene-client.js 读取，停止即清空，不持久化；
- * cameraApp 为页面控制器的导出引用；
- * cameraPhase 定位阶段，pipeline持有有界取消信号；apiBase为同源API挂载点；listeners是观察者集合；
- * localDeviceId是本地UI明确选择的设备；localFacingMode默认null，整合入口可显式指定environment请求后置镜头；
- * 两者同时配置时明确deviceId优先，非法非null方向配置仍拒绝；localOnly阻止本地MVP误启动HF，sessionId标记结果生命周期；
- * localSessionSeconds默认55，独立整合入口可显式设null接入连续本地会话，HF不接收此选项。
+ * Variable Index: MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
+ * PROCESSING_PATHS — the three explicit WebSocket modes; app — page controller; frameTimings — first-frame and bounded aggregate statistics;
+ * pacingFrames/pacingLateTotalMs/pacingLateMaxMs and creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
+ * aggregate only steady-state frames with pipeline scheduling observations; serial Echo frames without observations are not counted as zero;
+ * SCENE_MAX_AGE_MS — maximum age for scene-description frame/detection reuse; lastFrame/lastDetection retain only the latest
+ * encoded JPEG and detection metadata in memory for scene-client.js, then clear on stop without persistence;
+ * cameraApp — exported reference to the page controller;
+ * cameraPhase — lifecycle phase; pipeline — bounded cancellation signal; apiBase — same-origin API mount; listeners — observer set;
+ * localDeviceId — device explicitly selected in the local UI; localFacingMode — null by default, with the integrated entry optionally requesting the rear camera using environment;
+ * if both are set, explicit deviceId takes precedence; invalid non-null facing modes are rejected. localOnly prevents the local MVP from starting HF accidentally; sessionId identifies result lifecycle;
+ * localSessionSeconds defaults to 55; the separate integration entry may set null for a continuous local session; HF does not accept this option.
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
 import { LiveDetectionClient } from "./live-detection-client.js";
@@ -45,14 +45,14 @@ export function processingPath(processing) {
   return PROCESSING_PATHS[processing];
 }
 
-/** Functionality: 编码当前画布。Inputs: canvas。Outputs: JPEG Blob Promise。
- * Logic: 使用固定 JPEG_QUALITY；Constraints: 编码不支持时明确失败，不换格式。 */
+/** Functionality: Encode the current canvas. Inputs: canvas. Outputs: JPEG Blob Promise.
+ * Logic: Use fixed JPEG_QUALITY; Constraints: report unsupported encoding explicitly and do not change formats. */
 function encodeJpeg(canvas) {
-  /** Functionality: 绑定一次异步编码。Inputs: resolve/reject。Outputs: 无。
-   * Logic: 浏览器 toBlob 处理当前画布；Constraints: Blob 为空即错误。 */
+  /** Functionality: Complete one asynchronous encode. Inputs: resolve/reject. Outputs: None.
+   * Logic: Let browser toBlob encode the current canvas; Constraints: an empty Blob is an error. */
   function encode(resolve, reject) {
-    /** Functionality: 发布编码结果。Inputs: blob。Outputs: resolve 或 reject。
-     * Logic: 核对 MIME，禁止悄悄切换 PNG；Constraints: 不写本地文件。 */
+    /** Functionality: Publish the encoded result. Inputs: blob. Outputs: resolve or reject.
+     * Logic: Verify MIME type and prevent a silent PNG switch; Constraints: do not write local files. */
     function ready(blob) {
       if (!blob || blob.type !== "image/jpeg")
         reject(new Error("浏览器无法编码 JPEG 图像"));
@@ -63,13 +63,13 @@ function encodeJpeg(canvas) {
   return new Promise(encode);
 }
 
-/** Functionality: 管理手机摄像头诊断工作台。
- * Logic: generation 隔离取消后的异步返回；mode 防止重复开始或并发 ping。
- * Constraints: 不录音、不保存帧；页面隐藏、设备结束、停止或故障均释放摄像头。 */
+/** Functionality: Manage the mobile-camera diagnostic workspace.
+ * Logic: generation isolates late async results after cancellation; mode prevents duplicate starts or concurrent pings.
+ * Constraints: Do not record audio or save frames; release the camera on page hide, device end, stop, or failure. */
 export class CameraApp {
-  /** Functionality: 绑定控件。Inputs: 当前 document/window。Outputs: 实例及事件注册。
-   * Logic: processing选择模式；保存媒体/客户端/计时；本地会话默认55秒；apiBase由页面相对同源挂载点解析；不自动申请权限。
-   * Constraints: 运行时锁定模式，停止后才能切换。 */
+  /** Functionality: Bind controls. Inputs: Current document/window. Outputs: Instance and event handlers.
+   * Logic: processing selects the mode; retain media/client/timing state; local sessions default to 55 seconds; resolve apiBase from the page-relative same-origin mount; do not request permission automatically.
+   * Constraints: Lock mode during runtime; switching requires stopping first. */
   constructor() {
     this.video = document.getElementById("preview");
     this.image = document.getElementById("echo");
@@ -139,13 +139,13 @@ export class CameraApp {
       throw new Error("检测接口必须与页面同源。");
     return url;
   }
-  /** Functionality: 显示第三方图像处理及等待预算。Inputs: processing 当前值。
-   * Outputs: 提示可见性；Logic: 仅 hf 选择显示；Constraints: 不联网或申请权限。 */
+  /** Functionality: Show third-party image-processing and wait-budget notice. Inputs: current processing mode.
+   * Outputs: Notice visibility; Logic: visible only for hf; Constraints: no network or permission request. */
   handleProcessingChange() {
     document.getElementById("hf-note").hidden = this.processing.value !== "hf";
   }
-  /** Functionality: 更新状态与操作边界。Inputs: text、kind。Outputs: DOM 修改。
-   * Logic: mode 决定控件可操作性；Constraints: text 仅用 textContent，不插入 HTML。 */
+  /** Functionality: Update status and action boundaries. Inputs: text and kind. Outputs: DOM updates.
+   * Logic: mode determines control availability; Constraints: render textContent only, never insert HTML. */
   setStatus(text, kind = "idle") {
     this.status.textContent = text;
     this.status.dataset.kind = kind;
@@ -155,9 +155,9 @@ export class CameraApp {
     this.processing.disabled = this.mode !== "idle";
     this.stopButton.disabled = this.mode !== "camera";
   }
-  /** Functionality: 处理连接失败。Inputs: Error。Outputs: 释放资源及可读提示。
-   * Logic: 记录mode、摄像头阶段和已完成数量后停止并显示原因。
-   * Constraints: 日志无帧数据/凭据，其他操作的cameraPhase可为idle，不推断远端故障原因。 */
+  /** Functionality: Handle connection failure. Inputs: Error. Outputs: Resource cleanup and readable status.
+   * Logic: Log mode, camera phase, and completed count, then stop and display the reason.
+   * Constraints: Logs contain no frame data or credentials; cameraPhase may be idle for other operations; do not infer remote failure causes. */
   handleDisconnect(error) {
     this.emit({type: "error", sessionId: this.sessionId, errorType: error.name});
     console.error("Camera processing failed:", {
@@ -169,13 +169,13 @@ export class CameraApp {
     this.message.textContent = error.message;
     this.message.dataset.kind = "error";
   }
-  /** Functionality: 授权摄像头并使用显式所选模式。Inputs: localDeviceId、localFacingMode、facingMode、processing、浏览器媒体 API。
-   * Outputs: 本地 video、返回 img、往返时间及首帧后的完成速率。
-   * Logic: 原样保持单在途；HF/本地复用30FPS/12作业流水线；本地显式deviceId优先，否则仅允许入口明确指定environment；
-   * 后置模式先检查facingMode约束支持再申请一次权限；本地转传localSessionSeconds，HF保留exact镜头。
-   * Constraints: exact镜头；浏览器不支持或无后置镜头即失败，不回退到前置或默认设备；
-   * 检测失败停止，不切换模式或自动重新授权；不丢弃已发送帧来制造速率；
-   * 没有固定等待不保证达到10FPS；计时从 drawImage 前开始，不等于传感器曝光或屏幕实际绘制时间。 */
+  /** Functionality: Request camera access and use the explicitly selected mode. Inputs: localDeviceId, localFacingMode, facingMode, processing, and browser media APIs.
+   * Outputs: Local video, returned image, round-trip timings, and post-first-frame completion rate.
+   * Logic: Preserve one in-flight job; HF/local modes share the 30 FPS/12-job pipeline. For local mode, explicit deviceId wins; otherwise only an entry that explicitly sets environment may request the rear camera.
+   * Check facingMode constraint support before requesting rear-camera permission; pass localSessionSeconds locally while HF retains exact-camera behavior.
+   * Constraints: Require exact camera selection; fail if unsupported or no rear camera exists, with no front/default-camera fallback.
+   * Detection failure stops processing without mode switching or automatic permission retry; never discard sent frames to inflate rate.
+   * Without a fixed delay there is no 10 FPS guarantee; timing begins before drawImage and is not sensor exposure or final screen-render time. */
   async start() {
     if (this.mode !== "idle") return;
     const token = ++this.generation;
@@ -360,9 +360,9 @@ export class CameraApp {
       ? "本地视频会话已结束并释放资源。再次点击开始可开启新会话。"
       : "ZeroGPU 视频会话已结束并释放资源。再次点击开始可开启新会话。";
   }
-  /** Functionality: 按原长宽比采集 JPEG。Inputs: video 当前帧。Outputs: ArrayBuffer。
-   * Logic: 限制最大边 640；仅尺寸改变时重置画布，随后编码当前帧。
-   * Constraints: 无可用画面或超过 1 MiB 时明确错误；比例、最大边及 JPEG 质量保持原条件。 */
+  /** Functionality: Capture JPEG while preserving aspect ratio. Inputs: Current video frame. Outputs: ArrayBuffer.
+   * Logic: Limit the maximum edge to 640 pixels; resize the canvas only when dimensions change, then encode the frame.
+   * Constraints: Report unavailable frames and payloads over 1 MiB; preserve the original aspect ratio, edge limit, and JPEG quality. */
   async capture() {
     const width = this.video.videoWidth;
     const height = this.video.videoHeight;
@@ -382,29 +382,29 @@ export class CameraApp {
     this.lastFrame = {bytes, at: performance.now()};
     return bytes;
   }
-  /** Functionality: 为场景描述提供当前JPEG。Inputs: maxAgeMs，lastFrame与mode。
-   * Outputs: ArrayBuffer；摄像头未开启返回 null。
-   * Logic: 推流中最近一次已编码帧不超过 maxAgeMs 则直接复用；否则按同一640/JPEG0.8契约重新 capture()。
-   * Constraints: 只读不改推流；capture 与流水线共用画布但均绘制同一 video 当前帧，无额外协议；
-   * 不在未开启摄像头时申请权限；失败抛出 capture 的原始错误。 */
+  /** Functionality: Provide the current JPEG for scene description. Inputs: maxAgeMs, lastFrame, and mode.
+   * Outputs: ArrayBuffer; return null when the camera is off.
+   * Logic: Reuse the latest encoded streaming frame when no older than maxAgeMs; otherwise call capture() under the same 640/JPEG 0.8 contract.
+   * Constraints: Read without changing the stream; capture shares the pipeline canvas and draws the current video frame without a new protocol.
+   * Do not request permission when the camera is off; propagate the original capture error. */
   async latestJpeg(maxAgeMs = SCENE_MAX_AGE_MS) {
     if (this.mode !== "camera") return null;
     const frame = this.lastFrame;
     if (frame && performance.now() - frame.at <= maxAgeMs) return frame.bytes;
     return this.capture();
   }
-  /** Functionality: 为场景描述提供最近一次检测框。Inputs: maxAgeMs，lastDetection。
-   * Outputs: boxes数组（可为空）。Logic: 从原采集时间计算结果年龄，避免慢旧帧被当作新鲜结果。
-   * Constraints: 只读返回，不修改元数据；metadata/boxes 缺失或非数组返回空数组；Echo 模式或无检测时返回空数组，不伪造。 */
+  /** Functionality: Provide the latest detection boxes for scene description. Inputs: maxAgeMs and lastDetection.
+   * Outputs: boxes array, possibly empty. Logic: Calculate result age from original capture time so delayed frames are not treated as fresh.
+   * Constraints: Return data without mutating metadata; return an empty array when metadata/boxes is missing or non-array, or in Echo/no-detection mode. Never fabricate boxes. */
   latestBoxes(maxAgeMs = SCENE_MAX_AGE_MS) {
     const detection = this.lastDetection;
     if (this.mode !== "camera" || !detection || performance.now() - detection.at > maxAgeMs) return [];
     const boxes = detection.metadata?.boxes;
     return Array.isArray(boxes) ? boxes : [];
   }
-  /** Functionality: 显示当前模式校验后的服务端JPEG。Inputs: bytes、token、可选dimensions元数据。
-   * Outputs: img解码及URL生命周期。Logic: HF还校验实际naturalWidth/Height；finally释放旧帧。
-   * Constraints: 解码/尺寸失败终止；代际变化后不显示旧帧；不代表屏幕实际绘制已完成。 */
+  /** Functionality: Display a server JPEG validated for the current mode. Inputs: bytes, token, optional dimensions metadata.
+   * Outputs: Image decoding and URL lifecycle. Logic: HF also verifies actual naturalWidth/Height; finally release the prior frame.
+   * Constraints: Decode/dimension failure stops processing; never display stale frames after generation changes; this does not prove final screen rendering. */
   async showFrame(bytes, token, dimensions = null) {
     const previous = this.objectUrl;
     this.objectUrl = URL.createObjectURL(
@@ -424,13 +424,13 @@ export class CameraApp {
       if (previous) URL.revokeObjectURL(previous);
     }
   }
-  /** Functionality: 聚合一帧的阶段计时并返回首帧之后的完成速率。
-   * Inputs: processing模式；timing中capture/transport/renderQueue/decode、采集到结果/解码的毫秒数和completedAt；
-   * 流水线可选pacingLateMs/creditWaitMs区分定时器晚醒与有界信用等待。
-   * Outputs: 首帧或时钟尚无正间隔时返回 null，其余返回完成 FPS；首次及每5秒发布汇总日志。
-   * Logic: 首帧保留完整耗时；后续只累计数量、总和、最大值，不保存历史图像或无限计时列表；
-   * 完成速率为首帧完成至本帧完成的区间计数，包含后续停顿，未排除慢帧。
-   * Constraints: 只记录成功完成的帧；调用者必须先检查 generation；日志不含图像、凭据或设备身份。
+  /** Functionality: Aggregate one frame's phase timings and return completion rate after the first frame.
+   * Inputs: processing mode; timing.capture/transport/renderQueue/decode, capture-to-result/decode milliseconds, and completedAt;
+   * the pipeline may supply pacingLateMs/creditWaitMs to distinguish late timers from bounded credit waits.
+   * Outputs: null for the first frame or a non-positive clock interval; otherwise completion FPS. Emit summaries initially and every five seconds.
+   * Logic: Retain full first-frame timing; later frames update only count, sum, and maximum, not image history or an unbounded timing list.
+   * Completion FPS counts frames from first-frame completion through the current frame, includes later pauses, and does not exclude slow frames.
+   * Constraints: Record successful frames only; caller must check generation first; logs contain no image, credential, or device identity.
    */
   recordFrameTimings(processing, timing) {
     if (!this.frameTimings) {
@@ -467,10 +467,10 @@ export class CameraApp {
     const elapsed = timing.completedAt - metrics.first.completedAt;
     return elapsed > 0 ? metrics.steadyFrames * 1000 / elapsed : null;
   }
-  /** Functionality: 输出有限聚合统计。Inputs: reason、实例 frameTimings。
-   * Outputs: 一条 console.info；Logic: 首帧单列，稳态均值/最大延迟及完成 FPS 单列，更新日志时间；
-   * 存在调度观测时输出有限均值/最大值和信用等待帧数，缺失时为null。
-   * Constraints: 无帧时不输出；均值不是P95；解码完成不证明屏幕已绘制；不会重试或触发推理。
+  /** Functionality: Emit bounded aggregate statistics. Inputs: reason and instance frameTimings.
+   * Outputs: One console.info entry. Logic: Report first frame separately from steady-state mean/max latency and completion FPS, then update log time;
+   * when scheduling observations exist, report bounded mean/max and credit-wait frame count; otherwise use null.
+   * Constraints: Emit nothing without frames; mean is not P95; decode completion does not prove screen presentation; do not retry or trigger inference.
    */
   reportFrameTimings(reason) {
     const metrics = this.frameTimings;
@@ -502,8 +502,8 @@ export class CameraApp {
     });
     metrics.lastReportAt = metrics.lastCompletedAt;
   }
-  /** Functionality: 单独验证 ping/pong。Inputs: 当前页面同源地址。Outputs: 延迟与状态。
-   * Logic: 建立临时连接、校验标识后关闭；Constraints: 不开启摄像头，不能与采集并发。 */
+  /** Functionality: Validate ping/pong independently. Inputs: Current same-origin page URL. Outputs: Latency and status.
+   * Logic: Open a temporary connection, verify the ID, then close it; Constraints: Do not open the camera or run concurrently with capture. */
   async testPing() {
     if (this.mode !== "idle") return;
     const token = ++this.generation;
@@ -526,9 +526,9 @@ export class CameraApp {
       if (token === this.generation) this.handleDisconnect(error);
     }
   }
-  /** Functionality: 停止操作并释放媒体资源。Inputs: 当前流、客户端、Blob URL。
-   * Outputs: 清空预览和回显，保留页面统计并发布本次汇总；Logic: 递增 generation，取消旧异步操作。
-   * Constraints: 可重复调用；不自动恢复，需用户再次点击开始。 */
+  /** Functionality: Stop work and release media resources. Inputs: Current stream, client, and Blob URL.
+   * Outputs: Clear preview/echo, retain page statistics, and publish this run's summary; Logic: increment generation and cancel old async work.
+   * Constraints: Safe to call repeatedly; do not resume automatically, require another user start. */
   stop() {
     this.emit({type: "stop", sessionId: this.sessionId});
     this.sessionId = null;
@@ -560,21 +560,21 @@ export class CameraApp {
     this.message.dataset.kind = "idle";
     this.message.textContent = "摄像头和连接已释放。再次点击开始即可重新采集。";
   }
-  /** Functionality: 报告设备中断。Inputs: 媒体轨道 ended 事件。Outputs: 停止及错误提示。
-   * Logic: 不等待网络超时；Constraints: 不替换为其他摄像头。 */
+  /** Functionality: Report device interruption. Inputs: Media-track ended event. Outputs: Stop and error status.
+   * Logic: Do not wait for network timeout; Constraints: Do not switch cameras. */
   handleCameraEnded() {
     this.handleDisconnect(
       new Error("摄像头已中断，请检查权限或设备后重新开始"),
     );
   }
-  /** Functionality: 页面转入后台时释放资源。Inputs: document.visibilityState。
-   * Outputs: stop；Logic: 隐藏状态取消当前操作；Constraints: 回到前台不自动恢复采集。 */
+  /** Functionality: Release resources when the page is backgrounded. Inputs: document.visibilityState.
+   * Outputs: stop; Logic: Cancel current work while hidden; Constraints: Do not resume capture automatically on foreground return. */
   handleVisibility() {
     if (document.visibilityState === "hidden" && this.mode !== "idle")
       this.stop();
   }
-  /** Functionality: 页面离开时清理。Inputs: pagehide 事件。Outputs: stop。
-   * Logic: 统一释放；Constraints: 不依赖浏览器卸载等待异步网络。 */
+  /** Functionality: Clean up when the page is left. Inputs: pagehide event. Outputs: stop.
+   * Logic: Use common resource release; Constraints: Do not rely on asynchronous network work during browser unload. */
   handlePageHide() {
     this.stop();
   }

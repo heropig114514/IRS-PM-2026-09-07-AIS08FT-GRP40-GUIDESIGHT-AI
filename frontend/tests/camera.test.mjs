@@ -1,6 +1,6 @@
-/** Responsibilities: 验证显式后置/设备选择、取消、画布复用、原采集参数及首帧/稳态计时边界。
- * Implementation: 页面、媒体权限、轨道、画布及图像解码使用显式替身；不调用真实摄像头或网络。
- * Related Modules: camera.js；真机权限与浏览器行为仍须另行验证。
+/** Responsibilities: Verify explicit rear-camera/device selection, cancellation, canvas reuse, capture parameters, and first-frame/steady-state timing boundaries.
+ * Implementation: Use explicit page, media-permission, track, canvas, and image-decoding fixtures; do not access a real camera or network.
+ * Related Modules: camera.js; real-device permissions and browser behavior require separate verification.
  * Declaration Index: FakeElement; FakeElement.constructor; FakeElement.addEventListener;
  * FakeElement.removeAttribute; FakeDocument; FakeDocument.constructor; FakeDocument.getElementById;
  * FakeDocument.createElement; FakeDocument.addEventListener; ignoreWindowEvent; makeApp;
@@ -21,40 +21,42 @@
  * testRearPermissionGeneration.playVideo; testRearPermissionGeneration.registerPlayback;
  * testRearPermissionGeneration.oldTracks; testRearPermissionGeneration.newTracks;
  * testRearPermissionGeneration.stopOld; testRearPermissionGeneration.stopNew。
- * Variable Index: None；所有 mock 限于 Node 的独立测试文件进程。
+ * Variable Index: None; all mocks are scoped to this isolated Node test process.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
 import {LiveDetectionClient} from "../live-detection-client.js";
 
-/** Functionality: 最小 DOM 替身。Logic: 保存控件值，不执行渲染。
- * Constraints: 不能证明真实浏览器布局、视频播放或解码。 */
+/** Functionality: Minimal DOM fixture. Logic: Store control values without rendering.
+ * Constraints: Does not prove real browser layout, video playback, or decoding. */
 class FakeElement {
-  /** Functionality: 建立可变 DOM 状态。Inputs: None。Outputs: 实例。
-   * Logic: camera 默认后置，dataset 可写；Constraints: 不启动任何设备。 */
+  /** Functionality: Initialize mutable DOM state. Inputs: None. Outputs: Instance.
+   * Logic: Default camera is rear-facing and dataset is writable. Constraints: Does not start a device. */
   constructor() {
     this.dataset = {};
     this.hidden = false;
     this.value = "environment";
     this.src = "";
   }
-  /** Functionality: 接受事件注册。Inputs: name、handler。Outputs: 无。
-   * Logic: 测试直接调用实际控制器；Constraints: 不模拟事件传播。 */
+  /** Functionality: Accept event registration. Inputs: name and handler. Outputs: None.
+   * Logic: Tests call the actual controller directly. Constraints: Does not simulate event propagation. */
   addEventListener(name, handler) {
     void name;
     void handler;
   }
-  /** Functionality: 清除 src。Inputs: name。Outputs: 更新 src。
-   * Logic: 只支持本测试用到的属性；Constraints: 不是完整 DOM。 */
+  /** Functionality: Clear src. Inputs: name. Outputs: Updated src.
+   * Logic: Support only the property used by this test. Constraints: Not a complete DOM. */
   removeAttribute(name) {
     if (name === "src") this.src = "";
   }
 }
-/** Functionality: 跟踪尺寸赋值、绘制和编码参数。
- * Logic: 属性 setter 计数画布重置，toBlob 返回显式合成 marker；Constraints: 不执行真实绘制/编码。 */
+/** Functionality: Track size assignments, draw calls, and encoding parameters.
+ * Logic: Property setters count canvas resets; toBlob returns an explicit synthetic marker.
+ * Constraints: Does not perform real drawing or encoding. */
 class FakeCanvas extends FakeElement {
-  /** Functionality: 初始化画布替身。Inputs: None。Outputs: 实例。
-   * Logic: _width/_height存尺寸，resets计赋值，drawn/encoded存测试参数；Constraints: 不申请浏览器资源。 */
+  /** Functionality: Initialize the canvas fixture. Inputs: None. Outputs: Instance.
+   * Logic: _width/_height store dimensions, resets counts assignments, and drawn/encoded store test parameters.
+   * Constraints: Does not allocate browser resources. */
   constructor() {
     super();
     this._width = 0;
@@ -63,67 +65,68 @@ class FakeCanvas extends FakeElement {
     this.drawn = [];
     this.encoded = [];
   }
-  /** Functionality: 读取宽度。Inputs: _width。Outputs: number。
-   * Logic: 返回保存值；Constraints: 不计算布局。 */
+  /** Functionality: Read width. Inputs: _width. Outputs: Number.
+   * Logic: Return the stored value. Constraints: Does not calculate layout. */
   get width() { return this._width; }
-  /** Functionality: 记录宽度赋值。Inputs: value。Outputs: 状态和计数更新。
-   * Logic: 即使同值也计为重置，模拟实际画布属性语义；Constraints: 不分配像素缓冲。 */
+  /** Functionality: Record a width assignment. Inputs: value. Outputs: Updated state and count.
+   * Logic: Count same-value assignments as resets to match canvas property semantics.
+   * Constraints: Does not allocate a pixel buffer. */
   set width(value) { this._width = value; this.resets += 1; }
-  /** Functionality: 读取高度。Inputs: _height。Outputs: number。
-   * Logic: 返回保存值；Constraints: 不计算布局。 */
+  /** Functionality: Read height. Inputs: _height. Outputs: Number.
+   * Logic: Return the stored value. Constraints: Does not calculate layout. */
   get height() { return this._height; }
-  /** Functionality: 记录高度赋值。Inputs: value。Outputs: 状态和计数更新。
-   * Logic: 同值也计为重置；Constraints: 不分配像素缓冲。 */
+  /** Functionality: Record a height assignment. Inputs: value. Outputs: Updated state and count.
+   * Logic: Count same-value assignments as resets. Constraints: Does not allocate a pixel buffer. */
   set height(value) { this._height = value; this.resets += 1; }
-  /** Functionality: 提供绘制记录器。Inputs: kind。Outputs: 最小 context。
-   * Logic: 仅接受2d，绑定真实测试记录方法；Constraints: 不执行图像渲染。 */
+  /** Functionality: Provide a draw recorder. Inputs: kind. Outputs: Minimal context.
+   * Logic: Accept only 2d and bind the test's recorder. Constraints: Does not render images. */
   getContext(kind) {
     assert.equal(kind, "2d");
     return {drawImage: this.drawImage.bind(this)};
   }
-  /** Functionality: 记录目标尺寸。Inputs: video、x、y、width、height。Outputs: drawn 更新。
-   * Logic: 核对来源和原点，保存尺寸；Constraints: 不读取真实视频像素。 */
+  /** Functionality: Record target dimensions. Inputs: video, x, y, width, height. Outputs: Updated drawn.
+   * Logic: Check source and origin, then save dimensions. Constraints: Does not read real video pixels. */
   drawImage(video, x, y, width, height) {
     assert.ok(video);
     assert.equal(x, 0);
     assert.equal(y, 0);
     this.drawn.push([width, height]);
   }
-  /** Functionality: 返回显式合成JPEG标记。Inputs: callback、mime、quality。Outputs: callback(Blob)。
-   * Logic: 记录格式和质量；Constraints: marker不是可解码图像，测试只证明参数与控制逻辑。 */
+  /** Functionality: Return an explicit synthetic JPEG marker. Inputs: callback, mime, quality. Outputs: callback(Blob).
+   * Logic: Record format and quality. Constraints: The marker is not decodable; this verifies parameters and control flow only. */
   toBlob(callback, mime, quality) {
     this.encoded.push({mime, quality});
     callback(new Blob([Uint8Array.from([255, 216, 1, 255, 217])], {type: mime}));
   }
 }
-/** Functionality: 提供受控页面节点。Logic: 缺失节点按需创建。
- * Constraints: 不执行 HTML，独立于真实浏览器。 */
+/** Functionality: Provide controlled page nodes. Logic: Create missing nodes on demand.
+ * Constraints: Does not execute HTML and is independent of a real browser. */
 class FakeDocument {
-  /** Functionality: 初始化节点集合。Inputs: None。Outputs: 实例。
-   * Logic: 使用 Map 存节点；Constraints: 不读取文件。 */
+  /** Functionality: Initialize the node collection. Inputs: None. Outputs: Instance.
+   * Logic: Store nodes in a Map. Constraints: Does not read files. */
   constructor() {
     this.elements = new Map();
   }
-  /** Functionality: 提供稳定节点。Inputs: id。Outputs: FakeElement。
-   * Logic: 首次访问创建，后续复用；Constraints: 无选择器解析。 */
+  /** Functionality: Return a stable node. Inputs: id. Outputs: FakeElement.
+   * Logic: Create on first access and reuse afterwards. Constraints: No selector parsing. */
   getElementById(id) {
     if (!this.elements.has(id)) this.elements.set(id, new FakeElement());
     return this.elements.get(id);
   }
-  /** Functionality: 返回明确的元素替身。Inputs: tag。Outputs: FakeCanvas或FakeElement。
-   * Logic: canvas跟踪尺寸/绘制/编码参数；Constraints: 无真实浏览器性能验证。 */
+  /** Functionality: Return an explicit element fixture. Inputs: tag. Outputs: FakeCanvas or FakeElement.
+   * Logic: Canvas tracks dimensions, draw calls, and encoding parameters. Constraints: No real-browser performance verification. */
   createElement(tag) {
     return tag === "canvas" ? new FakeCanvas() : new FakeElement();
   }
-  /** Functionality: 接受页面事件注册。Inputs: name、handler。Outputs: 无。
-   * Logic: 不自动派发；Constraints: 不模拟系统后台状态。 */
+  /** Functionality: Accept page event registration. Inputs: name and handler. Outputs: None.
+   * Logic: Do not dispatch automatically. Constraints: Does not simulate system background state. */
   addEventListener(name, handler) {
     void name;
     void handler;
   }
 }
-/** Functionality: 接受窗口事件。Inputs: name、handler。Outputs: 无。
- * Logic: 保持构造契约；Constraints: 无实际窗口。 */
+/** Functionality: Accept window events. Inputs: name and handler. Outputs: None.
+ * Logic: Preserve the constructor contract. Constraints: No real window is present. */
 function ignoreWindowEvent(name, handler) {
   void name;
   void handler;
@@ -139,7 +142,7 @@ const { CameraApp, processingPath } = await import("../camera.js");
  * Inputs: actual mode mapping and retired/unknown enums. Outputs: fixed paths or explicit errors.
  * Logic: reject every former mode, rather than silently substituting a new provider.
  * Constraints: no external camera, socket, CPU detector or GPU request. */
-test("显式支持Echo、HF和独立本地视频模式", function testProcessingPath() {
+test("Explicitly support Echo, HF, and independent local video modes", function testProcessingPath() {
   assert.equal(processingPath("echo"), "./ws/echo/");
   assert.equal(processingPath("hf"), "./ws/detect/hf/");
   assert.equal(processingPath("local"), "./ws/detect/local/");
@@ -371,7 +374,7 @@ test("camera forwards continuous policy only to local transport and preserves55s
 /** Functionality: Resolve the additive live page against the existing same-origin API mount.
  * Inputs: explicit /prs/live/ location and ../ mount. Outputs: fixed root API URLs/cross-origin error.
  * Logic: real controller URL resolution; Constraints: no socket/GPU or real page rendering. */
-test("独立视频入口沿用同源API挂载点", function testApiMount() {
+test("Independent video entry point retains same-origin API mounting", function testApiMount() {
   const previous = window.location;
   window.location = {href: "https://47.239.50.129/prs/live/"};
   try {
@@ -383,8 +386,8 @@ test("独立视频入口沿用同源API挂载点", function testApiMount() {
   } finally { window.location = previous; }
 });
 
-/** Functionality: 创建隔离控制器。Inputs: getUserMedia 替身。Outputs: CameraApp。
- * Logic: 更换 fake document/navigator，设置原样模式；Constraints: 测试不验证实际模型。 */
+/** Functionality: Create an isolated controller. Inputs: getUserMedia fixture. Outputs: CameraApp.
+ * Logic: Replace fake document/navigator and set echo mode. Constraints: The test does not verify a real model. */
 function makeApp(getUserMedia) {
   globalThis.document = new FakeDocument();
   globalThis.document.getElementById("processing").value = "echo";
@@ -395,11 +398,11 @@ function makeApp(getUserMedia) {
   return new CameraApp();
 }
 
-test("权限拒绝后释放状态并显示错误" /** Functionality: 测试权限拒绝分支。
- * Inputs: 明确拒绝的权限替身。Outputs: idle/错误/可重启断言。
- * Logic: 执行实际 start；Constraints: 未访问真实权限服务。 */, async function testDenied() {
-  /** Functionality: 拒绝摄像头。Inputs: 浏览器约束。Outputs: rejected Promise。
-   * Logic: 合成 NotAllowed 场景；Constraints: 不访问硬件。 */
+test("Permission denial releases state and reports an error" /** Functionality: Test the permission-denial branch.
+ * Inputs: Explicitly rejecting permission fixture. Outputs: idle/error/restart assertions.
+ * Logic: Call the real start method. Constraints: Does not access a real permission service. */, async function testDenied() {
+  /** Functionality: Reject camera access. Inputs: Browser constraints. Outputs: Rejected Promise.
+   * Logic: Simulate NotAllowed. Constraints: No hardware access. */
   async function denyCamera() {
     throw new Error("permission denied");
   }
@@ -411,28 +414,28 @@ test("权限拒绝后释放状态并显示错误" /** Functionality: 测试权�
   assert.equal(app.startButton.disabled, false);
 });
 
-test("停止后的延迟授权不会打开连接并立即释放轨道" /** Functionality: 测试取消授权竞态。
- * Inputs: 延迟权限与 mock 轨道。Outputs: stop 次数及资源断言。
- * Logic: 先 stop 再完成授权；Constraints: 不能代表真机的授权 UI。 */, async function testCancelled() {
+test("Late permission after stop does not open a connection and releases tracks" /** Functionality: Test cancellation during permission acquisition.
+ * Inputs: Delayed permission result and mocked tracks. Outputs: Stop-call count and resource assertions.
+ * Logic: Stop first, then resolve permission. Constraints: Does not represent the real-device permission UI. */, async function testCancelled() {
   let finish;
   let stopped = 0;
-  /** Functionality: 延迟权限结果。Inputs: 采集约束。Outputs: 未完成 Promise。
-   * Logic: 测试控制 resolve 时刻；Constraints: 无真实权限提示。 */
+  /** Functionality: Delay the permission result. Inputs: Capture constraints. Outputs: Pending Promise.
+   * Logic: The test controls when resolve runs. Constraints: No real permission prompt. */
   function waitForPermission() {
-    /** Functionality: 保存完成句柄。Inputs: resolve。Outputs: finish 更新。
-     * Logic: 暂不返回媒体；Constraints: 测试显式完成。 */
+    /** Functionality: Save a completion handle. Inputs: resolve. Outputs: Updated finish callback.
+     * Logic: Do not return media yet. Constraints: The test completes it explicitly. */
     function register(resolve) {
       finish = resolve;
     }
     return new Promise(register);
   }
-  /** Functionality: 计数轨道释放。Inputs: None。Outputs: stopped 更新。
-   * Logic: 记录 stop 调用；Constraints: 非实际媒体轨道。 */
+  /** Functionality: Count track releases. Inputs: None. Outputs: Updated stopped state.
+   * Logic: Record stop calls. Constraints: Not a real media track. */
   function stopTrack() {
     stopped += 1;
   }
-  /** Functionality: 提供轨道替身。Inputs: None。Outputs: 一条 mock 轨道。
-   * Logic: 只实现取消场景；Constraints: 不生成视频。 */
+  /** Functionality: Provide a track fixture. Inputs: None. Outputs: One mocked track.
+   * Logic: Implement only the cancellation case. Constraints: Does not generate video. */
   function getTracks() {
     return [{ stop: stopTrack }];
   }
@@ -447,15 +450,15 @@ test("停止后的延迟授权不会打开连接并立即释放轨道" /** Funct
   assert.equal(app.mode, "idle");
 });
 
-test("停止后的延迟解码不会重新显示旧帧" /** Functionality: 测试图像解码取消竞态。
- * Inputs: mock decode Promise 和合成二进制。Outputs: 隐藏及 URL 释放断言。
- * Logic: 解码期间 stop，随后完成解码；Constraints: 不验证 JPEG 可解码性。 */, async function testDecodeCancelled() {
+test("Late decode after stop does not redisplay the stale frame" /** Functionality: Test cancellation during image decoding.
+ * Inputs: Mock decode Promise and synthetic binary. Outputs: Hidden-state and URL-release assertions.
+ * Logic: Stop during decode, then resolve it. Constraints: Does not verify JPEG decodability. */, async function testDecodeCancelled() {
   let finish;
-  /** Functionality: 延迟图像解码。Inputs: None。Outputs: 未完成 Promise。
-   * Logic: 保存完成控制点；Constraints: 非浏览器图像解码器。 */
+  /** Functionality: Delay image decoding. Inputs: None. Outputs: Pending Promise.
+   * Logic: Save the completion control point. Constraints: Not a browser image decoder. */
   function waitForDecode() {
-    /** Functionality: 保存完成句柄。Inputs: resolve。Outputs: finish 更新。
-     * Logic: 暂不完成；Constraints: 测试显式完成。 */
+    /** Functionality: Save a completion handle. Inputs: resolve. Outputs: Updated finish callback.
+     * Logic: Keep it pending until the test completes it explicitly. */
     function register(resolve) {
       finish = resolve;
     }
@@ -475,10 +478,12 @@ test("停止后的延迟解码不会重新显示旧帧" /** Functionality: 测�
   assert.equal(document.getElementById("verified").hidden, true);
 });
 
-/** Functionality: 检查稳定分辨率复用画布，旋转后更新尺寸，并保持原采集条件。
- * Inputs: 1280x960及960x1280视频尺寸、显式画布替身。Outputs: 重置次数/比例/格式/质量断言。
- * Logic: 调用实际capture三次，仅首次和旋转重置；Constraints: 不代表真实JPEG编码耗时或质量。 */
-test("相同尺寸复用画布且保持640/JPEG0.8", async function testCaptureReuse() {
+/** Functionality: Check canvas reuse at stable resolution, dimension updates after rotation, and unchanged capture settings.
+ * Inputs: 1280x960 and 960x1280 video sizes plus an explicit canvas fixture.
+ * Outputs: Reset count, ratio, format, and quality assertions.
+ * Logic: Call actual capture three times; only the first capture and rotation reset the canvas.
+ * Constraints: Does not represent real JPEG encoding time or quality. */
+test("Reuse canvas at stable dimensions and retain 640/JPEG0.8", async function testCaptureReuse() {
   const app = makeApp(ignoreWindowEvent);
   app.video.videoWidth = 1280;
   app.video.videoHeight = 960;
@@ -493,10 +498,10 @@ test("相同尺寸复用画布且保持640/JPEG0.8", async function testCaptureR
   assert.deepEqual(app.canvas.encoded, Array(3).fill({mime: "image/jpeg", quality: 0.8}));
 });
 
-/** Functionality: 检查场景描述取帧/取检测框钩子。Inputs: 受控 mode/lastFrame/lastDetection。
- * Outputs: 复用、过期重采、空数组及停止清空断言。Logic: 实际 CameraApp 方法；
- * Constraints: 不启动摄像头或网络，时间用真实 performance.now 的相对年龄。 */
-test("latestJpeg复用新鲜帧，过期重采，未开启返回null", async function testSceneHooks() {
+/** Functionality: Check scene-description hooks for frame and detection-box access.
+ * Inputs: Controlled mode/lastFrame/lastDetection. Outputs: Reuse, stale-frame recapture, empty-array, and stop-clearing assertions.
+ * Logic: Exercise actual CameraApp methods. Constraints: No camera or network; age uses relative real performance.now values. */
+test("latestJpeg reuses fresh frames, recaptures stale frames, and returns null when stopped", async function testSceneHooks() {
   const app = makeApp(ignoreWindowEvent);
   app.video.videoWidth = 640;
   app.video.videoHeight = 480;
@@ -526,11 +531,12 @@ test("latestJpeg复用新鲜帧，过期重采，未开启返回null", async fun
   assert.equal(app.lastDetection, null);
 });
 
-/** Functionality: 检查首帧单独记录而慢稳态帧保留在延迟和速率统计中。
- * Inputs: 首帧无调度字段、零时钟间隔/慢帧及显式定时器/信用等待样本。
- * Outputs: 有限聚合、null、2.5FPS及仅有观测的调度统计断言。
- * Logic: 实际计时方法处理三帧；Constraints: 输入是受控时钟，不是外部服务性能测试。 */
-test("慢首帧与稳态分开，停顿不被排除", function testTimingBoundaries() {
+/** Functionality: Check that first-frame timing is separate while slow steady-state frames remain in latency and rate statistics.
+ * Inputs: First frame without scheduling fields, zero clock interval/slow frame, and explicit timer/credit-wait samples.
+ * Outputs: Assertions for finite aggregates, null, 2.5 FPS, and observed-only scheduling statistics.
+ * Logic: Process three frames through the real timing methods.
+ * Constraints: Inputs use a controlled clock and are not an external-service performance test. */
+test("Separate slow startup frame and include stalls in steady-state metrics", function testTimingBoundaries() {
   const app = makeApp(ignoreWindowEvent);
   assert.equal(app.recordFrameTimings("hf", {
     captureMs: 10, transportMs: 1055, renderQueueMs: 0, decodeMs: 15,

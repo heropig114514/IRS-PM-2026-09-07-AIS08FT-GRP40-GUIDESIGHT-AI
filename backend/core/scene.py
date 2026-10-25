@@ -1,9 +1,8 @@
-"""Responsibilities: 场景描述配置状态与同源 POST 的 HTTP 适配。
-Implementation: Origin/Host 双重检查（同 core.maps）；先查长度再读正文；业务全部委托 core.vlm；
-scene_describe 为 async 视图，阻塞上游调用经 asyncio.to_thread 执行。
-Related Modules: core.vlm、core.maps、config.urls；frontend 场景描述客户端。
-Declaration Index: scene_config — 配置状态；scene_describe — 场景描述 POST。
-Variable Index: logger — 安全诊断日志；MAX_REQUEST_BYTES — 1.5 MiB 请求体上限。
+"""Responsibilities: Adapt same-origin scene-description POST requests and expose configuration status.
+Implementation: Check Origin and Host (as in core.maps), enforce the body limit before reading it, and delegate business logic to core.vlm.
+Related Modules: core.vlm, core.maps, config.urls, and the frontend scene-description client.
+Declaration Index: scene_config — configuration status; scene_describe — scene-description POST endpoint.
+Variable Index: logger — safe diagnostic logging; MAX_REQUEST_BYTES — 1.5 MiB request-body limit.
 """
 
 import asyncio
@@ -33,10 +32,10 @@ MAX_REQUEST_BYTES = 1572864
 
 @require_safe
 def scene_config(request):
-    """Functionality: 告知 VLM 是否配置，绝不提供 key。
-    Inputs: request、DASHSCOPE_* 环境；Outputs: 200 或未配置的 503 JSON，无缓存。
-    Logic: 仅公开 provider/model/configured/code；host 不公开；配置存在不证明认证通过。
-    Constraints: 实际认证由描述调用验证；未配置时 model 为环境值或默认值。
+    """Functionality: Report whether the VLM is configured without exposing credentials.
+    Inputs: request and DASHSCOPE_* environment; Outputs: uncached 200 or unconfigured 503 JSON.
+    Logic: Expose only provider/model/configured/code; keep host private. Configuration does not prove authentication.
+    Constraints: Authentication is verified by a description request; when unconfigured, model is the environment value or default.
     """
     try:
         _, _, model = vlm_settings()
@@ -60,12 +59,12 @@ def scene_config(request):
 @csrf_exempt
 @require_POST
 async def scene_describe(request):
-    """Functionality: 校验同源请求并返回前方场景的口语化描述。
+    """Functionality: Validate a same-origin request and return a conversational description of the scene ahead.
     Inputs: request Origin/Host、JSON image_jpeg_base64/language/question/objects；
-    Outputs: 契约成功 JSON 或 {code, detail, request_id}。
-    Logic: 严格 Origin/Host 代替 cookie CSRF；Content-Length 先于读取正文；限尺寸后交给 core.vlm。
-    Constraints: 同源不等于身份认证；图像/问题不存储不记录；无自动重试或降级。异步视图把阻塞的
-    http.client 调用放入线程，避免占用 Django 的 sync 线程而拖住其它同步页面（最长约 20 秒/次）。
+    Outputs: Contract-compliant success JSON or {code, detail, request_id}.
+    Logic: Strict Origin/Host checks replace cookie-based CSRF; check Content-Length before reading the body, then pass bounded input to core.vlm.
+    Constraints: Same-origin is not authentication; images/questions are neither stored nor logged; no automatic retry or fallback. The async view runs blocking
+    http.client work in a thread so it does not occupy Django's sync thread pool and stall other pages (up to about 20 seconds per request).
     """
     request_id = uuid.uuid4().hex[:12]
     try:
@@ -74,10 +73,10 @@ async def scene_describe(request):
             origin not in settings.CAMERA_ALLOWED_ORIGINS
             or urlsplit(origin).netloc != request.get_host()
         ):
-            raise SceneError("origin_rejected", "场景接口仅接受本页面的同源请求。", 403)
+            raise SceneError("origin_rejected", "The scene endpoint accepts same-origin requests from this page only.", 403)
         if request.content_type != "application/json":
-            raise SceneError("invalid_content_type", "请求必须使用 application/json。", 415)
-        too_large = SceneError("request_too_large", "场景请求超过 1.5 MiB 上限。", 413)
+            raise SceneError("invalid_content_type", "The request must use application/json.", 415)
+        too_large = SceneError("request_too_large", "The scene request exceeds the 1.5 MiB limit.", 413)
         declared = request.META.get("CONTENT_LENGTH", "")
         if declared.isdigit() and int(declared) > MAX_REQUEST_BYTES:
             raise too_large
@@ -90,7 +89,7 @@ async def scene_describe(request):
         try:
             body = json.loads(raw)
         except (ValueError, UnicodeDecodeError, RecursionError) as error:
-            raise SceneError("invalid_scene_input", "请求正文不是有效的 JSON。", 400) from error
+            raise SceneError("invalid_scene_input", "The request body is not valid JSON.", 400) from error
         scene = validate_scene_request(body)
         result = await asyncio.to_thread(describe_scene, scene, request_id)
         response = JsonResponse({**result, "request_id": request_id})

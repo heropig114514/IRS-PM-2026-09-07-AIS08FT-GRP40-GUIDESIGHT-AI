@@ -1,6 +1,9 @@
-/** Responsibilities: 用显式 socket mock 验证浏览器回传契约与取消行为。
- * Implementation: 原客户端逻辑配合受控事件，网络与摄像头完全未访问。
- * Related Modules: echo-client.js；公网联调独立执行。
+/** Responsibilities: Verify browser echo contracts and cancellation with an explicit socket mock.
+ * Implementation: Exercise the actual client with controlled events; no network or camera is accessed.
+ * Related Modules: echo-client.js; public-service integration is tested separately.
+ * Declaration Index: MockSocket; MockSocket.constructor/send/close/open/message; fixture;
+ * fixture.Socket; fixture.onError; testBinary; testMismatch; testPing; testConcurrent; testStop; testTimeout.
+ * Variable Index: None; all socket state and error collections are test-local.
  * Declaration Index: FakeSocket; FakeSocket.constructor; FakeSocket.send; FakeSocket.close;
  * FakeSocket.open; FakeSocket.receive; makeSession; makeSession.createSocket; makeSession.onDisconnect;
  * testBinary; testMismatch; testPing; testConcurrent; testConcurrent.sendConcurrentPing; testStop; testTimeout。
@@ -9,53 +12,54 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EchoClient } from "../echo-client.js";
 
-/** Functionality: 显式网络替身。Logic: 仅保存发送数据和控制事件。
- * Constraints: 不等同真实 WebSocket，也不模拟浏览器权限。 */
+/** Functionality: Explicit network fixture. Logic: Store sent data and controlled events only.
+ * Constraints: Not a real WebSocket and does not simulate browser permissions. */
 class FakeSocket {
-  /** Functionality: 初始化。Inputs: None。Outputs: 实例。
-   * Logic: CONNECTING 状态；Constraints: 无网络请求。 */
+  /** Functionality: Initialize the socket fixture. Inputs: None. Outputs: Instance.
+   * Logic: Start in CONNECTING state. Constraints: No network request. */
   constructor() {
     this.readyState = 0;
     this.sent = [];
     this.closed = [];
   }
-  /** Functionality: 保存消息。Inputs: data。Outputs: 无。
-   * Logic: 记录引用；Constraints: 不传到服务器。 */
+  /** Functionality: Store a message. Inputs: data. Outputs: None.
+   * Logic: Record the reference. Constraints: Do not send it to a server. */
   send(data) {
     this.sent.push(data);
   }
-  /** Functionality: 模拟关闭。Inputs: code、reason。Outputs: 保存关闭状态。
-   * Logic: 不自动触发 onclose，以便分开测试错误通知；Constraints: 无网络副作用。 */
+  /** Functionality: Simulate close. Inputs: code and reason. Outputs: Stored close state.
+   * Logic: Do not trigger onclose automatically so error notification can be tested separately.
+   * Constraints: No network side effects. */
   close(code, reason) {
     this.readyState = 3;
     this.closed.push({ code, reason });
   }
-  /** Functionality: 触发连接事件。Inputs: None。Outputs: onopen。
-   * Logic: 状态变为 OPEN；Constraints: 由测试显式调用。 */
+  /** Functionality: Trigger the open event. Inputs: None. Outputs: onopen.
+   * Logic: Set state to OPEN. Constraints: Called explicitly by the test. */
   open() {
     this.readyState = 1;
     this.onopen();
   }
-  /** Functionality: 触发回传。Inputs: data。Outputs: onmessage。
-   * Logic: 保留输入类型；Constraints: 无协议编码模拟。 */
+  /** Functionality: Trigger an echoed message. Inputs: data. Outputs: onmessage.
+   * Logic: Preserve the input type. Constraints: Does not simulate protocol encoding. */
   receive(data) {
     this.onmessage({ data });
   }
 }
 
-/** Functionality: 构造已打开的客户端。Inputs: None。Outputs: client/socket/errors。
- * Logic: 注入可控 socket 与错误收集；Constraints: 不使用原生 WebSocket。 */
+/** Functionality: Build an opened client. Inputs: None. Outputs: client/socket/errors.
+ * Logic: Inject a controlled socket and error collection. Constraints: Does not use native WebSocket. */
 async function makeSession() {
   const socket = new FakeSocket();
   const errors = [];
-  /** Functionality: 提供唯一替身。Inputs: url。Outputs: socket。
-   * Logic: 确认调用目标；Constraints: 无自动连接。 */
+  /** Functionality: Provide the sole socket fixture. Inputs: url. Outputs: Socket.
+   * Logic: Record the connection target. Constraints: No automatic connection. */
   function createSocket(url) {
     assert.equal(url, "ws://test/ws/echo/");
     return socket;
   }
-  /** Functionality: 收集断线通知。Inputs: error。Outputs: errors 更新。
-   * Logic: 保存异常引用；Constraints: 不吞掉被测 Promise 的拒绝。 */
+  /** Functionality: Collect disconnect notifications. Inputs: error. Outputs: Updated errors.
+   * Logic: Save the error reference. Constraints: Do not swallow the tested Promise rejection. */
   function onDisconnect(error) {
     errors.push(error);
   }
@@ -70,8 +74,8 @@ async function makeSession() {
   return { client, socket, errors };
 }
 
-test("二进制回传逐字节一致" /** Functionality: 校验实际字节比较。Inputs: mock 会话。
- * Outputs: 断言 Promise 数据；Logic: 注入相同内容；Constraints: 无真实网络。 */, async function testBinary() {
+test("Binary echo matches byte for byte" /** Functionality: Verify actual byte comparison. Inputs: Mock session.
+ * Outputs: Promise data assertions. Logic: Inject identical content. Constraints: No real network. */, async function testBinary() {
   const { client, socket } = await makeSession();
   const bytes = new Uint8Array([0, 255, 17, 24]).buffer;
   const result = client.sendFrame(bytes);
@@ -79,9 +83,9 @@ test("二进制回传逐字节一致" /** Functionality: 校验实际字节比�
   assert.deepEqual(new Uint8Array((await result).bytes), new Uint8Array(bytes));
   client.stop();
 });
-test("不同内容失败且只通知一次" /** Functionality: 检查相同长度内容不一致。
- * Inputs: mock 响应。Outputs: 拒绝及关闭断言；Logic: 修改一个字节。
- * Constraints: 不把错误回传当作成功图像。 */, async function testMismatch() {
+test("Different content fails and notifies once" /** Functionality: Check mismatch for content of equal length.
+ * Inputs: Mock response. Outputs: Rejection and close assertions. Logic: Change one byte.
+ * Constraints: Do not treat an erroneous echo as a successful image. */, async function testMismatch() {
   const { client, socket, errors } = await makeSession();
   const result = client.sendFrame(new Uint8Array([1, 2]).buffer);
   socket.receive(new Uint8Array([1, 3]).buffer);
@@ -91,22 +95,22 @@ test("不同内容失败且只通知一次" /** Functionality: 检查相同长�
   assert.equal(socket.closed[0].code, 4000);
   client.stop();
 });
-test("pong 标识不匹配明确失败" /** Functionality: 校验 ping id 边界。
- * Inputs: mock 和错误 id。Outputs: 拒绝断言；Logic: 假 pong 不能完成请求。
- * Constraints: 不测量真实网络延迟。 */, async function testPing() {
+test("Mismatched pong identifier fails explicitly" /** Functionality: Verify the ping ID boundary.
+ * Inputs: Mock and incorrect ID. Outputs: Rejection assertion. Logic: A false pong cannot complete the request.
+ * Constraints: Does not measure real network latency. */, async function testPing() {
   const { client, socket } = await makeSession();
   const result = client.ping();
   socket.receive(JSON.stringify({ type: "pong", id: "wrong" }));
   await assert.rejects(result, /标识不匹配/);
   client.stop();
 });
-test("禁止并发在途请求" /** Functionality: 验证单帧背压。
- * Inputs: 在途帧与 ping。Outputs: 同步拒绝断言；Logic: 第一帧仍可正确完成。
- * Constraints: mock 不能证明真实带宽占用。 */, async function testConcurrent() {
+test("Reject concurrent in-flight requests" /** Functionality: Verify single-frame backpressure.
+ * Inputs: In-flight frame and ping. Outputs: Synchronous rejection; the first frame can still complete.
+ * Constraints: Mock does not prove real bandwidth usage. */, async function testConcurrent() {
   const { client, socket } = await makeSession();
   const bytes = new Uint8Array([7]).buffer;
-  /** Functionality: 尝试并发 ping。Inputs: 已有在途帧的 client。Outputs: 原同步错误。
-   * Logic: 直接调用被测 ping；Constraints: 不替换客户端状态。 */
+  /** Functionality: Attempt a concurrent ping. Inputs: Client with an in-flight frame. Outputs: Original synchronous error.
+   * Logic: Call the tested ping directly. Constraints: Do not replace client state. */
   function sendConcurrentPing() {
     client.ping();
   }
@@ -116,9 +120,9 @@ test("禁止并发在途请求" /** Functionality: 验证单帧背压。
   await result;
   client.stop();
 });
-test("停止取消请求并关闭连接" /** Functionality: 验证用户停止语义。
- * Inputs: mock 在途帧。Outputs: 取消拒绝及 1000 关闭。
- * Logic: 主动停止不会发布断线错误；Constraints: 不验证真实设备轨道。 */, async function testStop() {
+test("Stop cancels the request and closes the connection" /** Functionality: Verify user-stop semantics.
+ * Inputs: Mock in-flight frame. Outputs: Cancellation rejection and close code 1000.
+ * Logic: Explicit stop does not publish a disconnect error. Constraints: Does not verify real device tracks. */, async function testStop() {
   const { client, socket, errors } = await makeSession();
   const result = client.sendFrame(new Uint8Array([7]).buffer);
   client.stop();
@@ -127,9 +131,9 @@ test("停止取消请求并关闭连接" /** Functionality: 验证用户停止�
   assert.equal(errors.length, 0);
   assert.equal(client.pending, null);
 });
-test("超时处理器停止而不重试" /** Functionality: 检查超时故障语义。
- * Inputs: mock 在途 ping 和显式计时器回调。Outputs: 拒绝及一次发送断言。
- * Logic: 调用实际超时处理器；Constraints: 不验证 10 秒真实时钟调度。 */, async function testTimeout() {
+test("Timeout handler stops without retrying" /** Functionality: Check timeout failure semantics.
+ * Inputs: Mock in-flight ping and explicit timer callback. Outputs: Rejection and one-send assertion.
+ * Logic: Call the actual timeout handler. Constraints: Does not verify a real 10-second timer. */, async function testTimeout() {
   const { client, socket } = await makeSession();
   const result = client.ping();
   client.handleTimeout();

@@ -1,64 +1,44 @@
-# TTC 与可解释风险评分
+# TTC and Interpretable Risk Scoring
 
-链路：原检测 → BoT-SORT → 原米制深度/ROI 融合 → 原 TrackHistory 运动估计 →
-`realtime.risk.enrich_object_risk()` → 标注/PRS1。新增阶段无状态，不增加第二套轨迹历史，
-不改变 YOLO、深度、BoT-SORT、EMA、回归、置信度或 NMS。没有新增模型、依赖、TTS、导航。
+Pipeline: original detection → BoT-SORT → original metric-depth/ROI fusion → original TrackHistory motion estimate → `realtime.risk.enrich_object_risk()` → annotation/PRS1. The added stage is stateless and adds no second track history. It does not change YOLO, depth, BoT-SORT, EMA, regression, confidence, or NMS. No model, dependency, TTS, or navigation feature is added.
 
 ## TTC
 
-`estimate_ttc(smoothed_distance_m, relative_speed_mps, motion_state)` 返回秒或 `None`。
-仅当距离为有限正数、速度有限且为负、状态为 `approaching`、接近速度
-`abs(speed) >= min_closing_speed_mps` 时计算 `TTC = smoothed_distance_m / abs(speed)`。
-默认最低接近速度0.20 m/s，包含等号。距离/速度的 None、NaN、Inf、布尔值、字符串、
-非正距离以及其他运动状态均不产生有限 TTC；速度为0或正数也不产生 TTC。
+`estimate_ttc(smoothed_distance_m, relative_speed_mps, motion_state)` returns seconds or `None`. TTC is calculated as `smoothed_distance_m / abs(speed)` only when distance is finite and positive, speed is finite and negative, state is `approaching`, and closing speed satisfies `abs(speed) >= min_closing_speed_mps`. The default minimum closing speed is 0.20 m/s, inclusive. `None`, NaN, Inf, booleans, strings, non-positive distance, other motion states, and zero or positive speed do not produce finite TTC.
 
-超过默认10秒评估窗口的 TTC **保留原数值**，TTC 分项为0，理由包含
-`ttc_beyond_horizon`；并不强制把其余距离/运动/方向/类别风险改为低。
-当前帧原始深度无效、平滑深度缺失或 ID 未确认时输出 `ttc_sec: null`、
-`risk_score: null`、`risk_level: unknown`、无告警。短暂缺深度仍保留原 TrackHistory
-的运动估计，评分阶段不重置历史，也不把缓存距离当作当前测量。
+TTC values beyond the default 10-second evaluation horizon are **retained unchanged**, while the TTC component is 0 and the reasons include `ttc_beyond_horizon`; other distance/motion/direction/class risk is not forcibly lowered. If the current raw depth is invalid, smoothed depth is absent, or the ID is unconfirmed, output `ttc_sec: null`, `risk_score: null`, `risk_level: unknown`, and no alert. A brief depth gap retains the existing TrackHistory motion estimate; scoring neither resets history nor treats a cached distance as a current measurement.
 
-## 规则及全部默认值
+## Rules and All Defaults
 
-`RiskConfig` 在 `realtime/risk.py` 集中定义。配置只在启动/CLI 初始化时读取一次。
-分数：`clamp(distance + motion + TTC + direction + class, 0, 100)`；每个数值只选一个
-所属分段，不累计多个距离/TTC段。分数是规则权重之和，**不是事故概率**。
-`RiskAssessment.components` 保留五个分项供 Python 调试；协议输出 `risk_reasons`，
-避免每框再携带一个分项字典。相同输入/配置得到相同结果。
+`RiskConfig` is defined centrally in `realtime/risk.py`. Configuration is read once during startup/CLI initialization. Score: `clamp(distance + motion + TTC + direction + class, 0, 100)`. Each value contributes only its matching band; multiple distance/TTC bands are not accumulated. The score is a sum of rule weights, **not an accident probability**. `RiskAssessment.components` retains the five components for Python debugging; the protocol emits `risk_reasons` instead of including a component dictionary for every box. Identical inputs/configuration produce identical results.
 
-| 参数/分项 | 默认阈值与权重 |
+| Parameter/component | Default thresholds and weights |
 |---|---|
-| `min_closing_speed_mps` | 0.20 m/s，接近速度 ≥ 此值才计算 TTC/接近加分 |
-| `max_ttc_sec` | 10.0秒，超过此值 TTC 分项为0 |
+| `min_closing_speed_mps` | 0.20 m/s; TTC/approach bonus applies at or above this closing speed |
+| `max_ttc_sec` | 10.0 seconds; TTC component is 0 above this value |
 | `distance_bands` | (0,1.5]m→40；(1.5,3]→25；(3,5]→15；(5,10]→5；>10→0 |
 | `ttc_bands` | (0,1.5]s→40；(1.5,3]→30；(3,5]→15；(5,8]→5；>8→0 |
 | `motion_weights` | approaching→15；moving_away→−10；stationary→0；unknown→0 |
-| `closing_speed_bands` | 接近速度 ≥1m/s额外+5；≥2m/s额外+10；仅取最高满足段 |
+| `closing_speed_bands` | +5 at closing speed ≥1 m/s; +10 at ≥2 m/s; use only the highest matching band |
 | `direction_weights` | front→10；front_left/front_right→7；left/right→3；behind/unknown→0 |
 | `class_weights` | truck/bus→18；car/motorcycle→15；bicycle/scooter→12 |
-| 同一类别表的中等权重 | person/animal/bird/cat/dog/horse/sheep/cow/elephant/bear/zebra/giraffe→5 |
-| 同一类别表的低权重 | bench/chair/stop sign/fire hydrant/pole/sign→1 |
-| `default_class_weight` | 未列入类别→5，类别本身不会单独触发告警 |
-| `risk_level_thresholds` | medium≥25；high≥50；critical≥75；其余已知分数为low |
-| `alert_priorities` | low/unknown→0；medium→2；high→3；critical→4；1保留为normal |
-| `medium_alert_enabled` | true；medium仅在接近速度有效、平滑距离≤3m且为前方区域时告警 |
-| `medium_alert_max_distance_m` | 3.0m，包含等号 |
+| Medium weights from the same class table | person/animal/bird/cat/dog/horse/sheep/cow/elephant/bear/zebra/giraffe → 5 |
+| Low weights from the same class table | bench/chair/stop sign/fire hydrant/pole/sign → 1 |
+| `default_class_weight` | 5 for unlisted classes; class alone never triggers an alert |
+| `risk_level_thresholds` | medium ≥25; high ≥50; critical ≥75; other known scores are low |
+| `alert_priorities` | low/unknown → 0; medium → 2; high → 3; critical → 4; 1 is reserved for normal |
+| `medium_alert_enabled` | true; medium alerts require valid closing speed, smoothed distance ≤3 m, and a front region |
+| `medium_alert_max_distance_m` | 3.0 m, inclusive |
 | `medium_alert_directions` | front、front_left、front_right |
-| `front_left_fraction` / `front_right_fraction` | 1/3、2/3；框中心在两界之间及边界上为front |
+| `front_left_fraction` / `front_right_fraction` | 1/3 and 2/3; a box center between or on the boundaries is front |
 
-low/unknown 不告警，high/critical 告警；未触发告警的 medium 优先级也是0。
-运动分类滞回期间标签与当前速度符号可能暂时不同：`approaching` 必须满足有效负速度
-才获得接近加分；`moving_away` 必须满足有效正速度才减分。未知运动不会因运动单独加分，
-但近距离仍可能高风险。提供的 TTC 若不符合当前公式或资格，不贡献 TTC 分项，并记录
-`ttc_inconsistent`，避免不一致的输入制造紧急程度。
+Low/unknown does not alert; high/critical does. Medium priority is also 0 unless its alert condition is met. During motion-classification hysteresis, a label may temporarily disagree with the current speed sign: `approaching` receives its bonus only with valid negative speed, and `moving_away` receives a reduction only with valid positive speed. Unknown motion earns no motion-only bonus, though short distance can still be high risk. A supplied TTC that does not satisfy the current formula or eligibility contributes nothing to the TTC component and adds `ttc_inconsistent`, preventing inconsistent input from creating urgency.
 
-优先复用已有合法 `direction`；否则根据原始框中心的水平位置导出
-front_left/front/front_right。框先夹到帧边界，非法几何输出unknown。
-这个方向是**相对相机视野**，没有已知行走方向或路径交叉判断。框尺寸只用于方向，不用于测距。
+Reuse an existing valid `direction` when available; otherwise derive `front_left`, `front`, or `front_right` from the original box center's horizontal position. Clamp the box to frame boundaries first; invalid geometry yields `unknown`. Direction is **relative to the camera view**; walking direction and path intersection are not known. Box size is used only for direction, not distance.
 
-## 配置及运行
+## Configuration and Use
 
-可直接调用 `RiskConfig(...)`，或使用 JSON。下面是部分覆盖示例，并非自动应用的实验参数：
+Call `RiskConfig(...)` directly or use JSON. The following partial-override example is not an experiment configuration applied automatically:
 
 ```json
 {
@@ -74,38 +54,30 @@ front_left/front/front_right。框先夹到帧边界，非法几何输出unknown
 }
 ```
 
-JSON 名称表（`class_weights/direction_weights/motion_weights/alert_priorities`）按键覆盖
-默认值，未指定的键保留；分段数组、级别阈值及方向列表整表替换。错误字段/数值/排序/文件
-明确报错，不自动修复、重试或继续用默认文件。TTC评分最大分段不能超过评估窗口。
+JSON name maps (`class_weights/direction_weights/motion_weights/alert_priorities`) override defaults by key; unspecified keys retain their defaults. Band arrays, level thresholds, and direction lists replace their entire defaults. Invalid fields/values/order/files fail explicitly; they are not repaired, retried, or replaced with a default file. The maximum TTC scoring band must not exceed the evaluation horizon.
 
-从 `backend` 执行：
+Run the following commands from `backend`:
 
 ```powershell
-# 本地规则/融合/协议自动化测试；需要按 README 配置 DJANGO_SECRET_KEY
+# Local rule/fusion/protocol tests; configure DJANGO_SECRET_KEY as described in README.
 .\.venv\Scripts\python.exe -X utf8 manage.py test model_tests.test_risk model_tests.test_tracking
 
-# 实际双模型+跟踪+TTC/风险；输出必须是新目录
+# Real dual-model inference, tracking, TTC, and risk; output must use a new directory.
 .\.venv\Scripts\python.exe -X utf8 -m model_tests.run_depth --track --repeat 6 --output model_tests/outputs/risk-run-1
 
-# 可选：自行保存上面的配置，或提供自己的显式参数
+# Optional: save the configuration above or provide explicit parameters of your own.
 .\.venv\Scripts\python.exe -X utf8 -m model_tests.run_depth --track --input model_tests/datasets/sequence-frames --risk-config model_tests/risk.json --output model_tests/outputs/risk-sequence-1
 ```
 
-重复静态图只能测试字段/ID/静止，不会产生可信的接近 TTC。CLI 使用本机推理开始时间，
-目录图像与原视频时间不同，不能据此评估真实视频速度/TTC。带时间戳的调用方可用
-`detector.predict(jpeg, timestamp=source_seconds)` 提供同一序列递增源时间；此任务未更改采集协议。
-实时原默认跟踪路径自动计算风险；独立照片测试默认关闭跟踪及风险。
-CLI 把有效配置完整写入 `run.json.settings.risk`，字段保存在 `results.jsonl.metadata.boxes`。
+Repeated static images can test fields/IDs/stationarity only; they do not produce credible approach TTC. The CLI uses local inference-start time. Directory-image timing differs from original video time and cannot establish real-video speed/TTC. Timestamped callers can pass increasing source times for the same sequence through `detector.predict(jpeg, timestamp=source_seconds)`; this work did not change the capture protocol. The original real-time tracking path computes risk automatically; independent photo tests disable tracking and risk by default. The CLI writes the full effective configuration to `run.json.settings.risk` and stores fields in `results.jsonl.metadata.boxes`.
 
-HF 可设置 `PRS_RISK_CONFIG=models/risk.json`（路径相对 Space 根目录），不设置则使用默认。
-自定义文件需自行提供，源码打包不上传用户配置或模型；这里只维护源码 allowlist，未发布。
-HF根进程加载不可变配置，allocation内传给检测器；实际轨迹仍只属于现有 ObjectTracker。
+HF can set `PRS_RISK_CONFIG=models/risk.json` (path relative to the Space root); otherwise defaults are used. Users must provide custom files themselves. Source packaging does not upload user configuration or models; this change updates only the source allowlist and was not released. The HF root process loads immutable configuration and passes it to the detector within an allocation; actual tracks remain owned by the existing ObjectTracker.
 
-## 输出示例
+## Output Examples
 
-以下距离均指传给规则的有效平滑米数，方向均为front；实际输出还保留原框/类别/置信度等字段。
+All distances below are valid smoothed meters passed to the rules, and all directions are `front`; actual output also retains the original box/class/confidence fields.
 
-| 对象 | 距离/运动/速度 | TTC | 分数/级别 | 告警/优先级 |
+| Object | Distance/motion/speed | TTC | Score/level | Alert/priority |
 |---|---|---|---|---|
 | person | 20m / stationary / 0m/s | null | 15 / low | false / 0 |
 | car | 5m / moving_away / +1m/s | null | 30 / medium | false / 0 |
@@ -123,46 +95,21 @@ HF根进程加载不可变配置，allocation内传给检测器；实际轨迹�
 }
 ```
 
-高/紧急标签：`ID 7 | bicycle | 2.1m | approaching | TTC 1.8s | CRITICAL`。
-近距静止高风险显示 `TTC N/A`。low/medium/unknown保留原普通标签，不新增面板或播报。
-帧元数据新增 `risk_model: rules-v1` 和独立 `risk_ms`，后者不包括模型、跟踪、绘制及传输。
-旧字段保持，前端继续接受没有风险字段的旧包；新版风险字段需完整成组，非法结果明确拒绝。
-元数据仍256KiB、JPEG仍1MiB；完整300目标带风险理由的精度保留测试覆盖此边界。
+High/critical label: `ID 7 | bicycle | 2.1m | approaching | TTC 1.8s | CRITICAL`. Short-distance stationary high risk displays `TTC N/A`. Low/medium/unknown retain the original ordinary label; no new panel or announcement is added. Frame metadata adds `risk_model: rules-v1` and a separate `risk_ms`, which excludes model, tracking, rendering, and transport time. Existing fields remain, and the frontend continues to accept old packets without risk fields. New risk fields must be provided as a complete group; invalid results are rejected explicitly. Metadata remains limited to 256 KiB and JPEG to 1 MiB; tests retain coverage of the full 300-target case with risk reasons.
 
-## 检查与限制
+## Checks and Limitations
 
-测试覆盖 TTC有效/无效输入、最低速度、10秒窗口、距离/TTC/分数各边界、A–G风险场景、
-速度加分、可选medium告警、配置错误、框方向、已有字段不变、真实TrackHistory融合、
-真实BoT-SORT原predict集成、缺深度缓存策略、标注、300目标协议及worker/CLI配置复用。
-本轮实际通过142项后端测试（含18项新增风险测试）、70项前端测试（含3项新增风险协议测试），
-以及 `manage.py check`、`makemigrations --check --dry-run`、`ruff check .`、
-`git diff --check`；迁移无变化，真实SDK跟踪测试没有跳过。Django检查用当前进程临时测试密钥，
-未改配置文件。变更代码的注释、声明/变量索引已人工复核，未引入文档检查脚本。
+Tests cover valid/invalid TTC inputs, minimum speed, the 10-second horizon, distance/TTC/score boundaries, risk scenarios A–G, speed bonuses, optional medium alerts, configuration errors, box direction, preservation of existing fields, real TrackHistory fusion, integration with the real BoT-SORT `predict`, missing-depth cache behavior, annotation, the 300-target protocol, and worker/CLI configuration reuse. This recorded run passed 142 backend tests (including 18 new risk tests), 70 frontend tests (including 3 new risk-protocol tests), `manage.py check`, `makemigrations --check --dry-run`, `ruff check .`, and `git diff --check`. No migrations were created, and real-SDK tracking tests were not skipped. Django checks used a temporary test key in the current process; no configuration file was changed. Comments and declaration/variable indexes in changed code were manually reviewed; no documentation checker was introduced.
 
-实际本地RTX3060双模型运行 `model_tests/outputs/risk-smoke-20261010/` 完成6帧、每帧5目标，
-ID全程稳定，原检测哈希/框及原始深度与 `outputs/bus-run-2` 完全一致。
-最终5目标均stationary，TTC均null，风险27/33/30/27/27（medium），均不告警。
-5目标 `risk_ms` 范围0.146至0.452ms，中位0.233ms；新阶段只处理已有CPU标量，
-没有GPU推理、CPU/GPU数据搬运或模型加载。标注/编码/JSON传输开销未计入该计时。
+The real local RTX 3060 dual-model run in `model_tests/outputs/risk-smoke-20261010/` processed 6 frames with 5 targets per frame. IDs remained stable; original detection hashes/boxes and raw depth exactly matched `outputs/bus-run-2`. All five final targets were stationary, all TTC values were null, risk scores were 27/33/30/27/27 (medium), and none generated alerts. For five targets, `risk_ms` ranged from 0.146 to 0.452 ms with a 0.233 ms median. The new stage processes existing CPU scalars only; it performs no GPU inference, CPU/GPU transfer, or model loading. Annotation/encoding/JSON transport overhead is excluded from that timing.
 
-同机纯CPU规则微测，每组1000次：100目标平均0.844ms/帧，300目标平均4.165ms/帧；
-输入为有效接近状态的合成数据，无模型/跟踪/绘制。这些是本机测量，不代表HF、
-手机端到端延迟或长期FPS。证据见
+On the same machine, a pure-CPU rules microbenchmark ran 1,000 iterations per group: 100 targets averaged 0.844 ms/frame and 300 targets averaged 4.165 ms/frame. Inputs were synthetic with valid approaching state; there was no model, tracking, or rendering. These are local measurements and do not represent HF, end-to-end phone latency, or sustained FPS. Evidence:
 [local-validation.json](benchmarks/2026-10-10/risk/local-validation.json)。
-真实手持视频、HF/PRS外部运行及距离/速度/TTC/风险真值准确率未验证；未提交或部署。
+Real handheld video, external HF/PRS operation, and ground-truth accuracy for distance/speed/TTC/risk were not verified; this work was not committed or deployed.
 
-米制单目深度存在误差，深度输出沿相机轴，不是所有物体的欧氏径向距离。相机运动也会
-造成距离变化；BoT-SORT的GMC仅补偿关联，没有把速度变成世界速度。TTC假设当前接近速度
-恒定，代表外推到零深度的时间，不证明物体将与用户路径相交。EMA/历史回归/滞回存在延迟，
-且当前实时使用处理开始时间而非硬件采集时间。风险规则尚未用真实带真值场景校准，
-无有效输入的unknown不表示安全；此阶段不新增跨帧风险滞回、提醒节流、遮挡预测或TTS。
+Monocular metric depth has error; depth is measured along the camera axis and is not Euclidean radial distance for every object. Camera motion also changes measured distance; BoT-SORT GMC compensates association only and does not convert speed into world velocity. TTC assumes constant current closing speed and represents extrapolated time to zero depth; it does not prove an object will intersect the user's path. EMA/history regression/hysteresis introduce delay, and the current real-time path uses processing-start time rather than hardware capture time. Risk rules have not been calibrated with real ground-truth scenes. `unknown` due to invalid input does not mean safe. This stage adds no cross-frame risk hysteresis, alert throttling, occlusion prediction, or TTS.
 
-本轮新增：`realtime/risk.py`、`model_tests/test_risk.py`、`RISK.md`。
-本轮修改：`realtime/detector.py`、`core/detector.py`、`zerogpu/live_worker.py`、`zerogpu/app.py`、
-`tools/deploy_space.py`、`tools/deploy_phone_live.py`、`model_tests/run_depth.py`、
-`model_tests/test_tracking.py`、`model_tests/README.md`、`TRACKING.md`、`README.md`、
-`PHONE-LIVE.md`、`zerogpu/README.md`、`../frontend/live-detection-client.js`、
-`../frontend/tests/live-detection-client.test.mjs`、`../frontend/README.md`。
-新增验证证据：`benchmarks/2026-10-10/risk/local-validation.json`。
-实际生成但Git忽略的文件：`model_tests/outputs/risk-smoke-20261010/run.json`、
-`results.jsonl`、6张标注JPEG及旁边的 `risk-smoke-20261010-console.log`。
+Added in this work: `realtime/risk.py`, `model_tests/test_risk.py`, and `RISK.md`.
+Modified in this work: `realtime/detector.py`, `core/detector.py`, `zerogpu/live_worker.py`, `zerogpu/app.py`, `tools/deploy_space.py`, `tools/deploy_phone_live.py`, `model_tests/run_depth.py`, `model_tests/test_tracking.py`, `model_tests/README.md`, `TRACKING.md`, `README.md`, `PHONE-LIVE.md`, `zerogpu/README.md`, `../frontend/live-detection-client.js`, `../frontend/tests/live-detection-client.test.mjs`, and `../frontend/README.md`.
+Additional validation evidence: `benchmarks/2026-10-10/risk/local-validation.json`.
+Files generated locally but ignored by Git: `model_tests/outputs/risk-smoke-20261010/run.json`, `results.jsonl`, six annotated JPEGs, and the adjacent `risk-smoke-20261010-console.log`.

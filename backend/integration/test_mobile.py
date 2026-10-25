@@ -448,8 +448,8 @@ class MobileTests(SimpleTestCase):
 
     async def test_real_assist_template(self):
         """Functionality: Verify actual combined HTML uses one mount-relative module graph.
-        Inputs: original assist renderer through the public wrapper. Outputs: nonce/permissions/SRI
-        and URL assertions.
+        Inputs: original assist renderer through the public wrapper. Outputs: nonce, product-only
+        same-origin microphone policy, SRI and URL assertions.
         Logic: resolve real script/link paths as the phone does; Constraints: no CDN/browser/TLS
         execution.
         """
@@ -467,9 +467,9 @@ class MobileTests(SimpleTestCase):
                 nonce = re.search(rb'<style nonce="([^"]+)"', body).group(1)
                 self.assertIn(b"'nonce-" + nonce + b"'", headers[b"content-security-policy"])
             self.assertEqual(body.count(b'integrity="sha256-'), 2)
-            self.assertEqual(
-                headers[b"permissions-policy"], b"geolocation=(self), camera=(self), microphone=()"
-            )
+            microphone_policy = b"microphone=(self)" if view == "product" else b"microphone=()"
+            self.assertEqual(headers[b"permissions-policy"],
+                             b"geolocation=(self), camera=(self), " + microphone_policy)
             scripts = re.findall(rb'<script[^>]+src="([^"]+)"', body)
             for script in scripts:
                 if not script.startswith(b"https://"):

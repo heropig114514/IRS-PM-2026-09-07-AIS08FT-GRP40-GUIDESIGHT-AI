@@ -183,7 +183,7 @@ class DescribeImageCliTests(SimpleTestCase):
         self.assertTrue(all(isinstance(row["elapsed_ms"], int) for row in rows))
         for path in output.iterdir():
             self.assertNotIn(KEY, path.read_text(encoding="utf-8"))
-        # 已存在的输出目录第二次必须被拒绝
+        # A second run must reject an output directory that already exists.
         with self.assertRaises(SystemExit):
             self.invoke(self.tmp / "in", "--output", output)
 

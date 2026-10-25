@@ -23,7 +23,7 @@ function initial() {
  * Logic: named mobile controls, hidden diagnostics. Constraints: never substitutes actual screenshots. */
 function surface() {
   return {horizontal_overflow: 0, duplicate_ids: [], unnamed_controls: [], small_touch_controls: [], visible_test_controls: [],
-    visible_test_text: [], diagnostic_link: "/mvp/maps/test"};
+    visible_test_text: [], voice_hold_label: "按住说话", diagnostic_link: null};
 }
 
 /* Functionality: Reject authentication scope expansion. Inputs: synthetic URL/paths.
@@ -70,22 +70,27 @@ test("default output controls, camera source and original speech parameters rema
     assert.throws(() => verifyInitial({...initial(), ...changed}), /PRODUCT_DEFAULTS_INVALID/);
 });
 
-/* Functionality: Ensure diagnostic separation can fail acceptance. Inputs: visible test control/text.
+/* Functionality: Require press-to-talk and ensure diagnostic links/text are absent. Inputs: visible surface evidence.
  * Outputs: rejection. Logic: one independent exposure each. Constraints: synthetic DOM evidence only. */
-test("product surface rejects visible testing controls or diagnostic text", function testDiagnostics() {
-  assert.equal(verifyProductSurface(surface()).diagnostic_link, "/mvp/maps/test");
-  for (const changed of [{visible_test_controls: ["speech-play"]}, {visible_test_text: ["PRF2"]}])
+test("product surface requires press-to-talk and hides diagnostic links and text", function testDiagnostics() {
+  assert.equal(verifyProductSurface(surface()).diagnostic_link, null);
+  for (const changed of [{visible_test_controls: ["speech-play"]}, {visible_test_controls: ["example"]},
+    {visible_test_text: ["PRF2"]}, {visible_test_text: ["Live camera"]},
+    {visible_test_text: ["Navigation not started"]}, {visible_test_text: ["No reliable navigation progress"]},
+    {visible_test_text: ["Waiting for turn guidance"]}, {visible_test_text: ["Find a route to start navigation."]}])
     assert.throws(() => verifyProductSurface({...surface(), ...changed}), /PRODUCT_DIAGNOSTICS_EXPOSED/);
+  assert.throws(() => verifyProductSurface({...surface(), voice_hold_label: null}), /PRODUCT_HOLD_CONTROL_MISSING/);
+  assert.throws(() => verifyProductSurface({...surface(), diagnostic_link: "/mvp/maps/test"}), /PRODUCT_DIAGNOSTIC_LINK_EXPOSED/);
 });
 
-/* Functionality: Reject inaccessible or ambiguous product surfaces. Inputs: broken layout/binding/name/link.
+/* Functionality: Reject inaccessible or ambiguous product surfaces. Inputs: broken layout, binding, name or PTT control.
  * Outputs: rejection. Logic: distinct accessibility gates. Constraints: actual layout still requires browser. */
-test("mobile overflow, missing labels, duplicate bindings and absent diagnostic link fail", function testAccessibility() {
+test("mobile overflow, missing labels, duplicate bindings and absent voice control fail", function testAccessibility() {
   assert.throws(() => verifyProductSurface({...surface(), horizontal_overflow: 20}), /PRODUCT_LAYOUT_INVALID/);
   assert.throws(() => verifyProductSurface({...surface(), duplicate_ids: ["start"]}), /PRODUCT_LAYOUT_INVALID/);
   assert.throws(() => verifyProductSurface({...surface(), unnamed_controls: ["language"]}), /PRODUCT_CONTROL_LABEL_MISSING/);
   assert.throws(() => verifyProductSurface({...surface(), small_touch_controls: ["start"]}), /PRODUCT_TOUCH_TARGET_TOO_SMALL/);
-  assert.throws(() => verifyProductSurface({...surface(), diagnostic_link: null}), /PRODUCT_DIAGNOSTIC_LINK_MISSING/);
+  assert.throws(() => verifyProductSurface({...surface(), voice_hold_label: ""}), /PRODUCT_HOLD_CONTROL_MISSING/);
 });
 
 /* Functionality: Reject duplicate acquisition and relaxed or microphone-enabled camera requests.
@@ -99,14 +104,14 @@ test("product camera requires one real-click exact rear request without audio or
     assert.throws(() => verifyCameraRequest(value), /PRODUCT_REAR_CAMERA_REQUEST_INVALID/);
 });
 
-/* Functionality: Prevent hidden or unrendered previews from passing product acceptance.
- * Inputs: synthetic media evidence. Outputs: rejection per missing signal. Logic: visibility plus decode.
+/* Functionality: Require a hidden capture source and visible decoded detection result.
+ * Inputs: synthetic media evidence. Outputs: rejection per missing signal. Logic: capture state plus decode.
  * Constraints: a valid fixture is not a claim about model accuracy or actual device frames. */
-test("product preview needs playing raw video and visible decoded returned image", function testCameraDisplay() {
-  const value = {preview_visible: true, preview_playing: true, preview_width: 640, preview_height: 480,
+test("product shows detection results while the playing capture source stays hidden", function testCameraDisplay() {
+  const value = {preview_hidden: true, preview_playing: true, preview_width: 640, preview_height: 480,
     result_visible: true, result_decoded: true, result_width: 640, result_height: 480, result_blob: true, frames: 1};
   assert.equal(verifyCameraDisplay(value), value);
-  for (const field of ["preview_visible", "preview_playing", "result_visible", "result_decoded", "result_blob"])
+  for (const field of ["preview_hidden", "preview_playing", "result_visible", "result_decoded", "result_blob"])
     assert.throws(() => verifyCameraDisplay({...value, [field]: false}), /PRODUCT_CAMERA_DISPLAY_INVALID/);
   for (const field of ["preview_width", "preview_height", "result_width", "result_height", "frames"])
     assert.throws(() => verifyCameraDisplay({...value, [field]: 0}), /PRODUCT_CAMERA_DISPLAY_INVALID/);

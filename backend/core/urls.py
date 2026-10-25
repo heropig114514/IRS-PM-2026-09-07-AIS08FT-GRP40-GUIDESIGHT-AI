@@ -1,8 +1,8 @@
-"""Responsibilities: 公共接口路由。
-Implementation: 将健康检查注册为 /api/health/；项目业务由其他应用承载。
+"""Responsibilities: Define shared API routes.
+Implementation: Register the health check at /api/health/; project business logic belongs to other applications.
 Related Modules: config.urls, core.views。
 Declaration Index: None。
-Variable Index: app_name — 路由命名空间；urlpatterns — 公共路由列表。
+Variable Index: app_name — route namespace; urlpatterns — shared route list.
 """
 
 from django.urls import path

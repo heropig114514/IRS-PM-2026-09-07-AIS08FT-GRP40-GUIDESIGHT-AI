@@ -1,5 +1,5 @@
-# Responsibilities: Django/DRF/ASGI 运行依赖，沿用参考项目本地已安装版本。
-# Implementation: 固定直接依赖；websockets 支持二进制回传；官方 MCP SDK 装配 AI 控制接口。
+# Responsibilities: Declare Django/DRF/ASGI runtime dependencies, using versions already installed in the reference project's local environment.
+# Implementation: Pin direct dependencies; websockets supports binary relay, and the official MCP SDK assembles the AI-control interface.
 # Related Modules: requirements-dev.txt, requirements-production.txt, core.ai_mcp。
 # Declaration Index: None。
 # Variable Index: None。

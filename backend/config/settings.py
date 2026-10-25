@@ -1,8 +1,8 @@
-"""Responsibilities: 本地开发数据库与主机白名单。
-Implementation: 使用共享装配及 backend/db.sqlite3；仅允许本机 Host。
-Related Modules: config.base；生产必须显式选择 config.production。
-Declaration Index: None。
-Variable Index: ALLOWED_HOSTS — 本地主机；DATABASES — SQLite 路径。
+"""Responsibilities: Configure the local development database and host allowlist.
+Implementation: Use shared settings and backend/db.sqlite3; permit only local hosts.
+Related Modules: config.base; production must explicitly select config.production.
+Declaration Index: None.
+Variable Index: ALLOWED_HOSTS — local hosts; DATABASES — SQLite path.
 """
 
 from .base import *  # noqa: F403

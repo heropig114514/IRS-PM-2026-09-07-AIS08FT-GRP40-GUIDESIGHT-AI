@@ -62,11 +62,11 @@ def load_detector(distance_config=None):
     distance_config = read_distance_config() if distance_config is None else distance_config
     needs_depth = distance_config.distance_mode != "geometry"
     if not weights.is_file() or (needs_depth and not depth_weights.is_file()):
-        raise IntegrationError("local_model_missing", "请准备当前测距模式需要的本地模型权重。")
+        raise IntegrationError("local_model_missing", "Prepare the local model weights required by the selected distance mode.")
     import torch
 
     if not torch.cuda.is_available():
-        raise IntegrationError("local_cuda_unavailable", "本地推理需要可用的 NVIDIA CUDA。")
+        raise IntegrationError("local_cuda_unavailable", "Local inference requires an available NVIDIA CUDA device.")
     from realtime.depth import DepthEstimator
     from realtime.detector import ResidentDetector
 
@@ -78,7 +78,7 @@ def load_detector(distance_config=None):
                          if needs_depth else None),
     }
     if hashes["detection_sha256"] != manifest["source_sha256"]:
-        raise IntegrationError("local_model_invalid", "检测权重与模型清单指纹不匹配。")
+        raise IntegrationError("local_model_invalid", "The detection weights do not match the model-manifest fingerprint.")
     depth = DepthEstimator(depth_weights, manifest["build"]["ultralytics"]) if needs_depth else None
     return ResidentDetector(weights, manifest_path, depth_estimator=depth,
                             distance_config=distance_config), hashes
@@ -175,7 +175,7 @@ class InferenceRuntime:
                     self.distance_config.distance_mode != "geometry") or (
                         detector.object_tracker is None):
                     raise IntegrationError(
-                        "local_pipeline_invalid", "本地推理必须启用完整算法链路。"
+                        "local_pipeline_invalid", "Local inference requires the complete algorithm pipeline."
                     )
                 self.detector, self.hashes = detector, hashes
             except Exception as error:
@@ -183,7 +183,7 @@ class InferenceRuntime:
                     error
                     if isinstance(error, IntegrationError | DetectionError)
                     else IntegrationError(
-                        "local_model_load_failed", "本地模型初始化失败，请检查推理日志后重启。"
+                        "local_model_load_failed", "Local model initialization failed; check inference logs before restarting."
                     )
                 )
                 logger.error(
@@ -199,7 +199,7 @@ class InferenceRuntime:
             logger.info("Local algorithm stream started session=%s resident=true", session_id)
         if self.frame_size is not None and size != self.frame_size:
             raise IntegrationError(
-                "frame_geometry_changed", "画面尺寸变化，请停止并开启新会话。", 400
+                "frame_geometry_changed", "Frame dimensions changed; stop and start a new session.", 400
             )
         self.frame_size = size
         metadata, rendered = self.detector.predict(jpeg, timestamp=timestamp)
@@ -292,7 +292,7 @@ class InferenceWorker:
             return await send({"type": "websocket.close", "code": 1008})
         await send({"type": "websocket.accept"})
         if not self.admission.acquire(blocking=False):
-            return await self.finish(send, None, IntegrationError("local_busy", "本地推理忙。"))
+            return await self.finish(send, None, IntegrationError("local_busy", "Local inference is busy."))
         session, tasks, error = WorkerSession(), [], None
         self.runtime.busy = True
         logger.info("Local worker admitted session=%s", session.id)
@@ -372,7 +372,7 @@ class InferenceWorker:
                 message.get("bytes"), session.received, session.previous_timestamp
             )
             if session.received - session.delivered >= MAX_INFLIGHT:
-                raise IntegrationError("local_capacity", "超过允许的在途帧数量。", 400)
+                raise IntegrationError("local_capacity", "The permitted number of in-flight frames was exceeded.", 400)
             session.incoming.put_nowait((session.received, timestamp, jpeg))
             session.previous_timestamp = timestamp
             session.received += 1
@@ -399,7 +399,7 @@ class InferenceWorker:
                 )
             except TimeoutError:
                 raise IntegrationError(
-                    "local_inference_timeout", "本地推理响应超时，请检查推理进程。"
+                    "local_inference_timeout", "Local inference timed out; check the inference process."
                 ) from None
             session.inflight = None
             packet = pack_result(metadata, rendered)
@@ -447,7 +447,7 @@ class InferenceWorker:
                 error
                 if isinstance(error, IntegrationError | DetectionError)
                 else IntegrationError(
-                    "local_inference_failed", "本地推理失败，请检查推理进程日志。"
+                    "local_inference_failed", "Local inference failed; check the inference-process logs."
                 )
             )
             logger.error(

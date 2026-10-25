@@ -1,11 +1,11 @@
-# Responsibilities: 独立摄像头/HF/MCP服务，仅监听 127.0.0.1:8766。
-# Implementation: 单worker、启用MCP lifespan、5条传输层输入队列、明确资源预算、无自动重启；运行目录可写，源码只读。
+# Responsibilities: Run the isolated camera/HF/MCP service, listening only on 127.0.0.1:8766.
+# Implementation: One worker, MCP lifespan enabled, five transport input queues, explicit resource budgets, and no automatic restart; runtime directory is writable and source is read-only.
 # Related Modules: config.camera_server, core.hf_video_relay/ai_mcp/ai_bridge, nginx.locations.conf。
 # Declaration Index: None。
-# Variable Index: User/Group 为 prs-camera；EnvironmentFile 为专用凭据；
-# MemoryMax/CPUQuota/TasksMax 为独立服务预算；ExecStart 为固定 ASGI 运行参数。
-# OPENBLAS_NUM_THREADS 限制数值库线程，限制共享数值库，避免争用其他应用。
-# WS上限1310728包含1MiB JPEG、256KiB融合/跟踪元数据及8字节头；输入队列仍为5。
+# Variable Index: User/Group — prs-camera service identity; EnvironmentFile — dedicated credentials;
+# MemoryMax/CPUQuota/TasksMax — isolated service budgets; ExecStart — fixed ASGI runtime arguments.
+# OPENBLAS_NUM_THREADS limits numerical-library threads to avoid contention with other applications.
+# WebSocket limit 1310728 includes 1 MiB JPEG, 256 KiB fusion/tracking metadata, and an 8-byte header; input queue remains 5.
 [Unit]
 Description=PRS camera echo and YOLO26 service
 After=network.target

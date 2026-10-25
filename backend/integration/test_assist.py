@@ -99,7 +99,8 @@ class AssistTests(SimpleTestCase):
     async def test_combined_page_and_permissions(self):
         """Functionality: Preserve original controller controls on both explicitly owned views.
         Inputs: actual product/test templates and GET/HEAD/invalid host/method scopes.
-        Outputs: stable controls, media/GPS permissions and safe errors without original file edits.
+        Outputs: stable controls, product-only same-origin microphone allowance, media/GPS policy,
+        and safe errors without original file edits.
         Logic: verify SRI and nonce continuity; independent manager scripts never enter this page.
         Constraints: no actual browser permissions, CDN availability or audible output verification.
         """
@@ -116,7 +117,7 @@ class AssistTests(SimpleTestCase):
         self.assertNotIn(b'src="../assets/integration/maps-navigation-speech.js"', body)
         self.assertNotIn(b'src="../integration/assets/local-mvp.js"', body)
         self.assertEqual(headers[b"permissions-policy"],
-                         b"geolocation=(self), camera=(self), microphone=()")
+                         b"geolocation=(self), camera=(self), microphone=(self)")
         self.assertIn(b'data-assist-view="product"', body)
         self.assertRegex(headers[b"content-security-policy"], rb"'nonce-[A-Za-z0-9_-]+'")
         self.assertIn(b"https://tile.openstreetmap.org", headers[b"content-security-policy"])
@@ -135,7 +136,8 @@ class AssistTests(SimpleTestCase):
     async def test_product_and_diagnostic_boundaries(self):
         """Functionality: Expose diagnostics only at the fixed sibling route with the same owner.
         Inputs: both rendered views, exact test path, invalid method/host/query and template drift.
-        Outputs: explicit view markers, working relative APIs and safe failures without fallback.
+        Outputs: explicit view markers, product-only microphone access, working relative APIs and
+        safe failures without fallback.
         Logic: no trailing slash keeps original config/route/asset URL resolution unchanged.
         Constraints: fixtures do not execute controls, acquire devices or alter the core template.
         """
@@ -146,6 +148,8 @@ class AssistTests(SimpleTestCase):
         self.assertIn(b'href="./"', body)
         self.assertIn(b'id="assist-video-file"', body)
         self.assertIn(b'id="speech-play"', body)
+        self.assertEqual(dict(start["headers"])[b"permissions-policy"],
+                         b"geolocation=(self), camera=(self), microphone=()")
         self.assertNotIn(b'src="../assets/integration/product-ui.js"', body)
         nonce = re.search(rb'<style nonce="([^"]+)"', body).group(1)
         self.assertIn(b"'nonce-" + nonce + b"'", dict(start["headers"])[b"content-security-policy"])

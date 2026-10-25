@@ -40,12 +40,13 @@ function setCoordinates(prefix, point) {
 
 /* Functionality: Serialize actions to prevent location and route updates from overwriting each other.
  * Inputs: Boolean value and configured state; Outputs: Disabled state of buttons/fields.
- * Logic: Configuration restricts only the route button; map selection also checks busy.
- * Constraints: No queueing or retries.
+ * Logic: Product pages omit the optional NUS sample button; diagnostic pages retain it. Configuration
+ * restricts only the route button, while map selection also checks busy. Constraints: No queueing or retries.
  */
 function setBusy(value) {
   busy = value;
-  button.disabled = exampleButton.disabled = value;
+  button.disabled = value;
+  if (exampleButton) exampleButton.disabled = value;
   planButton.disabled = value || !configured;
   for (const input of document.querySelectorAll("#route-form input"))
     input.disabled = value;
@@ -133,7 +134,9 @@ async function initialize() {
     });
     status.textContent = configured ? "ORS 已配置" : "ORS 未配置";
     message.textContent = configured
-      ? "可获取设备起点，点击地图选择终点；或填入 NUS 示例后测试路线。"
+      ? (exampleButton
+        ? "可获取设备起点，点击地图选择终点；或填入 NUS 示例后测试路线。"
+        : "使用当前位置设置起点，点击地图选择目的地。")
       : "服务器未配置 ORS_API_KEY，路线接口暂不可用。";
     setBusy(false);
     console.info(
@@ -320,7 +323,7 @@ document.addEventListener("prs-navigation-change", ({detail}) => {
   else navigationMarker = L.circleMarker(point, {color: "#b45309", radius: 9})
     .addTo(map).bindTooltip("导航设备位置");
 });
-exampleButton.addEventListener("click", useExample);
+if (exampleButton) exampleButton.addEventListener("click", useExample);
 document.querySelector("#route-form").addEventListener("submit", plan);
 for (const input of document.querySelectorAll("#route-form input"))
   input.addEventListener("input", () => {

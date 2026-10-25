@@ -1,6 +1,6 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
  * Implementation: Default-enabled unified outputs, interface-language local voice preference,
- * synchronous user-click speech activation and one-click product rear-camera acquisition,
+ * synchronous user-gesture speech activation and one-click product rear-camera acquisition,
  * canonical shared module URLs, independent source lifecycles, explicit controls,
  * original frame transports and passive maps snapshots; no navigation or algorithm calculations.
  * Related Modules: assist-panel.html/assist.css/assist-guidance.js; maps-navigation-bridge.js,
@@ -131,10 +131,10 @@ function cameraFailureMessage(reason) {
   return productText("摄像头启动或检测连接失败，请查看提示后重新开始。", "The camera or detection connection failed. Check the message and start again.");
 }
 
-/* Functionality: Display existing object metadata without deriving risk or refreshing its age.
- * Inputs: One validated frame. Outputs: Bounded object list and measured capture age.
- * Logic: Display at most 50 objects; only source clocks label freshness.
- * Constraints: No repeated inference, hidden thresholds, metric accuracy or safety claims. */
+/* Functionality: Render validated frame metadata for the product and diagnostic views.
+ * Inputs: One validated frame. Outputs: At most 50 object entries and a concise product status or
+ * diagnostic capture-age line. Logic: Product users see current detections without transport metrics;
+ * the test view retains frame number and age. Constraints: No repeated inference or safety claim. */
 function renderResults(event) {
   const list = node("assist-results"), metadata = event.result.metadata;
   list.replaceChildren();
@@ -143,8 +143,12 @@ function renderResults(event) {
     item.textContent = resultText(box, node("navigation-speech-language").value); list.append(item);
   }
   const age = performance.now() - event.capturedAt;
-  node("assist-result-status").textContent = `${metadata.count} objects · frame ${metadata.index} · ` +
-    `${age.toFixed(0)} ms capture age · ${age >= 0 && age < 1000 ? "fresh" : "stale"}`;
+  const status = testView
+    ? `${metadata.count} objects · frame ${metadata.index} · ${age.toFixed(0)} ms capture age · ${age >= 0 && age < 1000 ? "fresh" : "stale"}`
+    : metadata.count
+      ? productText(`检测到 ${metadata.count} 个目标，详情见下方。`, `${metadata.count} objects detected. See details below.`)
+      : productText("本帧暂未识别到目标；这不代表道路安全。", "No objects detected in this frame; this does not establish road safety.");
+  setStatusText("assist-result-status", status);
 }
 
 /* Functionality: Connect original source events to the independent risk input only.
@@ -157,6 +161,9 @@ function onSource(event, source) {
     riskOwner = source; sessionId = event.sessionId; sourceStarting = null; boundaryStopped = false;
     if (source === "camera") cameraFailure = null;
     guidanceManager.beginRisk(sessionId);
+    node("assist-results").replaceChildren();
+    setStatusText("assist-result-status", testView ? "等待本地检测结果。"
+      : productText("正在等待首个识别结果。", "Waiting for the first detection result."));
     node("assist-status").textContent = source === "video" ? "本地视频检测中；视频位置不代表设备位置。"
       : productText("正在留意周围障碍物。", "Monitoring nearby obstacles.");
   } else if (event.type === "frame") {
@@ -174,7 +181,8 @@ function onSource(event, source) {
       guidanceManager.stopRisk(event.reason || event.type);
       node("assist-status").textContent = testView ? "感知已停止；导航状态保持独立。"
         : productText("环境检测已停止。", "Obstacle detection stopped.");
-      node("assist-result-status").textContent = "感知已停止；最后画面仅供查看，不触发提醒。";
+      setStatusText("assist-result-status", testView ? "感知已停止；最后画面仅供查看，不触发提醒。"
+        : productText("检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."));
     }
     if (source === "video") node("assist-video-status").textContent = event.type === "error"
       ? `视频已停止：${event.message || "请检查本机服务。"}` : "视频会话已停止，需手动开始或重新选择视频。";
@@ -442,7 +450,8 @@ function stopPerception(reason = "user", stopOutput = true) {
   if (cameraApp.mode !== "idle") cameraApp.stop();
   node("assist-status").textContent = testView ? "感知已停止；导航状态保持独立。"
     : productText("环境检测已停止。", "Obstacle detection stopped.");
-  node("assist-result-status").textContent = "感知已停止；最后画面不触发提醒。";
+  setStatusText("assist-result-status", testView ? "感知已停止；最后画面不触发提醒。"
+    : productText("检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."));
   renderControls();
 }
 
@@ -505,7 +514,8 @@ function onBoundary(event) {
 
 /* Functionality: Bind the dedicated local integration surface to original controllers.
  * Inputs: Explicit assist document marker. Outputs: Read-only setup and user action handlers.
- * Logic: Select only local PRF2, reuse shared drivers; product speech follows the interface language.
+ * Logic: Select only local PRF2, reuse shared drivers; product speech follows the interface language
+ * and accepts the voice assistant's release gesture as its synchronous activation gesture.
  * Constraints: No automatic permissions, route requests, inference or first playback. */
 function initialize() {
   if (doc.documentElement.dataset.assist !== "true" || !navigation)
@@ -533,6 +543,7 @@ function initialize() {
   for (const id of ["navigation-speech-resume", "assist-resume-speech"])
     node(id).addEventListener("click", resumeSpeech);
   node("assist-speech-start").addEventListener("click", activateSpeech);
+  if (!testView) window.addEventListener("prs-assist-voice-gesture", activateSpeech);
   speechOutput.enabled.addEventListener("change", () => renderSpeechActivation(speechActivation.describe()));
   node("assist-resume-vibration").addEventListener("click", () => guidanceManager.resume("vibration"));
   node("assist-source").addEventListener("change", renderControls);

@@ -1,8 +1,8 @@
-/* Responsibilities: 摄像头工作台的手机与桌面布局、控制状态、语言选择、回显、震动/语音测试及场景描述区块样式。
- * Implementation: 双屏桌面网格在窄屏变为单列；不依赖外部字体或图片。
+/* Responsibilities: Style the camera workspace's mobile/desktop layouts, control states, language picker, echo, vibration/speech tests, and scene-description panels.
+ * Implementation: The two-column desktop grid becomes one column on narrow screens; no external fonts or images are required.
  * Related Modules: index.html, maps.html, camera.js, i18n.js, vibration.js, speech-output.js, scene-client.js。
  * Declaration Index: None。
- * Variable Index: --ink/--muted/--accent/--line 为文字、辅助色、主题色和边框色。 */
+ * Variable Index: --ink/--muted/--accent/--line are the text, muted, theme, and border colors. */
 :root {
   --ink: #183047;
   --muted: #64768a;

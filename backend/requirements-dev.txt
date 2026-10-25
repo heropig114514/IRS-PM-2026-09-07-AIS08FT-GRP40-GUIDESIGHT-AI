@@ -1,5 +1,5 @@
-# Responsibilities: 本地和 CI 检查依赖。
-# Implementation: 包含视觉/网页依赖、固定 Ruff 与部署工具所需 Paramiko；测试只模拟外部 HTTP/SSH 服务。
+# Responsibilities: Declare local and CI check dependencies.
+# Implementation: Includes vision/web dependencies, pinned Ruff, and Paramiko for deployment tooling; tests mock external HTTP/SSH services.
 # Related Modules: requirements-vision.txt, pyproject.toml, core/test_hf.py, tools/deploy_phone_live.py, core/test_deploy_phone_live.py。
 # Declaration Index: None。
 # Variable Index: None。

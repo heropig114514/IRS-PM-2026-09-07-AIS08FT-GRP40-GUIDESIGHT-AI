@@ -55,24 +55,24 @@ def provider_error(payload):
     title = payload.get("title") if isinstance(payload, dict) else None
     message = message if isinstance(message, str) else ""
     seconds = re.search(r"\((\d{1,6})s requested vs\. (\d{1,6})s left\)", message)
-    reason, detail = "inference_failed", "ZeroGPU 推理失败，请检查 Space 日志。"
+    reason, detail = "inference_failed", "ZeroGPU inference failed; check the Space logs."
     if "You have exceeded your ZeroGPU runs limit." in message:
-        reason, detail = "runs_exceeded", "ZeroGPU 今日免费调用次数已用尽，请等待额度恢复。"
+        reason, detail = "runs_exceeded", "Today's free ZeroGPU calls are exhausted; wait for quota to reset."
     elif "too many ZeroGPU credits allocated to running tasks" in message:
-        reason, detail = "pending_credits", "ZeroGPU 额度被运行中的任务占用，请等待任务结束。"
+        reason, detail = "pending_credits", "ZeroGPU quota is reserved by a running task; wait for it to finish."
     elif title == "ZeroGPU illegal duration":
-        reason, detail = "illegal_duration", "ZeroGPU 申请时长超过当前账户允许的上限。"
+        reason, detail = "illegal_duration", "The requested ZeroGPU duration exceeds the current account limit."
     elif "Space app has reached its GPU limit." in message:
-        reason, detail = "space_quota_exceeded", "Space GPU 额度受限，请检查请求身份和 HF 日志。"
+        reason, detail = "space_quota_exceeded", "The Space GPU quota is restricted; check the request identity and HF logs."
     elif seconds or title == "ZeroGPU quota exceeded":
-        reason, detail = "quota_exceeded", "ZeroGPU 免费额度不足，请等待额度恢复。"
+        reason, detail = "quota_exceeded", "ZeroGPU free quota is insufficient; wait for it to reset."
         if seconds:
-            detail = (f"ZeroGPU 免费额度不足：HF 要求{seconds[1]}秒额度，"
-                      f"返回剩余{seconds[2]}秒（取整值）。请等待额度恢复。")
+            detail = (f"ZeroGPU free quota is insufficient: HF requires {seconds[1]} seconds, "
+                      f"and reports {seconds[2]} seconds remaining (rounded). Wait for quota to reset.")
     elif "No GPU was available" in message:
-        reason, detail = "busy", "ZeroGPU 暂无可用 GPU，请稍后手动开始。"
+        reason, detail = "busy", "No ZeroGPU is currently available; start a new request manually later."
     elif "GPU task aborted" in message:
-        reason, detail = "worker_failed", "ZeroGPU 工作进程已中止，请检查 Space 日志。"
+        reason, detail = "worker_failed", "The ZeroGPU worker stopped; check the Space logs."
     logger.warning("ZeroGPU service rejected reason=%s requested_seconds=%s remaining_seconds=%s",
                    reason, int(seconds[1]) if seconds else None,
                    int(seconds[2]) if seconds else None)
@@ -94,7 +94,7 @@ def exchange(method, path, body, deadline, stream=False, *, token):
         or len(token) > 4096
         or any(c.isspace() for c in token)
     ):
-        raise DetectionError("hf_not_configured", "服务端 HF token 格式无效。", 503)
+        raise DetectionError("hf_not_configured", "The server-side HF token format is invalid.", 503)
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise TimeoutError("ZeroGPU request deadline")
@@ -121,9 +121,9 @@ def exchange(method, path, body, deadline, stream=False, *, token):
         if response.status != 200:
             logger.warning("ZeroGPU HTTP rejected method=%s status=%d", method, response.status)
             if response.status == 429:
-                raise DetectionError("hf_busy", "ZeroGPU 请求受限，请稍后手动开始。", 429)
+                raise DetectionError("hf_busy", "The ZeroGPU request is rate-limited; start again manually later.", 429)
             raise DetectionError(
-                "hf_unavailable", "ZeroGPU 接口未就绪，请检查 Space 或私有配置。", 503
+                "hf_unavailable", "The ZeroGPU endpoint is not ready; check the Space or private configuration.", 503
             )
         phase = "body"
         content_type = response.getheader("Content-Type", "").split(";")[0]

@@ -1,9 +1,9 @@
-# Responsibilities: 后端 Ruff 检查配置。
-# Implementation: Python 3.12 语法检查及导入排序；不定义业务参数。
+# Responsibilities: Configure backend Ruff checks.
+# Implementation: Check Python 3.12 syntax and import ordering; define no business parameters.
 # Related Modules: requirements-dev.txt, .github/workflows/backend.yml。
 # Declaration Index: None。
-# Variable Index: tool.ruff.line-length 为行宽；target-version 为 Python 版本；
-# tool.ruff.lint.select 为启用的规则集合。
+# Variable Index: tool.ruff.line-length — line width; target-version — Python version;
+# tool.ruff.lint.select — enabled rule set.
 [tool.ruff]
 line-length = 100
 target-version = "py312"

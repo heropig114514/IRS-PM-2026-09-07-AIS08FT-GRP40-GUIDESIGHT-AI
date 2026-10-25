@@ -1,5 +1,5 @@
-# Responsibilities: 跟踪开发源码和明确选定的测试视频，课程资料、凭据、环境和生成工件留在本地。
-# Implementation: 根目录白名单；测试视频及来源清单显式放行，其余模型二进制、大型数据和结果忽略。
+# Responsibilities: Track development source and explicitly selected test videos; keep course files, credentials, environments, and generated artifacts local.
+# Implementation: Use a root allowlist; explicitly include test videos and their source manifest while ignoring other model binaries, large datasets, and results.
 # Related Modules: backend/tools/deploy_space.py, backend/tools/prepare_kaggle.py,
 # backend/model_tests/README.md, README.md。
 # Declaration Index: None。

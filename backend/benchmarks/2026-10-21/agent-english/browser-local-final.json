@@ -6,7 +6,7 @@
       "input": "你能做什么？",
       "elapsed_ms": 3553,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n支持的操作：启动导航、规划路线、查找地点、停止导航、查询地图或导航状态、获取当前位置、打开地图页、打开摄像头、关闭摄像头、切换摄像头或处理模式、查询摄像头状态、描述摄像头画面、测试摄像头连接、打开摄像头页、朗读文字、停止朗读、查询朗读状态或声音、请求震动、停止震动、查询震动支持、切换界面语言。说出操作和必要信息即可。",
+      "reply": "Assistant\nSupported operations: start navigation, plan a route, find places, stop navigation, check map or navigation status, get current location, open the map page, open or close the camera, change camera or processing mode, check camera status, describe a camera scene, test the camera connection, open the camera page, speak text, stop speech, check speech status or voices, request or stop vibration, check vibration support, and change the interface language. State the action and any required details.",
       "activity": "Recognized operations: List supported operations",
       "tools": [],
       "diagnostic": [
@@ -34,7 +34,7 @@
       "input": "为什么天空是蓝色的？",
       "elapsed_ms": 2898,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n当前请求不属于已启用的能力范围，未执行系统操作。可说“你能做什么”查看支持的操作。",
+      "reply": "Assistant\nThis request is outside the enabled capabilities. No system action was taken. Ask \"What can you do?\" to list supported operations.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilities",
       "tools": [],
       "diagnostic": [
@@ -55,7 +55,7 @@
       "input": "帮我打开微信并给朋友发消息",
       "elapsed_ms": 2391,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n当前请求不属于已启用的能力范围，未执行系统操作。可说“你能做什么”查看支持的操作。",
+      "reply": "Assistant\nThis request is outside the enabled capabilities. No system action was taken. Ask \"What can you do?\" to list supported operations.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilities",
       "tools": [],
       "diagnostic": [
@@ -76,7 +76,7 @@
       "input": "停止",
       "elapsed_ms": 2919,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n请明确要操作的功能，例如导航、摄像头、朗读或震动；一次最多3项。",
+      "reply": "Assistant\nPlease specify the feature you want to use, such as navigation, camera, speech, or vibration; up to 3 per request.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarification",
       "tools": [],
       "diagnostic": [
@@ -97,7 +97,7 @@
       "input": "嗯，帮我开启导航。",
       "elapsed_ms": 28488,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n请告诉我您想去哪里？",
+      "reply": "Assistant\nPlease tell me where you would like to go.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device location",
       "tools": [
         {
@@ -218,7 +218,7 @@
       "input": "第四个",
       "elapsed_ms": 27464,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n导航已启动，正在前往 Sheng Siong (Clementi West)。当前状态为 navigating，剩余距离约 2555 米。",
+      "reply": "Assistant\nNavigation started to Sheng Siong (Clementi West). The current state is navigating, with about 2,555 m remaining.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigation",
       "tools": [
         {
@@ -276,7 +276,7 @@
       "input": "还有多远？",
       "elapsed_ms": 20332,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n剩余距离约 2555 米，预计还需 1840 秒。",
+      "reply": "Assistant\nAbout 2,555 m remain, with an estimated 1,840 seconds left.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigation",
       "tools": [
         {
@@ -324,7 +324,7 @@
       "input": "停止导航",
       "elapsed_ms": 21331,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n导航已停止。",
+      "reply": "Assistant\nNavigation stopped.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigation",
       "tools": [
         {
@@ -372,7 +372,7 @@
       "input": "导航到一个商场，我读音不准，听起来像‘克莱门提摩尔’，请按读音找候选给我确认。",
       "elapsed_ms": 22351,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n检索返回以下待确认候选（可能包含近音或相关地点），名称按服务原文显示。请核对后回复编号；如都不符合，请补充名称或地址：\n1. Bridge inside Clement MRT Station that connects to Clementi Mall, Singapore\n2. LogisHub @ Clementi, Toh Tuck, Singapore\n3. Clementi Road, National University of Singapore, Singapore\n4. Clementi Road, Clementi Woods, Singapore\n5. Clementi Road, Clementi Woods, Singapore",
+      "reply": "Assistant\nSearch returned the following candidates for confirmation (including possible phonetic or related matches); names are shown as returned by the service. Review them and reply with a number. If none match, provide a name or address:\n1. Bridge inside Clement MRT Station that connects to Clementi Mall, Singapore\n2. LogisHub @ Clementi, Toh Tuck, Singapore\n3. Clementi Road, National University of Singapore, Singapore\n4. Clementi Road, Clementi Woods, Singapore\n5. Clementi Road, Clementi Woods, Singapore",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destination",
       "tools": [
         {
@@ -432,7 +432,7 @@
       "input": "是 The Clementi Mall，使用刚才返回的商场坐标规划并开始导航。",
       "elapsed_ms": 17734,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n检索结果中未出现名为“The Clementi Mall”的商场候选，当前列表为：\n1. Bridge inside Clement MRT Station that connects to Clementi Mall, Singapore\n2. LogisHub @ Clementi, Toh Tuck, Singapore\n3. Clementi Road, National University of Singapore, Singapore\n4. Clementi Road, Clementi Woods, Singapore\n5. Clementi Road, Clementi Woods, Singapore\n\n请回复编号选择，或提供更准确的名称/地址以便重新搜索。",
+      "reply": "Assistant\nThe search results did not contain a mall candidate named \"The Clementi Mall\". The current list is:\n1. Bridge inside Clement MRT Station that connects to Clementi Mall, Singapore\n2. LogisHub @ Clementi, Toh Tuck, Singapore\n3. Clementi Road, National University of Singapore, Singapore\n4. Clementi Road, Clementi Woods, Singapore\n5. Clementi Road, Clementi Woods, Singapore\n\nReply with a number to select a candidate, or provide a more precise name/address to search again.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflow",
       "tools": [
         {
@@ -475,7 +475,7 @@
       "input": "第一个",
       "elapsed_ms": 25921,
       "url": "http://127.0.0.1:8766/maps/",
-      "reply": "Assistant\n导航已启动，正在前往 Bridge inside Clement MRT Station that connects to Clementi Mall。当前状态为 navigating，剩余距离约 3264 米。",
+      "reply": "Assistant\nNavigation started to Bridge inside Clement MRT Station that connects to Clementi Mall. The current state is navigating, with about 3,264 m remaining.",
       "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigation",
       "tools": [
         {
@@ -533,7 +533,7 @@
       "input": "停止导航，然后关闭摄像头",
       "elapsed_ms": 42274,
       "url": "http://127.0.0.1:8766/live/",
-      "reply": "Assistant\n导航已停止，摄像头当前处于关闭状态。",
+      "reply": "Assistant\nNavigation stopped; the camera is currently off.",
       "activity": "Recognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Stop navigation / Close cameraDiscovering system toolsLoading workflowLoading workflowStopping navigationOpening pageChecking camera",
       "tools": [
         {
@@ -1282,5 +1282,6 @@
       "status": 200
     }
   ],
-  "errors": []
+  "errors": [],
+  "translation_note": "Chinese assistant replies are English translations for repository consistency. Chinese user utterances and zh intent labels remain as bilingual test data; timings, routes, tool events, checks, and outcomes are unchanged."
 }

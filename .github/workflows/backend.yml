@@ -1,9 +1,9 @@
-# Responsibilities: 前后端依赖、Django、媒体/AI 控制契约和 Ruff 自动检查。
-# Implementation: Ubuntu/Python 3.12/Node 22；测试无外网，不下载或运行真实模型。
+# Responsibilities: Run dependency, Django, media/AI-control contract, and Ruff checks for the backend and frontend.
+# Implementation: Ubuntu/Python 3.12/Node 22; tests do not use the network or download/run real models.
 # Related Modules: backend/core/tests.py/test_echo.py/test_maps.py/test_ai_control.py;
 # frontend/tests/*.test.mjs, frontend/ai-control.js。
 # Declaration Index: None。
-# Variable Index: DJANGO_SECRET_KEY — GITHUB_ENV 中仅供当次运行的随机配置。
+# Variable Index: DJANGO_SECRET_KEY — random configuration stored in GITHUB_ENV for the current job only.
 name: Backend checks
 
 on:

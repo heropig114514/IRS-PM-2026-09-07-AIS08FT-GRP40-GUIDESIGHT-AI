@@ -10,13 +10,13 @@ class heights and performance records.
 The same integration entry also provides `/integration/video/` for browser-selected local videos,
 using its own controller, `/ws/detect/local/` and the original dual models. Public source provenance,
 1x playback/two-clock constraints and Chrome checks are documented in the
-[local video guide](LOCAL-MVP.md#连续本地视频入口); no computer camera is required.
+[local video guide](LOCAL-MVP.md#continuous-local-video-entry); no computer camera is required.
 
 Street playback uses moving-camera MOT17-07 daylight and MOT17-10 night sequences with H.264 browser
 copies. Two original previews, two playback copies and their source manifest are versioned; complete
 annotations and run reports are managed separately. See the
-[data guide](model_tests/DATASETS.md#连续街景视频用于本地联调) and
-[MVP validation guide](LOCAL-MVP.md#验收方法与边界).
+[data guide](model_tests/DATASETS.md#continuous-street-video-for-local-integration) and
+[MVP validation guide](LOCAL-MVP.md#acceptance-method-and-boundaries).
 
 All backend development belongs here. The stack is Python 3.12, Django, Django REST Framework and
 Uvicorn, using dependency versions from the local AiInterviewer environment while implementing

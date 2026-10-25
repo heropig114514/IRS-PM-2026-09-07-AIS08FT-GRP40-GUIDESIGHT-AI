@@ -52,16 +52,16 @@ def decode_frame(payload):
     from PIL import Image, UnidentifiedImageError
 
     if not 0 < len(payload) <= MAX_FRAME_BYTES:
-        raise DetectionError("frame_size", "图像为空或超过 1 MiB。", 413)
+        raise DetectionError("frame_size", "The image is empty or exceeds 1 MiB.", 413)
     try:
         with Image.open(io.BytesIO(payload)) as image:
             longest = max(image.size)
             if image.format != "JPEG" or not 0 < min(image.size) <= longest <= MAX_INPUT_EDGE:
-                raise DetectionError("invalid_frame", "仅接受最大边不超过 1280 的 JPEG。", 400)
+                raise DetectionError("invalid_frame", "Only JPEG images with a maximum edge of 1,280 pixels are accepted.", 400)
             image.load()
             return image.convert("RGB")
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
-        raise DetectionError("invalid_frame", "JPEG 图像损坏或无法解码。", 400) from error
+        raise DetectionError("invalid_frame", "The JPEG image is corrupt or could not be decoded.", 400) from error
 
 
 def letterbox(image, output=None):
@@ -104,7 +104,7 @@ def decode_boxes(predictions, image_size, transform, names):
     import numpy as np
 
     if predictions.shape != (1, 300, 6) or not np.isfinite(predictions).all():
-        raise DetectionError("invalid_prediction", "模型输出格式无效。", 502)
+        raise DetectionError("invalid_prediction", "The model output format is invalid.", 502)
     width, height = image_size
     scale, left, top = transform
     rows = predictions[0]
@@ -112,7 +112,7 @@ def decode_boxes(predictions, image_size, transform, names):
     if np.any((scores < 0) | (scores > 1)) or np.any(
         (classes < 0) | (classes >= len(names)) | (classes != np.trunc(classes))
     ):
-        raise DetectionError("invalid_prediction", "模型类别或置信度无效。", 502)
+        raise DetectionError("invalid_prediction", "The model class or confidence is invalid.", 502)
     thresholds = np.asarray([CLASS_CONF.get(name, CONFIDENCE_THRESHOLD) for name in names],
                             dtype=np.float32)
     selected = rows[scores >= thresholds[classes.astype(np.int64)]]
@@ -246,5 +246,5 @@ def annotate(image, boxes):
     image.save(output, format="JPEG", quality=JPEG_QUALITY)
     payload = output.getvalue()
     if len(payload) > MAX_FRAME_BYTES:
-        raise DetectionError("result_size", "标注图像超过 1 MiB。", 502)
+        raise DetectionError("result_size", "The annotated image exceeds 1 MiB.", 502)
     return payload

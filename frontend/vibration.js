@@ -1,31 +1,31 @@
-/** Responsibilities: 手动UI与显式MCP调用共享的手机震动测试和浏览器能力/拒绝反馈。
- * Implementation: 统一入口保留用户启用、前台和激活要求，发送固定节奏并返回结构化结果；
- * 关闭、隐藏或离页时请求取消，不自动恢复；请求广播固定事件快照并向每个订阅者提供独立副本。
- * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js；core.camera提供资源。
+/** Responsibilities: Provide shared manual-UI and explicit-MCP vibration tests with browser capability and rejection feedback.
+ * Implementation: A shared entry point enforces user enablement, foreground, and activation requirements, sends fixed patterns, and returns structured results;
+ * request cancellation on disable, hide, or page exit without resuming automatically; publish fixed event snapshots with an independent copy per listener.
+ * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js; core.camera supplies the asset.
  * Declaration Index: VibrationTester; VibrationTester.constructor; VibrationTester.render;
  * VibrationTester.feedback; VibrationTester.callNative; VibrationTester.handleEnable;
  * VibrationTester.describe; VibrationTester.testResult; VibrationTester.testPattern;
  * VibrationTester.handleTest; VibrationTester.stop; VibrationTester.handleStop;
  * VibrationTester.handleVisibility; VibrationTester.handlePageHide; VibrationTester.subscribe;
  * VibrationTester.notify; VibrationTester.stopOwned。
- * Variable Index: PATTERNS — 固定毫秒节奏；tester — 当前页面测试控制器。
- * 实例 doc/win 为浏览器依赖；enabled/buttons/stopButton/status/message 为独立控件；
- * supported 仅说明接口存在，requested 记录尚未成功取消的已接受请求，不证明马达仍在震动；
- * nativeOutcome记录最近一次原生结果；sequence/requestId及listeners给引导模块明确所有权与API生命周期；
- * notify的局部event固定本次请求/阶段/时间，隔离订阅者修改和同步新请求。
+ * Variable Index: PATTERNS — fixed millisecond patterns; tester — current-page controller.
+ * Instance doc/win are browser dependencies; enabled/buttons/stopButton/status/message are independent controls.
+ * supported reports API presence only; requested records an accepted request not yet successfully canceled and does not prove the motor is still vibrating.
+ * nativeOutcome stores the latest native result; sequence/requestId/listeners provide explicit ownership and API lifecycle to guidance modules.
+ * notify's local event fixes the request/phase/time for that event and isolates listener mutations and synchronous new requests.
  */
 const PATTERNS = {short: [200], long: [800], double: [150, 100, 150]};
 
-/** Functionality: 管理手动按钮和显式MCP请求触发的震动测试。
- * Logic: 与摄像头和检测流水线解耦，分别报告接口缺失、调用拒绝、异常及请求被接受。
- * Constraints: 不联网、不申请媒体权限、不保存偏好，不自动重试或改用其他提醒方式。
+/** Functionality: Manage vibration tests triggered by manual controls and explicit MCP requests.
+ * Logic: Keep vibration independent of the camera and detection pipeline; report missing API, rejected calls, exceptions, and accepted requests separately.
+ * Constraints: No network, media permissions, persisted preferences, automatic retries, or substitute alert mechanisms.
  */
 export class VibrationTester {
-  /** Functionality: 安装测试控件与页面生命周期监听。
-   * Inputs: doc/win，默认当前浏览器文档及窗口；页面须包含 vibration-test 区域。
-   * Outputs: 实例、控件初始状态和一次能力日志，不触发震动。
-   * Logic: 默认关闭；通过注入依赖支持控制逻辑测试，真实事件仍由浏览器派发。
-   * Constraints: supported 不证明设备具有马达或系统允许震动；无权限弹窗。
+  /** Functionality: Bind test controls and page-lifecycle listeners.
+   * Inputs: doc/win, defaulting to the current browser document/window; the page must contain the vibration-test region.
+   * Outputs: Instance, initial control state, and one capability log; no vibration is triggered.
+   * Logic: Start disabled; injected dependencies support controller tests while real events remain browser-dispatched.
+   * Constraints: supported does not prove that a motor exists or the operating system permits vibration; no permission prompt is shown.
    */
   constructor(doc = document, win = window) {
     this.doc = doc;
@@ -83,10 +83,10 @@ export class VibrationTester {
     return this.requested && requestId === this.requestId ? this.stop("guidance") : false;
   }
 
-  /** Functionality: 根据能力和用户开关刷新操作边界。
-   * Inputs: supported/enabled.checked。Outputs: disabled 属性，不调用震动接口。
-   * Logic: 测试必须明确启用；停止按钮在接口存在时始终可用，包括关闭后的取消拒绝场景。
-   * Constraints: 不根据展示文字推断内部状态，不影响摄像头控件。
+  /** Functionality: Refresh operation boundaries from API support and the user toggle.
+   * Inputs: supported/enabled.checked. Outputs: disabled properties; does not call the vibration API.
+   * Logic: Tests require explicit enablement; keep Stop available whenever the API exists, including cancellation-rejection cases after disable.
+   * Constraints: Do not infer internal state from displayed text or affect camera controls.
    */
   render() {
     this.enabled.disabled = !this.supported;
@@ -94,21 +94,21 @@ export class VibrationTester {
     this.stopButton.disabled = !this.supported;
   }
 
-  /** Functionality: 显示独立诊断文字与提示颜色。
-   * Inputs: text 为词典中文原文，kind 为 idle/live/error。Outputs: 可翻译的 aria-live 文本。
-   * Logic: 仅使用 textContent，交由现有语言观察器翻译。
-   * Constraints: 不把请求被接受表述为已观察到物理震动。
+  /** Functionality: Display separate diagnostic text and status styling.
+   * Inputs: text is the dictionary source string; kind is idle/live/error. Outputs: Translatable aria-live text.
+   * Logic: Use textContent and let the existing language observer translate it.
+   * Constraints: Do not describe an accepted request as physically observed vibration.
    */
   feedback(text, kind = "idle") {
     this.message.textContent = text;
     this.message.dataset.kind = kind;
   }
 
-  /** Functionality: 调用原生震动接口并记录可诊断的结果。
-   * Inputs: pattern 为固定毫秒数组或取消值0，action 为测试类型或取消原因；win.navigator/console。
-   * Outputs: 仅原生返回true时为true；拒绝或接口异常为false并显示错误。
-   * Logic: 保持 navigator 方法接收者；只捕获本次原生调用的异常，不吞掉初始化/DOM错误。
-   * Constraints: 每次仅调用一次；无重试、替代接口或硬件成功推断；日志不包含媒体和身份信息。
+  /** Functionality: Call the native vibration API and record a diagnosable outcome.
+   * Inputs: pattern is a fixed millisecond array or cancellation value 0; action is a test type or cancellation reason; win.navigator/console.
+   * Outputs: true only when the native API returns true; false with an error message for rejection or exception.
+   * Logic: Preserve the navigator method receiver; catch only this native call's exception and let initialization/DOM errors propagate.
+   * Constraints: One call per request; no retries, alternate APIs, or hardware-success inference; logs omit media and identity information.
    */
   callNative(pattern, action) {
     try {
@@ -128,10 +128,10 @@ export class VibrationTester {
     }
   }
 
-  /** Functionality: 应用用户明确的启用/关闭选择。
-   * Inputs: enabled.checked/requested。Outputs: 控件状态、提示；关闭后必要时发送取消值0。
-   * Logic: 启用本身不震动；曾被接受的请求只有在取消成功后才清除。
-   * Constraints: 关闭时取消失败仍明确显示，可手动点停止；不保存或自动开启偏好。
+  /** Functionality: Apply the user's explicit enable/disable choice.
+   * Inputs: enabled.checked/requested. Outputs: Control state and feedback; send cancellation value 0 after disabling when needed.
+   * Logic: Enabling alone does not vibrate; clear an accepted request only after cancellation succeeds.
+   * Constraints: Show cancellation failure after disable and allow manual Stop; do not persist or enable preferences automatically.
    */
   handleEnable() {
     if (!this.enabled.checked && this.requested) this.stop("disabled");
@@ -140,11 +140,11 @@ export class VibrationTester {
     this.win.console.info("[PRS vibration] Setting changed", {enabled: this.enabled.checked});
   }
 
-  /** Functionality: 读取震动调用前提与请求记录。
-   * Inputs: supported、开关、doc.visibilityState、navigator.userActivation和requested。
-   * Outputs: JSON兼容状态；user_activated在浏览器不提供该信息时为null。
-   * Logic: 读取同一控制器与当前request_id，供UI/MCP/引导共享，不调用原生震动或申请权限。
-   * Constraints: request_pending仅指已接受且未成功取消的记录；hardware_verified始终为false。
+  /** Functionality: Read vibration prerequisites and request state.
+   * Inputs: supported, toggle, doc.visibilityState, navigator.userActivation, and requested.
+   * Outputs: JSON-compatible state; user_activated is null when the browser does not expose it.
+   * Logic: Read this controller and current request_id for UI/MCP/guidance consumers without calling vibration or requesting permission.
+   * Constraints: request_pending means only an accepted request not yet successfully canceled; hardware_verified is always false.
    */
   describe() {
     return {available: true, supported: this.supported, enabled: this.enabled.checked,
@@ -153,11 +153,11 @@ export class VibrationTester {
       request_pending: this.requested, request_id: this.requestId, hardware_verified: false};
   }
 
-  /** Functionality: 构造一次测试的机器可读结果并记录拒绝边界。
-   * Inputs: name、accepted、reason；当前控制器状态。
-   * Outputs: 带operation/pattern/accepted/reason的状态，不依赖被翻译的DOM文字。
-   * Logic: 原生调用前的拒绝单独记录原因；原生调用本身由callNative记录。
-   * Constraints: 不重试、不保存无限历史、不把浏览器接受解释为物理震动完成。
+  /** Functionality: Build one machine-readable test result and record rejection boundaries.
+   * Inputs: name, accepted, reason, and current controller state.
+   * Outputs: State with operation/pattern/accepted/reason that does not depend on translated DOM text.
+   * Logic: Record pre-native-call rejection separately; callNative records outcomes from the native call itself.
+   * Constraints: No retries or unbounded history; browser acceptance is not physical vibration completion.
    */
   testResult(name, accepted, reason) {
     if (!accepted && !reason.startsWith("native_"))
@@ -165,11 +165,11 @@ export class VibrationTester {
     return {...this.describe(), operation: "test", pattern: name, accepted, reason};
   }
 
-  /** Functionality: 为手动按钮或显式MCP调用发送一次固定节奏。
-   * Inputs: name(short/long/double)、开关、文档可见性及可用的用户激活状态。
-   * Outputs: 结构化接受/拒绝结果和UI提示；接受后设置 requested。
-   * Logic: 先校验固定节奏、接口和开关，再检查前台与浏览器已发生的用户交互。
-   * Constraints: 不依赖摄像头、不排队或循环；新请求替换旧节奏由原生API处理。
+  /** Functionality: Send one fixed pattern for a manual button or explicit MCP call.
+   * Inputs: name (short/long/double), toggle, document visibility, and available user-activation state.
+   * Outputs: Structured acceptance/rejection result and UI feedback; set requested after acceptance.
+   * Logic: Validate fixed pattern, API, and toggle before checking foreground and prior browser interaction.
+   * Constraints: No camera dependency, queue, or loop; the native API handles a new request replacing an old pattern.
    */
   testPattern(name) {
     if (!Object.hasOwn(PATTERNS, name)) {
@@ -200,20 +200,21 @@ export class VibrationTester {
     return this.testResult(name, false, this.nativeOutcome);
   }
 
-  /** Functionality: 将手动按钮委派到共同测试入口。
-   * Inputs: event.currentTarget.dataset.vibrationPattern。
-   * Outputs: testPattern的结构化结果及相同UI副作用。
-   * Logic: 只读取固定按钮类型，不制造用户激活。Constraints: 不重复原生调用。
+  /** Functionality: Delegate a manual button to the shared test entry point.
+   * Inputs: event.currentTarget.dataset.vibrationPattern.
+   * Outputs: testPattern's structured result and the same UI side effects.
+   * Logic: Read only the fixed button type; do not manufacture user activation.
+   * Constraints: Do not duplicate the native call.
    */
   handleTest(event) {
     return this.testPattern(event.currentTarget.dataset.vibrationPattern);
   }
 
-  /** Functionality: 请求取消震动并保留拒绝诊断。
-   * Inputs: reason 默认manual，或disabled/hidden/pagehide/mcp；supported/requested。
-   * Outputs: 原生取消是否被接受；成功时清除requested并显示相应提示。
-   * Logic: 取消不要求开关仍开启或文档仍可见，以便生命周期边界尽力释放已接受请求。
-   * Constraints: 浏览器可在后台拒绝；失败不清除记录、不自动重试；不是物理马达状态检测。
+  /** Functionality: Request cancellation and preserve rejection diagnostics.
+   * Inputs: reason, default manual or disabled/hidden/pagehide/mcp; supported/requested.
+   * Outputs: Whether native cancellation was accepted; on success clear requested and show corresponding feedback.
+   * Logic: Cancellation does not require the toggle to remain on or the document to remain visible, allowing lifecycle boundaries to release accepted requests.
+   * Constraints: Browsers may reject in the background; failure preserves the record and is not retried; this is not motor-state detection.
    */
   stop(reason = "manual") {
     if (!this.supported) {
@@ -230,25 +231,25 @@ export class VibrationTester {
     return true;
   }
 
-  /** Functionality: 处理用户点击停止。
-   * Inputs: 当前实例支持状态。Outputs: 一次manual取消请求及诊断。
-   * Logic: 独立于测试开关，允许主动取消。Constraints: 无循环或重试。
+  /** Functionality: Handle the user's Stop click.
+   * Inputs: Current instance support state. Outputs: One manual cancellation request and diagnostic feedback.
+   * Logic: Allow explicit cancellation independently of the test toggle. Constraints: No loop or retry.
    */
   handleStop() { this.stop(); }
 
-  /** Functionality: 页面进入后台时取消曾被接受的请求。
-   * Inputs: doc.visibilityState/requested。Outputs: 必要时发送取消值0。
-   * Logic: 仅隐藏且存在未取消请求时执行；返回前台不发起震动。
-   * Constraints: 无后台提醒能力；请求拒绝由callNative明确记录。
+  /** Functionality: Cancel an accepted request when the page becomes hidden.
+   * Inputs: doc.visibilityState/requested. Outputs: Send cancellation value 0 when needed.
+   * Logic: Act only when hidden with an uncanceled request; do not vibrate when returning to foreground.
+   * Constraints: No background-alert capability; callNative records request rejection explicitly.
    */
   handleVisibility() {
     if (this.doc.visibilityState !== "visible" && this.requested) this.stop("hidden");
   }
 
-  /** Functionality: 离开页面时取消曾被接受的请求。
-   * Inputs: requested。Outputs: 必要时发送取消值0。
-   * Logic: 与隐藏事件共享取消逻辑，已成功取消则不重复调用。
-   * Constraints: 不等待异步卸载、不自动恢复震动。
+  /** Functionality: Cancel an accepted request when leaving the page.
+   * Inputs: requested. Outputs: Send cancellation value 0 when needed.
+   * Logic: Share cancellation logic with the hidden event and avoid duplicate calls after success.
+   * Constraints: Do not wait for asynchronous unload work or resume vibration automatically.
    */
   handlePageHide() { if (this.requested) this.stop("pagehide"); }
 }
