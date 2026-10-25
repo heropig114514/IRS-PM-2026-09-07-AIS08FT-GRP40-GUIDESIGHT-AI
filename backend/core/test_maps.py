@@ -1,16 +1,21 @@
-"""Responsibilities: Test the map page, same-origin input boundary, and ORS transport, capacity, and response contracts.
-Implementation: Read actual page files; mock upstream HTTP with a fake key; make no ORS or device-location calls.
+"""Responsibilities: Test the map page, same-origin input boundary, and ORS transport, capacity, and
+response contracts.
+Implementation: Read actual page files; mock upstream HTTP with a fake key; make no ORS or
+device-location calls.
 Related Modules: core.maps and core.services; live upstream integration is verified separately.
 Declaration Index: route_fixture — synthetic upstream payload; MapsTests — HTTP endpoints;
 MapsTests.test_page — policy, bilingual UI, and navigation asset wiring;
 MapsTests.test_navigation_speech_assets — nested asset allowlist and rejection boundaries;
 MapsTests.test_config — credential boundary; MapsTests.test_route_input — request validation;
 MapsTests.test_route_result — route adaptation;
-ServiceTests — service behavior; ServiceTests.setUp — rate-limit reset; ServiceTests.test_coordinates — coordinates;
+ServiceTests — service behavior; ServiceTests.setUp — rate-limit reset;
+ServiceTests.test_coordinates — coordinates;
 ServiceTests.test_normalize — upstream format; ServiceTests.test_success — transport contract;
 ServiceTests.test_errors — error mapping; ServiceTests.test_timeout_and_size — resource limits;
-ServiceTests.test_rate_and_capacity — rate and concurrency limits; ServiceTests.test_missing_key — missing configuration.
-Variable Index: None; fixture coordinates are synthetic test points and do not represent the current device.
+ServiceTests.test_rate_and_capacity — rate and concurrency limits; ServiceTests.test_missing_key —
+missing configuration.
+Variable Index: None; fixture coordinates are synthetic test points and do not represent the current
+device.
 """
 
 import copy
@@ -26,8 +31,10 @@ from . import services
 
 def route_fixture():
     """Functionality: Build a minimal valid ORS GeoJSON response.
-    Inputs: None. Outputs: An independent dictionary. Logic: Two points and real departure/arrival field structure.
-    Constraints: Synthetic data does not prove that a road exists, GPS works, or a public request succeeds.
+    Inputs: None. Outputs: An independent dictionary. Logic: Two points and real departure/arrival
+    field structure.
+    Constraints: Synthetic data does not prove that a road exists, GPS works, or a public request
+    succeeds.
     """
     return {
         "type": "FeatureCollection",
@@ -64,15 +71,19 @@ def route_fixture():
 
 
 class MapsTests(SimpleTestCase):
-    """Functionality: Verify HTTP page and API contracts. Logic: Use real routes and files while replacing upstream calls.
+    """Functionality: Verify HTTP page and API contracts. Logic: Use real routes and files while
+    replacing upstream calls.
     Constraints: No database, external network, or browser permissions.
     """
 
     def test_page(self):
-        """Functionality: Verify CSP, nonce, bilingual UI, and navigation assets against the real page.
+        """Functionality: Verify CSP, nonce, bilingual UI, and navigation assets against the real
+        page.
         Inputs: Actual page. Outputs: Policy and wiring assertions.
-        Logic: Check HTML/CSP nonce consistency, language selector and map/navigation modules, and removal of Google domains and credentials.
-        Constraints: Does not execute browser CSP or prove dynamic translation; browser tools cover the real DOM separately.
+        Logic: Check HTML/CSP nonce consistency, language selector and map/navigation modules, and
+        removal of Google domains and credentials.
+        Constraints: Does not execute browser CSP or prove dynamic translation; browser tools cover
+        the real DOM separately.
         """
         first = self.client.get("/maps/")
         second = self.client.get("/maps/")
@@ -127,8 +138,10 @@ class MapsTests(SimpleTestCase):
                 self.assertEqual(self.client.get("/assets/" + name).status_code, 404)
 
     def test_config(self):
-        """Functionality: Keep the key server-side. Inputs: A fake key and an empty-key environment. Outputs: Configuration assertions.
-        Logic: Check status and fields without exposing the key. Constraints: Does not verify real authentication.
+        """Functionality: Keep the key server-side. Inputs: A fake key and an empty-key environment.
+        Outputs: Configuration assertions.
+        Logic: Check status and fields without exposing the key. Constraints: Does not verify real
+        authentication.
         """
         for key, status in [("fake-ors-key", 200), ("", 503)]:
             with patch.dict("os.environ", {"ORS_API_KEY": key}):
@@ -142,10 +155,12 @@ class MapsTests(SimpleTestCase):
 
     @patch("core.maps.walking_route")
     def test_route_input(self, upstream):
-        """Functionality: Reject cross-origin, malformed or oversized bodies, and invalid coordinates.
+        """Functionality: Reject cross-origin, malformed or oversized bodies, and invalid
+        coordinates.
         Inputs: Requests and a mocked upstream. Outputs: Error statuses; upstream remains uncalled.
         Logic: Reject invalid input before any external request.
-        Constraints: Non-browser clients can forge Origin; same-origin checks are not authentication.
+        Constraints: Non-browser clients can forge Origin; same-origin checks are not
+        authentication.
         """
         base = {"HTTP_HOST": "127.0.0.1:8766", "HTTP_ORIGIN": "http://127.0.0.1:8766"}
         valid = {"start": [103.7, 1.3], "end": [103.8, 1.4]}
@@ -197,7 +212,8 @@ class MapsTests(SimpleTestCase):
 
     @patch("core.maps.walking_route")
     def test_route_result(self, upstream):
-        """Functionality: Adapt service results and errors. Inputs: Canonical fixtures and mocked RouteError.
+        """Functionality: Adapt service results and errors. Inputs: Canonical fixtures and mocked
+        RouteError.
         Outputs: Numeric order, status, and diagnostic identifier assertions.
         Logic: Ensure the HTTP boundary does not expose credentials.
         Constraints: A mocked route does not prove connectivity to real ORS.
@@ -225,21 +241,26 @@ class MapsTests(SimpleTestCase):
 
 @patch.dict("os.environ", {"ORS_API_KEY": "fake-ors-key"})
 class ServiceTests(SimpleTestCase):
-    """Functionality: Verify service validation, transport, and rate limits while replacing HTTPSConnection.
+    """Functionality: Verify service validation, transport, and rate limits while replacing
+    HTTPSConnection.
     Logic: Keep the service implementation in the exercised path.
     Constraints: The fake key is never sent externally; production defaults remain unchanged.
     """
 
     def setUp(self):
-        """Functionality: Clear rate-limit test state. Inputs: self and the module queue. Outputs: An empty queue.
-        Logic: Prevent cross-test contamination. Constraints: Do not change production capacity, quota, or time settings.
+        """Functionality: Clear rate-limit test state. Inputs: self and the module queue. Outputs:
+        An empty queue.
+        Logic: Prevent cross-test contamination. Constraints: Do not change production capacity,
+        quota, or time settings.
         """
         services.request_times.clear()
 
     def test_coordinates(self):
-        """Functionality: Verify strict numeric boundaries. Inputs: Valid boundary values and invalid values.
+        """Functionality: Verify strict numeric boundaries. Inputs: Valid boundary values and
+        invalid values.
         Outputs: Coordinate and exception assertions.
-        Logic: Reject bool, NaN, infinity, and oversized integers. Constraints: No location device is simulated.
+        Logic: Reject bool, NaN, infinity, and oversized integers. Constraints: No location device
+        is simulated.
         """
         self.assertEqual(services.validate_coordinate([-180, 90]), [-180.0, 90.0])
         for value in [
@@ -255,8 +276,10 @@ class ServiceTests(SimpleTestCase):
                 services.validate_coordinate(value)
 
     def test_normalize(self):
-        """Functionality: Verify response contracts and malformed data. Inputs: Synthetic fixtures. Outputs: Canonical fields and 502.
-        Logic: Check metadata cleanup and geometry/step boundaries. Constraints: No real upstream is used.
+        """Functionality: Verify response contracts and malformed data. Inputs: Synthetic fixtures.
+        Outputs: Canonical fields and 502.
+        Logic: Check metadata cleanup and geometry/step boundaries. Constraints: No real upstream is
+        used.
         """
         route = services.normalize_route(route_fixture())
         self.assertNotIn("metadata", route)
@@ -270,7 +293,8 @@ class ServiceTests(SimpleTestCase):
 
     @patch("core.services.http.client.HTTPSConnection")
     def test_success(self, connection):
-        """Functionality: Verify fixed host, path, Authorization, and single-request behavior using an HTTP mock.
+        """Functionality: Verify fixed host, path, Authorization, and single-request behavior using
+        an HTTP mock.
         Outputs: Timeout, result, and close assertions. Logic: Parse actual fixture bytes.
         Constraints: Does not prove TLS, public-network access, or real authentication.
         """
@@ -296,7 +320,8 @@ class ServiceTests(SimpleTestCase):
 
     @patch("core.services.http.client.HTTPSConnection")
     def test_errors(self, connection):
-        """Functionality: Fail explicitly on authentication, quota, unavailable, and redirect responses.
+        """Functionality: Fail explicitly on authentication, quota, unavailable, and redirect
+        responses.
         Inputs: Mocked HTTP statuses. Outputs: Error codes and one call per case.
         Logic: Do not follow redirects or retry. Constraints: Real ORS is not called.
         """
@@ -318,7 +343,8 @@ class ServiceTests(SimpleTestCase):
     @patch("core.services.http.client.HTTPSConnection")
     def test_timeout_and_size(self, connection):
         """Functionality: Verify network timeouts and response-size limits using an HTTP mock.
-        Outputs: Explicit errors and released capacity slots. Logic: Do not swallow errors or report success.
+        Outputs: Explicit errors and released capacity slots. Logic: Do not swallow errors or report
+        success.
         Constraints: Mock timeouts do not measure real network timing.
         """
         connection.return_value.request.side_effect = TimeoutError()
@@ -341,7 +367,8 @@ class ServiceTests(SimpleTestCase):
     def test_rate_and_capacity(self, connection):
         """Functionality: Reject requests for rate or capacity limits before network access.
         Inputs: Module slots and queue state. Outputs: Two 429 responses and no upstream calls.
-        Logic: Restore capacity in finally. Constraints: Verifies one worker only, not cross-worker limiting.
+        Logic: Restore capacity in finally. Constraints: Verifies one worker only, not cross-worker
+        limiting.
         """
         services.request_times.extend([time.monotonic()] * services.MAX_REQUESTS_PER_MINUTE)
         with self.assertRaises(services.RouteError) as caught:
@@ -363,7 +390,8 @@ class ServiceTests(SimpleTestCase):
     def test_missing_key(self, connection):
         """Functionality: Fail without making a request when no key is configured.
         Inputs: An explicitly empty-key environment. Outputs: 503 and zero upstream calls.
-        Logic: Preserve configuration-failure semantics. Constraints: Do not probe credentials for other projects.
+        Logic: Preserve configuration-failure semantics. Constraints: Do not probe credentials for
+        other projects.
         """
         with patch.dict("os.environ", {"ORS_API_KEY": ""}):
             with self.assertRaises(services.RouteError) as caught:

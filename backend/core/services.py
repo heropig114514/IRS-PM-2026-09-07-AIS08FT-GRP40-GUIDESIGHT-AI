@@ -1,11 +1,15 @@
 """Responsibilities: Call ORS walking routes, bound capacity, and enforce the shared route contract.
-Implementation: Fixed HTTPS host, 20-second network-I/O timeout, 1 MiB response limit; no retries or redirects.
+Implementation: Fixed HTTPS host, 20-second network-I/O timeout, 1 MiB response limit; no retries or
+redirects.
 Related Modules: core.maps; the frontend consumes geometry/summary/steps.
-Declaration Index: RouteError/RouteError.__init__ — public error; validate_coordinate — coordinate validation;
+Declaration Index: RouteError/RouteError.__init__ — public error; validate_coordinate — coordinate
+validation;
 normalize_route — upstream contract validation; walking_route — rate-limit and call ORS.
-Variable Index: ORS_HOST/ORS_PATH — sole upstream; TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — transport bounds;
+Variable Index: ORS_HOST/ORS_PATH — sole upstream; TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — transport
+bounds;
 MAX_REQUESTS_PER_MINUTE — per-worker budget; route_slots — two concurrent slots;
-request_times/request_lock — rate-limit state; logger — logs without keys/coordinates; ATTRIBUTION — route-data attribution.
+request_times/request_lock — rate-limit state; logger — logs without keys/coordinates; ATTRIBUTION —
+route-data attribution.
 """
 
 import http.client
@@ -61,8 +65,10 @@ def validate_coordinate(value):
 def normalize_route(data):
     """Functionality: Convert real ORS GeoJSON into the stable application contract.
     Inputs: Decoded ORS JSON; Outputs: geometry/summary/steps/provider/profile/attribution.
-    Logic: Validate geometry, distance, duration, and step indexes; remove request-coordinate copies from metadata.
-    Constraints: Map upstream response failures to 502; do not generate substitute routes, invented steps, or default distances.
+    Logic: Validate geometry, distance, duration, and step indexes; remove request-coordinate copies
+    from metadata.
+    Constraints: Map upstream response failures to 502; do not generate substitute routes, invented
+    steps, or default distances.
     """
     try:
         if data["type"] != "FeatureCollection" or len(data["features"]) != 1:
@@ -120,11 +126,14 @@ def normalize_route(data):
 
 
 def walking_route(start, end, request_id):
-    """Functionality: Call hosted ORS while bounding upstream resource use for the anonymous diagnostic service.
+    """Functionality: Call hosted ORS while bounding upstream resource use for the anonymous
+    diagnostic service.
     Inputs: Validated start/end, non-sensitive request_id, and ORS_API_KEY environment.
     Outputs: Normalized route or RouteError; logs contain only IDs, status, duration, and counts.
-    Logic: Limit each worker to 20 requests/minute and two concurrent calls; send credentials only in Authorization; finally release the connection and slot.
-    Constraints: Per-worker rate limiting is not authentication; enforce 1 MiB and 20-second network-I/O bounds; no retries, redirects, or coordinate storage.
+    Logic: Limit each worker to 20 requests/minute and two concurrent calls; send credentials only
+    in Authorization; finally release the connection and slot.
+    Constraints: Per-worker rate limiting is not authentication; enforce 1 MiB and 20-second
+    network-I/O bounds; no retries, redirects, or coordinate storage.
     """
     key = os.environ.get("ORS_API_KEY", "").strip()
     if not key:
@@ -135,18 +144,26 @@ def walking_route(start, end, request_id):
             request_times.popleft()
         if len(request_times) >= MAX_REQUESTS_PER_MINUTE:
             raise RouteError(
-                "route_rate_limit", "The route request limit of 20 per minute was reached; try again manually later.", 429
+                "route_rate_limit",
+                "The route request limit of 20 per minute was reached; try again manually later.",
+                429,
             )
         if not route_slots.acquire(blocking=False):
-            raise RouteError("route_capacity", "Two route requests are already in progress; try again manually later.", 429)
+            raise RouteError(
+                "route_capacity",
+                "Two route requests are already in progress; try again manually later.",
+                429,
+            )
         request_times.append(started)
     connection = None
     try:
         connection = http.client.HTTPSConnection(ORS_HOST, timeout=TIMEOUT_SECONDS)
         logger.info("ORS request started id=%s profile=foot-walking", request_id)
         body = json.dumps({"coordinates": [start, end], "instructions": True, "language": "en"})
-        # Functionality: Request GeoJSON; Logic: Match Accept to the requested output format to avoid ORS 406.
-        # Constraints: Content-Type describes the JSON request; Accept describes the GeoJSON response.
+        # Functionality: Request GeoJSON; Logic: Match Accept to the requested output format to
+        # avoid ORS 406.
+        # Constraints: Content-Type describes the JSON request; Accept describes the GeoJSON
+        # response.
         connection.request(
             "POST",
             ORS_PATH,
@@ -162,21 +179,37 @@ def walking_route(start, end, request_id):
         logger.info("ORS response received id=%s status=%s", request_id, response.status)
         if response.status in (401, 403):
             raise RouteError(
-                "ors_authentication_failed", "ORS rejected the credentials; check the server key or account permissions.", 502
+                "ors_authentication_failed",
+                "ORS rejected the credentials; check the server key or account permissions.",
+                502,
             )
         if response.status == 429:
-            raise RouteError("ors_quota_exceeded", "The ORS quota limit was reached; check the account quota.", 503)
+            raise RouteError(
+                "ors_quota_exceeded",
+                "The ORS quota limit was reached; check the account quota.",
+                503,
+            )
         if response.status in (400, 404, 422):
-            raise RouteError("ors_route_unavailable", "ORS could not generate this walking route; check the endpoints.", 422)
+            raise RouteError(
+                "ors_route_unavailable",
+                "ORS could not generate this walking route; check the endpoints.",
+                422,
+            )
         if response.status != 200:
             raise RouteError("ors_upstream_error", "ORS returned a non-success status.", 502)
         raw = response.read(MAX_RESPONSE_BYTES + 1)
         if len(raw) > MAX_RESPONSE_BYTES:
-            raise RouteError("ors_response_too_large", "The ORS route exceeds this prototype's 1 MiB response limit.", 502)
+            raise RouteError(
+                "ors_response_too_large",
+                "The ORS route exceeds this prototype's 1 MiB response limit.",
+                502,
+            )
         try:
             route = normalize_route(json.loads(raw))
         except (ValueError, UnicodeDecodeError) as error:
-            raise RouteError("ors_invalid_response", "The ORS response could not be decoded as JSON.", 502) from error
+            raise RouteError(
+                "ors_invalid_response", "The ORS response could not be decoded as JSON.", 502
+            ) from error
         logger.info(
             "ORS request completed id=%s elapsed_ms=%d points=%d steps=%d",
             request_id,
@@ -186,7 +219,11 @@ def walking_route(start, end, request_id):
         )
         return route
     except TimeoutError as error:
-        raise RouteError("ors_timeout", "ORS network I/O timed out; check the network and try again manually.", 504) from error
+        raise RouteError(
+            "ors_timeout",
+            "ORS network I/O timed out; check the network and try again manually.",
+            504,
+        ) from error
     except (OSError, http.client.HTTPException) as error:
         logger.warning(
             "ORS transport failed id=%s exception_type=%s", request_id, type(error).__name__

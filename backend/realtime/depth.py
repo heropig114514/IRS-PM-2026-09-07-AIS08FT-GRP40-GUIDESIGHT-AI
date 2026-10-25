@@ -3,10 +3,12 @@ Implementation: Official DepthPredictor removes its own letterbox; ROI statistic
 Related Modules: realtime.detector; zerogpu.app/live_worker; core.detector.DetectionError.
 Declaration Index: roi_bounds; validate_depth_map; roi_median; get_object_distance;
 fuse_object_depth; DepthEstimator; DepthEstimator.__init__; DepthEstimator.activate;
-DepthEstimator.predict.
+DepthEstimator.prepare_source; DepthEstimator.predict.
 Variable Index: logger — safe load/alignment/invalid-ROI diagnostics;
 DEPTH_EDGE — explicit independent depth input size, not the detector's experimental parameter.
 DepthEstimator.model/model_name/active — loaded checkpoint identity and allocation device state.
+DepthEstimator.image_size/half — explicit depth-only settings; defaults preserve baseline A.
+DepthEstimator.fast_input — opt-in direct BGR packing; default PIL ingress is retained.
 """
 
 import logging
@@ -143,13 +145,20 @@ class DepthEstimator:
     to detection, CPU fallback or retained allocation-local predictor across ZeroGPU tasks.
     """
 
-    def __init__(self, weights_path, expected_version):
+    def __init__(self, weights_path, expected_version, *, image_size=DEPTH_EDGE, half=False,
+                 fast_input=False):
         """Functionality: Load local metric depth weights once and verify task/build identity.
-        Inputs: explicit local .pt path and detector's pinned Ultralytics version.
+        Inputs: local .pt path, pinned version, independent depth size/precision and fast_input.
         Outputs: loaded model, inactive device state or safe missing/load error.
         Logic: check file before YOLO construction to prevent its automatic asset downloader.
-        Constraints: trust only operator-provisioned official weights; no checkpoint substitution.
+        Constraints: defaults preserve depth768/FP32; never changes detector precision or weights.
         """
+        if type(image_size) is not int or image_size < 32 or image_size % 32:
+            raise ValueError("Depth image size must be a positive multiple of 32")
+        if type(half) is not bool:
+            raise ValueError("Depth half must be boolean")
+        self.image_size, self.half = image_size, half
+        self.fast_input = fast_input
         path = Path(weights_path)
         if path.suffix != ".pt" or not path.is_file():
             logger.error("Depth model missing or invalid local weight path")
@@ -170,12 +179,12 @@ class DepthEstimator:
                                  503) from None
         self.active = False
         self.model_name = path.stem
-        logger.info("YOLO26 depth model loaded task=depth input_edge=%d", DEPTH_EDGE)
+        logger.info("YOLO26 depth model loaded task=depth input_edge=%d", self.image_size)
 
     def activate(self):
         """Functionality: Place the loaded depth model on the allocation GPU once.
         Inputs: loaded model and actual CUDA availability. Outputs: active reusable model.
-        Logic: explicit FP32 CUDA model, no half/compile or detector runtime-flag changes.
+        Logic: place source model on CUDA; predictor applies requested precision at first use.
         Constraints: must run inside spaces.GPU on HF; idempotent within one allocation.
         """
         if self.active:
@@ -191,7 +200,20 @@ class DepthEstimator:
             logger.error("Depth GPU activation failed type=%s", type(error).__name__)
             raise DetectionError("depth_inference_failed", "Depth model requires usable CUDA.",
                                  503) from None
-        logger.info("Depth model activated device=cuda precision=FP32")
+        logger.info("Depth model activated device=cuda requested_precision=%s",
+                    "FP16" if self.half else "FP32")
+
+    def prepare_source(self, image):
+        """Functionality: Select original PIL ingress or exact one-pass BGR packing.
+        Inputs: decoded image. Outputs: unchanged PIL or contiguous uint8 BGR array.
+        Logic: opt-in packing avoids a separate RGB array and RGB-to-BGR conversion.
+        Constraints: fast input requires RGB; official resize/normalization remain unchanged.
+        """
+        if not self.fast_input:
+            return image
+        from realtime.depth_fast import pack_bgr
+
+        return pack_bgr(image)
 
     def predict(self, image):
         """Functionality: Infer dense metric depth from the same decoded RGB frame as detection.
@@ -207,7 +229,9 @@ class DepthEstimator:
             import torch
             import torch.nn.functional as functional
 
-            results = self.model.predict(source=image, imgsz=DEPTH_EDGE, device="cuda", half=False,
+            results = self.model.predict(source=self.prepare_source(image),
+                                         imgsz=self.image_size, device="cuda",
+                                         half=self.half,
                                          verbose=False, save=False, stream=False)
             if len(results) != 1 or tuple(results[0].orig_shape) != (image.height, image.width):
                 raise DetectionError("depth_map_size", "Depth result frame identity mismatch.", 502)

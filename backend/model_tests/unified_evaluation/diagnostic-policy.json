@@ -1,0 +1,8 @@
+{
+  "min_visibility_token": 3,
+  "min_input_width_px": 8,
+  "min_input_height_px": 16,
+  "min_retained_bbox_fraction": 0.5,
+  "description": "Diagnostic-only observable subset; not a replacement evaluation standard. Visibility tokens are over all six cameras. Width8/height16 correspond to one/two finest stride8 feature cells, not a claim of guaranteed detectability.",
+  "sensitivity_input_heights_px": [0, 8, 16, 32]
+}

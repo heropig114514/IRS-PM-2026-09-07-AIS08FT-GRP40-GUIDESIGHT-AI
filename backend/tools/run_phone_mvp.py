@@ -1,6 +1,7 @@
 """Responsibilities: Run local GPU/Web services behind the public HTTPS phone relay.
 Implementation: One pinned interactive SSH connection, one reverse loopback bind, explicit optional
-Nginx guest-relay install, existing isolated child processes and honest readiness/failure supervision.
+Nginx guest-relay install, existing isolated child processes and honest readiness/failure
+supervision.
 Related Modules: integration.phone_deploy/mobile_asgi/relay; tools.run_local_mvp; PHONE-MVP.md.
 Declaration Index: public_ready; check_remote_binding; supervise; run; main.
 Variable Index: ROOT/STOP_REQUESTED and local child helpers are reused from the existing launcher;
@@ -54,7 +55,8 @@ from tools.run_local_mvp import (
 def public_ready():
     """Functionality: Verify one trusted HTTPS request across the actual server relay.
     Inputs: Fixed public relay target. Outputs: Public guest-readiness metadata.
-    Logic: Native CA/IP verification, unauthenticated request, bounded HTML and explicit CSP/media gates.
+    Logic: Native CA/IP verification, unauthenticated request, bounded HTML and explicit CSP/media
+    gates.
     Constraints: No redirects, retries, TLS bypass, device requests or page-body logs.
     """
     connection = http.client.HTTPSConnection(SERVER, timeout=15)

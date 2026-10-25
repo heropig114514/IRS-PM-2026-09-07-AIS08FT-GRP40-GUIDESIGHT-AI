@@ -1,5 +1,6 @@
 """Responsibilities: Implement a read-only database health check.
-Implementation: Execute SELECT 1; return 503 and log the exception stack on database failure, with no retry.
+Implementation: Execute SELECT 1; return 503 and log the exception stack on database failure, with
+no retry.
 Related Modules: core.urls; the database is selected by config.settings/production.
 Declaration Index: health — public GET check for HTTP service and database availability.
 Variable Index: logger — shared application console logger.
@@ -19,10 +20,12 @@ logger = logging.getLogger(__name__)
 @permission_classes([AllowAny])
 def health(request):
     """Functionality: Check the database connection and return machine-readable service status.
-    Inputs: DRF request; implicitly reads the default database connection settings and no user input.
+    Inputs: DRF request; implicitly reads the default database connection settings and no user
+    input.
     Outputs: 200/status=ok/database=engine on success; 503/status=error on database failure.
     Logic: Execute SELECT 1 inside a context manager; catch only Django DatabaseError.
-    Constraints: Anonymous GET is explicitly allowed; failure logs identify the endpoint and database engine without returning credentials.
+    Constraints: Anonymous GET is explicitly allowed; failure logs identify the endpoint and
+    database engine without returning credentials.
     """
     try:
         with connection.cursor() as cursor:

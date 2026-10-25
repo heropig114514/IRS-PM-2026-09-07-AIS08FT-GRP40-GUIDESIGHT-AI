@@ -541,13 +541,15 @@ class MobileTests(SimpleTestCase):
             start, body = await http_call(app, "/assets/" + name)
             self.assertEqual(start["status"], 200)
             self.assertEqual(body, original)
-            headers = dict(start["headers"])
-            self.assertEqual(headers[b"content-type"], b"text/javascript; charset=utf-8")
+            headers = {key.lower(): value for key, value in start["headers"]}
+            self.assertEqual(headers[b"content-type"], b"text/javascript")
             self.assertEqual(int(headers[b"content-length"]), len(original))
             local, local_body = await http_call(app, "/assets/" + name,
                                                headers=[(b"host", b"127.0.0.1:8766")])
             self.assertEqual(local["status"], 200)
             self.assertEqual(local_body, original)
+            local_headers = {key.lower(): value for key, value in local["headers"]}
+            self.assertEqual(headers[b"content-type"], local_headers[b"content-type"])
             self.assertEqual((FRONTEND / name).read_bytes(), original)
         for name in ("navigation.js", "navigation-ui.js", "speech-output.js", "camera.js"):
             start, body = await http_call(app, "/assets/" + name)
