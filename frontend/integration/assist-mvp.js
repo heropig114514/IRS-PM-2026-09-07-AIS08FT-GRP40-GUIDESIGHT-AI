@@ -5,7 +5,7 @@
  * original frame transports and passive maps snapshots; no navigation or algorithm calculations.
  * Related Modules: assist-panel.html/assist.css/assist-guidance.js; maps-navigation-bridge.js,
  * devices.js/video-replay.js/catalog.js/voice-preferences.js; original camera/navigation/speech/vibration singletons.
- * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; onGuidance; applyVoice;
+ * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; guidanceDiagnostic; onGuidance; applyVoice;
  * renderSpeechActivation; activateSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
  * onBoundary; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
@@ -16,9 +16,10 @@
  * Exported controllers are the original instances; navigationPort forwards the existing bridge API;
  * replay href uses its original integration/video base so ../../ws preserves the current application mount.
  * speechActivation gates automatic speech until a real native start; defaults do not acquire sensors.
- * testView retains manual diagnostic choices; voicePreference stores configuration availability;
+ * testView retains localized manual diagnostic choices; voicePreference stores configuration availability;
  * languageObserver watches only the document language and never starts or cancels speech;
- * cameraFailure retains a finite native error type across the core's following stop event.
+ * cameraFailure retains a finite native error type across the core's following stop event;
+ * GUIDANCE_PHASE_LABELS provides bilingual lifecycle labels to guidanceDiagnostic.
  */
 import {cameraApp} from "../camera.js";
 import {navigation} from "../navigation-ui.js";
@@ -39,6 +40,30 @@ export {speechOutput} from "../speech-output.js";
 
 const doc = document;
 const testView = doc.documentElement.dataset.assistView === "test";
+/* Functionality: Map internal guidance lifecycle codes to fixed bilingual diagnostic labels.
+ * Inputs: The finite phase values emitted by AssistGuidanceManager and configuration updates.
+ * Outputs: Chinese/English label pairs consumed by guidanceDiagnostic.
+ * Logic: Keep transport and engine identifiers out of user-facing status copy.
+ * Constraints: Unknown phases use a generic label; this table does not alter event state. */
+const GUIDANCE_PHASE_LABELS = {
+  paused: ["输出已暂停", "Output paused"],
+  suppressed: ["输出因优先级而暂缓", "Output deferred by priority"],
+  resumed: ["输出已恢复", "Output resumed"],
+  risk_enabled: ["风险提醒设置已更新", "Risk alert setting updated"],
+  navigation_enabled: ["导航播报设置已更新", "Navigation announcement setting updated"],
+  risk_session: ["风险检测会话已启动", "Risk detection session started"],
+  risk_stopped: ["风险检测已停止", "Risk detection stopped"],
+  navigation_run: ["导航播报已启动", "Navigation announcements started"],
+  navigation_stopped: ["导航播报已停止", "Navigation announcements stopped"],
+  output_cancel: ["输出已取消", "Output cancelled"],
+  output_submitted: ["输出已提交", "Output submitted"],
+  output_start: ["输出已开始", "Output started"],
+  output_end: ["输出已结束", "Output ended"],
+  output_error: ["输出失败", "Output failed"],
+  pattern_elapsed: ["振动模式已完成", "Vibration pattern completed"],
+  stopped: ["导航与风险输出已停止", "Navigation and risk outputs stopped"],
+  configuration_changed: ["语音配置已更新", "Voice configuration updated"],
+};
 let voicePreference = {language: null, voiceId: "", reason: "local_voice_unavailable"};
 let languageObserver = null;
 let cameraFailure = null;
@@ -75,6 +100,28 @@ function node(id) { return doc.getElementById(id); }
  * Logic: Existing UI lang remains authoritative. Constraints: No input text translation or speech. */
 function productText(chinese, english) {
   return interfaceSpeechLanguage(doc.documentElement.lang) === "en-US" ? english : chinese;
+}
+
+/* Functionality: Render one guidance event as a localized, readable test status.
+ * Inputs: Manager event with phase and optional channel, enabled, reason, and request_id fields.
+ * Outputs: A concise status string in the current interface language.
+ * Logic: Resolve phase/channel labels, expose boolean setting state, and retain useful request context.
+ * Constraints: Never display raw phase identifiers; reason details are diagnostic codes only. */
+function guidanceDiagnostic(event) {
+  const [chinesePhase, englishPhase] = GUIDANCE_PHASE_LABELS[event.phase] ||
+    ["收到未知引导事件", "Unknown guidance event"];
+  const fragments = [productText(chinesePhase, englishPhase)];
+  if (event.channel) {
+    const channel = event.channel === "speech" ? productText("语音", "Speech")
+      : event.channel === "vibration" ? productText("振动", "Vibration") : event.channel;
+    fragments.push(`${productText("通道", "Channel")}: ${channel}`);
+  }
+  if (typeof event.enabled === "boolean")
+    fragments.push(productText(event.enabled ? "已启用" : "已停用", event.enabled ? "enabled" : "disabled"));
+  if (event.reason)
+    fragments.push(`${productText("原因", "Reason")}: ${String(event.reason).replaceAll("_", " ")}`);
+  if (event.request_id) fragments.push(`#${event.request_id}`);
+  return fragments.join(" · ");
 }
 
 /* Functionality: Update an accessible status only when its user-facing text changes.
@@ -162,9 +209,9 @@ function onSource(event, source) {
     if (source === "camera") cameraFailure = null;
     guidanceManager.beginRisk(sessionId);
     node("assist-results").replaceChildren();
-    setStatusText("assist-result-status", testView ? "等待本地检测结果。"
+    setStatusText("assist-result-status", testView ? productText("等待本地检测结果。", "Waiting for local detection results.")
       : productText("正在等待首个识别结果。", "Waiting for the first detection result."));
-    node("assist-status").textContent = source === "video" ? "本地视频检测中；视频位置不代表设备位置。"
+    node("assist-status").textContent = source === "video" ? productText("本地视频检测中；视频位置不代表设备位置。", "Local video detection is running; video position does not represent device location.")
       : productText("正在留意周围障碍物。", "Monitoring nearby obstacles.");
   } else if (event.type === "frame") {
     const controller = source === "video" ? videoReplay : cameraApp;
@@ -179,13 +226,14 @@ function onSource(event, source) {
     if (riskOwner === source) {
       riskOwner = sessionId = null; latest = null;
       guidanceManager.stopRisk(event.reason || event.type);
-      node("assist-status").textContent = testView ? "感知已停止；导航状态保持独立。"
+      node("assist-status").textContent = testView ? productText("感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent.")
         : productText("环境检测已停止。", "Obstacle detection stopped.");
-      setStatusText("assist-result-status", testView ? "感知已停止；最后画面仅供查看，不触发提醒。"
+      setStatusText("assist-result-status", testView ? productText("感知已停止；最后画面仅供查看，不触发提醒。", "Perception stopped; the last frame is for viewing only and triggers no alerts.")
         : productText("检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."));
     }
     if (source === "video") node("assist-video-status").textContent = event.type === "error"
-      ? `视频已停止：${event.message || "请检查本机服务。"}` : "视频会话已停止，需手动开始或重新选择视频。";
+      ? productText(`视频已停止：${event.message || "请检查本机服务。"}`, `Video stopped: ${event.message || "Check the local service."}`)
+      : productText("视频会话已停止，需手动开始或重新选择视频。", "Video session stopped. Start it manually or choose a video again.");
     // CameraApp publishes stop before clearing mode; read its completed transition once.
     if (source === "camera") queueMicrotask(renderControls);
   }
@@ -196,14 +244,14 @@ function onSource(event, source) {
   renderControls();
 }
 
-/* Functionality: Present product output availability or diagnostic lifecycle and recovery controls.
+/* Functionality: Present product output availability or localized diagnostic lifecycle and recovery controls.
  * Inputs: Manager event. Outputs: Finite status without logging media, GPS or spoken text.
- * Logic: Product text describes available actions; only the test view exposes request identities.
+ * Logic: Product text describes available actions; test diagnostics use finite phase labels and request identities.
  * The startup gate uses the activation button; recovery appears only for a separate channel pause.
  * Constraints: Engine acceptance/start/end are not physical speaker or motor verification. */
 function onGuidance(event) {
   const state = guidanceManager.describe();
-  const diagnostic = `${event.phase}${event.reason ? ` · ${event.reason}` : ""}${event.request_id ? ` · #${event.request_id}` : ""}`;
+  const diagnostic = guidanceDiagnostic(event);
   const status = testView ? diagnostic : !speechOutput.enabled.checked
     ? productText("语音提醒已关闭。", "Voice alerts are off.")
     : voicePreference.reason
@@ -252,12 +300,12 @@ function renderSpeechActivation(state) {
         : productText("语音跟随界面语言。点击启动语音，或开始导航、检测。", "Voice follows the interface language. Tap Activate voice, or start navigation or detection."));
     return;
   }
-  node("assist-speech-status").textContent = !enabled ? "语音输出已关闭。" : state.ready
-    ? gated ? "语音已停止；点击“启动语音”或开始导航、检测后恢复。"
-      : output.paused.speech ? `语音引擎已启动，但自动播报已暂停（${output.reasons.speech}），请手动恢复输出。`
-      : "语音引擎已启动，导航和预警可自动播报；请确认设备实际声音。"
-    : state.state === "queued" ? "正在启动语音，请等待提示音。"
-    : `语音提醒已开启，尚未启动（${state.reason || "activation_required"}）。选择本地声音后，点击“启动语音”或开始导航、检测。`;
+  node("assist-speech-status").textContent = !enabled ? productText("语音输出已关闭。", "Speech output is off.") : state.ready
+    ? gated ? productText("语音已停止；点击“启动语音”或开始导航、检测后恢复。", "Voice has stopped. Tap Activate voice, or start navigation or detection to resume.")
+      : output.paused.speech ? productText(`语音引擎已启动，但自动播报已暂停（${output.reasons.speech}），请手动恢复输出。`, `The speech engine has started, but automatic announcements are paused (${String(output.reasons.speech).replaceAll("_", " ")}). Resume output manually.`)
+        : productText("语音引擎已启动，导航和预警可自动播报；请确认设备实际声音。", "The speech engine has started and can announce navigation and alerts. Confirm that sound is audible on the device.")
+    : state.state === "queued" ? productText("正在启动语音，请等待提示音。", "Starting voice. Wait for the prompt.")
+      : productText(`语音提醒已开启，尚未启动（${state.reason || "activation_required"}）。选择本地声音后，点击“启动语音”或开始导航、检测。`, `Voice alerts are enabled but have not started (${String(state.reason || "activation_required").replaceAll("_", " ")}). Select a local voice, then tap Activate voice or start navigation or detection.`);
 }
 
 /* Functionality: Start the first utterance directly within the current real click stack.
@@ -353,7 +401,7 @@ function readVoices() {
   const select = node("navigation-speech-voice"), selected = select.value;
   const language = node("navigation-speech-language").value;
   select.replaceChildren();
-  const empty = doc.createElement("option"); empty.value = ""; empty.textContent = "请选择本地声音"; select.append(empty);
+  const empty = doc.createElement("option"); empty.value = ""; empty.textContent = productText("请选择本地声音", "Select a local voice"); select.append(empty);
   for (const voice of speechOutput.voiceList().voices.filter(item => item.local_service === true &&
       item.language.split("-")[0].toLowerCase() === language.split("-")[0].toLowerCase())) {
     const option = doc.createElement("option"); option.value = voice.id;
@@ -377,7 +425,7 @@ async function readDevices(devices) {
     const inventory = Array.isArray(devices) ? devices : await navigator.mediaDevices.enumerateDevices();
     if (choice !== permissionChoice) return;
     select.replaceChildren();
-    const empty = doc.createElement("option"); empty.value = ""; empty.textContent = "请明确选择摄像头"; select.append(empty);
+    const empty = doc.createElement("option"); empty.value = ""; empty.textContent = productText("请明确选择摄像头", "Select a camera explicitly"); select.append(empty);
     for (const [index, device] of inventory.filter(item => item.kind === "videoinput" && item.deviceId).entries()) {
       const option = doc.createElement("option"); option.value = device.deviceId;
       option.textContent = device.label || `Camera ${index + 1}`; select.append(option);
@@ -385,7 +433,7 @@ async function readDevices(devices) {
     select.value = explicitDeviceId(inventory, selected); cameraApp.localDeviceId = select.value;
   } catch (error) {
     if (choice === permissionChoice) node("assist-status").textContent = testView
-      ? `读取摄像头失败（${error.name}），请检查浏览器权限。`
+      ? productText(`读取摄像头失败（${error.name}），请检查浏览器权限。`, `Camera list failed (${error.name}). Check browser permissions.`)
       : productText("无法读取摄像头，请检查浏览器的摄像头权限。", "Cannot list cameras. Check the browser's camera permission.");
   }
   renderControls();
@@ -403,7 +451,7 @@ async function authorizeDevices() {
     if (choice !== permissionChoice) return;
     await readDevices(devices);
   } catch (error) {
-    if (choice === permissionChoice) node("assist-status").textContent = testView ? `摄像头授权失败（${error.name}）。`
+    if (choice === permissionChoice) node("assist-status").textContent = testView ? productText(`摄像头授权失败（${error.name}）。`, `Camera permission failed (${error.name}).`)
       : productText("无法访问摄像头，请检查设备和浏览器权限。", "Cannot access the camera. Check the device and browser permissions.");
   }
   finally { if (choice === permissionChoice) { sourceStarting = null; renderControls(); } }
@@ -420,8 +468,8 @@ async function selectFile() {
     const operation = videoReplay.loadFile(file); renderControls(); await operation;
     if (choice !== fileChoice) return;
     fileReady = true; node("assist-video-file").value = "";
-    node("assist-video-status").textContent = `${file.name} · ${videoReplay.video.duration.toFixed(2)} s；点击开始视频检测。`;
-  } catch (error) { if (choice === fileChoice) node("assist-video-status").textContent = `视频未就绪：${error.message}`; }
+    node("assist-video-status").textContent = productText(`${file.name} · ${videoReplay.video.duration.toFixed(2)} s；点击开始视频检测。`, `${file.name} · ${videoReplay.video.duration.toFixed(2)} s. Select Start video detection to begin.`);
+  } catch (error) { if (choice === fileChoice) node("assist-video-status").textContent = productText(`视频未就绪：${error.message}`, `Video is not ready: ${error.message}`); }
   renderControls();
 }
 
@@ -433,7 +481,7 @@ async function startVideo() {
   activateSpeech();
   sourceStarting = "video"; boundaryStopped = false; renderControls();
   try { await videoReplay.start(); }
-  catch (error) { node("assist-video-status").textContent = `未开始：${error.message}`; }
+  catch (error) { node("assist-video-status").textContent = productText(`未开始：${error.message}`, `Not started: ${error.message}`); }
   finally { if (sourceStarting === "video") sourceStarting = null; renderControls(); }
 }
 
@@ -448,9 +496,9 @@ function stopPerception(reason = "user", stopOutput = true) {
   if (stopOutput) guidanceManager.stopRisk(reason);
   videoReplay.stop(reason);
   if (cameraApp.mode !== "idle") cameraApp.stop();
-  node("assist-status").textContent = testView ? "感知已停止；导航状态保持独立。"
+  node("assist-status").textContent = testView ? productText("感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent.")
     : productText("环境检测已停止。", "Obstacle detection stopped.");
-  setStatusText("assist-result-status", testView ? "感知已停止；最后画面不触发提醒。"
+  setStatusText("assist-result-status", testView ? productText("感知已停止；最后画面不触发提醒。", "Perception stopped; the last frame does not trigger alerts.")
     : productText("检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."));
   renderControls();
 }
@@ -491,7 +539,7 @@ function stopAll(reason = "user", stopNavigation = true) {
     if (stopNavigation && (navigation.active || navigation.describe().reason === "stop_failed")) navigation.stop("user");
     cleanupCompleted = true;
   } finally {
-    if (testView) node("assist-status").textContent = "已请求停止全部；请查看导航和输出状态确认清理结果。";
+    if (testView) node("assist-status").textContent = productText("已请求停止全部；请查看导航和输出状态确认清理结果。", "Stop all was requested. Check navigation and output statuses to confirm cleanup.");
     else {
       renderStopStatus(cleanupCompleted);
       // Native page lifecycle handlers stop original GPS after this capture listener returns.
@@ -527,7 +575,7 @@ function initialize() {
     node("product-camera-start").addEventListener("click", startProductCamera);
   }
   cameraApp.processing.value = "local"; cameraApp.handleProcessingChange();
-  node("maps-navigation-speech-panel").querySelector("h2").textContent = "导航与风险播报声音";
+  node("maps-navigation-speech-panel").querySelector("h2").textContent = productText("导航与风险播报声音", "Navigation and risk alert audio");
   guidanceManager.subscribe(onGuidance);
   cameraApp.subscribe(event => onSource(event, "camera"));
   videoReplay.subscribe(event => onSource(event, "video"));
