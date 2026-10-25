@@ -1,0 +1,21 @@
+{
+  "ultralytics": "8.4.171",
+  "model": "YOLO26n",
+  "signature": "cef81662c6245162c876a79eb15d256756be47202ea64cbcf1a07218b1c2f4f0",
+  "feature_channels": [
+    64,
+    128,
+    256
+  ],
+  "inspected_detect_input_sources": [
+    16,
+    19,
+    22
+  ],
+  "feature_strides": [
+    8,
+    16,
+    32
+  ],
+  "note": "Derived from the actual installed YOLO26n checkpoint; no guessed YOLOv5/v8 layer numbers."
+}

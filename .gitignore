@@ -17,6 +17,7 @@
 *.py[cod]
 .venv/
 .venv-inference/
+.venv-evaluation/
 .venv-space/
 backend/.space-bundle/
 backend/.kaggle-bundle/

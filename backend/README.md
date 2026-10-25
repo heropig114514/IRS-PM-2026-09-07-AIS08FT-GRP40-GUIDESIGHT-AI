@@ -1,5 +1,9 @@
 # Backend development
 
+Scheme E is an isolated shared-YOLO object camera-z experiment. See
+[object_distance/README.md](object_distance/README.md) for local data preparation, Windows training,
+evaluation, teammate-weight compatibility and comparison boundaries. A/B/C defaults are unchanged.
+
 Distance estimation defaults to dual-model mode A, with optional geometric mode B and low-frequency
 depth mode C. See [DISTANCE-MODES.md](DISTANCE-MODES.md) for configuration, commands, focal lengths,
 class heights and performance records.
@@ -184,3 +188,10 @@ assets through the Web server. Camera deployment does not expose `/prs/admin/` o
 Maps/camera pages expose Qwen -> intent catalog -> Skill -> MCP -> existing controllers, with
 missing-input questions, cross-page conversations, progress and cancellation. Configuration,
 operation, capability limits and reproducible checks are in [AGENT.md](AGENT.md).
+
+## External distance experiments
+
+The independent [nuScenes A/B/C/E evaluation tool](model_tests/unified_evaluation/README.md)
+compares center-z errors, detection/distance coverage, paired targets, temporal behavior and
+synchronized latency/resources. It requires explicit smoke/full scope, uses local data/weights,
+and preserves existing production and E training interfaces.

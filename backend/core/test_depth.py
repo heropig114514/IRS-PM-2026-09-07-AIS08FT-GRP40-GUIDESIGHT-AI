@@ -7,7 +7,7 @@ DepthTests.test_fusion_and_shape_contract; DepthTests.test_missing_and_wrong_mod
 DepthTests.test_resident_integration; DepthTests.test_rendered_labels;
 DepthTests.test_full_detection_packet; DepthTests.test_depth_deployment_closure;
 DepthTests.test_tensor_median; DepthTests.test_model_reuse_alignment_and_failures;
-DepthTests.test_worker_depth_handoff.
+DepthTests.test_worker_depth_handoff; DepthTests.test_depth_experiment_options.
 Variable Index: HAS_TORCH — optional inference-runtime availability; test doubles do not prove
 pretrained accuracy or actual CUDA inference. GPU tensor checks run only with actual CUDA.
 """
@@ -254,6 +254,14 @@ class DepthTests(SimpleTestCase):
             loader.assert_called_once()
             self.assertEqual(model.predict.call_count, 2)
             self.assertIs(model.predict.call_args.kwargs["source"], image)
+            self.assertEqual(model.predict.call_args.kwargs["imgsz"], 768)
+            self.assertIs(model.predict.call_args.kwargs["half"], False)
+            experimental = DepthEstimator(path, "8.4.171", image_size=640, half=True)
+            experimental.activate()
+            aligned = experimental.predict(image)
+            self.assertEqual(aligned.shape, (4, 6))
+            self.assertEqual(model.predict.call_args.kwargs["imgsz"], 640)
+            self.assertIs(model.predict.call_args.kwargs["half"], True)
             result.orig_shape = (6, 4)
             with self.assertRaises(DetectionError) as caught:
                 estimator.predict(image)
@@ -271,6 +279,16 @@ class DepthTests(SimpleTestCase):
                 with self.assertRaises(DetectionError) as caught:
                     estimator.activate()
                 self.assertEqual(caught.exception.code, "depth_inference_failed")
+
+    def test_depth_experiment_options(self):
+        """Functionality: Reject malformed depth-only options before model loading.
+        Inputs: invalid sizes and precision flags. Outputs: explicit configuration errors.
+        Logic: validate integer stride multiples and boolean precision. Constraints: no downloads.
+        """
+        for options in ({"image_size": 0}, {"image_size": 641}, {"image_size": True},
+                        {"half": "true"}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                DepthEstimator("unused.pt", "unused", **options)
 
     def test_worker_depth_handoff(self):
         """Functionality: Pass the loaded estimator once to the actual live worker factory.

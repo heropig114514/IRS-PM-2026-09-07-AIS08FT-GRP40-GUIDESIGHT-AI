@@ -93,13 +93,14 @@ def letterbox(image, output=None):
     return output, scale, left, top
 
 
-def decode_boxes(predictions, image_size, transform, names):
+def decode_boxes(predictions, image_size, transform, names, *, class_conf=None):
     """Functionality: Convert verified e2e rows to clipped original-image detections.
-    Inputs: predictions [1,300,6], image_size (width,height), transform scale/left/top, names.
+    Inputs: predictions [1,300,6], image_size, transform, names and optional class overrides.
     Outputs: list of xyxy/score/class_id/label dictionaries; invalid model output raises 502.
     Logic: validate all numbers/classes, filter score below the per-class threshold
-    (CLASS_CONF, default 0.25), invert letterbox and clip padding.
-    Constraints: no external NMS; an empty list is a valid no-detection result.
+    (CLASS_CONF by default), invert letterbox and clip padding. Explicit {} retains uniform 0.25.
+    Constraints: existing callers keep production thresholds; historical experiments opt out
+    explicitly without mutating global policy. No external NMS; empty detections are valid.
     """
     import numpy as np
 
@@ -113,9 +114,13 @@ def decode_boxes(predictions, image_size, transform, names):
         (classes < 0) | (classes >= len(names)) | (classes != np.trunc(classes))
     ):
         raise DetectionError("invalid_prediction", "The model class or confidence is invalid.", 502)
-    thresholds = np.asarray([CLASS_CONF.get(name, CONFIDENCE_THRESHOLD) for name in names],
-                            dtype=np.float32)
-    selected = rows[scores >= thresholds[classes.astype(np.int64)]]
+    overrides = CLASS_CONF if class_conf is None else class_conf
+    if overrides:
+        thresholds = np.asarray([overrides.get(name, CONFIDENCE_THRESHOLD) for name in names],
+                                dtype=np.float32)
+        selected = rows[scores >= thresholds[classes.astype(np.int64)]]
+    else:
+        selected = rows[scores >= CONFIDENCE_THRESHOLD]
     # Float64 matches the previous Python-float inverse, including clipping/order.
     restored = selected[:, :4].astype(np.float64)
     restored -= [left, top, left, top]

@@ -1,0 +1,7 @@
+# Responsibilities: Add the official dataset SDK in an isolated evaluation environment.
+# Implementation: Inherit the existing inference environment; pin the dataset Devkit separately.
+# Related Modules: unified_evaluation.dataset/performance; README.md documents isolation.
+# Declaration Index: None.
+# Variable Index: None.
+nuscenes-devkit==1.2.0
+psutil>=5.9,<8

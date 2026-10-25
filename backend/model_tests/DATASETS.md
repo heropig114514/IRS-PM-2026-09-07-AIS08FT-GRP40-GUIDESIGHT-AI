@@ -206,3 +206,10 @@ See [README.md](README.md) for installation and usage, and [DEPTH.md](../DEPTH.m
 GPU verification. Future formal evaluation should add a dedicated script for reading ground truth
 and calculating metrics, using a predefined protocol and the project's existing evaluation
 configuration.
+
+## External nuScenes comparison
+
+The independent [A/B/C/E evaluator](unified_evaluation/README.md) reads local nuScenes Mini,
+projects labeled camera keyframes and reports center-z errors, coverage, paired targets and
+latency/resources. It preserves existing depth scripts and production algorithms. Read its
+protocol limitations and run an explicit smoke subset before selecting full evaluation.
