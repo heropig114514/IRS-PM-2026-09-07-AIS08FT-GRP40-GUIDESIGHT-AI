@@ -1,6 +1,8 @@
 """Responsibilities: Shared HTTP, ORM, session authentication, admin, and logging configuration.
-Implementation: Read backend/.env and stop startup when required secrets are missing; database settings are selected by environment modules.
-Related Modules: config.settings/production/camera_server select databases; core provides public APIs and echo transport.
+Implementation: Read backend/.env and stop startup when required secrets are missing; database
+settings are selected by environment modules.
+Related Modules: config.settings/production/camera_server select databases; core provides public
+APIs and echo transport.
 Declaration Index: None。
 Variable Index:
 - BASE_DIR — Absolute backend path; SECRET_KEY — required Django secret.

@@ -1,7 +1,10 @@
-"""Responsibilities: Adapt same-origin scene-description POST requests and expose configuration status.
-Implementation: Check Origin and Host (as in core.maps), enforce the body limit before reading it, and delegate business logic to core.vlm.
+"""Responsibilities: Adapt same-origin scene-description POST requests and expose configuration
+status.
+Implementation: Check Origin and Host (as in core.maps), enforce the body limit before reading it,
+and delegate business logic to core.vlm.
 Related Modules: core.vlm, core.maps, config.urls, and the frontend scene-description client.
-Declaration Index: scene_config — configuration status; scene_describe — scene-description POST endpoint.
+Declaration Index: scene_config — configuration status; scene_describe — scene-description POST
+endpoint.
 Variable Index: logger — safe diagnostic logging; MAX_REQUEST_BYTES — 1.5 MiB request-body limit.
 """
 
@@ -34,8 +37,10 @@ MAX_REQUEST_BYTES = 1572864
 def scene_config(request):
     """Functionality: Report whether the VLM is configured without exposing credentials.
     Inputs: request and DASHSCOPE_* environment; Outputs: uncached 200 or unconfigured 503 JSON.
-    Logic: Expose only provider/model/configured/code; keep host private. Configuration does not prove authentication.
-    Constraints: Authentication is verified by a description request; when unconfigured, model is the environment value or default.
+    Logic: Expose only provider/model/configured/code; keep host private. Configuration does not
+    prove authentication.
+    Constraints: Authentication is verified by a description request; when unconfigured, model is
+    the environment value or default.
     """
     try:
         _, _, model = vlm_settings()
@@ -59,12 +64,16 @@ def scene_config(request):
 @csrf_exempt
 @require_POST
 async def scene_describe(request):
-    """Functionality: Validate a same-origin request and return a conversational description of the scene ahead.
+    """Functionality: Validate a same-origin request and return a conversational description of the
+    scene ahead.
     Inputs: request Origin/Host、JSON image_jpeg_base64/language/question/objects；
     Outputs: Contract-compliant success JSON or {code, detail, request_id}.
-    Logic: Strict Origin/Host checks replace cookie-based CSRF; check Content-Length before reading the body, then pass bounded input to core.vlm.
-    Constraints: Same-origin is not authentication; images/questions are neither stored nor logged; no automatic retry or fallback. The async view runs blocking
-    http.client work in a thread so it does not occupy Django's sync thread pool and stall other pages (up to about 20 seconds per request).
+    Logic: Strict Origin/Host checks replace cookie-based CSRF; check Content-Length before reading
+    the body, then pass bounded input to core.vlm.
+    Constraints: Same-origin is not authentication; images/questions are neither stored nor logged;
+    no automatic retry or fallback. The async view runs blocking
+    http.client work in a thread so it does not occupy Django's sync thread pool and stall other
+    pages (up to about 20 seconds per request).
     """
     request_id = uuid.uuid4().hex[:12]
     try:
@@ -73,10 +82,16 @@ async def scene_describe(request):
             origin not in settings.CAMERA_ALLOWED_ORIGINS
             or urlsplit(origin).netloc != request.get_host()
         ):
-            raise SceneError("origin_rejected", "The scene endpoint accepts same-origin requests from this page only.", 403)
+            raise SceneError(
+                "origin_rejected",
+                "The scene endpoint accepts same-origin requests from this page only.",
+                403,
+            )
         if request.content_type != "application/json":
             raise SceneError("invalid_content_type", "The request must use application/json.", 415)
-        too_large = SceneError("request_too_large", "The scene request exceeds the 1.5 MiB limit.", 413)
+        too_large = SceneError(
+            "request_too_large", "The scene request exceeds the 1.5 MiB limit.", 413
+        )
         declared = request.META.get("CONTENT_LENGTH", "")
         if declared.isdigit() and int(declared) > MAX_REQUEST_BYTES:
             raise too_large
@@ -89,7 +104,9 @@ async def scene_describe(request):
         try:
             body = json.loads(raw)
         except (ValueError, UnicodeDecodeError, RecursionError) as error:
-            raise SceneError("invalid_scene_input", "The request body is not valid JSON.", 400) from error
+            raise SceneError(
+                "invalid_scene_input", "The request body is not valid JSON.", 400
+            ) from error
         scene = validate_scene_request(body)
         result = await asyncio.to_thread(describe_scene, scene, request_id)
         response = JsonResponse({**result, "request_id": request_id})

@@ -1,5 +1,6 @@
 """Responsibilities: Provide the Django synchronous HTTP deployment entry point.
-Implementation: Use development settings by default; production configuration must be selected explicitly through the environment.
+Implementation: Use development settings by default; production configuration must be selected
+explicitly through the environment.
 Related Modules: config.settings/production; routine project startup uses config.asgi.
 Declaration Index: None。
 Variable Index: application — the Django WSGI application.

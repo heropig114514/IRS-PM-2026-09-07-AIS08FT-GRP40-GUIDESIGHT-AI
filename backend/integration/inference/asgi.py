@@ -57,7 +57,12 @@ async def application(scope, receive, send):
         )
         if not local:
             await respond(
-                send, 403, {"code": "origin_rejected", "detail": "The inference process accepts local access only."}
+                send,
+                403,
+                {
+                    "code": "origin_rejected",
+                    "detail": "The inference process accepts local access only.",
+                },
             )
         elif scope.get("path") != "/health/" or scope.get("query_string"):
             await respond(send, 404, {"code": "not_found"})

@@ -2,18 +2,23 @@
 Implementation: Independent minimal session manifests and annotation observations.
 Related Modules: object_distance.prepare_sanpo/data/config.
 Declaration Index: SanpoTrainingTests; SanpoTrainingTests.test_conversion_and_target_guard.
-Variable Index: None.
+Variable Index: HAS_TORCH identifies the optional dataset loader dependency.
 """
 
 import json
 import tempfile
+from importlib.util import find_spec
 from pathlib import Path
-from unittest import TestCase
+from unittest import TestCase, skipUnless
 
-from object_distance.data import KittiObjects
 from object_distance.prepare_sanpo import TARGET_NAME, convert
 
+HAS_TORCH = find_spec("torch") is not None
+if HAS_TORCH:
+    from object_distance.data import KittiObjects
 
+
+@skipUnless(HAS_TORCH, "Optional PyTorch dataset loader required")
 class SanpoTrainingTests(TestCase):
     """Functionality: Test usable manifests and reject mislabeled targets.
     Logic: Separate sessions, manual/machine observations, explicit target check.

@@ -57,11 +57,17 @@ def decode_frame(payload):
         with Image.open(io.BytesIO(payload)) as image:
             longest = max(image.size)
             if image.format != "JPEG" or not 0 < min(image.size) <= longest <= MAX_INPUT_EDGE:
-                raise DetectionError("invalid_frame", "Only JPEG images with a maximum edge of 1,280 pixels are accepted.", 400)
+                raise DetectionError(
+                    "invalid_frame",
+                    "Only JPEG images with a maximum edge of 1,280 pixels are accepted.",
+                    400,
+                )
             image.load()
             return image.convert("RGB")
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
-        raise DetectionError("invalid_frame", "The JPEG image is corrupt or could not be decoded.", 400) from error
+        raise DetectionError(
+            "invalid_frame", "The JPEG image is corrupt or could not be decoded.", 400
+        ) from error
 
 
 def letterbox(image, output=None):

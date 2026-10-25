@@ -1,4 +1,5 @@
-"""Responsibilities: Admit public guest traffic through one explicit HTTPS relay around the unchanged local assist application.
+"""Responsibilities: Admit public guest traffic through one explicit HTTPS relay around the
+unchanged local assist application.
 Implementation: Loopback peer, exact Host/Origin/path gates; canonical internal headers preserve
 existing Web/GPU checks. Public responses retain /mvp/WSS, with no account authentication.
 Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol; core.ai_bridge/ai_mcp;
@@ -18,6 +19,7 @@ import os
 from urllib.parse import urlsplit
 
 from .protocol import is_loopback, web_origins
+
 MOUNT = "/mvp"
 HTTP_METHODS = {
     "/": frozenset({"GET", "HEAD"}),

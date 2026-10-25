@@ -14,9 +14,13 @@ import numpy as np
 
 def synchronize(device):
     """Functionality: Close the selected CUDA device's asynchronous timing boundary.
-    Inputs: device string. Outputs: None. Logic: CUDA synchronization only for CUDA devices.
+    Inputs: device string. Outputs: None. Logic: explicit CPU requires no optional Torch import;
+    CUDA synchronization remains mandatory for CUDA devices.
     Constraints: CPU is used only when explicitly requested for tests/E; A/B/C require CUDA.
     """
+    if device == "cpu":
+        return
+
     import torch
 
     if torch.device(device).type == "cuda":

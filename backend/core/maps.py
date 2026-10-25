@@ -93,7 +93,11 @@ def maps_route(request):
             origin not in settings.CAMERA_ALLOWED_ORIGINS
             or urlsplit(origin).netloc != request.get_host()
         ):
-            raise RouteError("origin_rejected", "The route endpoint accepts same-origin requests from this page only.", 403)
+            raise RouteError(
+                "origin_rejected",
+                "The route endpoint accepts same-origin requests from this page only.",
+                403,
+            )
         if request.content_type != "application/json":
             raise RouteError("invalid_content_type", "The request must use application/json.", 415)
         if len(request.body) > MAX_REQUEST_BYTES:
@@ -107,7 +111,9 @@ def maps_route(request):
                 raise ValueError("The start and end points must differ.")
         except (ValueError, UnicodeDecodeError, OverflowError) as error:
             raise RouteError(
-                "invalid_route_input", "Start and end must be distinct valid [longitude, latitude] coordinates.", 400
+                "invalid_route_input",
+                "Start and end must be distinct valid [longitude, latitude] coordinates.",
+                400,
             ) from error
         route = walking_route(start, end, request_id)
         response = JsonResponse({**route, "request_id": request_id})

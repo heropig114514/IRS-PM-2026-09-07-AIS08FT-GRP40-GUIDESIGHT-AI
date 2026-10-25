@@ -1,19 +1,27 @@
-"""Responsibilities: Validate scene-description input, construct prompts, call DashScope, bound capacity, and parse responses.
-Implementation: Fixed HTTPS OpenAI-compatible chat/completions; 20-second network-I/O timeout and 256 KiB response limit;
+"""Responsibilities: Validate scene-description input, construct prompts, call DashScope, bound
+capacity, and parse responses.
+Implementation: Fixed HTTPS OpenAI-compatible chat/completions; 20-second network-I/O timeout and
+256 KiB response limit;
 no retries, redirects, or fallback; the key appears only in the Authorization header.
 Related Modules: core.scene (HTTP adapter), core.services (parallel ORS rate-limit/error structure),
-tools.describe_image (CLI), and frontend/scene-client.js (boxes_to_objects follows the mapObjects rule).
-Declaration Index: SceneError/SceneError.__init__ — public error; vlm_settings — read environment configuration;
+tools.describe_image (CLI), and frontend/scene-client.js (boxes_to_objects follows the mapObjects
+rule).
+Declaration Index: SceneError/SceneError.__init__ — public error; vlm_settings — read environment
+configuration;
 _is_number — finite non-boolean check; _validate_object — validate one detection object;
-validate_scene_request — validate and normalize request body; build_messages — construct prompt/messages;
+validate_scene_request — validate and normalize request body; build_messages — construct
+prompt/messages;
 parse_completion — parse upstream response; describe_scene — rate-limit and call DashScope;
 new_request_id — generate request_id; _map_box — map one detection box to an object;
 boxes_to_objects — map a detection-box list; _prepare_scene — shared high-level validation;
 describe — asynchronous one-call entry; describe_sync — synchronous script entry.
 Variable Index: DEFAULT_HOST/DEFAULT_MODEL — environment defaults; CHAT_PATH — sole upstream path;
-TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — transport bounds; MAX_TOKENS/TEMPERATURE/ENABLE_THINKING — generation settings
-(Qwen3 hybrid reasoning tokens are not bounded by max_tokens; enabling reasoning measured 14–16 seconds and often timed out, so it is explicitly disabled);
-MAX_IMAGE_BYTES/MAX_BASE64_CHARS — image bounds; MAX_OBJECTS/MAX_QUESTION_CHARS/MAX_LABEL_CHARS — input bounds;
+TIMEOUT_SECONDS/MAX_RESPONSE_BYTES — transport bounds; MAX_TOKENS/TEMPERATURE/ENABLE_THINKING —
+generation settings
+(Qwen3 hybrid reasoning tokens are not bounded by max_tokens; enabling reasoning measured 14–16
+seconds and often timed out, so it is explicitly disabled);
+MAX_IMAGE_BYTES/MAX_BASE64_CHARS — image bounds; MAX_OBJECTS/MAX_QUESTION_CHARS/MAX_LABEL_CHARS —
+input bounds;
 MAX_REQUESTS_PER_MINUTE — per-worker quota; vlm_slots — two concurrent slots;
 MAX_SAFE_INTEGER — track_id limit aligned with frontend Number.isSafeInteger;
 request_times/request_lock — rate-limit state; LANGUAGES — supported languages and prompt names;
@@ -123,31 +131,42 @@ class SceneError(Exception):
 def vlm_settings():
     """Functionality: Read and validate DashScope environment configuration.
     Inputs: DASHSCOPE_API_KEY/DASHSCOPE_HOST/VLM_MODEL environment; Outputs: (key, host, model).
-    Logic: Missing key or invalid host/model format is treated as unconfigured and raises 503; host must be a hostname without port/path.
+    Logic: Missing key or invalid host/model format is treated as unconfigured and raises 503; host
+    must be a hostname without port/path.
     Constraints: Do not fall back to a default host to hide configuration errors; never log the key.
     """
     key = os.environ.get("DASHSCOPE_API_KEY", "").strip()
     host = os.environ.get("DASHSCOPE_HOST", "").strip() or DEFAULT_HOST
     model = os.environ.get("VLM_MODEL", "").strip() or DEFAULT_MODEL
     if not key:
-        raise SceneError("vlm_not_configured", "DASHSCOPE_API_KEY is not configured on the server.", 503)
+        raise SceneError(
+            "vlm_not_configured", "DASHSCOPE_API_KEY is not configured on the server.", 503
+        )
     if not HOST_PATTERN.fullmatch(host) or not MODEL_PATTERN.fullmatch(model):
-        raise SceneError("vlm_not_configured", "The DASHSCOPE_HOST or VLM_MODEL configuration format is invalid.", 503)
+        raise SceneError(
+            "vlm_not_configured",
+            "The DASHSCOPE_HOST or VLM_MODEL configuration format is invalid.",
+            503,
+        )
     return key, host, model
 
 
 def _is_number(value):
     """Functionality: Determine whether a value is a finite non-boolean number.
-    Inputs: Any JSON value; Outputs: bool; Logic: Exclude bool, NaN, and Inf; Constraints: no side effects.
+    Inputs: Any JSON value; Outputs: bool; Logic: Exclude bool, NaN, and Inf; Constraints: no side
+    effects.
     """
     return type(value) in (int, float) and math.isfinite(value)
 
 
 def _validate_object(item):
     """Functionality: Validate and normalize one detection object.
-    Inputs: One object from the request; Outputs: A dict containing only provided allowlisted fields, or ValueError.
-    Logic: Reject unknown keys and invalid types/ranges; retain three decimal places for distance/confidence without rounding values upward.
-    Constraints: Treat null as absent and omit it so the model is not given implied distance or other information.
+    Inputs: One object from the request; Outputs: A dict containing only provided allowlisted
+    fields, or ValueError.
+    Logic: Reject unknown keys and invalid types/ranges; retain three decimal places for
+    distance/confidence without rounding values upward.
+    Constraints: Treat null as absent and omit it so the model is not given implied distance or
+    other information.
     """
     if not isinstance(item, dict) or not set(item) <= OBJECT_KEYS:
         raise ValueError("The object is not a mapping or contains unknown fields.")
@@ -170,7 +189,9 @@ def _validate_object(item):
         if not _is_number(distance) or distance <= 0:
             raise ValueError("distance_m must be a positive finite number.")
         if round(distance, 3) <= 0:
-            raise ValueError("distance_m is too small to remain positive at the supported precision.")
+            raise ValueError(
+                "distance_m is too small to remain positive at the supported precision."
+            )
         result["distance_m"] = round(distance, 3)
     for name, allowed in (
         ("direction", DIRECTIONS),
@@ -194,11 +215,17 @@ def validate_scene_request(body):
     """Functionality: Validate request JSON and normalize its internal representation.
     Inputs: Decoded JSON value; Outputs: {image, language, question, objects}, or SceneError(400).
     Logic: Validate the key set and image first (invalid_image), then language/question/objects
-    (invalid_scene_input); check image length before strict base64 decoding and JPEG SOI/EOI markers; do not decode pixels.
-    Constraints: Do not validate whether the model can understand image content; retain a nonblank question after stripping.
+    (invalid_scene_input); check image length before strict base64 decoding and JPEG SOI/EOI
+    markers; do not decode pixels.
+    Constraints: Do not validate whether the model can understand image content; retain a nonblank
+    question after stripping.
     """
-    bad_input = SceneError("invalid_scene_input", "Scene request fields are missing, unknown, or invalid.", 400)
-    bad_image = SceneError("invalid_image", "The image must be a standard base64 JPEG from 1 byte to 1 MiB.", 400)
+    bad_input = SceneError(
+        "invalid_scene_input", "Scene request fields are missing, unknown, or invalid.", 400
+    )
+    bad_image = SceneError(
+        "invalid_image", "The image must be a standard base64 JPEG from 1 byte to 1 MiB.", 400
+    )
     if not isinstance(body, dict) or not set(body) <= {
         "image_jpeg_base64",
         "language",
@@ -240,11 +267,14 @@ def validate_scene_request(body):
 
 
 def build_messages(scene):
-    """Functionality: Build system and user messages from a normalized request, with image before text.
+    """Functionality: Build system and user messages from a normalized request, with image before
+    text.
     Inputs: Output from validate_scene_request; Outputs: OpenAI-compatible messages list.
-    Logic: Append objects as compact JSON (ensure_ascii=False, no spaces), including only caller-provided fields.
+    Logic: Append objects as compact JSON (ensure_ascii=False, no spaces), including only
+    caller-provided fields.
     Omit distance_m when no distance was supplied; the prompt prohibits inventing one.
-    Constraints: Do not rewrite the question; keep the prompt in English for rule stability and select reply language from language.
+    Constraints: Do not rewrite the question; keep the prompt in English for rule stability and
+    select reply language from language.
     """
     question = scene["question"] or "Describe the scene ahead."
     if scene["objects"]:
@@ -274,8 +304,10 @@ def build_messages(scene):
 def parse_completion(data):
     """Functionality: Extract text and token usage from an OpenAI-compatible response.
     Inputs: Decoded JSON; Outputs: (text, input_tokens|None, output_tokens|None).
-    Logic: Require non-empty choices[0].message.content; use None for usage fields that are not non-negative integers.
-    Constraints: Do not generate replacement text; malformed structure raises vlm_invalid_response(502).
+    Logic: Require non-empty choices[0].message.content; use None for usage fields that are not
+    non-negative integers.
+    Constraints: Do not generate replacement text; malformed structure raises
+    vlm_invalid_response(502).
     """
     try:
         text = data["choices"][0]["message"]["content"]
@@ -283,7 +315,9 @@ def parse_completion(data):
             raise ValueError
     except (KeyError, IndexError, TypeError, ValueError) as error:
         raise SceneError(
-            "vlm_invalid_response", "The vision model returned data that violates the API contract.", 502
+            "vlm_invalid_response",
+            "The vision model returned data that violates the API contract.",
+            502,
         ) from error
     usage = data.get("usage") if isinstance(data, dict) else None
     usage = usage if isinstance(usage, dict) else {}
@@ -296,10 +330,14 @@ def parse_completion(data):
 
 def describe_scene(scene, request_id):
     """Functionality: Call DashScope under rate limits and return a normalized scene description.
-    Inputs: Validated scene, non-sensitive request_id, and DASHSCOPE_* environment; Outputs: contract fields or SceneError.
-    Logic: Limit each worker to 10 requests/minute and two concurrent calls; put credentials only in Authorization;
-    finally release the connection and slot. Logs contain only request_id, status, duration, token counts, and object count.
-    Constraints: Per-worker rate limits are not authentication; timeout applies to one socket I/O operation, not total duration;
+    Inputs: Validated scene, non-sensitive request_id, and DASHSCOPE_* environment; Outputs:
+    contract fields or SceneError.
+    Logic: Limit each worker to 10 requests/minute and two concurrent calls; put credentials only in
+    Authorization;
+    finally release the connection and slot. Logs contain only request_id, status, duration, token
+    counts, and object count.
+    Constraints: Per-worker rate limits are not authentication; timeout applies to one socket I/O
+    operation, not total duration;
     no retries, redirects, or fallback; never store or log images, questions, answers, or keys.
     """
     key, host, model = vlm_settings()
@@ -309,10 +347,17 @@ def describe_scene(scene, request_id):
             request_times.popleft()
         if len(request_times) >= MAX_REQUESTS_PER_MINUTE:
             raise SceneError(
-                "vlm_rate_limit", "The scene-description limit of 10 requests per minute was reached; try again manually later.", 429
+                "vlm_rate_limit",
+                "The scene-description limit of 10 requests per minute was reached; "
+                "try again manually later.",
+                429,
             )
         if not vlm_slots.acquire(blocking=False):
-            raise SceneError("vlm_capacity", "Two scene descriptions are already in progress; try again manually later.", 429)
+            raise SceneError(
+                "vlm_capacity",
+                "Two scene descriptions are already in progress; try again manually later.",
+                429,
+            )
         request_times.append(started)
     connection = None
     try:
@@ -353,14 +398,18 @@ def describe_scene(scene, request_id):
             )
         if response.status == 429:
             raise SceneError(
-                "vlm_quota_exceeded", "DashScope quota or rate limit was reached; check the account quota.", 503
+                "vlm_quota_exceeded",
+                "DashScope quota or rate limit was reached; check the account quota.",
+                503,
             )
         if response.status != 200:
             raise SceneError("vlm_upstream_error", "DashScope returned a non-success status.", 502)
         raw = response.read(MAX_RESPONSE_BYTES + 1)
         if len(raw) > MAX_RESPONSE_BYTES:
             raise SceneError(
-                "vlm_response_too_large", "The DashScope response exceeds this prototype's 256 KiB limit.", 502
+                "vlm_response_too_large",
+                "The DashScope response exceeds this prototype's 256 KiB limit.",
+                502,
             )
         try:
             text, input_tokens, output_tokens = parse_completion(json.loads(raw))
@@ -386,14 +435,18 @@ def describe_scene(scene, request_id):
         }
     except TimeoutError as error:
         raise SceneError(
-            "vlm_timeout", "DashScope network I/O timed out; check the network and try again manually.", 504
+            "vlm_timeout",
+            "DashScope network I/O timed out; check the network and try again manually.",
+            504,
         ) from error
     except (OSError, http.client.HTTPException) as error:
         logger.warning(
             "VLM transport failed id=%s exception_type=%s", request_id, type(error).__name__
         )
         raise SceneError(
-            "vlm_upstream_error", "Could not connect to DashScope; check server networking or TLS.", 502
+            "vlm_upstream_error",
+            "Could not connect to DashScope; check server networking or TLS.",
+            502,
         ) from error
     finally:
         try:
@@ -406,17 +459,22 @@ def describe_scene(scene, request_id):
 def new_request_id():
     """Functionality: Generate a non-sensitive request_id in the HTTP view's format.
     Inputs: None; Outputs: 12 lowercase hexadecimal characters.
-    Logic: Use the first 12 characters of uuid4; Constraints: for log correlation only, never a credential.
+    Logic: Use the first 12 characters of uuid4; Constraints: for log correlation only, never a
+    credential.
     """
     return uuid.uuid4().hex[:12]
 
 
 def _map_box(box):
-    """Functionality: Map one PRS1 detection box to an API object, following the frontend mapBox rules.
+    """Functionality: Map one PRS1 detection box to an API object, following the frontend mapBox
+    rules.
     Inputs: One item from metadata.boxes; Outputs: Object dict or None when the box is discarded.
-    Logic: Require label and score (0..1, mapped to confidence); include other fields only when valid and omit missing values.
-    Read raw distance_m, not smoothed distance. Two frontend differences prevent rejecting the whole request:
-    stripped label must have 1..40 characters and no control characters; distance_m must stay positive after rounding to three decimals.
+    Logic: Require label and score (0..1, mapped to confidence); include other fields only when
+    valid and omit missing values.
+    Read raw distance_m, not smoothed distance. Two frontend differences prevent rejecting the whole
+    request:
+    stripped label must have 1..40 characters and no control characters; distance_m must stay
+    positive after rounding to three decimals.
     Constraints: Do not invent distance/direction; return None for non-dict input.
     """
     if not isinstance(box, dict):
@@ -453,9 +511,12 @@ def _map_box(box):
 def boxes_to_objects(boxes):
     """Functionality: Select and map up to 50 most important detections for describe's objects.
     Inputs: PRS1 metadata.boxes (list/tuple of dicts); Outputs: objects list.
-    Logic: Drop invalid boxes, then stable-sort by alert_priority descending, raw distance_m ascending (non-finite last),
-    score descending, then original order; truncate to MAX_OBJECTS. Matches frontend/scene-client.js mapObjects.
-    Constraints: Do not modify input; treat non-list/tuple as empty; never invent distance when absent.
+    Logic: Drop invalid boxes, then stable-sort by alert_priority descending, raw distance_m
+    ascending (non-finite last),
+    score descending, then original order; truncate to MAX_OBJECTS. Matches frontend/scene-client.js
+    mapObjects.
+    Constraints: Do not modify input; treat non-list/tuple as empty; never invent distance when
+    absent.
     """
     if not isinstance(boxes, list | tuple):
         return []
@@ -474,13 +535,18 @@ def boxes_to_objects(boxes):
 
 
 def _prepare_scene(jpeg_bytes, boxes, question, language):
-    """Functionality: Assemble and validate high-level arguments into a normalized scene for describe_scene.
-    Inputs: JPEG bytes, optional boxes/question, and language; Outputs: normalized scene or SceneError.
-    Logic: Base64-encode and pass through validate_scene_request so limits and error codes match HTTP;
+    """Functionality: Assemble and validate high-level arguments into a normalized scene for
+    describe_scene.
+    Inputs: JPEG bytes, optional boxes/question, and language; Outputs: normalized scene or
+    SceneError.
+    Logic: Base64-encode and pass through validate_scene_request so limits and error codes match
+    HTTP;
     omit objects when empty. Constraints: Non-bytes images raise invalid_image; never log content.
     """
     if not isinstance(jpeg_bytes, bytes | bytearray | memoryview):
-        raise SceneError("invalid_image", "The image must be a standard base64 JPEG from 1 byte to 1 MiB.", 400)
+        raise SceneError(
+            "invalid_image", "The image must be a standard base64 JPEG from 1 byte to 1 MiB.", 400
+        )
     body = {"image_jpeg_base64": base64.b64encode(bytes(jpeg_bytes)).decode("ascii"),
             "language": language}
     if question is not None:
@@ -492,11 +558,14 @@ def _prepare_scene(jpeg_bytes, boxes, question, language):
 
 
 async def describe(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, request_id=None):
-    """Functionality: Describe a scene through a one-call async API and return the HTTP success fields.
-    Inputs: JPEG bytes, optional metadata.boxes/question, language (zh-CN/en-US), and optional request_id;
+    """Functionality: Describe a scene through a one-call async API and return the HTTP success
+    fields.
+    Inputs: JPEG bytes, optional metadata.boxes/question, language (zh-CN/en-US), and optional
+    request_id;
     Outputs: {text, model, language, elapsed_ms, usage, request_id}.
     Logic: Validate with _prepare_scene and run blocking describe_scene through asyncio.to_thread.
-    Constraints: Propagate SceneError(code/detail/status); no retries or fallback; share per-process limits of
+    Constraints: Propagate SceneError(code/detail/status); no retries or fallback; share per-process
+    limits of
     10 requests/minute and two concurrent calls; never log images, questions, or answers.
     """
     scene = _prepare_scene(jpeg_bytes, boxes, question, language)
@@ -507,8 +576,10 @@ async def describe(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, r
 
 def describe_sync(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, request_id=None):
     """Functionality: Synchronous describe entry for scripts/CLI.
-    Inputs/Outputs: Same as describe. Logic: Apply the same validation and call describe_scene synchronously in the current thread.
-    Constraints: Do not run on an active event-loop thread (it would block the loop); raise RuntimeError when detected.
+    Inputs/Outputs: Same as describe. Logic: Apply the same validation and call describe_scene
+    synchronously in the current thread.
+    Constraints: Do not run on an active event-loop thread (it would block the loop); raise
+    RuntimeError when detected.
     Error semantics match describe; no retries or fallback.
     """
     try:
@@ -516,7 +587,9 @@ def describe_sync(jpeg_bytes, boxes=None, question=None, language="zh-CN", *, re
     except RuntimeError:
         pass
     else:
-        raise RuntimeError("describe_sync cannot run in an event-loop thread; use await describe(...) instead.")
+        raise RuntimeError(
+            "describe_sync cannot run in an event-loop thread; use await describe(...) instead."
+        )
     scene = _prepare_scene(jpeg_bytes, boxes, question, language)
     request_id = request_id or new_request_id()
     return {**describe_scene(scene, request_id), "request_id": request_id}

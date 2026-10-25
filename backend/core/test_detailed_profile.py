@@ -7,12 +7,12 @@ DetailedProfileTests.test_runner_ignores_coarse_duration.
 Variable Index: None. Synthetic event durations verify arithmetic, not GPU speed.
 """
 
+from importlib.util import find_spec
 from types import SimpleNamespace
-from unittest import TestCase
+from unittest import TestCase, skipUnless
 from unittest.mock import Mock, patch
 
 import numpy as np
-import torch
 from PIL import Image
 
 from model_tests.unified_evaluation.adapters import NativeAdapter
@@ -25,6 +25,7 @@ class DetailedProfileTests(TestCase):
     Logic: inspect call order, event reuse and restoration. Constraints: serial profiler tests.
     """
 
+    @skipUnless(find_spec("torch"), "Optional PyTorch CUDA event API required")
     def test_event_order_and_reuse(self):
         """Functionality: Prevent asynchronous enqueue time from masquerading as completed work.
         Inputs: fake events, deterministic clock and ordered operation. Outputs: correct totals.
@@ -55,12 +56,15 @@ class DetailedProfileTests(TestCase):
         self.assertAlmostEqual(timer.values["forward_wall_ms"], 11)
         self.assertEqual(timer.values["forward_cuda_ms"], 6)
 
+    @skipUnless(find_spec("torch"), "Optional PyTorch CUDA operations required")
     def test_fusion_and_restore(self):
         """Functionality: Preserve actual ROI medians and restore temporary module hooks.
         Inputs: CUDA depth, valid and outside-image boxes. Outputs: identical fused dictionaries.
         Logic: compare original versus instrumented fusion, retain per-box samples and cleanup.
         Constraints: requires CUDA; does not establish pretrained model accuracy.
         """
+        import torch
+
         if not torch.cuda.is_available():
             self.skipTest("CUDA required for actual ROI event timing")
         plane = torch.arange(1, 25, device="cuda", dtype=torch.float32).reshape(4, 6)

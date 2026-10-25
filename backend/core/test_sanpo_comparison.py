@@ -7,27 +7,33 @@ SanpoComparisonTests.test_continuous_scoring; SanpoComparisonTests.test_continuo
 SanpoComparisonTests.test_continuous_scoring.predict;
 SanpoComparisonTests.test_missing_rgb_and_machine_targets.
 SanpoComparisonTests.test_explicit_diagnostic_split.
-Variable Index: None.
+Variable Index: HAS_TORCH identifies the optional evaluation dataset loader dependency.
 """
 
 import json
 import tempfile
+from importlib.util import find_spec
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import skipUnless
 from unittest.mock import Mock
 
 from django.test import SimpleTestCase
 from PIL import Image
 
-from model_tests.unified_evaluation.sanpo_comparison import (
-    evaluate_pass,
-    load_sequence,
-    write_reports,
-)
 from object_distance.config import digest, write_json
 from object_distance.sanpo_instances import TARGET
 
+HAS_TORCH = find_spec("torch") is not None
+if HAS_TORCH:
+    from model_tests.unified_evaluation.sanpo_comparison import (
+        evaluate_pass,
+        load_sequence,
+        write_reports,
+    )
 
+
+@skipUnless(HAS_TORCH, "Optional PyTorch evaluation dataset loader required")
 class SanpoComparisonTests(SimpleTestCase):
     """Functionality: Verify official-session boundaries, sampling and inherited-distance scoring.
     Logic: thirteen frames with annotations every six and depth every five.

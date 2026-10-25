@@ -3,21 +3,27 @@ Implementation: Small deterministic feature tensors through actual ROI/head oper
 Related Modules: object_distance.model/config/predict/data.
 Declaration Index: AgnosticTests; AgnosticTests.test_class_values_cannot_change_distance;
 AgnosticTests.test_kitti_predicted_boxes_ignore_category_gate.
-Variable Index: None.
+Variable Index: HAS_VISION identifies optional tensor/ROI dependencies, not GPU availability.
 """
 
-from unittest import TestCase
+from importlib.util import find_spec
+from unittest import TestCase, skipUnless
 from unittest.mock import Mock
 
-import torch
 from PIL import Image
 
 from object_distance.config import ROOT, ExperimentConfig, read_config
-from object_distance.data import prepare_image
-from object_distance.model import DistanceHead, ObjectDistanceModel
-from object_distance.predict import run_frame
+
+HAS_VISION = all(find_spec(name) for name in ("torch", "torchvision"))
+if HAS_VISION:
+    import torch
+
+    from object_distance.data import prepare_image
+    from object_distance.model import DistanceHead, ObjectDistanceModel
+    from object_distance.predict import run_frame
 
 
+@skipUnless(HAS_VISION, "Optional PyTorch and Torchvision ROI operations required")
 class AgnosticTests(TestCase):
     """Functionality: Guard removal of class dependency.
     Logic: Identical ROIs/features with radically different category values.

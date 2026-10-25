@@ -5,6 +5,7 @@ Declaration Index: StageProfileTests; StageProfileTests.test_preserves_nested_ca
 StageProfileTests.test_preserves_nested_calls.update;
 StageProfileTests.test_preserves_nested_calls.predict;
 StageProfileTests.test_propagates_failure.
+StageProfileTests.test_explicit_cpu_does_not_import_torch.
 Variable Index: None.
 """
 
@@ -13,6 +14,7 @@ from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
 
+from model_tests.unified_evaluation.performance import synchronize
 from model_tests.unified_evaluation.stage_profile import StageProfile
 
 
@@ -20,6 +22,16 @@ class StageProfileTests(SimpleTestCase):
     """Functionality: Verify measurements delegate exactly once and retain predictions/state.
     Logic: fake nested update calls and error injection. Constraints: no GPU timing claims.
     """
+
+    def test_explicit_cpu_does_not_import_torch(self):
+        """Functionality: Keep explicit CPU timing usable in lightweight web CI.
+        Inputs: blocked optional PyTorch import. Outputs: CPU no-op, CUDA import failure.
+        Logic: simulate an absent package. Constraints: CUDA never silently falls back to CPU.
+        """
+        with patch.dict("sys.modules", {"torch": None}):
+            self.assertIsNone(synchronize("cpu"))
+            with self.assertRaises(ModuleNotFoundError):
+                synchronize("cuda:0")
 
     def test_preserves_nested_calls(self):
         """Functionality: Keep original outputs while measuring nested association/GMC calls.

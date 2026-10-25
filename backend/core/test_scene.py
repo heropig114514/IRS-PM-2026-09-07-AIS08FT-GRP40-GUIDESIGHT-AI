@@ -1,18 +1,24 @@
-"""Responsibilities: Test scene-description input boundaries, prompts, upstream transport/error mapping, rate limits, and key protection.
-Implementation: Mock http.client.HTTPSConnection and service functions; use a fake key and synthetic JPEG bytes; make no network calls.
+"""Responsibilities: Test scene-description input boundaries, prompts, upstream transport/error
+mapping, rate limits, and key protection.
+Implementation: Mock http.client.HTTPSConnection and service functions; use a fake key and synthetic
+JPEG bytes; make no network calls.
 Related Modules: core.scene and core.vlm; live DashScope integration is verified separately.
-Declaration Index: jpeg_b64 — synthetic image; scene — valid request body; completion — synthetic upstream response;
+Declaration Index: jpeg_b64 — synthetic image; scene — valid request body; completion — synthetic
+upstream response;
 fake_connection — mock connection;
 SceneHttpTests — HTTP adapter; SceneHttpTests.setUp/post/test_config/test_input_boundaries/
 test_success_and_errors/test_max_size_request;
-VlmServiceTests — service; VlmServiceTests.setUp/test_validation/test_prompt_has_no_invented_distance/
+VlmServiceTests — service;
+VlmServiceTests.setUp/test_validation/test_prompt_has_no_invented_distance/
 test_transport_contract/test_status_mapping/test_response_errors/test_transport_errors/
 test_rate_and_capacity/test_missing_or_bad_config/test_key_not_in_logs_or_response;
-box — synthetic PRS1 detection box; BoxesToObjectsTests — detection-box mapping (same examples as frontend tests);
+box — synthetic PRS1 detection box; BoxesToObjectsTests — detection-box mapping (same examples as
+frontend tests);
 BoxesToObjectsTests.test_mapping_and_omission/test_ranking_and_truncation/test_invalid_input;
 DescribeHelperTests — high-level helper; DescribeHelperTests.setUp/test_describe_success/
 test_describe_errors_propagate/test_describe_sync/test_default_model.
-Variable Index: KEY — fake key; ORIGIN/HOST — same-origin request headers; SECRET_QUESTION — log-leak probe.
+Variable Index: KEY — fake key; ORIGIN/HOST — same-origin request headers; SECRET_QUESTION —
+log-leak probe.
 """
 
 import asyncio
@@ -61,28 +67,34 @@ def fake_connection(status=200, body=None):
 
 
 def scene(**extra):
-    """Functionality: Build a valid request body before normalization. Outputs: Dictionary. Constraints: extra overrides fields."""
+    """Functionality: Build a valid request body before normalization. Outputs: Dictionary.
+    Constraints: extra overrides fields."""
     return {"image_jpeg_base64": jpeg_b64(), "language": "zh-CN", **extra}
 
 
 @patch.dict("os.environ", {"DASHSCOPE_API_KEY": KEY})
 class SceneHttpTests(SimpleTestCase):
-    """Functionality: Verify HTTP contracts using real routes while replacing describe_scene or the HTTPS connection.
+    """Functionality: Verify HTTP contracts using real routes while replacing describe_scene or the
+    HTTPS connection.
     Constraints: No database or external network.
     """
 
     def setUp(self):
-        """Functionality: Clear rate-limit state. Outputs: Empty queue. Constraints: Production quota is unchanged."""
+        """Functionality: Clear rate-limit state. Outputs: Empty queue. Constraints: Production
+        quota is unchanged."""
         vlm.request_times.clear()
 
     def post(self, data, **extra):
-        """Functionality: Send a same-origin JSON POST. Inputs: Data and header overrides. Outputs: Response."""
+        """Functionality: Send a same-origin JSON POST. Inputs: Data and header overrides. Outputs:
+        Response."""
         options = {"content_type": "application/json", **ORIGIN, **extra}
         return self.client.post("/scene/describe/", data, **options)
 
     def test_config(self):
-        """Functionality: Ensure configuration status does not leak the key. Inputs: Configured and missing key.
-        Outputs: Assertions for 200/503. Logic: Response contains only provider/model/configured/code.
+        """Functionality: Ensure configuration status does not leak the key. Inputs: Configured and
+        missing key.
+        Outputs: Assertions for 200/503. Logic: Response contains only
+        provider/model/configured/code.
         Constraints: Does not verify real authentication.
         """
         response = self.client.get("/scene/config/")
@@ -107,7 +119,8 @@ class SceneHttpTests(SimpleTestCase):
 
     @patch("core.scene.describe_scene")
     def test_input_boundaries(self, upstream):
-        """Functionality: Reject invalid requests before calling upstream. Inputs: Invalid request variants. Outputs: Status/code.
+        """Functionality: Reject invalid requests before calling upstream. Inputs: Invalid request
+        variants. Outputs: Status/code.
         Logic: Validate Origin, Content-Type, size, JSON, image, and fields individually.
         Constraints: Upstream is never called.
         """
@@ -186,8 +199,10 @@ class SceneHttpTests(SimpleTestCase):
     def test_max_size_request(self):
         """Functionality: Check the maximum-size request contract.
         Inputs: 1 MiB JPEG, 50 objects, and a 200-character question.
-        Outputs: The real view returns 200, the body stays under 1.5 MiB, and upstream receives all objects.
-        Logic: Mock the upstream connection. Constraints: Does not prove a real model accepts this size.
+        Outputs: The real view returns 200, the body stays under 1.5 MiB, and upstream receives all
+        objects.
+        Logic: Mock the upstream connection. Constraints: Does not prove a real model accepts this
+        size.
         """
         objects = [
             {
@@ -271,7 +286,8 @@ class VlmServiceTests(SimpleTestCase):
     """
 
     def setUp(self):
-        """Functionality: Clear rate-limit state. Outputs: Empty queue. Constraints: Quota and concurrency are unchanged."""
+        """Functionality: Clear rate-limit state. Outputs: Empty queue. Constraints: Quota and
+        concurrency are unchanged."""
         vlm.request_times.clear()
 
     def test_validation(self):
@@ -351,8 +367,10 @@ class VlmServiceTests(SimpleTestCase):
         self.assertTrue(empty[1]["content"][1]["text"].endswith("provided): []"))
 
     def test_transport_contract(self):
-        """Functionality: Verify request target, headers, body, and success result using a mock connection.
-        Outputs: Parameter assertions. Logic: Custom host/model are applied, Bearer appears only in headers,
+        """Functionality: Verify request target, headers, body, and success result using a mock
+        connection.
+        Outputs: Parameter assertions. Logic: Custom host/model are applied, Bearer appears only in
+        headers,
         and max_tokens=200/temperature=0.2/enable_thinking=false.
         Constraints: Does not verify TLS or real authentication.
         """
@@ -394,7 +412,8 @@ class VlmServiceTests(SimpleTestCase):
         self.assertEqual(vlm.vlm_slots._value, 2)
 
     def test_response_errors(self):
-        """Functionality: Map malformed response bodies. Inputs: Non-JSON, missing structure, empty text, or oversized body.
+        """Functionality: Map malformed response bodies. Inputs: Non-JSON, missing structure, empty
+        text, or oversized body.
         Outputs: Error code. Logic: Map all cases to 502 and set malformed usage to None.
         Constraints: Do not generate replacement text.
         """
@@ -422,7 +441,8 @@ class VlmServiceTests(SimpleTestCase):
         self.assertEqual(result["usage"], {"input_tokens": None, "output_tokens": None})
 
     def test_transport_errors(self):
-        """Functionality: Map timeout and network errors. Inputs: A connection that raises an exception.
+        """Functionality: Map timeout and network errors. Inputs: A connection that raises an
+        exception.
         Outputs: 504/502 and a released capacity slot.
         Logic: TimeoutError→vlm_timeout; OSError→vlm_upstream_error. Constraints: No retry.
         """
@@ -474,7 +494,8 @@ class VlmServiceTests(SimpleTestCase):
     def test_missing_or_bad_config(self):
         """Functionality: Verify missing configuration and invalid host/model values.
         Inputs: Environment. Outputs: 503; upstream remains uncalled.
-        Logic: Treat a host containing path, port, or scheme as invalid and do not fall back to defaults.
+        Logic: Treat a host containing path, port, or scheme as invalid and do not fall back to
+        defaults.
         Constraints: Format validation only.
         """
         parsed = vlm.validate_scene_request(scene())
@@ -501,7 +522,8 @@ class VlmServiceTests(SimpleTestCase):
     def test_key_not_in_logs_or_response(self):
         """Functionality: Ensure logs omit keys, images, questions, and answers.
         Inputs: Successful and failed calls. Outputs: Log assertions.
-        Logic: assertLogs captures core.vlm and core.scene; log records contain IDs, status, token counts, and object counts.
+        Logic: assertLogs captures core.vlm and core.scene; log records contain IDs, status, token
+        counts, and object counts.
         Constraints: Covers the current log statements from these two loggers only.
         """
         constructor, _ = fake_connection()
@@ -527,7 +549,8 @@ class VlmServiceTests(SimpleTestCase):
 
 
 def box(**extra):
-    """Functionality: Build a synthetic PRS1 detection box with the same shape as the frontend test helper.
+    """Functionality: Build a synthetic PRS1 detection box with the same shape as the frontend test
+    helper.
     Inputs: Field overrides. Outputs: Dictionary. Constraints: Values are synthetic.
     """
     return {"class_id": 0, "label": "person", "score": 0.9, "xyxy": [0, 0, 10, 10],
@@ -538,15 +561,18 @@ def box(**extra):
 
 
 class BoxesToObjectsTests(SimpleTestCase):
-    """Functionality: Check rule consistency between boxes_to_objects and frontend mapObjects using shared examples.
+    """Functionality: Check rule consistency between boxes_to_objects and frontend mapObjects using
+    shared examples.
     Constraints: Pure-function tests with no network access.
     """
 
     def test_mapping_and_omission(self):
         """Functionality: Verify field mapping and omission of missing fields.
-        Inputs: Complete, label/score-only, and invalid boxes. Outputs: Objects matching frontend assertions.
+        Inputs: Complete, label/score-only, and invalid boxes. Outputs: Objects matching frontend
+        assertions.
         Logic: Map score to confidence and do not use smoothed_distance_m.
-        Constraints: Also verify that None, non-dict, invalid enum, and invalid distance values are omitted rather than fabricated.
+        Constraints: Also verify that None, non-dict, invalid enum, and invalid distance values are
+        omitted rather than fabricated.
         """
         self.assertEqual(
             vlm.boxes_to_objects([box()])[0],
@@ -570,13 +596,17 @@ class BoxesToObjectsTests(SimpleTestCase):
                {"label": "a\x00b", "score": 0.5}, {"label": "  ", "score": 0.5}]
         self.assertEqual(vlm.boxes_to_objects(bad), [])
         for item in vlm.boxes_to_objects([box(), box(label=" bike ", distance_m=0.0001)]):
-            vlm.validate_scene_request(scene(objects=[item]))  # The mapped result must be accepted by the API.
+            vlm.validate_scene_request(
+                scene(objects=[item])
+            )  # The mapped result must be accepted by the API.
 
     def test_ranking_and_truncation(self):
-        """Functionality: Verify ranking and truncation with 120 mixed-priority, with-distance, and distance-free boxes.
+        """Functionality: Verify ranking and truncation with 120 mixed-priority, with-distance, and
+        distance-free boxes.
         Outputs: urgent, near, far, nodist ordering; 50 items with the nearest first.
         Logic: Stable sorting without mutating the input.
-        Constraints: Distance-free items sort last within priority; ties use score and then original order.
+        Constraints: Distance-free items sort last within priority; ties use score and then original
+        order.
         """
         ranked = vlm.boxes_to_objects([
             box(label="far", alert_priority=0, distance_m=9),
@@ -595,7 +625,8 @@ class BoxesToObjectsTests(SimpleTestCase):
         self.assertEqual((len(out), out[0]["label"], len(many)), (vlm.MAX_OBJECTS, "l0", 120))
 
     def test_invalid_input(self):
-        """Functionality: Treat non-list inputs as empty. Inputs: None, dict, or str. Outputs: []."""
+        """Functionality: Treat non-list inputs as empty. Inputs: None, dict, or str. Outputs:
+        []."""
         for value in (None, {"label": "a"}, "abc", 5):
             self.assertEqual(vlm.boxes_to_objects(value), [])
         self.assertEqual(vlm.boxes_to_objects(()), [])
@@ -612,14 +643,17 @@ class DescribeHelperTests(SimpleTestCase):
         vlm.request_times.clear()
 
     def test_default_model(self):
-        """Functionality: Verify the default model is qwen3-vl-plus. Constraints: VLM_MODEL from the environment takes precedence."""
+        """Functionality: Verify the default model is qwen3-vl-plus. Constraints: VLM_MODEL from the
+        environment takes precedence."""
         self.assertEqual(vlm.DEFAULT_MODEL, "qwen3-vl-plus")
 
     def test_describe_success(self):
         """Functionality: Verify success-path fields and upstream request body.
-        Inputs: JPEG bytes, boxes, and a question. Outputs: HTTP-shaped result containing request_id.
+        Inputs: JPEG bytes, boxes, and a question. Outputs: HTTP-shaped result containing
+        request_id.
         Logic: Base64 image and mapped objects are passed into the prompt.
-        Constraints: request_id is 12 hexadecimal characters and matches an explicitly supplied value.
+        Constraints: request_id is 12 hexadecimal characters and matches an explicitly supplied
+        value.
         """
         constructor, connection = fake_connection()
         jpeg = base64.b64decode(jpeg_b64())
@@ -673,7 +707,8 @@ class DescribeHelperTests(SimpleTestCase):
 
     def test_describe_sync(self):
         """Functionality: Verify synchronous results and prohibit calls from within an event loop.
-        Inputs: A normal thread call and a call from a coroutine. Outputs: Successful result or RuntimeError.
+        Inputs: A normal thread call and a call from a coroutine. Outputs: Successful result or
+        RuntimeError.
         Constraints: RuntimeError occurs before any network activity.
         """
         constructor, _ = fake_connection()

@@ -64,7 +64,9 @@ def read_token():
     token = os.environ.get("HF_INFERENCE_TOKEN", "")
     if not token.startswith("hf_") or len(token) > 4096 or any(c.isspace() for c in token):
         raise DetectionError(
-            "hf_not_configured", "A valid server-side HF token is required to start a video session.", 503
+            "hf_not_configured",
+            "A valid server-side HF token is required to start a video session.",
+            503,
         )
     return token
 
@@ -291,7 +293,9 @@ class HFLiveRelay:
                         detail = (
                             error.detail
                             if isinstance(error, DetectionError)
-                            else ("The video session failed; check server logs before starting again.")
+                            else (
+                                "The video session failed; check server logs before starting again."
+                            )
                         )
                         await send(
                             {
@@ -387,9 +391,12 @@ class HFLiveRelay:
             reason = decision.get("reason")
             detail = "ZeroGPU free quota is insufficient; wait for it to reset."
             if reason == "insufficient_free_seconds":
-                detail = (f"ZeroGPU free quota is insufficient: this request needs "
-                          f"{LIVE_GPU_QUOTA_SECONDS:g} seconds, with {decision['free_gpu_seconds']:.2f} seconds remaining. "
-                          "Wait for quota to reset.")
+                detail = (
+                    f"ZeroGPU free quota is insufficient: this request needs "
+                    f"{LIVE_GPU_QUOTA_SECONDS:g} seconds, "
+                    f"with {decision['free_gpu_seconds']:.2f} seconds remaining. "
+                    "Wait for quota to reset."
+                )
             elif reason == "free_run_limit_exhausted":
                 detail = "Today's free ZeroGPU calls are exhausted; wait for quota to reset."
             elif reason == "unknown_free_quota":

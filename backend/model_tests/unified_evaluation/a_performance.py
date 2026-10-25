@@ -1,5 +1,6 @@
 """Responsibilities: Compare baseline and exact fast A on identical continuous SANPO frames.
 Implementation: Counterbalanced per-frame AB/BA order, shared models, distance/preprocess axes.
+Inference-only imports stay inside run so pure comparison helpers work in lightweight CI.
 Related Modules: a_formal; sanpo_comparison; kitti.collect_metrics; realtime.depth_fast.
 Declaration Index: pair_order; compare_objects; save_tables; run; main.
 Variable Index: VARIANTS names baseline/optimized; experiment fixes the comparison axis.
@@ -18,10 +19,8 @@ from object_distance.config import digest, write_json
 
 from .a_formal import FormalA
 from .adapters import NativeAdapter
-from .kitti import collect_metrics
 from .performance import latency_summary
 from .sanpo import canonical
-from .sanpo_comparison import load_sequence, make_frame, read_rgb
 from .scoring import score_frame
 
 VARIANTS = ("baseline", "optimized")
@@ -107,6 +106,9 @@ def run(options):
     """
     import torch
     import ultralytics
+
+    from .kitti import collect_metrics
+    from .sanpo_comparison import load_sequence, make_frame, read_rgb
 
     output = Path(options["output"])
     output.mkdir(parents=True, exist_ok=False)

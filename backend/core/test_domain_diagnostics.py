@@ -16,7 +16,9 @@ Variable Index: None. Synthetic assertions do not establish cross-domain model a
 import json
 import math
 import tempfile
+from importlib.util import find_spec
 from pathlib import Path
+from unittest import skipUnless
 
 from django.test import SimpleTestCase
 from PIL import Image
@@ -32,7 +34,6 @@ from model_tests.unified_evaluation.domain_diagnostics import (
     standardize_composition,
     target_record,
 )
-from object_distance.data import prepare_image
 from object_distance.prepare import parse_label
 
 
@@ -92,12 +93,15 @@ class DomainDiagnosticsTests(SimpleTestCase):
             with self.assertRaises(ValueError):
                 distance_bin(value)
 
+    @skipUnless(find_spec("torch"), "Optional PyTorch training image loader required")
     def test_intrinsics_follow_actual_rounded_letterbox(self):
         """Functionality: Avoid comparing raw focal lengths after unequal input resize scales.
         Inputs: KITTI-like1242x375 image and P2. Outputs: exact existing preprocessing transform.
         Logic: compare camera scaling with prepare_image and known transformed principal point.
         Constraints: y rounding cannot be replaced by ideal shared scalar width ratio.
         """
+        from object_distance.data import prepare_image
+
         frame = {
             "image_id": "one",
             "image_size": [1242, 375],

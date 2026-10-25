@@ -57,20 +57,40 @@ def provider_error(payload):
     seconds = re.search(r"\((\d{1,6})s requested vs\. (\d{1,6})s left\)", message)
     reason, detail = "inference_failed", "ZeroGPU inference failed; check the Space logs."
     if "You have exceeded your ZeroGPU runs limit." in message:
-        reason, detail = "runs_exceeded", "Today's free ZeroGPU calls are exhausted; wait for quota to reset."
+        reason, detail = (
+            "runs_exceeded",
+            "Today's free ZeroGPU calls are exhausted; wait for quota to reset.",
+        )
     elif "too many ZeroGPU credits allocated to running tasks" in message:
-        reason, detail = "pending_credits", "ZeroGPU quota is reserved by a running task; wait for it to finish."
+        reason, detail = (
+            "pending_credits",
+            "ZeroGPU quota is reserved by a running task; wait for it to finish.",
+        )
     elif title == "ZeroGPU illegal duration":
-        reason, detail = "illegal_duration", "The requested ZeroGPU duration exceeds the current account limit."
+        reason, detail = (
+            "illegal_duration",
+            "The requested ZeroGPU duration exceeds the current account limit.",
+        )
     elif "Space app has reached its GPU limit." in message:
-        reason, detail = "space_quota_exceeded", "The Space GPU quota is restricted; check the request identity and HF logs."
+        reason, detail = (
+            "space_quota_exceeded",
+            "The Space GPU quota is restricted; check the request identity and HF logs.",
+        )
     elif seconds or title == "ZeroGPU quota exceeded":
-        reason, detail = "quota_exceeded", "ZeroGPU free quota is insufficient; wait for it to reset."
+        reason, detail = (
+            "quota_exceeded",
+            "ZeroGPU free quota is insufficient; wait for it to reset.",
+        )
         if seconds:
-            detail = (f"ZeroGPU free quota is insufficient: HF requires {seconds[1]} seconds, "
-                      f"and reports {seconds[2]} seconds remaining (rounded). Wait for quota to reset.")
+            detail = (
+                f"ZeroGPU free quota is insufficient: HF requires {seconds[1]} seconds, "
+                f"and reports {seconds[2]} seconds remaining (rounded). Wait for quota to reset."
+            )
     elif "No GPU was available" in message:
-        reason, detail = "busy", "No ZeroGPU is currently available; start a new request manually later."
+        reason, detail = (
+            "busy",
+            "No ZeroGPU is currently available; start a new request manually later.",
+        )
     elif "GPU task aborted" in message:
         reason, detail = "worker_failed", "The ZeroGPU worker stopped; check the Space logs."
     logger.warning("ZeroGPU service rejected reason=%s requested_seconds=%s remaining_seconds=%s",
@@ -94,7 +114,9 @@ def exchange(method, path, body, deadline, stream=False, *, token):
         or len(token) > 4096
         or any(c.isspace() for c in token)
     ):
-        raise DetectionError("hf_not_configured", "The server-side HF token format is invalid.", 503)
+        raise DetectionError(
+            "hf_not_configured", "The server-side HF token format is invalid.", 503
+        )
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise TimeoutError("ZeroGPU request deadline")
@@ -121,9 +143,15 @@ def exchange(method, path, body, deadline, stream=False, *, token):
         if response.status != 200:
             logger.warning("ZeroGPU HTTP rejected method=%s status=%d", method, response.status)
             if response.status == 429:
-                raise DetectionError("hf_busy", "The ZeroGPU request is rate-limited; start again manually later.", 429)
+                raise DetectionError(
+                    "hf_busy",
+                    "The ZeroGPU request is rate-limited; start again manually later.",
+                    429,
+                )
             raise DetectionError(
-                "hf_unavailable", "The ZeroGPU endpoint is not ready; check the Space or private configuration.", 503
+                "hf_unavailable",
+                "The ZeroGPU endpoint is not ready; check the Space or private configuration.",
+                503,
             )
         phase = "body"
         content_type = response.getheader("Content-Type", "").split(";")[0]

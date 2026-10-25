@@ -1,12 +1,17 @@
-"""Responsibilities: Resource-bounded in-memory WebSocket echo; images are not parsed, stored, or forwarded.
-Implementation: Validate origin and connection limits; echo binary payloads unchanged and answer JSON pings with a matching pong ID.
-Related Modules: config.asgi; frontend/echo-client.js enforces one in-flight request and byte equality.
+"""Responsibilities: Resource-bounded in-memory WebSocket echo; images are not parsed, stored, or
+forwarded.
+Implementation: Validate origin and connection limits; echo binary payloads unchanged and answer
+JSON pings with a matching pong ID.
+Related Modules: config.asgi; frontend/echo-client.js enforces one in-flight request and byte
+equality.
 Declaration Index:
 - echo_socket — Admit, echo, time out, and release one connection.
 Variable Index:
 - MAX_FRAME_BYTES — 1 MiB per-frame limit; MAX_TEXT_BYTES — 1,024-byte control-message limit.
-- MAX_CONNECTIONS — At most four echo connections per worker; IDLE_SECONDS — Close after 15 seconds without input.
-- active_connections — Current admitted connection count; logger — Protocol lifecycle and error logs.
+- MAX_CONNECTIONS — At most four echo connections per worker; IDLE_SECONDS — Close after 15 seconds
+without input.
+- active_connections — Current admitted connection count; logger — Protocol lifecycle and error
+logs.
 """
 
 import asyncio
@@ -27,11 +32,15 @@ logger = logging.getLogger(__name__)
 
 
 async def echo_socket(scope, receive, send):
-    """Functionality: Echo binary frames, answer application-level pings, and bound per-process resource use.
+    """Functionality: Echo binary frames, answer application-level pings, and bound per-process
+    resource use.
     Inputs: ASGI scope/receive/send; reads CAMERA_ALLOWED_ORIGINS and process connection count.
-    Outputs: Binary echo, JSON pong, or explicit close code; logs contain only connection IDs and counts.
-    Logic: Check and increment the connection count without an await after the first await; finally always releases the slot.
-    Constraints: Single worker only; this is an anonymous diagnostic endpoint, and same-origin validation is not user authentication; never log media bodies.
+    Outputs: Binary echo, JSON pong, or explicit close code; logs contain only connection IDs and
+    counts.
+    Logic: Check and increment the connection count without an await after the first await; finally
+    always releases the slot.
+    Constraints: Single worker only; this is an anonymous diagnostic endpoint, and same-origin
+    validation is not user authentication; never log media bodies.
     """
     global active_connections
     first = await receive()

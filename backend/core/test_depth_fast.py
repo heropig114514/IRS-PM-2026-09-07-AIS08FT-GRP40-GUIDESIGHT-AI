@@ -7,12 +7,12 @@ FastDepthTests.test_counterbalance_and_audit; FastDepthTests.test_coarse_timer_b
 Variable Index: None. Synthetic data establishes contracts, not runtime speed.
 """
 
+from importlib.util import find_spec
 from types import SimpleNamespace
-from unittest import TestCase
+from unittest import TestCase, skipUnless
 from unittest.mock import Mock, patch
 
 import numpy as np
-import torch
 from PIL import Image
 
 from core.detector import DetectionError
@@ -28,6 +28,7 @@ class FastDepthTests(TestCase):
     Constraints: pretrained inference equality is checked separately on actual SANPO frames.
     """
 
+    @skipUnless(find_spec("ultralytics"), "Optional Ultralytics loader required")
     def test_bgr_pixels(self):
         """Functionality: Keep direct input export pixel-identical to official PIL ingestion.
         Inputs: seeded RGB images including narrow/odd shapes. Outputs: exact contiguous BGR.
@@ -46,12 +47,15 @@ class FastDepthTests(TestCase):
         with self.assertRaises(ValueError):
             pack_bgr(Image.new("L", (4, 4)))
 
+    @skipUnless(find_spec("torch"), "Optional PyTorch ROI operations required")
     def test_exact_medians(self):
         """Functionality: Preserve original finite-positive filtering and even/odd arithmetic.
         Inputs: FP32 planes, invalid/overlapping/fractional boxes, tiny and extreme depths.
         Outputs: exactly equal canonical objects. Logic: original Torch versus host partition.
         Constraints: CPU always tested; CUDA tested when present, with no approximate tolerance.
         """
+        import torch
+
         rng = np.random.default_rng(42)
         plane = rng.uniform(0.01, 1000, (49, 79)).astype(np.float32)
         plane[0, :8] = [np.nan, np.inf, -np.inf, 0, -2, 3, 7, 11]
@@ -82,11 +86,14 @@ class FastDepthTests(TestCase):
             self.assertNotIn("distance_m", boxes[0])
             np.testing.assert_array_equal(depth.cpu().numpy(), plane)
 
+    @skipUnless(find_spec("torch"), "Optional PyTorch tensor required")
     def test_empty_and_invalid(self):
         """Functionality: Preserve empty and malformed-map contracts without needless downloads.
         Inputs: empty boxes, wrong dtype and unaligned shape. Outputs: empty or explicit error.
         Logic: exercise public optimized fusion. Constraints: unsupported precision is not cast.
         """
+        import torch
+
         depth = torch.ones((4, 6))
         self.assertEqual(fuse_depth_host(depth, [], (6, 4)), [])
         with self.assertRaises(DetectionError):

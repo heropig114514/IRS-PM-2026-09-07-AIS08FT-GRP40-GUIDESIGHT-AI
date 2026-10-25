@@ -1,11 +1,14 @@
 """Responsibilities: Define explicit PostgreSQL and HTTPS production settings.
-Implementation: Inherit shared settings directly; missing variables or connection failures do not fall back to the development database.
-Related Modules: config.base, requirements-production.txt; HTTPS/static assets are served by a reverse proxy.
+Implementation: Inherit shared settings directly; missing variables or connection failures do not
+fall back to the development database.
+Related Modules: config.base, requirements-production.txt; HTTPS/static assets are served by a
+reverse proxy.
 Declaration Index: None。
 Variable Index:
 - ALLOWED_HOSTS — required host allowlist; DATABASES — required PostgreSQL connection settings.
 - SECURE_SSL_REDIRECT — require HTTPS; SESSION_COOKIE_SECURE/CSRF_COOKIE_SECURE — secure cookies.
-Constraints: No proxy headers are trusted; configure forwarded-protocol handling only after defining the trusted boundary for an HTTPS proxy deployment.
+Constraints: No proxy headers are trusted; configure forwarded-protocol handling only after defining
+the trusted boundary for an HTTPS proxy deployment.
 """
 
 import os

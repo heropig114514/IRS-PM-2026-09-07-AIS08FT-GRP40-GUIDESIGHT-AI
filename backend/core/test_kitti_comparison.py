@@ -5,27 +5,33 @@ Declaration Index: KittiComparisonTests; KittiComparisonTests.fixture;
 KittiComparisonTests.test_calibration_and_targets; KittiComparisonTests.test_reset_every_image;
 KittiComparisonTests.test_reset_every_image.predict; KittiComparisonTests.test_partial_failure;
 KittiComparisonTests.test_partial_failure.launch; KittiComparisonTests.test_original_validation.
-Variable Index: None.
+Variable Index: HAS_TORCH identifies the optional evaluation dataset loader dependency.
 """
 
 import json
 import tempfile
+from importlib.util import find_spec
 from pathlib import Path
+from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 from PIL import Image
 
-from model_tests.unified_evaluation.kitti import (
-    collect_metrics,
-    evaluate_pass,
-    load_dataset,
-    make_frame,
-    run,
-)
 from object_distance.config import TARGET, write_json
 
+HAS_TORCH = find_spec("torch") is not None
+if HAS_TORCH:
+    from model_tests.unified_evaluation.kitti import (
+        collect_metrics,
+        evaluate_pass,
+        load_dataset,
+        make_frame,
+        run,
+    )
 
+
+@skipUnless(HAS_TORCH, "Optional PyTorch evaluation dataset loader required")
 class KittiComparisonTests(SimpleTestCase):
     """Functionality: Verify lifecycle and evaluation contracts without external models.
     Logic: independent expected camera values, boundary metrics and failed-method aggregation.
