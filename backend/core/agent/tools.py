@@ -12,10 +12,14 @@ BrowserTools.navigation_status; BrowserTools.navigation_start; BrowserTools.navi
 BrowserTools.camera_status; BrowserTools.camera_start; BrowserTools.camera_stop;
 BrowserTools.speech_status; BrowserTools.speech_voices; BrowserTools.speech_speak;
 BrowserTools.speech_stop; BrowserTools.vibration_status; BrowserTools.vibration_test;
-BrowserTools.vibration_stop; create_server.
-Variable Index: DESCRIPTIONS — tool catalog descriptions; Wait — bounded observation schema.
+BrowserTools.vibration_stop; capture_tool_errors; create_server.
+Variable Index: logger — safe tool boundary failure codes/types; DESCRIPTIONS — tool catalog
+descriptions; Wait — bounded observation schema.
 """
 
+import inspect
+import logging
+from functools import wraps
 from typing import Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
@@ -29,6 +33,7 @@ from .places import search_context
 from .provider import AgentError
 from .skills import catalog, read_skill, tool_policy
 
+logger = logging.getLogger(__name__)
 Wait = Annotated[float, Field(ge=0, le=12)]
 DESCRIPTIONS = {
     "discover_tools": "Discover the actual bound MCP tool catalog and skill tool scopes before "
@@ -68,6 +73,55 @@ DESCRIPTIONS = {
     "vibration_test": "Request one short/long/double vibration; never proves hardware output.",
     "vibration_stop": "Cancel vibration on this page.",
 }
+
+
+def capture_tool_errors(function):
+    """Functionality: Preserve safe application diagnostics across the MCP tool boundary.
+    Inputs: one bound tool method; Outputs: signature-preserving async adapter.
+    Logic: Return AgentError codes, local diagnostic text and valid HTTP status as structured
+    result data; map timeouts and unexpected exceptions to stable codes plus exception class. MCP
+    otherwise replaces raised exceptions with a generic message before the agent can inspect them.
+    Constraints: Forward only an exception class for unexpected failures; discard exception text
+    and preserve cancellation propagation.
+    """
+    @wraps(function)
+    async def invoke(*args, **kwargs) -> dict[str, Any]:
+        try:
+            result = function(*args, **kwargs)
+            return await result if inspect.isawaitable(result) else result
+        except AgentError as error:
+            diagnostic = {
+                "state": "error",
+                "completion": "unknown",
+                "error_code": error.code,
+                "error_type": type(error).__name__,
+            }
+            if isinstance(error.detail, str) and error.detail:
+                diagnostic["diagnostic"] = error.detail[:500]
+            if type(error.http_status) is int and 100 <= error.http_status <= 599:
+                diagnostic["http_status"] = error.http_status
+            return diagnostic
+        except TimeoutError:
+            return {
+                "state": "error",
+                "completion": "unknown",
+                "error_code": "operation_timeout",
+                "error_type": "TimeoutError",
+            }
+        except Exception as error:
+            error_type = type(error).__name__
+            logger.warning(
+                "MCP tool raised name=%s exception_type=%s",
+                function.__name__, error_type,
+            )
+            return {
+                "state": "error",
+                "completion": "unknown",
+                "error_code": "operation_failed",
+                "error_type": error_type,
+            }
+
+    return invoke
 
 
 class BrowserTools:
@@ -324,13 +378,17 @@ class BrowserTools:
 def create_server(session_id):
     """Functionality: Create a scoped MCP server for official in-memory client transport.
     Inputs: verified session ID; Outputs: MCPServer instance with explicit tools.
-    Logic: Register bound methods; runtime discovers schemas instead of duplicating them.
+    Logic: Register signature-preserving adapters that retain safe AgentError and timeout
+    diagnostics as structured tool results; runtime discovers schemas instead of duplicating them.
     Constraints: Not mounted on a public HTTP path; does not change full/outputs profiles.
     """
     server = MCPServer("PRS Conversation Tools", log_level="WARNING")
     adapter = BrowserTools(session_id, server)
     for name, description in DESCRIPTIONS.items():
         server.add_tool(
-            getattr(adapter, name), name=name, description=description, structured_output=True
+            capture_tool_errors(getattr(adapter, name)),
+            name=name,
+            description=description,
+            structured_output=True,
         )
     return server

@@ -33,10 +33,10 @@ def search_context():
     """
     country = os.environ.get("PRS_AGENT_SEARCH_COUNTRY", DEFAULT_SEARCH_COUNTRY).strip()
     if not re.fullmatch(r"[A-Z]{3}", country):
-        raise AgentError("search_not_configured", "搜索区域配置须为三位大写国家代码。")
+        raise AgentError("search_not_configured", "The configured search country must be a three-letter uppercase code.")
     language = os.environ.get("PRS_AGENT_SEARCH_LANGUAGE", "en").strip()
     if not re.fullmatch(r"[a-z]{2,3}", language):
-        raise AgentError("search_not_configured", "搜索语言须为小写语言代码。")
+        raise AgentError("search_not_configured", "The configured search language must be a lowercase language code.")
     return {"default_search_country": country, "query_language": language,
             "source": "deployment_configuration",
             "is_device_location": False}
@@ -47,27 +47,27 @@ async def search_places(text, focus=None, country=None):
     Inputs: 1..200-character query, optional [longitude, latitude] focus, optional alpha-3
     country override, ORS_API_KEY and deployment country configuration.
     Outputs: Candidates with identity metadata, applied query/scope and rejected-candidate count;
-    invalid input or upstream failure raises AgentError.
+    failures raise AgentError with a stable code and HTTP status when available.
     Logic: Apply country as a hard boundary and focus only as a ranking hint; verify country
     metadata, exclude outside-boundary results explicitly, never select a destination.
     Constraints: Query/focus go to ORS, remain out of logs; 20s phase timeout and 256KiB cap;
     caller adds total timeout. No retries, fallback geocoders, persistence or nearest guarantee.
     """
     if not isinstance(text, str) or not 1 <= len(text.strip()) <= 200:
-        raise AgentError("invalid_place", "请提供 1～200 字的目的地名称或地址。")
+        raise AgentError("invalid_place", "Provide a destination name or address between 1 and 200 characters.")
     selected_country = search_context()["default_search_country"] if country is None else country
     if not isinstance(selected_country, str) or not re.fullmatch(r"[A-Z]{3}", selected_country):
-        raise AgentError("invalid_country", "搜索国家须为三位大写代码，例如 SGP。")
+        raise AgentError("invalid_country", "The search country must be a three-letter uppercase code.")
     params = {"text": text.strip(), "size": 5, "boundary.country": selected_country}
     if focus is not None:
         try:
             lon, lat = validate_coordinate(focus)
         except ValueError as error:
-            raise AgentError("invalid_focus", "搜索中心须为有效经纬度。") from error
+            raise AgentError("invalid_focus", "The search focus must contain valid longitude and latitude.") from error
         params.update({"focus.point.lon": lon, "focus.point.lat": lat})
     key = os.environ.get("ORS_API_KEY", "").strip()
     if not key:
-        raise AgentError("ors_not_configured", "服务器尚未配置 ORS_API_KEY。")
+        raise AgentError("ors_not_configured", "The server has no OpenRouteService API key configured.")
     try:
         async with httpx2.AsyncClient(
             timeout=20, follow_redirects=False, trust_env=False
@@ -82,13 +82,14 @@ async def search_places(text, focus=None, country=None):
                 if response.status_code != 200:
                     raise AgentError(
                         "geocoder_http_error",
-                        f"地点搜索失败（HTTP {response.status_code}），未自动重试。",
+                        "The geocoding service returned an unsuccessful HTTP response; no retry was attempted.",
+                        http_status=response.status_code,
                     )
                 raw = bytearray()
                 async for chunk in response.aiter_bytes():
                     raw.extend(chunk)
                     if len(raw) > 262144:
-                        raise AgentError("geocoder_response_limit", "地点搜索结果超过大小限制。")
+                        raise AgentError("geocoder_response_limit", "The geocoding response exceeded the configured size limit.")
         data = json.loads(raw)
         candidates, excluded = [], 0
         for feature in data["features"][:5]:
@@ -125,6 +126,6 @@ async def search_places(text, focus=None, country=None):
         }
     except httpx2.HTTPError as error:
         logger.warning("Place search network failed exception_type=%s", type(error).__name__)
-        raise AgentError("geocoder_network_error", "地点搜索网络请求失败，未自动重试。") from error
+        raise AgentError("geocoder_network_error", "The geocoding request failed at the network boundary; no retry was attempted.") from error
     except (KeyError, TypeError, ValueError) as error:
-        raise AgentError("geocoder_invalid_response", "地点搜索返回格式无效。") from error
+        raise AgentError("geocoder_invalid_response", "The geocoding service response did not match the expected data contract.") from error

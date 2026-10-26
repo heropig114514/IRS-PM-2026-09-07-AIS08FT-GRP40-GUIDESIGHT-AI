@@ -36,6 +36,45 @@ test("intent activity distinguishes mapped operations from rejected general ques
   assert.equal(items[2].textContent, "General question");
 });
 
+// Functionality: Keep backend failure details out of assistant-authored dialogue.
+// Inputs: Ordered failure events, their untrusted detail field and the selected UI language.
+// Outputs: Empty dialogue plus a localized, non-conversational status notice.
+// Logic: Exercise the production receive path with a minimal panel owner.
+// Constraints: Presentation only; no service call or model output is involved.
+test("agent failures render as status and never as assistant messages", t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {configurable: true, value: {
+    documentElement: {lang: "zh-CN"},
+  }});
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else delete globalThis.document;
+  });
+
+  const dialogue = [], status = {textContent: ""};
+  const owner = {
+    seen: 0, busy: true, stage: "thinking", notice: null, root: {dataset: {}},
+    status,
+    append: (...entry) => dialogue.push(entry),
+    render() { this.status.textContent = this.notice || "Ready"; },
+  };
+  AgentPanel.prototype.receive.call(owner, {
+    type: "error", seq: 1, code: "agent_explanation_unavailable",
+    detail: "A fixed backend message must not be presented as the agent's reply.",
+  });
+  assert.deepEqual(dialogue, []);
+  assert.equal(status.textContent, "助手暂时无法生成故障说明，请稍后重试。");
+  assert.equal(status.textContent.includes("fixed backend message"), false);
+
+  document.documentElement.lang = "en-US";
+  AgentPanel.prototype.receive.call(owner, {
+    type: "error", seq: 2, code: "qwen_http_error",
+    detail: "A second fixed backend message must also stay out of dialogue.",
+  });
+  assert.deepEqual(dialogue, []);
+  assert.equal(status.textContent, "The assistant service is unavailable.");
+});
+
 /* Functionality: Notify the speech integration for live replies but never replayed history.
  * Inputs: Ordered reply/ready events and an EventTarget fixture. Outputs: One body-bearing event per live reply.
  * Logic: Observe the production receive method, including ready-event replay and sequence deduplication.

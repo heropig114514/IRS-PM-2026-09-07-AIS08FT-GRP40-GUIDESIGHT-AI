@@ -2,11 +2,12 @@
  * Implementation: One bound WebSocket, ordered replay and explicit request ownership; the product
  * view uses press-and-hold voice capture with a prompt-preserving first permission request, while
  * the diagnostic view retains click-to-toggle capture. Safe DOM text rendering and in-memory audio;
- * only live assistant replies notify the speech integration. Disconnect releases microphone.
+ * only live assistant replies notify the speech integration; failures render as status, never dialogue.
+ * Disconnect releases microphone.
  * No auto reconnect.
  * Related Modules: ai-control.js, voice-input.js, agent.css, integration/assist-mvp.js;
  * backend/core/agent/transport.
- * Declaration Index: label; recordingFailure; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
+ * Declaration Index: label; recordingFailure; eventNotice; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
  * AgentPanel.send; AgentPanel.submit; AgentPanel.record; AgentPanel.startRecording;
  * AgentPanel.finishRecording; AgentPanel.handlePressStart; AgentPanel.handlePressEnd;
  * AgentPanel.handlePressCancel; AgentPanel.cancel;
@@ -14,7 +15,8 @@
  * Variable Index: COPY — bilingual interface and media setup text; TOOLS — discovery/action labels;
  * panel — singleton; AgentPanel.productMode selects the formal press-to-talk interaction;
  * holdActive/holdToken/activePointerId isolate the active pointer or keyboard press from stale events;
- * prs-agent-reply notifies speech integration for live replies only, never replayed history.
+ * prs-agent-reply notifies speech integration for live replies only, never replayed history;
+ * eventNotice maps non-conversational transport/runtime status by UI language.
  */
 import {VoiceInput} from "./voice-input.js";
 
@@ -31,6 +33,11 @@ const COPY = {
   routing: ["正在识别操作意图…", "Identifying your request…"],
   system: ["已识别操作：", "Recognized operations: "], clarify: ["需要明确操作意图", "Operation needs clarification"],
   general: ["通用问答", "General question"], unsupported: ["未命中已启用的能力", "Outside enabled capabilities"],
+  requestFailed: ["请求未完成，请稍后重试。", "The request did not complete. Try again later."],
+  explanationUnavailable: ["助手暂时无法生成故障说明，请稍后重试。", "The assistant could not explain this failure. Try again later."],
+  assistantUnavailable: ["助手服务暂时不可用。", "The assistant service is unavailable."],
+  cancelledNotice: ["请求已取消。", "Request cancelled."],
+  busyNotice: ["上一条指令仍在处理中。", "The previous request is still running."],
   recording: ["正在录音，点击结束并发送（最长20秒）", "Recording. Finish and send within 20 seconds."],
   permission: ["等待麦克风授权…", "Waiting for microphone permission…"],
   permissionReady: ["麦克风已获准，请再次按住说话。", "Microphone access was granted. Hold again to speak."],
@@ -53,10 +60,30 @@ const TOOLS = {
   vibration_status: ["查看震动支持", "Checking vibration"], vibration_test: ["提交震动", "Requesting vibration"],
   vibration_stop: ["停止震动", "Stopping vibration"],
 };
+const EVENT_NOTICES = {
+  agent_explanation_unavailable: COPY.explanationUnavailable,
+  agent_internal_error: COPY.assistantUnavailable,
+  agent_timeout: COPY.assistantUnavailable,
+  agent_not_configured: COPY.assistantUnavailable,
+  qwen_network_error: COPY.assistantUnavailable,
+  qwen_http_error: COPY.assistantUnavailable,
+  qwen_response_limit: COPY.assistantUnavailable,
+  qwen_invalid_response: COPY.assistantUnavailable,
+  qwen_empty_response: COPY.assistantUnavailable,
+  agent_busy: COPY.busyNotice,
+};
 
 /* Functionality: Select UI language. Inputs: bilingual tuple and document language.
  * Outputs: text; Logic: use page's existing language choice; Constraints: user/model text untouched. */
 function label(pair) { return pair[document.documentElement.lang.startsWith("zh") ? 0 : 1]; }
+
+/* Functionality: Localize a non-conversational event notice. Inputs: backend event. Outputs: UI text.
+ * Logic: Translate the stable event code; never display backend detail as an assistant reply.
+ * Constraints: Unknown codes produce generic status text and do not alter dialogue history. */
+function eventNotice(event) {
+  if (event.type === "cancelled") return label(COPY.cancelledNotice);
+  return label(EVENT_NOTICES[event.code] || COPY.requestFailed);
+}
 
 /* Functionality: Explain bounded microphone failures in the selected interface language.
  * Inputs: Browser capture exception. Outputs: actionable localized guidance.
@@ -137,6 +164,7 @@ export class AgentPanel {
     this.activity = this.root.querySelector("#agent-activity");
     this.busy = false;
     this.connected = false;
+    this.notice = null;
     this.recording = false;
     this.holdActive = false;
     this.holdToken = 0;
@@ -223,6 +251,7 @@ export class AgentPanel {
    * Logic: Fresh request UUID; Constraints: never resubmit after disconnect or timeout. */
   submit(input) {
     if (this.send({type: "submit", request_id: crypto.randomUUID(), ...input})) {
+      this.notice = null;
       this.busy = true; this.stage = input.audio ? "transcribing" : "thinking"; this.render();
     }
   }
@@ -381,11 +410,11 @@ export class AgentPanel {
       this.stage = "thinking";
     }
     if (["error", "cancelled", "rejected"].includes(event.type)) {
-      this.append("assistant", event.detail);
+      this.notice = eventNotice(event);
       if (event.type === "rejected" && event.code !== "agent_busy") { this.busy = false; this.stage = "ready"; }
     }
     if (event.type === "idle") { this.busy = false; this.stage = "ready"; }
-    if (event.type === "cleared") { this.dialogue.replaceChildren(); this.activity.replaceChildren(); }
+    if (event.type === "cleared") { this.notice = null; this.dialogue.replaceChildren(); this.activity.replaceChildren(); }
     this.root.dataset.busy = String(this.busy);
     this.render();
     if (liveReply) window.dispatchEvent(new CustomEvent("prs-agent-reply", {detail: {text: liveReply}}));
@@ -411,7 +440,7 @@ export class AgentPanel {
     this.root.querySelector('[data-copy="help"]').textContent = label(this.productMode ? COPY.productHelp : COPY.help);
     const status = this.productMode && this.recording ? COPY.recordingProduct
       : COPY[this.connected ? this.stage : this.stage === "offline" ? "offline" : "connecting"] || COPY.ready;
-    this.status.textContent = label(status);
+    this.status.textContent = this.notice || label(status);
     this.input.disabled = !this.connected || this.busy || this.recording || this.holdActive || this.stage === "permission";
     this.root.querySelector("#agent-send").disabled = this.input.disabled;
     const record = this.root.querySelector("#agent-record");
@@ -426,9 +455,9 @@ export class AgentPanel {
     this.root.dataset.busy = String(this.busy);
     this.root.dataset.connected = String(this.connected);
   }
-  /* Functionality: Show a local error. Inputs: safe diagnostic text; Outputs: visible log.
-   * Logic: Preserve error after status rerender; Constraints: no auto-resubmission. */
-  fail(text) { this.append("assistant", text); this.render(); }
+  /* Functionality: Show a local, non-conversational status. Inputs: UI-safe text; Outputs: status.
+   * Logic: Keep client failures out of assistant dialogue; Constraints: no auto-resubmission. */
+  fail(text) { this.notice = text; this.render(); }
 }
 
 const panel = typeof document !== "undefined" && document.querySelector("main") ? new AgentPanel() : null;

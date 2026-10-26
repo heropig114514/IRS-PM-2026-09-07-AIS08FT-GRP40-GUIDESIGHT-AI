@@ -4,11 +4,12 @@ Related Modules: core.agent.*, frontend/tools/check_agent_browser.mjs.
 Declaration Index: AgentTests; AgentTests.setUp; AgentTests.test_skill_catalog_and_paths;
 AgentTests.test_mcp_schema_binding; AgentTests.test_runtime_uses_evidence_and_memory;
 AgentTests.test_tool_failure_stops_without_retry;
-AgentTests.test_failure_fallback_after_model_error;
+AgentTests.test_service_error_reaches_agent_as_structured_evidence;
+AgentTests.test_failed_tool_is_not_replaced_when_model_fails;
 AgentTests.test_route_error_is_explained;
 AgentTests.test_english_failure_explanation_ignores_chinese_history;
-AgentTests.test_tool_error_normalization; AgentTests.test_localized_failure_fallback;
-AgentTests.test_empty_failure_explanation_uses_fallback;
+AgentTests.test_tool_error_normalization; AgentTests.test_tool_error_diagnostic_allowlist;
+AgentTests.test_empty_failure_explanation_is_not_replaced;
 AgentTests.test_declined_action_blocks_batched_mutations; AgentTests.test_cancel_and_deduplicate;
 AgentTests.test_input_validation; AgentTests.test_audio_validation;
 AgentTests.test_provider_contract; AgentTests.test_provider_contract.handler;
@@ -42,7 +43,6 @@ from core.agent.provider import AgentError, completion, transcribe
 from core.agent.runtime import (
     Conversation,
     conversations,
-    failure_reply,
     tool_exception,
     tool_failure,
 )
@@ -198,7 +198,7 @@ class AgentTests(SimpleTestCase):
 
     async def test_tool_failure_stops_without_retry(self):
         """Functionality: Preserve unknown completion on transport failure.
-        Inputs: one scripted mutation and failing browser; Outputs: localized explanation,
+        Inputs: one scripted mutation and failing browser; Outputs: agent-authored explanation,
         no replay.
         Logic: Real MCP error becomes bounded evidence for one final model response.
         Constraints: fake transport failure only; no provider quality claim.
@@ -222,16 +222,16 @@ class AgentTests(SimpleTestCase):
         results = [event["result"] for event in conversation.events
                    if event["type"] == "tool_result"]
         self.assertEqual(results[-1]["completion"], "unknown")
-        self.assertEqual(results[-1]["reason"], "operation_failed")
+        self.assertEqual(results[-1]["reason"], "operation_timeout")
         replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
         self.assertEqual(replies, ["I couldn't confirm the camera started; its state is unknown."])
         self.assertFalse(any(event["type"] == "error" for event in conversation.events))
         self.assertEqual(len(conversation.turns), 1)
 
     async def test_route_error_is_explained(self):
-        """Functionality: Replace a raw route error with localized, bounded evidence.
-        Inputs: Camera navigation request and MCP tool raising the public not_found code.
-        Outputs: Model explanation receives route_unavailable, never the JSON error body.
+        """Functionality: Keep raw MCP exception text out of the model explanation context.
+        Inputs: Camera navigation request and a synthetic JSON-shaped relay exception.
+        Outputs: Normalized failure and exception class reach the model, without raw JSON.
         Logic: Run actual in-process MCP encoding and inspect the next completion context.
         Constraints: Synthetic relay failure; does not exercise the remote proxy.
         """
@@ -253,6 +253,7 @@ class AgentTests(SimpleTestCase):
                            if message.get("role") == "tool")
         self.assertIn('"reason": "operation_failed"', tool_result)
         self.assertIn('"completion": "unknown"', tool_result)
+        self.assertIn('"error_type": "ValueError"', tool_result)
         self.assertNotIn('"code":"not_found"', tool_result)
         self.assertEqual(conversation.events[-2]["type"], "reply")
         self.assertFalse(any(event["type"] == "error" for event in conversation.events))
@@ -303,11 +304,48 @@ class AgentTests(SimpleTestCase):
             ["discover_tools", "read_skill", "maps_status"],
         )
 
-    async def test_failure_fallback_after_model_error(self):
-        """Functionality: Keep failed-action explanations available when the model is unavailable.
-        Inputs: Tool failure followed by a failed final completion.
-        Outputs: Static localized reply and one mutation dispatch.
-        Logic: Exercise the runtime's emergency rendering branch after failure evidence is saved.
+    async def test_service_error_reaches_agent_as_structured_evidence(self):
+        """Functionality: Preserve safe service diagnostics for agent reasoning.
+        Inputs: Navigation tool failure with a stable code, HTTP status and trusted diagnostic.
+        Outputs: The next model request receives those fields and authors the dialogue reply.
+        Logic: Exercise the real MCP adapter and runtime with a synthetic service exception.
+        Constraints: No live map-provider call or model-quality claim.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["navigation.search"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "navigation"}),
+            tool_message("places_categories"),
+            {"role": "assistant", "content": "The map provider rejected this request (HTTP 403)."},
+        ])) as model:
+            with patch("core.agent.tools.poi.categories", AsyncMock(side_effect=AgentError(
+                "ors_authentication_failed", "The map provider rejected the configured credential.",
+                http_status=403,
+            ))):
+                await conversation.run("request", "Find nearby supermarkets", None)
+        tool_result = next(
+            message["content"] for message in reversed(model.await_args_list[3].args[0])
+            if message.get("role") == "tool"
+        )
+        evidence = json.loads(tool_result)
+        self.assertEqual(evidence["error_code"], "ors_authentication_failed")
+        self.assertEqual(evidence["http_status"], 403)
+        self.assertEqual(
+            evidence["diagnostic"], "The map provider rejected the configured credential."
+        )
+        self.assertEqual(
+            [event["text"] for event in conversation.events if event["type"] == "reply"],
+            ["The map provider rejected this request (HTTP 403)."],
+        )
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+    async def test_failed_tool_is_not_replaced_when_model_fails(self):
+        """Functionality: Do not fabricate dialogue when agent explanation generation fails.
+        Inputs: One tool timeout followed by an unavailable explanation model.
+        Outputs: Typed status event, preserved evidence and one mutation dispatch.
+        Logic: Exercise the structured timeout adapter and the runtime error boundary.
         Constraints: Synthetic provider/transport errors; no model-quality claim.
         """
         self.router.return_value = tool_message("route_intent", {
@@ -322,10 +360,12 @@ class AgentTests(SimpleTestCase):
                 await conversation.run("request", "Start my camera", None)
         browser.assert_awaited_once()
         replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
-        self.assertEqual(len(replies), 1)
-        self.assertIn("final state is unknown", replies[0])
-        self.assertIn("I did not retry it", replies[0])
-        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+        self.assertEqual(replies, [])
+        errors = [event for event in conversation.events if event["type"] == "error"]
+        self.assertEqual([event["code"] for event in errors], ["agent_explanation_unavailable"])
+        evidence = json.dumps(conversation.turns[-1], ensure_ascii=False)
+        self.assertIn("operation_timeout", evidence)
+        self.assertNotIn("provider unavailable", evidence)
 
     def test_tool_error_normalization(self):
         """Functionality: Map explicit MCP error codes while withholding raw payloads.
@@ -338,41 +378,46 @@ class AgentTests(SimpleTestCase):
         normalized = tool_failure("ui_navigate", result)
         self.assertEqual(normalized, {
             "outcome": "failed", "tool": "ui_navigate", "reason": "route_unavailable",
-            "completion": "failed",
+            "completion": "failed", "error_code": "not_found",
         })
         read_error = SimpleNamespace(content=[SimpleNamespace(text="internal error")])
         self.assertEqual(tool_failure("camera_status", read_error)["completion"], "not_started")
         timeout = tool_exception("camera_start", TimeoutError("sensitive detail"))
         self.assertEqual(timeout, {
             "outcome": "failed", "tool": "camera_start", "reason": "operation_timeout",
-            "completion": "unknown",
+            "completion": "unknown", "error_type": "TimeoutError",
         })
         self.assertEqual(
             tool_exception("camera_status", RuntimeError("sensitive detail"))["completion"],
             "not_started",
         )
 
-    def test_localized_failure_fallback(self):
-        """Functionality: Keep the emergency tool-failure explanation concise and localized.
-        Inputs: Normalized missing-camera outcome; Outputs: safe English and Chinese replies.
-        Logic: Check cause, action boundary, and absence of raw tool payload.
-        Constraints: Static rendering does not measure model language quality.
+    def test_tool_error_diagnostic_allowlist(self):
+        """Functionality: Preserve service code/status without forwarding raw error payload text.
+        Inputs: Synthetic MCP JSON with a known code, HTTP status and sensitive detail field.
+        Outputs: Bounded normalized evidence with free-form payload content removed.
+        Logic: Exercise the runtime parser against an error result from a tool boundary.
+        Constraints: No live provider call or diagnosis-quality assertion.
         """
-        failure = {
-            "tool": "camera_start", "reason": "camera_not_found", "completion": "failed",
-        }
-        english = failure_reply(failure, "en")
-        chinese = failure_reply(failure, "zh")
-        self.assertIn("No matching camera", english)
-        self.assertIn("没有找到符合条件的摄像头", chinese)
-        self.assertNotIn("{\"code\"", english)
+        result = SimpleNamespace(content=[SimpleNamespace(text=json.dumps({
+            "code": "geocoder_http_error", "status": 429,
+            "error_type": "HTTPStatusError",
+            "detail": "credential-value-must-not-be-forwarded",
+        }))])
+        normalized = tool_failure("places_search", result)
+        self.assertEqual(normalized["reason"], "geocoder_http_error")
+        self.assertEqual(normalized["error_code"], "geocoder_http_error")
+        self.assertEqual(normalized["http_status"], 429)
+        self.assertEqual(normalized["error_type"], "HTTPStatusError")
+        self.assertNotIn("detail", normalized)
+        self.assertNotIn("credential-value-must-not-be-forwarded", json.dumps(normalized))
 
-    async def test_empty_failure_explanation_uses_fallback(self):
-        """Functionality: Replace an empty model response after a failure with localized guidance.
-        Inputs: Camera request, failed camera tool, and blank final completion.
-        Outputs: A nonempty safe explanation without additional browser dispatch.
-        Logic: Exercise the normal failure-evidence and final-reply path.
-        Constraints: Synthetic provider/transport state; no real camera permission is requested.
+    async def test_empty_failure_explanation_is_not_replaced(self):
+        """Functionality: Keep an empty model explanation out of assistant dialogue.
+        Inputs: Camera request, failed camera tool and blank final model response.
+        Outputs: Explanation-unavailable event and no fixed reply or extra tool dispatch.
+        Logic: Exercise the normal failure-evidence and error-status path.
+        Constraints: Synthetic provider/transport state; no camera permission is requested.
         """
         self.router.return_value = tool_message("route_intent", {
             "route": "system", "intent_ids": ["camera.start"], "language": "en",
@@ -386,10 +431,10 @@ class AgentTests(SimpleTestCase):
                 await conversation.run("request", "Start my camera", None)
         browser.assert_awaited_once()
         replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
-        self.assertEqual(len(replies), 1)
-        self.assertTrue(replies[0].strip())
-        self.assertIn("final state is unknown", replies[0])
-        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+        self.assertEqual(replies, [])
+        self.assertIn("agent_explanation_unavailable", [
+            event.get("code") for event in conversation.events if event["type"] == "error"
+        ])
 
     async def test_declined_action_blocks_batched_mutations(self):
         """Functionality: Stop every later action in a model batch after a negative outcome.
