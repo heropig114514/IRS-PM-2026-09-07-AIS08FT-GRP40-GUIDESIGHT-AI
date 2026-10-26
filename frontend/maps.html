@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Responsibilities: Present OSM location, ORS walking routes and continuous navigation.
-Implementation: Pin Leaflet 1.9.4/SRI; install shared language controls before maps; load the AI bridge and separate navigation speech wiring, disabled by default; require explicit location, selection, sample and planning actions; core.maps substitutes the nonce.
+Implementation: Pin Leaflet 1.9.4/SRI; install shared language controls before maps; load the AI bridge and separate navigation speech wiring, disabled by default; require explicit location, selection, sample and planning actions; both header links return to the canonical /maps/ product page rather than the retired bare mount; core.maps substitutes the nonce.
 Related Modules: agent-client.js/agent.css (voice/text assistant), i18n.js, translations.js, maps-client.js, maps-page.js, navigation-ui.js, ai-control.js, speech-output.js, integration/maps-navigation-speech.js, camera.css, core.maps/services.
 Declaration Index: None.
 Variable Index: __CSP_NONCE__ — CSS nonce; language — preference; form IDs — controller bindings; navigation-* — navigation buttons/status; Leaflet URL/integrity — pinned dependency. -->
@@ -104,8 +104,8 @@ Variable Index: __CSP_NONCE__ — CSS nonce; language — preference; form IDs �
   <body>
     <div class="shell">
       <header class="topbar">
-        <a class="brand" href="../"><span class="brand-mark">P</span> PRS LAB</a
-        ><a class="top-note" href="../">← 摄像头回传</a>
+        <a class="brand" href="./"><span class="brand-mark">P</span> PRS LAB</a
+        ><a class="top-note" href="./">← 摄像头回传</a>
         <label class="language-select">
           <span>语言</span>
           <select id="language" aria-label="语言">

@@ -10,7 +10,8 @@ MobileTests.test_explicit_https_origin; MobileTests.test_original_local_scope_an
 MobileTests.test_public_headers_and_mount; MobileTests.test_public_origin_host_and_peer_rejections;
 MobileTests.test_relay_marker_prevents_local_bypass; MobileTests.test_public_paths_and_methods;
 MobileTests.test_public_websocket_admission; MobileTests.test_no_path_guessing_or_traversal;
-MobileTests.test_redirect_csp_and_local_response_isolation; MobileTests.test_real_assist_template;
+MobileTests.test_no_public_root_alias_csp_and_local_response_isolation;
+MobileTests.test_real_assist_template;
 MobileTests.test_real_asset_allowlist; MobileTests.test_real_route_uses_original_origin_gate;
 MobileTests.test_lifespan_delegates; MobileTests.test_video_endpoint_mount_resolution;
 MobileTests.test_public_map_assets_are_forwarded_unchanged.
@@ -325,14 +326,14 @@ class MobileTests(SimpleTestCase):
 
     async def test_public_paths_and_methods(self):
         """Functionality: Keep public operations on the exact combined-entry capability set.
-        Inputs: allowed methods plus MCP/admin/API/HF/standalone paths. Outputs: delegation/404/405.
+        Inputs: allowed methods plus mount-root/MCP/admin/API/HF/standalone paths. Outputs:
+        delegation/404/405.
         Logic: no prefix-based business-route exposure; Constraints: fixture response is not real
         business validation.
         """
         inner = RecordingApplication()
         app = MobileApplication(inner)
         for path, method in (
-            ("/", "GET"),
             ("/maps/", "HEAD"),
             ("/maps/test", "GET"),
             ("/maps/test", "HEAD"),
@@ -347,6 +348,7 @@ class MobileTests(SimpleTestCase):
             "/mcp",
             "/mcp/",
             "/admin/",
+            "/",
             "/api/health/",
             "/live/",
             "/integration/video/",
@@ -426,15 +428,19 @@ class MobileTests(SimpleTestCase):
         )
         self.assertEqual(inner.scopes, [])
 
-    async def test_redirect_csp_and_local_response_isolation(self):
-        """Functionality: Preserve /mvp redirects and public WSS without losing CSP restrictions.
-        Inputs: exact downstream CSP/redirect and local/public requests. Outputs: public-only safe
-        header changes.
-        Logic: nonce/CDN/blob/ancestors directives survive byte-for-byte; Constraints: no body
-        mutation.
+    async def test_no_public_root_alias_csp_and_local_response_isolation(self):
+        """Functionality: Reject extra public root entries and preserve page CSP isolation.
+        Inputs: public root/page and local root requests. Outputs: root 404, canonical page header
+        rewriting, and unchanged local-development behavior.
+        Logic: the public mount exposes only its two named page routes; nonce/CDN/blob/ancestor
+        directives survive byte-for-byte. Constraints: no response-body mutation.
         """
         app = MobileApplication(RecordingApplication())
-        start, body = await http_call(app, "/")
+        root, root_body = await http_call(app, "/")
+        self.assertEqual(root["status"], 404)
+        self.assertEqual(root_body, b'{"code": "not_found"}')
+        self.assertEqual(app.application.scopes, [])
+        start, body = await http_call(app, "/maps/")
         headers = dict(start["headers"])
         self.assertEqual(headers[b"location"], b"/mvp/maps/")
         self.assertEqual(body, b"{}")
@@ -454,9 +460,10 @@ class MobileTests(SimpleTestCase):
         self.assertIn(b"ws://127.0.0.1", dict(local["headers"])[b"content-security-policy"])
 
     async def test_real_assist_template(self):
-        """Functionality: Verify actual combined HTML uses one mount-relative module graph.
+        """Functionality: Verify actual combined HTML uses one mount-relative module graph and
+        canonical page navigation.
         Inputs: original assist renderer through the public wrapper. Outputs: nonce, same-origin
-        microphone policy for both assistant views, SRI and URL assertions.
+        microphone policy for both assistant views, SRI, and mounted product-page header links.
         Logic: resolve real script/link paths as the phone does; Constraints: no CDN/browser/TLS
         execution.
         """
@@ -471,6 +478,11 @@ class MobileTests(SimpleTestCase):
             headers = dict(start["headers"])
             self.assertRegex(headers[b"content-security-policy"], rb"'nonce-[A-Za-z0-9_-]+'")
             if view == "test":
+                self.assertIn(b'<a class="brand" href="./">', body)
+                self.assertIn(b'<a class="top-note" href="./">', body)
+                self.assertEqual(urljoin(PUBLIC + "/mvp" + path, "./"), PUBLIC + "/mvp/maps/")
+                self.assertNotIn(b'<a class="brand" href="../">', body)
+                self.assertNotIn(b'<a class="top-note" href="../">', body)
                 nonce = re.search(rb'<style nonce="([^"]+)"', body).group(1)
                 self.assertIn(b"'nonce-" + nonce + b"'", headers[b"content-security-policy"])
             self.assertEqual(body.count(b'integrity="sha256-'), 2)

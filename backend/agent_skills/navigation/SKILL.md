@@ -105,9 +105,12 @@ nearby category result also ends the action phase.
    planning outcome; do not infer an ORS failure cause merely from a short distance.
 8. After successful planning, continue navigation requests with navigation_start; planning-only
    requests end here. navigation_start includes at most 12 seconds of read-only observation.
-   Report state/verified: navigating/verified=true means navigation is running; locating is still
-   waiting for location; error is failure. Do not repeat observation of the same terminal state merely
-   for formality. **A promise to locate or plan ends the turn with no background continuation.
+   Report state/verified: navigating/verified=true means turn-by-turn navigation is running; locating
+   means the accepted location watch is waiting for a usable fix; off_route with active=true means
+   the watch is running but its latest fix is outside the planned route tolerance, so it is not a
+   start failure; error is a failed navigation. For off_route, ask the user to verify the current
+   location/origin and manually replan; do not claim guidance is available or start a second watch.
+   Do not repeat observation of the same terminal state merely for formality. **A promise to locate or plan ends the turn with no background continuation.
    Invoke tools before reporting results; sufficient input requires execution, not a future-tense promise.**
 9. Navigation speech is separate and disabled by default. Read the actual
    navigation_status.navigation_speech state. The user must enable navigation speech and speech

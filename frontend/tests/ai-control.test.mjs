@@ -1,11 +1,11 @@
-/* Responsibilities: Verify semantic navigation respects embedded MVP and standard page routes.
- * Implementation: Exercise the exported route resolver with focused DOM fixtures.
+/* Responsibilities: Verify embedded navigation routes and shared speech-control dispatch.
+ * Implementation: Exercise exported controls with focused DOM/controller fixtures.
  * Related Modules: ai-control.js; check_assist_browser.mjs covers the live pages.
  * Declaration Index: None (test callbacks are anonymous).
  * Variable Index: None; fixtures are scoped to individual tests. */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {navigatePage} from "../ai-control.js";
+import {navigatePage, performSpeech} from "../ai-control.js";
 
 // Functionality: Focus an available embedded camera without requesting a route change.
 // Inputs: MVP document fixture and configured base URL; Outputs: same-page section result.
@@ -57,4 +57,45 @@ test("standard PRS pages retain their existing routes", () => {
   const base = new URL("https://example.test/prs/");
   assert.equal(navigatePage("camera", doc, base).navigating_to, "https://example.test/prs/live/");
   assert.equal(navigatePage("maps", doc, base).navigating_to, "https://example.test/prs/maps/");
+});
+
+// Functionality: Reuse the product page's existing local voice for a natural-language read request.
+// Inputs: Local-only controller with one selected voice and a speech request without voice_id.
+// Outputs: One controller submission carrying that exact voice identity.
+// Logic: Inspect the option already selected by the page; no voice inventory or replacement is used.
+// Constraints: Does not enable output, create trusted activation, or emulate audible playback.
+test("speech request inherits the exact selected voice on a local-only page", () => {
+  let submitted;
+  const controller = {localOnly: true, voice: {value: "windows-local-zh"},
+    speak: (text, options) => (submitted = {text, options})};
+  performSpeech("speech_speak", {text: "测试朗读", language: "zh-CN"}, controller);
+  assert.deepEqual(submitted, {text: "测试朗读", options: {
+    language: "zh-CN", voice_id: "windows-local-zh", rate: 1, volume: 1,
+  }});
+});
+
+// Functionality: Preserve an explicit voice supplied by the user or agent.
+// Inputs: Local-only controller, requested voice and selected page voice.
+// Outputs: Submission uses the explicit requested voice.
+// Logic: Caller choice takes precedence over the page's current selection.
+// Constraints: Does not substitute if the caller's voice is unavailable; controller validates it.
+test("explicit speech voice is never replaced by the page selection", () => {
+  let submitted;
+  const controller = {localOnly: true, voice: {value: "windows-local-zh"},
+    speak: (text, options) => (submitted = {text, options})};
+  performSpeech("speech_speak", {text: "测试朗读", language: "zh-CN", voice_id: "requested-voice"}, controller);
+  assert.equal(submitted.options.voice_id, "requested-voice");
+});
+
+// Functionality: Preserve the standard page's browser-default voice behavior when no choice exists.
+// Inputs: Non-local-only controller and speech request without voice_id.
+// Outputs: Submission retains null so the existing controller selects its browser default.
+// Logic: The local-only override is deliberately limited to pages that already enforce it.
+// Constraints: Does not inspect or mutate a standalone page's selector.
+test("standard speech request retains its browser-default voice behavior", () => {
+  let submitted;
+  const controller = {localOnly: false, voice: {value: "ignored-selection"},
+    speak: (text, options) => (submitted = {text, options})};
+  performSpeech("speech_speak", {text: "测试朗读", language: "zh-CN"}, controller);
+  assert.equal(submitted.options.voice_id, null);
 });

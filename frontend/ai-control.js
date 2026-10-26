@@ -259,11 +259,14 @@ export function performVibration(action, args = {}, controller = tester) {
 }
 
 /* Functionality: Expose the page's speech output controller without duplicating playback logic.
- * Inputs: fixed speech action, args.text/language/voice_id/rate/volume, optional controller.
+ * Inputs: fixed speech action, args.text/language/voice_id/rate/volume, optional controller;
+ * the controller may carry the exact voice already selected by the page.
  * Outputs: State, voice inventory or one submission/cancellation acknowledgement.
- * Logic: Queries do not speak; mutating actions delegate once to the same UI interface.
- * Constraints: No automatic enabling, trusted activation, queue, voice substitution, sensor
- * authorization or retry. Missing speech UI returns page_unavailable without side effects. */
+ * Logic: Queries do not speak; mutating actions delegate once to the same UI interface. When a
+ * local-only page has an existing explicit voice selection and the caller omits voice_id, reuse
+ * that exact selection so the shared page policy remains satisfied.
+ * Constraints: Never select a replacement/default voice, enable output, synthesize activation,
+ * queue, authorize a sensor or retry. Missing speech UI returns page_unavailable without effects. */
 export function performSpeech(action, args = {}, controller = speechOutput) {
   if (!["speech_status", "speech_voices", "speech_speak", "speech_stop"].includes(action))
     throw new Error("Unknown speech command");
@@ -274,7 +277,8 @@ export function performSpeech(action, args = {}, controller = speechOutput) {
   if (action === "speech_voices") return controller.voiceList();
   if (action === "speech_stop") return controller.stop();
   const {language = "zh-CN", voice_id = null, rate = 1, volume = 1} = args;
-  return controller.speak(args.text, {language, voice_id, rate, volume});
+  const selectedVoice = voice_id || (controller.localOnly ? controller.voice?.value || null : null);
+  return controller.speak(args.text, {language, voice_id: selectedVoice, rate, volume});
 }
 
 /* Functionality: Register this open page with the application's MCP control service.

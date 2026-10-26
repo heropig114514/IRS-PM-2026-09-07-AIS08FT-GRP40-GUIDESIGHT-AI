@@ -1,11 +1,12 @@
 /* Responsibilities: Adapt existing map/camera controllers to conversational tools.
- * Implementation: Conditional imports, bounded read-only observation waits and user-activation
- * gating for assistant-triggered camera starts on the public product surface.
- * Related Modules: ai-control.js, camera.js, maps-page.js, navigation-ui.js.
+ * Implementation: Conditional imports, bounded read-only observation waits, product/standalone
+ * navigation-speech snapshots, and user-activation gating for camera starts.
+ * Related Modules: ai-control.js, camera.js, maps-page.js, navigation-ui.js,
+ * integration/assist-mvp.js, integration/maps-navigation-speech.js.
  * Declaration Index: CAMERA_FAILURE_REASONS — stable browser error mappings; cameraFailureReason;
- * cameraState; observe; performDevice.
+ * cameraState; observe; productNavigationSpeechState; performDevice.
  * Variable Index: CAMERA_FAILURE_REASONS — user-safe semantic causes; controller/status/deadline
- * are call-local state. */
+ * and productGuidance are call-local state. */
 
 const CAMERA_FAILURE_REASONS = {
   NotFoundError: "camera_not_found",
@@ -52,6 +53,26 @@ export async function observe(read, pending, seconds = 0) {
   return state;
 }
 
+/* Functionality: Project the unified product's output owner into the navigation-status contract.
+ * Inputs: Detached AssistGuidanceManager.describe() snapshot. Outputs: navigation_speech metadata.
+ * Logic: Map only current navigation-output ownership, enablement and pause state; null malformed
+ * optional fields rather than inferring a selection or playback result.
+ * Constraints: This is a software-state snapshot; it never reads spoken text or verifies audibility.
+ */
+export function productNavigationSpeechState(productGuidance) {
+  const activeSpeech = productGuidance?.active?.speech;
+  return {
+    available: true,
+    enabled: productGuidance?.navigation_enabled === true,
+    paused: productGuidance?.paused?.speech === true,
+    reason: typeof productGuidance?.reasons?.speech === "string" ? productGuidance.reasons.speech : null,
+    run_id: typeof productGuidance?.navigation_run_id === "string" ? productGuidance.navigation_run_id : null,
+    active_request_id: typeof activeSpeech?.request_id === "string" ? activeSpeech.request_id : null,
+    active_started: activeSpeech?.started === true,
+    audio_output_verified: false,
+  };
+}
+
 /* Functionality: Execute one semantic command via shared controllers.
  * Inputs: action/args/current document; Outputs: state, acknowledgement or error.
  * Logic: Page checks precede imports; product camera starts require a live local user activation,
@@ -64,13 +85,20 @@ export async function performDevice(action, args = {}, doc = document) {
     if (action === "agent_navigation_status") {
       const {navigation} = await import("./navigation-ui.js");
       let speech = null;
-      if (doc.querySelector("#maps-navigation-speech-panel")) {
+      if (doc.documentElement?.dataset.assist === "true") {
+        // The unified product already owns navigation speech through AssistGuidanceManager.
+        // Importing maps-navigation-speech.js here would request an asset that the isolated
+        // /mvp/ relay does not publish and would turn a status read into a false start failure.
+        const {guidanceManager, assistReady} = await import("./integration/assist-mvp.js");
+        await assistReady;
+        speech = productNavigationSpeechState(guidanceManager.describe());
+      } else if (doc.querySelector("#maps-navigation-speech-panel")) {
         const {navigationSpeech, mapsNavigationSpeechReady} = await import("./integration/maps-navigation-speech.js");
         await mapsNavigationSpeechReady;
-        speech = navigationSpeech;
+        speech = {available: true, ...navigationSpeech.describe()};
       }
       return observe(() => ({...navigation.describe(),
-        navigation_speech: speech ? {available: true, ...speech.describe()} : {available: false}}),
+        navigation_speech: speech || {available: false}}),
       state => state.state === "locating", args.wait_seconds ?? 0);
     }
     const {mapsControl} = await import("./maps-page.js");

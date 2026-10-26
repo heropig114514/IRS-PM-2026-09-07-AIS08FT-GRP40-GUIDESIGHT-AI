@@ -336,9 +336,9 @@ async function waitNode(predicate, milliseconds, code) {
   }
 }
 
-/* Functionality: Observe real public WSS handshake/clock data without binary media or command bodies.
- * Inputs: Playwright socket and report. Outputs: public endpoint, hello/PRF2/control lifecycle.
- * Logic: permit only the mounted control and local inference paths; no authorization-header capture.
+/* Functionality: Observe real public WSS handshakes and inference clocks without media/command bodies.
+ * Inputs: Playwright socket and report. Outputs: public endpoint, assistant/control lifecycle, hello/PRF2.
+ * Logic: permit the mounted control, assistant, and local-inference paths; no authorization-header capture.
  * Constraints: read-only observation, never a replacement client or access-control workaround. */
 function monitorSocket(socket, report) {
   const address = new URL(socket.url());
@@ -346,7 +346,7 @@ function monitorSocket(socket, report) {
     hellos: [], inputs: [], welcomes: [], pongs: 0};
   report.sockets.push(item);
   if (address.origin !== PHONE_ORIGIN.replace("https:", "wss:") ||
-      ![`${PREFIX}ws/control/`, `${PREFIX}ws/detect/local/`].includes(address.pathname))
+      ![`${PREFIX}ws/control/`, `${PREFIX}ws/agent/`, `${PREFIX}ws/detect/local/`].includes(address.pathname))
     report.failures.push({phase: report.phase, code: "UNEXPECTED_SOCKET", type: "GateError"});
   socket.on("close", () => { item.closed = true; });
   /* Functionality: Read only fixed public handshake and control heartbeat fields.

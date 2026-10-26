@@ -28,5 +28,8 @@ description: Open/close the camera, select existing echo or HF detection mode, i
    question, click #scene-describe, wait for that button to become enabled, then inspect
    #scene-result and #scene-message via ui_snapshot. Empty result/error is failure; never
    fabricate a scene. This existing VLM has its own service configuration.
-7. Connection testing uses observed #ping and status, only when camera is idle. For all
+7. Connection testing uses observed #ping and status, only when camera is idle. On the diagnostic
+   MVP page, this verifies the mounted WSS echo/ping-pong path only; it does not send an inference
+   frame or verify model readiness. To validate inference without camera permission, use the
+   diagnostic page's explicit local-video replay, then verify a completed returned frame. For all
    device actions preserve real browser permissions and the existing processing parameters.

@@ -9,7 +9,8 @@
  * Speech.manual; Speech.stopOwned; Vibration; Vibration.constructor; Vibration.subscribe;
  * Vibration.emit; Vibration.describe; Vibration.testPattern; Vibration.stopOwned;
  * box; navigationSnapshot; fixture; fixture.risk; fixture.navigation;
- * testDisabled; testNavigationOnly; testRiskOnly; testPreemption; testLatestNavigation;
+ * testDisabled; testNavigationOnly; testAssistantReplyQueue; testAssistantReplyPriority;
+ * testRiskOnly; testPreemption; testLatestNavigation;
  * testCompletedNavigation; testRiskCompletion; testEscalation; testCooldown; testSourceClock;
  * testQueuedRisk; testQueuedNavigation; testNavigationExpiry; testIndependentStops;
  * testIndependentSwitches; testForeignSpeech; testForeignVibration; testSynchronous;
@@ -22,6 +23,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {AssistGuidanceManager} from "../integration/assist-guidance.js";
+import {MAX_TEXT_LENGTH} from "../speech-output.js";
 import {videoAlertText} from "../integration/video-alerts.js";
 import {navigationSpeechText} from "../integration/navigation-speech.js";
 
@@ -214,6 +216,43 @@ test("navigation works alone and completed same-step GPS never repeats", functio
   const f = fixture(); f.navigation(); assert.equal(f.speech.requests[0].text, navigationSpeechText(f.manager.latestNavigation, "zh-CN"));
   f.speech.start(); f.speech.end(); f.clock.advance(200); f.navigation(); assert.equal(f.speech.requests.length, 1);
   assert.equal(f.vibration.requests.length, 0); f.manager.dispose();
+});
+
+/* Functionality: Verify complete FIFO assistant speech and driver-sized text segmentation.
+ * Inputs: Two queued replies, one longer than the native utterance limit. Outputs: Ordered owned requests.
+ * Logic: Complete each simulated native utterance, then concatenate the long reply's submitted parts.
+ * Constraints: Fake driver events verify scheduling only; they do not prove browser audio is audible. */
+test("live assistant replies queue in order and long text is spoken without truncation", function testAssistantReplyQueue() {
+  const f = fixture(), longReply = "甲".repeat(MAX_TEXT_LENGTH - 5) + "。后半段也必须完整播报。";
+  f.manager.enqueueAssistantReply(longReply); f.manager.enqueueAssistantReply("第二条助手回复。");
+  const parts = [];
+  while (f.manager.describe().queued_assistant_replies) {
+    const request = f.speech.current;
+    assert.ok(request, "the next queued assistant part should own the speech driver");
+    assert.equal(request.options.voice_id, "local-zh");
+    parts.push(request.text); f.speech.start(); f.speech.end();
+  }
+  assert.ok(parts.slice(0, -1).every(part => [...part].length <= MAX_TEXT_LENGTH));
+  assert.equal(parts.slice(0, -1).join(""), longReply);
+  assert.equal(parts.at(-1), "第二条助手回复。");
+  assert.equal(f.manager.describe().queued_assistant_replies, 0);
+  f.manager.dispose();
+});
+
+/* Functionality: Verify assistant priority against route guidance and risk output.
+ * Inputs: Synthetic active route, assistant reply and risk source. Outputs: Owned priority transitions.
+ * Logic: Assistant preempts navigation; required risk preempts the reply; route guidance resumes last.
+ * Constraints: No GPS, camera, algorithm execution, physical output or device permission is exercised. */
+test("risk preempts a live assistant reply and route guidance resumes after both", function testAssistantReplyPriority() {
+  const f = fixture(); f.navigation(); f.manager.enqueueAssistantReply("正在测试的助手回复。");
+  assert.equal(f.speech.current.text, "正在测试的助手回复。");
+  f.speech.start(); f.risk();
+  assert.equal(f.speech.current.text, videoAlertText(box(), "zh-CN"));
+  f.speech.start(); f.risk([]); f.speech.end();
+  assert.equal(f.speech.current.text, "正在测试的助手回复。");
+  f.speech.start(); f.speech.end();
+  assert.equal(f.speech.current.text, navigationSpeechText(f.manager.latestNavigation, "zh-CN"));
+  f.manager.dispose();
 });
 
 // Functionality: Check risk-only output; Inputs: Required box; Outputs: Existing text/pattern; Logic: No nav prerequisite; Constraints: No scoring change.

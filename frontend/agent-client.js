@@ -1,8 +1,9 @@
 /* Responsibilities: Shared voice/text assistant panel, progress and cross-page conversation.
  * Implementation: One bound WebSocket, ordered replay and explicit request ownership; the product
  * view uses press-and-hold voice capture with a prompt-preserving first permission request, while
- * the diagnostic view retains click-to-toggle capture.
- * safe DOM text rendering and in-memory audio; disconnect releases microphone. No auto reconnect.
+ * the diagnostic view retains click-to-toggle capture. Safe DOM text rendering and in-memory audio;
+ * only live assistant replies notify the speech integration. Disconnect releases microphone.
+ * No auto reconnect.
  * Related Modules: ai-control.js, voice-input.js, agent.css, integration/assist-mvp.js;
  * backend/core/agent/transport.
  * Declaration Index: label; recordingFailure; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
@@ -12,7 +13,8 @@
  * AgentPanel.receive; AgentPanel.append; AgentPanel.render; AgentPanel.fail.
  * Variable Index: COPY — bilingual interface and media setup text; TOOLS — discovery/action labels;
  * panel — singleton; AgentPanel.productMode selects the formal press-to-talk interaction;
- * holdActive/holdToken/activePointerId isolate the active pointer or keyboard press from stale events.
+ * holdActive/holdToken/activePointerId isolate the active pointer or keyboard press from stale events;
+ * prs-agent-reply notifies speech integration for live replies only, never replayed history.
  */
 import {VoiceInput} from "./voice-input.js";
 
@@ -94,11 +96,12 @@ function recordingFailure(error) {
  * Logic: Correlated events reflect actual backend work; page navigation reattaches same identity.
  * State: productMode selects the formal hold gesture; busy/connected/recording/stage drive controls;
  * holdActive/holdToken/activePointerId isolate gestures; seen deduplicates replay; voice/socket/heartbeat own resources.
- * Constraints: No unsolicited microphone access, automatic reply speech or command replay. */
+ * Constraints: No unsolicited microphone access or command replay; replayed replies never request speech. */
 export class AgentPanel {
   /* Functionality: Build the page-specific assistant panel and bind explicit controls.
    * Inputs: document view marker, main element and browser event targets. Outputs: inserted panel/listeners.
-   * Logic: Product mode places hold-to-send after the intro; other pages keep click-to-toggle.
+   * Logic: Product mode places hold-to-send after the intro and uses text submission as an explicit
+   * speech-activation gesture; other pages keep click-to-toggle capture.
    * Constraints: Static markup only; no microphone request until a user gesture. */
   constructor() {
     this.productMode = document.documentElement.dataset.assistView === "product";
@@ -147,7 +150,10 @@ export class AgentPanel {
     this.root.querySelector("#agent-form").addEventListener("submit", event => {
       event.preventDefault();
       const text = this.input.value.trim();
-      if (text && !this.busy && !this.recording) { this.submit({text}); this.input.value = ""; }
+      if (text && !this.busy && !this.recording) {
+        if (this.productMode) window.dispatchEvent(new Event("prs-assist-voice-gesture"));
+        this.submit({text}); this.input.value = "";
+      }
     });
     const recordButton = this.root.querySelector("#agent-record");
     if (this.productMode) {
@@ -341,19 +347,24 @@ export class AgentPanel {
     if (local) { this.stage = this.connected ? "ready" : "offline"; this.render(); }
     else this.send({type: "cancel"});
   }
-  /* Functionality: Apply ordered backend events. Inputs: parsed event; Outputs: UI state.
+  /* Functionality: Apply ordered backend events.
+   * Inputs: Parsed event and replayed (defaults false) history flag. Outputs: UI state and live-reply notification.
    * Logic: Ignore replay duplicates; show configured intent labels before tool activity;
    * distinguish acknowledgement, reply, failure and idle.
-   * Constraints: Tool events show activity, never fabricated completion. */
-  receive(event) {
+   * Constraints: Replayed history never speaks; tool events show activity, never fabricated completion. */
+  receive(event, replayed = false) {
     if (event.type === "ready") {
-      for (const previous of event.events || []) this.receive(previous);
+      for (const previous of event.events || []) this.receive(previous, true);
       this.connected = true; this.busy = event.busy; this.stage = event.busy ? "thinking" : "ready";
     }
     if (event.seq && event.seq <= this.seen) return;
     if (event.seq) this.seen = event.seq;
     if (event.type === "working") { this.busy = true; this.stage = event.stage; }
-    if (event.type === "user" || event.type === "reply") this.append(event.type === "user" ? "you" : "assistant", event.text);
+    let liveReply = null;
+    if (event.type === "user" || event.type === "reply") {
+      this.append(event.type === "user" ? "you" : "assistant", event.text);
+      if (event.type === "reply" && !replayed) liveReply = event.text;
+    }
     if (event.type === "intent") {
       const item = document.createElement("li");
       const route = event.route === "general" && event.unknown_policy === "reject" ? "unsupported" : event.route;
@@ -377,6 +388,7 @@ export class AgentPanel {
     if (event.type === "cleared") { this.dialogue.replaceChildren(); this.activity.replaceChildren(); }
     this.root.dataset.busy = String(this.busy);
     this.render();
+    if (liveReply) window.dispatchEvent(new CustomEvent("prs-agent-reply", {detail: {text: liveReply}}));
   }
   /* Functionality: Display dialogue as text. Inputs: role/text; Outputs: bounded log entry.
    * Logic: textContent prevents markup injection; Constraints: no dialogue storage. */

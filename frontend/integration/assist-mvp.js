@@ -1,21 +1,23 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
  * Implementation: Default-enabled unified outputs, interface-language local voice preference,
- * synchronous user-gesture speech activation and one-click product rear-camera acquisition,
- * canonical shared module URLs, independent source lifecycles, explicit controls,
+ * synchronous user-gesture speech activation, prioritized live assistant reply speech and
+ * one-click product rear-camera acquisition,
+ * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
  * original frame transports and passive maps snapshots; no navigation or algorithm calculations.
  * Related Modules: assist-panel.html/assist.css/assist-guidance.js; maps-navigation-bridge.js,
  * devices.js/video-replay.js/catalog.js/voice-preferences.js; original camera/navigation/speech/vibration singletons.
  * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; guidanceDiagnostic; onGuidance; applyVoice;
  * renderSpeechActivation; activateSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
- * onBoundary; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
+ * onBoundary; speakAssistantReply; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
  * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
  * locks user source choice during permission/admission; fileChoice/permissionChoice invalidate
  * late metadata/permission UI; boundaryStopped prevents repeated lifecycle cancellation;
  * fileReady/latest retain one source state/result only; stoppingAll makes two-source cleanup atomic.
  * Exported controllers are the original instances; navigationPort forwards the existing bridge API;
  * replay href uses its original integration/video base so ../../ws preserves the current application mount.
- * speechActivation gates automatic speech until a real native start; defaults do not acquire sensors.
+ * speechActivation gates automatic speech until a real native start; guidanceManager queues live
+ * replies behind risk alerts and ahead of navigation; defaults do not acquire sensors.
  * testView retains localized manual diagnostic choices; voicePreference stores configuration availability;
  * languageObserver watches only the document language and never starts or cancels speech;
  * cameraFailure retains a finite native error type across the core's following stop event;
@@ -61,8 +63,9 @@ const GUIDANCE_PHASE_LABELS = {
   output_end: ["输出已结束", "Output ended"],
   output_error: ["输出失败", "Output failed"],
   pattern_elapsed: ["振动模式已完成", "Vibration pattern completed"],
-  stopped: ["导航与风险输出已停止", "Navigation and risk outputs stopped"],
+  stopped: ["导航、风险与助手输出已停止", "Navigation, risk and assistant outputs stopped"],
   configuration_changed: ["语音配置已更新", "Voice configuration updated"],
+  assistant_replies_cleared: ["待播报的助手回复已清除", "Queued assistant replies cleared"],
 };
 let voicePreference = {language: null, voiceId: "", reason: "local_voice_unavailable"};
 let languageObserver = null;
@@ -259,7 +262,7 @@ function onGuidance(event) {
     : state.paused?.speech && state.reasons.speech !== "activation_required"
       ? productText("语音提醒已暂停，请点击恢复语音。", "Voice alerts are paused. Tap Resume voice.")
       : !speechActivation.describe().ready
-        ? productText("开始导航或环境检测时，将启用语音提醒。", "Starting navigation or detection will activate voice alerts.")
+        ? productText("发送助手指令、开始导航或环境检测时，将启用语音提醒。", "Sending an assistant request, starting navigation or detection activates voice alerts.")
         : productText("语音提醒已就绪。", "Voice alerts are ready.");
   setStatusText("assist-output-status", status);
   setStatusText("navigation-speech-status", status);
@@ -291,25 +294,25 @@ function renderSpeechActivation(state) {
       : voicePreference.reason
         ? productText("未找到当前语言的本地声音。请在设备设置中安装中文声音，或切换界面语言后再试。", "No local voice matches this language. Install an English voice in device settings, or change the interface language and try again.")
       : state.ready
-        ? gated ? productText("点击启动语音，或重新开始导航、检测。", "Tap Activate voice, or start navigation or detection again.")
+        ? gated ? productText("点击启动语音、发送助手指令，或重新开始导航、检测。", "Tap Activate voice, send an assistant request, or start navigation or detection again.")
           : output.paused.speech ? productText("语音提醒已暂停，请点击恢复语音。", "Voice alerts are paused. Tap Resume voice.")
           : productText("语音提醒已就绪。", "Voice alerts are ready.")
       : state.state === "queued" ? productText("正在启用语音提醒。", "Activating voice alerts.")
       : state.state === "error"
-        ? productText("语音尚未启动，请保持页面在前台并再次点击启动语音。", "Voice has not started. Keep this page open and tap Activate voice again.")
-        : productText("语音跟随界面语言。点击启动语音，或开始导航、检测。", "Voice follows the interface language. Tap Activate voice, or start navigation or detection."));
+        ? productText("语音尚未启动，请保持页面在前台，再次点击启动语音或发送助手指令。", "Voice has not started. Keep this page open, then tap Activate voice again or send an assistant request.")
+        : productText("语音跟随界面语言。点击启动语音、发送助手指令，或开始导航、检测。", "Voice follows the interface language. Tap Activate voice, send an assistant request, or start navigation or detection."));
     return;
   }
   node("assist-speech-status").textContent = !enabled ? productText("语音输出已关闭。", "Speech output is off.") : state.ready
-    ? gated ? productText("语音已停止；点击“启动语音”或开始导航、检测后恢复。", "Voice has stopped. Tap Activate voice, or start navigation or detection to resume.")
+    ? gated ? productText("语音已停止；点击“启动语音”、发送助手指令或开始导航、检测后恢复。", "Voice has stopped. Tap Activate voice, send an assistant request, or start navigation or detection to resume.")
       : output.paused.speech ? productText(`语音引擎已启动，但自动播报已暂停（${output.reasons.speech}），请手动恢复输出。`, `The speech engine has started, but automatic announcements are paused (${String(output.reasons.speech).replaceAll("_", " ")}). Resume output manually.`)
-        : productText("语音引擎已启动，导航和预警可自动播报；请确认设备实际声音。", "The speech engine has started and can announce navigation and alerts. Confirm that sound is audible on the device.")
+        : productText("语音引擎已启动，助手回复、导航和风险提醒可自动播报；请确认设备实际声音。", "The speech engine has started and can announce assistant replies, navigation and risk alerts. Confirm that sound is audible on the device.")
     : state.state === "queued" ? productText("正在启动语音，请等待提示音。", "Starting voice. Wait for the prompt.")
-      : productText(`语音提醒已开启，尚未启动（${state.reason || "activation_required"}）。选择本地声音后，点击“启动语音”或开始导航、检测。`, `Voice alerts are enabled but have not started (${String(state.reason || "activation_required").replaceAll("_", " ")}). Select a local voice, then tap Activate voice or start navigation or detection.`);
+      : productText(`语音提醒已开启，尚未启动（${state.reason || "activation_required"}）。选择本地声音后，点击“启动语音”、发送助手指令或开始导航、检测。`, `Voice alerts are enabled but have not started (${String(state.reason || "activation_required").replaceAll("_", " ")}). Select a local voice, then tap Activate voice, send an assistant request, or start navigation or detection.`);
 }
 
-/* Functionality: Start the first utterance directly within the current real click stack.
- * Inputs: Explicit startup, navigation or perception click. Outputs: Activation acknowledgement.
+/* Functionality: Start the first utterance directly within the current real user-gesture stack.
+ * Inputs: Explicit startup, navigation, perception or assistant-submit gesture. Outputs: Activation acknowledgement.
  * Logic: Delegate synchronously before any permission promise or inference callback.
  * Constraints: No await, task deferral, automatic enabling, device selection or playback retry. */
 function activateSpeech() {
@@ -326,6 +329,23 @@ function activateSpeech() {
  * Constraints: Existing unrelated output errors still require the manager's explicit recovery. */
 function resumeSpeech() {
   return speechActivation.describe().ready ? guidanceManager.resume("speech") : activateSpeech();
+}
+
+/* Functionality: Submit one newly received assistant reply for automatic local speech.
+ * Inputs: CustomEvent carrying reply text. Outputs: Manager queue entry or no output.
+ * Logic: Require visible page, enabled driver, an exact selected local voice and either completed
+ * activation or its pending native calibration; the manager gate holds pending replies until startup.
+ * Constraints: Historical replay, disabled/unavailable output and unrelated paused speech are never queued. */
+function speakAssistantReply(event) {
+  const text = event.detail?.text;
+  const activation = speechActivation.describe(), output = guidanceManager.describe();
+  const selection = speechActivation.selection();
+  const awaitingActivation = activation.state === "queued" &&
+    output.paused.speech && output.reasons.speech === "activation_required";
+  if (typeof text !== "string" || !text.trim() || doc.visibilityState !== "visible" ||
+      !speechOutput.enabled.checked || (!activation.ready && !awaitingActivation) ||
+      selection.reason || (output.paused.speech && !awaitingActivation)) return;
+  guidanceManager.enqueueAssistantReply(text);
 }
 
 /* Functionality: Apply the user's default-on policy only to this unified MVP document.
@@ -562,8 +582,9 @@ function onBoundary(event) {
 
 /* Functionality: Bind the dedicated local integration surface to original controllers.
  * Inputs: Explicit assist document marker. Outputs: Read-only setup and user action handlers.
- * Logic: Select only local PRF2, reuse shared drivers; product speech follows the interface language
- * and accepts the voice assistant's release gesture as its synchronous activation gesture.
+ * Logic: Select only local PRF2, reuse shared drivers; expose the existing ping button only on the
+ * diagnostic page; product speech follows the interface language and accepts a voice-release or
+ * text-submit gesture as synchronous activation.
  * Constraints: No automatic permissions, route requests, inference or first playback. */
 function initialize() {
   if (doc.documentElement.dataset.assist !== "true" || !navigation)
@@ -574,8 +595,10 @@ function initialize() {
     cameraApp.localFacingMode = "environment";
     node("product-camera-start").addEventListener("click", startProductCamera);
   }
+  node("ping").hidden = !testView;
+  node("ping").textContent = productText("测试页面连接", "Test page connection");
   cameraApp.processing.value = "local"; cameraApp.handleProcessingChange();
-  node("maps-navigation-speech-panel").querySelector("h2").textContent = productText("导航与风险播报声音", "Navigation and risk alert audio");
+  node("maps-navigation-speech-panel").querySelector("h2").textContent = productText("自动语音播报", "Automatic speech output");
   guidanceManager.subscribe(onGuidance);
   cameraApp.subscribe(event => onSource(event, "camera"));
   videoReplay.subscribe(event => onSource(event, "video"));
@@ -592,7 +615,11 @@ function initialize() {
     node(id).addEventListener("click", resumeSpeech);
   node("assist-speech-start").addEventListener("click", activateSpeech);
   if (!testView) window.addEventListener("prs-assist-voice-gesture", activateSpeech);
-  speechOutput.enabled.addEventListener("change", () => renderSpeechActivation(speechActivation.describe()));
+  speechOutput.enabled.addEventListener("change", () => {
+    if (!speechOutput.enabled.checked) guidanceManager.clearAssistantReplies("speech_disabled");
+    renderSpeechActivation(speechActivation.describe());
+  });
+  window.addEventListener("prs-agent-reply", speakAssistantReply);
   node("assist-resume-vibration").addEventListener("click", () => guidanceManager.resume("vibration"));
   node("assist-source").addEventListener("change", renderControls);
   node("assist-device").addEventListener("change", () => { cameraApp.localDeviceId = node("assist-device").value; renderControls(); });

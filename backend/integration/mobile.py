@@ -1,7 +1,8 @@
 """Responsibilities: Admit public guest traffic through one explicit HTTPS relay around the
 unchanged local assist application.
-Implementation: Loopback peer, exact Host/Origin/path gates; canonical internal headers preserve
-existing Web/GPU checks. Public responses retain /mvp/WSS, with no account authentication.
+Implementation: Expose only the product and diagnostic page entries, with their required resource
+and API paths, through exact Host/Origin/path gates; canonical headers preserve Web/GPU checks.
+Public responses retain /mvp/WSS, with no account authentication.
 Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol; core.ai_bridge/ai_mcp;
 deployment reverse SSH and Nginx terminate public TLS without exposing the worker or MCP.
 Declaration Index: mobile_origin; reject; MobileApplication; MobileApplication.__init__;
@@ -22,7 +23,6 @@ from .protocol import is_loopback, web_origins
 
 MOUNT = "/mvp"
 HTTP_METHODS = {
-    "/": frozenset({"GET", "HEAD"}),
     "/maps/": frozenset({"GET", "HEAD"}),
     "/maps/test": frozenset({"GET", "HEAD"}),
     "/maps/config/": frozenset({"GET", "HEAD"}),
@@ -118,8 +118,9 @@ class MobileApplication:
     """Functionality: Isolate one public mobile relay from original localhost capabilities.
     Logic: validate original peer/headers before mapping admitted public traffic to canonical local
     inputs. Same process/hub remains available to the computer's original local MCP client.
-    Constraints: one worker and proxy-stripped path contract; no public MCP/admin/general API routes,
-    account authentication, trusted forwarded headers, algorithm changes or extra controllers.
+    Constraints: one worker and proxy-stripped path contract; no public MCP/admin/general API
+    routes, account authentication, trusted forwarded headers, algorithm changes or extra
+    controllers.
     """
 
     def __init__(self, application, *, public_origin=None):
