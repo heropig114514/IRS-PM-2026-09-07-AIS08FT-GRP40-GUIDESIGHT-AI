@@ -3,13 +3,13 @@ unchanged local assist application.
 Implementation: Expose only the product and diagnostic page entries, with their required resource
 and API paths, through exact Host/Origin/path gates; canonical headers preserve Web/GPU checks.
 Public responses retain /mvp/WSS, with no account authentication.
-Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol; core.ai_bridge/ai_mcp;
+Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol; core.ai_bridge/ai_mcp/agent.tts;
 deployment reverse SSH and Nginx terminate public TLS without exposing the worker or MCP.
 Declaration Index: mobile_origin; reject; MobileApplication; MobileApplication.__init__;
 MobileApplication.__call__; MobileApplication.public_path; MobileApplication.forward;
 MobileApplication.forward.public_send.
 Variable Index: MOUNT — fixed public /mvp prefix; HTTP_METHODS — exact public endpoint methods;
-WS_PATHS — exact control, assistant, local-detection, and echo sockets;
+WS_PATHS — exact control, assistant, local-detection, echo, and backend speech sockets;
 STRIPPED_HEADERS — proxy/relay headers never trusted downstream; logger — body-free admission
 diagnostics. Public origin is an explicit routing boundary, not user identity. No MCP/admin or
 general API route is exposed.
@@ -31,7 +31,7 @@ HTTP_METHODS = {
     "/integration/status/": frozenset({"GET"}),
 }
 WS_PATHS = frozenset(
-    {"/ws/control/", "/ws/agent/", "/ws/detect/local/", "/ws/echo/"}
+    {"/ws/control/", "/ws/agent/", "/ws/detect/local/", "/ws/echo/", "/ws/tts/"}
 )
 STRIPPED_HEADERS = frozenset(
     {

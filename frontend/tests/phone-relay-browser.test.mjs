@@ -133,14 +133,14 @@ test("model acceptance matches two real-format capture-clock sessions without ac
   rejectsCode(() => verifyModelEvidence(value.frames, value.sockets), "FOREIGN_MODEL_FRAME");
 });
 
-test("speech activation needs a real matching native start from the first explicit user gesture", () => {
+test("speech activation needs a real matching backend audio start from the first user gesture", () => {
   const evidence = {activation: {ready: true, request_id: 7}, calls: [{user_gesture_active: true}],
-    native: [{phase: "submitted", request_id: 7}, {phase: "start", request_id: 7}]};
+    audio: [{phase: "submitted", request_id: 7}, {phase: "start", request_id: 7}]};
   assert.equal(verifySpeechActivation(evidence).request_id, 7);
   rejectsCode(() => verifySpeechActivation({...evidence, activation: {ready: false, request_id: 7}}), "SPEECH_ACTIVATION_NOT_READY");
   rejectsCode(() => verifySpeechActivation({...evidence, calls: [{user_gesture_active: false}]}), "SPEECH_ACTIVATION_NOT_GESTURE");
-  rejectsCode(() => verifySpeechActivation({...evidence, native: [{phase: "submitted", request_id: 7}]}), "SPEECH_ACTIVATION_NO_NATIVE_START");
-  rejectsCode(() => verifySpeechActivation({...evidence, native: [{phase: "start", request_id: 8}]}), "SPEECH_ACTIVATION_NO_NATIVE_START");
+  rejectsCode(() => verifySpeechActivation({...evidence, audio: [{phase: "submitted", request_id: 7}]}), "SPEECH_ACTIVATION_NO_AUDIO_START");
+  rejectsCode(() => verifySpeechActivation({...evidence, audio: [{phase: "start", request_id: 8}]}), "SPEECH_ACTIVATION_NO_AUDIO_START");
 });
 
 test("wire time, 55second contract, insecure WSS, metadata identity and reset failures are rejected", () => {

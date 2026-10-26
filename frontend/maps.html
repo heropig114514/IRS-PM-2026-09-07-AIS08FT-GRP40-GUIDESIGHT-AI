@@ -219,29 +219,29 @@ Variable Index: __CSP_NONCE__ — CSS nonce; language — preference; form IDs �
             <p id="navigation-deviation">—</p>
             <p>导航需浏览器定位权限；隐藏页面会停止。偏航后请手动重新规划，预计时间基于原路线比例。</p>
           </section>
-          <section id="maps-navigation-speech-panel" class="route-details" aria-label="导航语音">
+          <section id="maps-navigation-speech-panel" class="route-details" aria-label="后端语音播报">
             <h2>导航语音</h2>
             <label><input id="navigation-speech-enabled" type="checkbox" />启用导航播报（默认关闭）</label>
             <label>播报语言 <select id="navigation-speech-language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
-            <label>本地声音 <select id="navigation-speech-voice"><option value="">请选择本地声音</option></select></label>
-            <div class="navigation-speech-actions"><button id="navigation-voices-refresh" class="button secondary" type="button">读取本地声音</button><button id="navigation-speech-stop" class="button secondary" type="button" disabled>停止导航播报</button><button id="navigation-speech-resume" class="button secondary" type="button" disabled>手动恢复导航语音</button></div>
+            <label>后端语音 <select id="navigation-speech-voice"><option value="Cherry">Cherry · 中文 / English</option></select></label>
+            <div class="navigation-speech-actions"><button id="navigation-voices-refresh" class="button secondary" type="button">重置语音选项</button><button id="navigation-speech-stop" class="button secondary" type="button" disabled>停止导航播报</button><button id="navigation-speech-resume" class="button secondary" type="button" disabled>手动恢复导航语音</button></div>
             <p>还需启用下方语音输出。只播报导航模块提供的步骤和状态，同一步骤的定位更新不重复播报。</p>
             <p>停止导航播报不会停止定位；仅结束本轮播报，下次重新开始导航后恢复。取消失败时先显式停止清理，再手动恢复错误暂停。</p>
             <p id="navigation-speech-status" role="status">导航播报已关闭。</p>
           </section>
-          <section id="speech-test" class="route-details speech-test" aria-label="原生语音输出">
-            <h2>原生语音输出 <span id="speech-status" class="status">正在检查接口</span></h2>
+          <section id="speech-test" class="route-details speech-test" aria-label="后端语音输出测试">
+            <h2>后端语音输出测试 <span id="speech-status" class="status">正在检查接口</span></h2>
             <label><input id="speech-enabled" type="checkbox" disabled />启用语音输出</label>
             <label class="speech-field">朗读文本（最多1000个字符）<textarea id="speech-text" rows="2" maxlength="2000" data-language-original disabled>这是 PRS 导航语音测试。</textarea></label>
             <div class="speech-settings">
-              <label>朗读语言 <select id="speech-language" disabled><option value="zh-CN">中文朗读</option><option value="en-US">English</option></select></label>
-              <label>语音选择 <select id="speech-voice" disabled><option value="">须明确选择声音</option></select></label>
+              <label>朗读语言 <select id="speech-language" disabled><option value="zh-CN">中文朗读</option><option value="en-US">English</option><option value="auto">自动适配中英文</option></select></label>
+              <label>后端语音 <select id="speech-voice" disabled><option value="Cherry">Cherry · 中文 / English</option></select></label>
               <label>语速（默认2倍，可调整） <output id="speech-rate-value">2.0×</output><input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="2" disabled /></label>
               <label>音量 <output id="speech-volume-value">100%</output><input id="speech-volume" type="range" min="0" max="1" step="0.1" value="1" disabled /></label>
             </div>
             <div class="navigation-speech-actions"><button id="speech-play" class="button primary" type="button" disabled>朗读文本</button><button id="speech-stop" class="button secondary" type="button" disabled>停止朗读</button></div>
             <p id="speech-message" role="status"></p><p id="speech-request">尚无语音请求。</p>
-            <p>语音引擎事件不等于实际扬声器听音验证。导航语音与视频警报保持独立。</p>
+            <p>文本由后端合成为分块音频后传到本页播放。播放事件不等于实际扬声器听音验证；语音内容会发送到已配置的 Qwen 语音服务。</p>
           </section>
           <section class="route-details" aria-label="路线结果">
             <h2 id="route-summary">尚未请求路线</h2>

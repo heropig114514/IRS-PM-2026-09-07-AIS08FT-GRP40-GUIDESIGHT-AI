@@ -1,8 +1,8 @@
 <!-- Responsibilities: Unified local perception controls alongside the original maps/navigation UI.
-Implementation: Camera-first UI, default-enabled output intentions with explicit speech activation,
+Implementation: Camera-first UI, default-enabled output intentions with backend bilingual speech activation,
 automatic assistant replies below risk alerts and above navigation, optional video regression and emergency stop;
-existing maps page supplies the shared navigation/voice controls. The shared i18n module translates
-static UI text and accessibility labels; native voice names remain device-provided. No automatic device access.
+existing maps page supplies shared navigation controls and the fixed backend Cherry voice. The shared i18n module
+translates static UI text and accessibility labels. No browser voice inventory or automatic device access.
 Related Modules: assist-mvp.js, assist.css, i18n.js, translations.js; camera.js, video-replay.js,
 vibration.js; integration.assist.
 Declaration Index: None.
@@ -13,7 +13,7 @@ video-source/video-result bind the independent file replay. No route, credential
     <h2 id="assist-title">导航与环境感知</h2>
     <button id="assist-stop-all" class="button secondary" type="button">停止全部</button>
   </div>
-  <p>语音输出、导航播报和风险提醒默认开启。选择本地中文声音后，点击“启动语音”；首次发送助手指令、开始导航或检测时也会启动提示语音。语音助手回复会自动播报；风险提醒优先，随后播报待播报的助手回复，再恢复仍有效的导航指令。</p>
+  <p>语音输出、导航播报和风险提醒默认开启。语音通过后端中英文合成服务生成音频，前端负责流式播放。点击“启动语音”以允许页面播放；首次发送助手指令、开始导航或检测时也会启动语音提醒。语音助手回复会按内容自动适配中英文；风险提醒优先，随后播报待播报的助手回复，再恢复仍有效的导航指令。</p>
   <button id="assist-speech-start" class="button primary" type="button">启动语音</button>
   <p id="assist-speech-status" role="status">语音提醒已开启，等待首次点击启动。</p>
   <p>默认使用打开此页面的设备摄像头：在手机 Safari 打开时，调用的是手机摄像头。请先授权、选择后置镜头，再开始检测。地图路线和避障提醒独立计算，不据此生成避让路线。</p>

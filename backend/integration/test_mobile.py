@@ -368,9 +368,8 @@ class MobileTests(SimpleTestCase):
             self.assertEqual((await http_call(app, path, method))[0]["status"], 405)
 
     async def test_public_websocket_admission(self):
-        """Functionality: Admit exact same-origin control, assistant, local inference, and echo
-        sockets.
-        Inputs: four explicitly allowed sockets and hostile/absent-origin/foreign-path variants.
+        """Functionality: Admit exact same-origin control, assistant, inference, echo and TTS sockets.
+        Inputs: five explicitly allowed sockets and hostile/absent-origin/foreign-path variants.
         Outputs: preserved acceptance/normalized headers or 1008. Logic: original hub remains a
         singleton.
         Constraints: echo retains its original frame/connection bounds; no socket listener, native
@@ -378,7 +377,7 @@ class MobileTests(SimpleTestCase):
         """
         inner = RecordingApplication()
         app = MobileApplication(inner)
-        for path in ("/ws/control/", "/ws/agent/", "/ws/detect/local/", "/ws/echo/"):
+        for path in ("/ws/control/", "/ws/agent/", "/ws/detect/local/", "/ws/echo/", "/ws/tts/"):
             self.assertEqual((await websocket_call(app, path))["type"], "websocket.accept")
             self.assertEqual(inner.scopes[-1]["root_path"], MOUNT)
             self.assertEqual(inner.scopes[-1]["scheme"], "wss")
@@ -402,7 +401,7 @@ class MobileTests(SimpleTestCase):
         self.assertEqual(
             (await websocket_call(app, "/ws/control/", query_string=b"token=fixture"))["code"], 1008
         )
-        self.assertEqual(len(inner.scopes), 4)
+        self.assertEqual(len(inner.scopes), 5)
 
     async def test_no_path_guessing_or_traversal(self):
         """Functionality: Enforce the one stripped-path contract without traversal or query aliases.

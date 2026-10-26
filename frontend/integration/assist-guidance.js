@@ -1,7 +1,8 @@
 /* Responsibilities: Arbitrate live assistant replies, navigation and algorithm-required risk output in one owner.
  * Implementation: Latest-source scheduling, separate monotonic/GPS clocks, existing short-text
  * policies, a temporary FIFO for live assistant replies, owned preemption, source deadlines and
- * start-based channel cooldowns. Long replies are divided at safe text boundaries for the driver's limit.
+ * start-based channel cooldowns. Assistant replies use automatic bilingual TTS language selection;
+ * risk/navigation guidance follows the explicit UI language. Long replies use safe text boundaries.
  * Related Modules: video-alerts.js, navigation-speech.js, maps-navigation-bridge.js, events.js,
  * catalog.js, ../navigation.js, ../speech-output.js, ../vibration.js; no core/device creation.
  * Declaration Index: splitAssistantReply; AssistGuidanceManager; AssistGuidanceManager.constructor;
@@ -144,16 +145,16 @@ export class AssistGuidanceManager {
       paused: {...this.paused}, reasons: {...this.reasons}, at: this.now(), ...details});
   }
 
-  /* Functionality: Store an explicit common local voice selection. Inputs: voiceId/language.
-   * Outputs: State. Logic: Live identity is checked at each submission.
-   * Constraints: Does not enable, resume or replace an unavailable voice. */
+  /* Functionality: Store the shared voice ID and language selection. Inputs: voiceId/language.
+   * Outputs: State. Logic: Unified entries use the fixed backend voice; standalone callers retain
+   * explicit native identity. Constraints: Does not enable, resume or replace a voice. */
   configure({voiceId, language}) { this.voiceId = voiceId; this.language = languageOf(language); return this.describe(); }
 
   /* Functionality: Queue one live assistant reply for prioritized automatic speech.
    * Inputs: Reply text. Outputs: Acceptance and reply identity; no text is returned in metadata.
    * Logic: Preserve complete text in bounded driver-sized chunks; risk and current assistant order
    * take precedence over navigation. Completion advances one chunk; explicit stop clears the queue.
-   * Constraints: Callers must establish a visible page, enabled output, selected local voice and
+   * Constraints: Callers must establish a visible page, enabled output, configured speech service and
    * genuine speech activation first; errors never trigger an automatic retry. */
   enqueueAssistantReply(text) {
     if (this.disposed) return {accepted: false, reason: "disposed"};
@@ -385,7 +386,7 @@ export class AssistGuidanceManager {
     }
   }
 
-  /* Functionality: Submit one explicitly local risk, navigation or assistant utterance.
+  /* Functionality: Submit one backend or standalone risk, navigation or assistant utterance.
    * Inputs: Frozen descriptor/text.
    * Outputs: Request ownership or diagnosed pause/suppression. Logic: Protect all foreign speech.
    * Constraints: No default voice, automatic enablement, retry or scene/manual preemption. */
@@ -396,14 +397,17 @@ export class AssistGuidanceManager {
       return this.suppress("speech", "speech_unavailable", descriptor);
     if (status.active_request || status.engine_speaking || status.engine_pending || status.engine_paused)
       return this.suppress("speech", "foreign_speech_busy", descriptor);
-    if (typeof this.voiceId !== "string" || !this.voiceId) return this.suppress("speech", "explicit_local_voice_required", descriptor);
+    if (typeof this.voiceId !== "string" || !this.voiceId) return this.suppress("speech", "speech_voice_unavailable", descriptor);
     const inventory = this.speech.voiceList(), voices = inventory.voices?.filter(voice => voice.id === this.voiceId) || [];
-    if (!inventory.accepted || voices.length !== 1 || voices[0].local_service !== true ||
-        typeof voices[0].language !== "string" || voices[0].language.split("-")[0].toLowerCase() !== this.language.split("-")[0].toLowerCase())
-      return this.pause("speech", "local_voice_unavailable", descriptor);
+    const voice = voices[0], backendVoice = voice?.service === "backend" && this.speech.backendOnly;
+    const languageMatches = voice?.language === "multi" ||
+      typeof voice?.language === "string" && voice.language.split("-")[0].toLowerCase() === this.language.split("-")[0].toLowerCase();
+    if (!inventory.accepted || voices.length !== 1 || !(backendVoice || voice.local_service === true) || !languageMatches)
+      return this.pause("speech", backendVoice ? "backend_voice_unavailable" : "local_voice_unavailable", descriptor);
     this.pendingSubmission = {...descriptor, channel: "speech", started: false, requestId: null};
     let result;
-    try { result = this.speech.speak(text, {language: this.language, voice_id: this.voiceId,
+    const language = descriptor.kind === "assistant" && this.speech.backendOnly ? "auto" : this.language;
+    try { result = this.speech.speak(text, {language, voice_id: this.voiceId,
       rate: Number(this.speech.rate?.value ?? 2), volume: Number(this.speech.volume?.value ?? 1)}); }
     catch { result = {accepted: false, reason: "speak_failed"}; }
     const pending = this.pendingSubmission; this.pendingSubmission = null;
@@ -442,7 +446,7 @@ export class AssistGuidanceManager {
 
   /* Functionality: Consume real driver lifecycle with synchronous submission support.
    * Inputs: Body-free shared-driver event. Outputs: Start cooldown, completion or latched failure.
-   * Logic: Match exact owned IDs; advance assistant replies only after a native end event.
+   * Logic: Match exact owned IDs; advance assistant replies only after the shared driver reports completion.
    * Unconfirmed external stop retains ownership and pauses.
    * Constraints: Old/foreign callbacks cannot complete another request or silently recover a channel. */
   outputEvent(event) {
