@@ -1,15 +1,16 @@
 /* Responsibilities: Shared voice/text assistant panel, progress and cross-page conversation.
  * Implementation: One bound WebSocket, ordered replay and explicit request ownership; the product
- * view uses press-and-hold voice capture while the diagnostic view retains click-to-toggle capture.
+ * view uses press-and-hold voice capture with a prompt-preserving first permission request, while
+ * the diagnostic view retains click-to-toggle capture.
  * safe DOM text rendering and in-memory audio; disconnect releases microphone. No auto reconnect.
  * Related Modules: ai-control.js, voice-input.js, agent.css, integration/assist-mvp.js;
  * backend/core/agent/transport.
- * Declaration Index: label; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
+ * Declaration Index: label; recordingFailure; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
  * AgentPanel.send; AgentPanel.submit; AgentPanel.record; AgentPanel.startRecording;
  * AgentPanel.finishRecording; AgentPanel.handlePressStart; AgentPanel.handlePressEnd;
  * AgentPanel.handlePressCancel; AgentPanel.cancel;
  * AgentPanel.receive; AgentPanel.append; AgentPanel.render; AgentPanel.fail.
- * Variable Index: COPY — bilingual interface text; TOOLS — discovery/action labels;
+ * Variable Index: COPY — bilingual interface and media setup text; TOOLS — discovery/action labels;
  * panel — singleton; AgentPanel.productMode selects the formal press-to-talk interaction;
  * holdActive/holdToken/activePointerId isolate the active pointer or keyboard press from stale events.
  */
@@ -17,7 +18,7 @@ import {VoiceInput} from "./voice-input.js";
 
 const COPY = {
   title: ["语音助手", "Voice assistant"], help: ["说出或输入你想做的事，例如：开启导航、关闭摄像头。", "Say or type a request, such as start navigation or close the camera."],
-  productHelp: ["按住按钮说话，松开后发送；也可以输入文字指令。", "Hold the button while speaking, then release to send. You can also type a request."],
+  productHelp: ["按住按钮说话，松开后发送。首次使用请完成麦克风授权，再按住说话；也可以输入指令。", "Hold the button while speaking, then release to send. On first use, allow microphone access and hold again to speak. You can also type a request."],
   privacy: ["录音最长20秒；音频与对话发送 Qwen 处理，应用不保存录音。定位和设备权限仍由你授权。", "Up to 20 seconds. Audio and conversation are processed by Qwen; this app does not save recordings. Device permissions remain yours."],
   send: ["发送", "Send"], record: ["点击说话", "Speak"], finish: ["结束并发送", "Finish & send"],
   hold: ["按住说话", "Hold to speak"], release: ["松开发送", "Release to send"],
@@ -30,6 +31,7 @@ const COPY = {
   general: ["通用问答", "General question"], unsupported: ["未命中已启用的能力", "Outside enabled capabilities"],
   recording: ["正在录音，点击结束并发送（最长20秒）", "Recording. Finish and send within 20 seconds."],
   permission: ["等待麦克风授权…", "Waiting for microphone permission…"],
+  permissionReady: ["麦克风已获准，请再次按住说话。", "Microphone access was granted. Hold again to speak."],
   offline: ["连接已断开，请刷新页面；正在执行的操作可能仍在完成。", "Disconnected. Refresh the page; dispatched operations may still be completing."],
   trace: ["执行记录", "Activity"], you: ["你", "You"], assistant: ["助手", "Assistant"],
 };
@@ -53,6 +55,40 @@ const TOOLS = {
 /* Functionality: Select UI language. Inputs: bilingual tuple and document language.
  * Outputs: text; Logic: use page's existing language choice; Constraints: user/model text untouched. */
 function label(pair) { return pair[document.documentElement.lang.startsWith("zh") ? 0 : 1]; }
+
+/* Functionality: Explain bounded microphone failures in the selected interface language.
+ * Inputs: Browser capture exception. Outputs: actionable localized guidance.
+ * Logic: Distinguish permission, secure-context, missing-device, busy-device and unsupported cases.
+ * Constraints: Native exception messages and implementation details are not shown to users. */
+function recordingFailure(error) {
+  const messages = {
+    NotAllowedError: [
+      "浏览器没有授予麦克风权限。若没有出现权限弹窗，请再次点按“按住说话”；若之前拒绝过，请在浏览器网站设置中允许麦克风。",
+      "The browser did not grant microphone access. If no prompt appeared, tap and hold Speak again; if access was previously denied, allow microphone access in the browser's site settings.",
+    ],
+    SecurityError: [
+      "麦克风需要安全的 HTTPS 页面；请在手机系统浏览器中打开安全链接。",
+      "Microphone access requires a secure HTTPS page. Open the secure link in your phone's browser.",
+    ],
+    NotSupportedError: [
+      "当前浏览器不支持麦克风录音，请使用手机系统浏览器。",
+      "This browser does not support microphone recording. Use your phone's browser.",
+    ],
+    AudioContextError: [
+      "麦克风已获准，但浏览器未能启动音频采集。请保持页面在前台并再次按住说话。",
+      "Microphone access was granted, but the browser could not start audio capture. Keep the page in front and hold Speak again.",
+    ],
+    NotFoundError: ["没有检测到可用麦克风。", "No microphone was found on this device."],
+    NotReadableError: [
+      "麦克风暂时无法读取，请关闭其他正在使用麦克风的应用后重试。",
+      "The microphone could not be read. Close other apps using it, then try again.",
+    ],
+  };
+  return label(messages[error?.name] || [
+    "无法启动麦克风录音。请检查设备和浏览器权限后重试。",
+    "Microphone recording could not start. Check the device and browser permissions, then try again.",
+  ]);
+}
 
 /* Functionality: Own assistant UI and one page-bound transport.
  * Logic: Correlated events reflect actual backend work; page navigation reattaches same identity.
@@ -196,8 +232,9 @@ export class AgentPanel {
   }
   /* Functionality: Request the microphone and begin one recorder generation.
    * Inputs: Optional holdToken from the product press that owns this capture. Outputs: recording state.
-   * Logic: A stale/released press cancels a late permission result before it can start recording.
-   * Constraints: Permission follows an explicit gesture; failures are shown without retries/fallback. */
+   * Logic: A released hold leaves the browser permission prompt open; if permission arrives after
+   * release, stop the probe stream and ask the user to hold again. Explicit cancellation invalidates
+   * the recorder generation. Constraints: No retries or fallback capture devices. */
   async startRecording(holdToken = null) {
     if (this.busy || !this.connected) return;
     this.stage = "permission"; this.render();
@@ -207,19 +244,16 @@ export class AgentPanel {
         if (started) await this.voice.cancel();
         this.recording = false;
         if (this.stage === "permission") this.stage = this.connected ? "ready" : "offline";
-        this.render();
+        if (started) this.fail(label(COPY.permissionReady));
+        else this.render();
         return;
       }
       this.recording = started;
       this.stage = !this.connected ? "offline" : this.recording ? "recording" : "ready";
       this.render();
     } catch (error) {
-      if (holdToken !== null && (holdToken !== this.holdToken || !this.holdActive)) {
-        this.recording = false; this.stage = this.connected ? "ready" : "offline"; this.render();
-        return;
-      }
       this.busy = this.recording = false; this.stage = this.connected ? "ready" : "offline";
-      this.fail(`录音失败（${error.name}）。${error.name === "NotAllowedError" ? "请允许麦克风权限。" : error.message}`);
+      this.fail(recordingFailure(error));
       console.error("Voice capture failed", {type: error.name});
     }
   }
@@ -238,7 +272,7 @@ export class AgentPanel {
       if (this.connected) this.submit({audio});
     } catch (error) {
       this.busy = this.recording = false; this.stage = this.connected ? "ready" : "offline";
-      this.fail(`录音失败（${error.name}）。${error.name === "NotAllowedError" ? "请允许麦克风权限。" : error.message}`);
+      this.fail(`录音失败（${error.name}）。${error.message}`);
       console.error("Voice capture failed", {type: error.name});
     }
   }
@@ -257,9 +291,10 @@ export class AgentPanel {
     this.render();
     void this.startRecording(holdToken);
   }
-  /* Functionality: Finish a held recording on release or discard an unfinished permission request.
-   * Inputs: Matching pointerup/keyup event and current hold/recorder state. Outputs: submitted audio or idle state.
-   * Logic: A released button during permission invalidates the generation; only active recording is sent.
+  /* Functionality: Finish a held recording on release while preserving a pending permission prompt.
+   * Inputs: Matching pointerup/keyup event and current hold/recorder state. Outputs: submitted audio or an inactive permission probe.
+   * Logic: Release ends active capture; during permission setup the browser request must continue
+   * so a mobile tap can resolve its native prompt. A granted late stream is stopped by startRecording.
    * Constraints: Secondary pointers and unrelated key releases cannot finish this capture. */
   handlePressEnd(event) {
     if (!this.productMode || !this.holdActive) return;
@@ -274,17 +309,23 @@ export class AgentPanel {
       void finishing;
       return;
     }
-    if (this.stage === "permission") { void this.cancel(); return; }
+    if (this.stage === "permission") return;
     this.stage = this.connected ? "ready" : "offline";
     this.render();
   }
-  /* Functionality: Discard recording when the browser cancels an active pointer gesture.
-   * Inputs: Matching pointercancel event. Outputs: released microphone and ready/offline state.
-   * Logic: Reuse explicit local cancellation, never submit a gesture the browser interrupted.
+  /* Functionality: End hold ownership when the browser cancels an active pointer gesture.
+   * Inputs: Matching pointercancel event. Outputs: released hold or microphone and ready/offline state.
+   * Logic: Keep an open native permission prompt alive; otherwise cancel capture and never submit a
+   * gesture the browser interrupted. A granted late stream is stopped by startRecording.
    * Constraints: An unrelated pointer cancellation cannot stop the active recording. */
   handlePressCancel(event) {
     if (!this.productMode || !this.holdActive || this.activePointerId !== event.pointerId) return;
     event.preventDefault();
+    if (this.stage === "permission") {
+      this.holdActive = false; this.holdToken++; this.activePointerId = null;
+      this.root.dataset.pressing = "false"; this.render();
+      return;
+    }
     void this.cancel();
   }
   /* Functionality: Cancel a held capture or pending agent request. Inputs: button/visibility event.
@@ -363,7 +404,7 @@ export class AgentPanel {
     this.root.querySelector("#agent-send").disabled = this.input.disabled;
     const record = this.root.querySelector("#agent-record");
     record.textContent = label(this.productMode
-      ? this.recording ? COPY.release : this.stage === "permission" && this.holdActive ? COPY.permission : COPY.hold
+      ? this.recording ? COPY.release : this.stage === "permission" ? COPY.permission : COPY.hold
       : COPY[this.recording ? "finish" : "record"]);
     if (this.productMode) record.setAttribute("aria-pressed", String(this.holdActive));
     record.disabled = !this.connected || this.busy || !this.productMode && this.stage === "permission";

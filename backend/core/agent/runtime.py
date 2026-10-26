@@ -332,7 +332,8 @@ def observed_failure(name, observed):
 def failure_reply(failure, language):
     """Functionality: Render a concise localized explanation if model completion is unavailable.
     Inputs: normalized failure and validated user language code. Outputs: safe user-facing prose.
-    Logic: describe the affected operation, allowlisted cause, and whether completion is known.
+    Logic: describe the affected operation, allowlisted cause, direct camera gesture requirement and
+    whether completion is known.
     Constraints: no raw JSON, invented cause, success claim, retry, or background promise.
     """
     language_index = 0 if language == "en" else 1
@@ -340,6 +341,13 @@ def failure_reply(failure, language):
     action = ACTION_LABELS.get(tool, ("the requested operation", "所请求的操作"))[language_index]
     reason = reason_code(failure.get("reason"))
     detail = REASON_LABELS.get(reason, REASON_LABELS["operation_failed"])[language_index]
+    if tool == "camera_start" and reason == "user_activation_required":
+        detail = (
+            "Tap Start environment awareness on this page to request camera access "
+            "and begin detection."
+            if language_index == 0 else
+            "请直接点击本页的“开启环境感知”，以请求摄像头权限并开始检测。"
+        )
     completion = failure.get("completion")
     if language_index == 0:
         if completion == "unknown":

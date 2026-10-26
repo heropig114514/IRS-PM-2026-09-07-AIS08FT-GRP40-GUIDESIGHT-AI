@@ -1,5 +1,6 @@
 /* Responsibilities: Adapt existing map/camera controllers to conversational tools.
- * Implementation: Conditional imports and bounded read-only observation waits.
+ * Implementation: Conditional imports, bounded read-only observation waits and user-activation
+ * gating for assistant-triggered camera starts on the public product surface.
  * Related Modules: ai-control.js, camera.js, maps-page.js, navigation-ui.js.
  * Declaration Index: CAMERA_FAILURE_REASONS — stable browser error mappings; cameraFailureReason;
  * cameraState; observe; performDevice.
@@ -53,8 +54,9 @@ export async function observe(read, pending, seconds = 0) {
 
 /* Functionality: Execute one semantic command via shared controllers.
  * Inputs: action/args/current document; Outputs: state, acknowledgement or error.
- * Logic: Page checks precede imports; start returns promptly, status observes startup and
- * the existing optional navigation speech adapter without creating sensors or enabling output.
+ * Logic: Page checks precede imports; product camera starts require a live local user activation,
+ * while the visible product button remains the native permission entry point. Status observes
+ * startup and optional navigation speech without creating sensors or enabling output.
  * Constraints: No provider fallback, permission bypass or processing parameter changes. */
 export async function performDevice(action, args = {}, doc = document) {
   if (action.startsWith("maps_") || action === "agent_navigation_status") {
@@ -83,6 +85,10 @@ export async function performDevice(action, args = {}, doc = document) {
     if (action === "camera_start") {
       if (doc.visibilityState === "hidden") return {accepted: false, reason: "page_hidden", ...cameraState(app)};
       if (app.mode !== "idle") return {accepted: false, reason: "already_active", ...cameraState(app)};
+      if (doc.documentElement.dataset.assistView === "product" &&
+          !globalThis.navigator?.userActivation?.isActive) {
+        return {accepted: false, reason: "user_activation_required", ...cameraState(app)};
+      }
       if (args.processing != null) {
         if (!["echo", "hf"].includes(args.processing)) throw new Error("Invalid processing mode");
         app.processing.value = args.processing;
