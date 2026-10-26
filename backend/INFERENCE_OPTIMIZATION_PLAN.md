@@ -8,6 +8,39 @@
 
 ## 执行顺序
 
+### Depth ONNX / TensorRT forward work
+
+The executable workflow, artifact contract and final-weight handoff are documented in
+[Depth forward export and acceleration](DEPTH-EXPORT.md).
+
+1. Merge the teammate's upstream implementation, verify both supplied checkpoint hashes, and
+   preserve original service contracts and existing experiment evidence.
+2. Keep depth `imgsz=768`, batch 1 and FP32, with TF32 disabled as in the native inference plan.
+   Prepare the existing bus/COCO8 fixtures through the pinned SDK; preserve every resulting tensor
+   shape and value. Do not force square input or change preprocessing to improve a benchmark.
+3. Export fixed-shape ONNX artifacts with checkpoint, graph, SDK and environment identities.
+   Preserve the native quarter-resolution depth output and existing postprocessing. The SDK's
+   standard export adds a full-resolution resize; record this contract explicitly instead of
+   comparing unequal forward workloads. No FP16/INT8 conversion or numerical tolerance relaxation.
+4. Build a native TensorRT FP32 engine per observed shape. Validate ONNX Runtime CUDA without CPU
+   fallback, TensorRT bindings/buffer ownership and changed-input/shape rejection. Keep failures.
+5. Compare PyTorch eager, the existing PyTorch CUDA Graph, ONNX Runtime CUDA and TensorRT using
+   identical device-resident inputs. Separate construction/build, first call and the original
+   30 steady samples after one cold call. Record CUDA events and synchronized host wall separately;
+   retain every sample. Compare complete raw and aligned depth maps; report exact equality and
+   observed differences without inventing a ground-truth acceptance threshold.
+6. Retain explicit experimental adapters and re-export instructions for future fine-tuned weights.
+   Bind engines to source/ONNX hashes, shape, precision, SDK/runtime and GPU identity. New weights
+   require new export/build/validation; local consistency does not establish quality or deployment
+   acceptance. Keep default services unchanged until the required quality evidence is available.
+
+Export dependencies live in an isolated environment below the ignored local `.venv/` directory;
+the existing native Torch/Ultralytics installation is reused read-only. Model binaries and engines
+remain under ignored `models/experiments/`; reproducibility manifests and reports are tracked.
+Implementation references: [Ultralytics depth contract](https://docs.ultralytics.com/tasks/depth),
+[ONNX Runtime CUDA I/O binding and TF32](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html),
+[TensorRT installation](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/install-pip.html).
+
 | 顺序 | 工作 | 产出与准入条件 |
 | --- | --- | --- |
 | 1 | 同步远端代码并保持各服务接口兼容 | 保留常驻、HF、本地 PRF2、A/B/C 测距及视频/导航功能；通过规定检查 |

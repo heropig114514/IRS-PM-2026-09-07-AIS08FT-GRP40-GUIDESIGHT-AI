@@ -1,7 +1,6 @@
-# Responsibilities: Fixed optional dependencies for the local phone-relay supervisor.
-# Implementation: Reuse the existing development/deployment environment; pin the password hash library.
+# Responsibilities: Fixed optional dependencies for the local public phone-relay supervisor.
+# Implementation: Reuse the existing development/deployment environment; no website-password hashing is required.
 # Related Modules: integration.phone_deploy/relay; tools.run_phone_mvp.
 # Declaration Index: None.
 # Variable Index: None.
 -r requirements-dev.txt
-bcrypt==5.0.0

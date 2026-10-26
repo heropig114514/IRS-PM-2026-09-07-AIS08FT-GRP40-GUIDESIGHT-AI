@@ -1,0 +1,36 @@
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "eager_before"}
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "onnx_cuda"}
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "tensorrt"}
+[10/26/2026-11:34:52] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "eager_after"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg", "backend": "eager_before"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg", "backend": "onnx_cuda"}
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg", "backend": "tensorrt"}
+[10/26/2026-11:34:55] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg", "backend": "eager_after"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg", "backend": "eager_before"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg", "backend": "onnx_cuda"}
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg", "backend": "tensorrt"}
+[10/26/2026-11:34:58] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg", "backend": "eager_after"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg", "backend": "eager_before"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg", "backend": "onnx_cuda"}
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg", "backend": "tensorrt"}
+[10/26/2026-11:35:02] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg", "backend": "eager_after"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg", "backend": "eager_before"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg", "backend": "onnx_cuda"}
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg", "backend": "tensorrt"}
+[10/26/2026-11:35:05] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+{"phase": "benchmark", "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg", "backend": "eager_after"}

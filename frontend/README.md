@@ -1,408 +1,223 @@
-# 摄像头前端
+# Camera Frontend
 
-## 统一导航与感知
+The independent resident GPU entry explicitly adds `/ws/detect/resident/` as a fourth camera mode;
+see [resident service](../backend/RESIDENT.md). Its native FP32 contract remains distinct from HF and local PRF2.
 
-使用后端启动器的显式 `--assist` 模式，打开 http://127.0.0.1:8766/maps/ 。
-该入口使用 `integration/assist-product.html` 与独立产品样式，使用原 `maps-page.js`、
-`navigation-ui.js`、`camera.js`、`VideoReplay`、语音/振动驱动及MCP；不修改导航或算法计算。
-与离线入口的准备和启动区别见 [本地MVP](../backend/LOCAL-MVP.md#统一导航与感知入口)。
-跨网络的 iPhone 通过独立 `/mvp/` HTTPS 中转访问同一入口；访问认证、手机权限与运行要求
-见 [手机MVP](../backend/PHONE-MVP.md)。
+## Unified Navigation and Perception
 
-产品页保留步行导航、设备摄像头、语音启动、提醒开关与停止操作，常用按钮适配手机触控。
-导航区的“填入 NUS 示例”只填写固定起终点，仍须手动规划路线，示例不代表设备位置。
-`integration/product-ui.js` 将原控制器状态转为面向使用者的提示，隐藏的原始 DOM 绑定保留
-共享控制器契约，不作为可交互测试区。测试与诊断入口为 `/maps/test`（无尾斜杠），手机
-中转下为 `/mvp/maps/test`；手动镜头选择、朗读、音色/语速/音量调节、视频回放、检测统计
-和输出生命周期移至该页。两个页面使用同一服务，但各自拥有浏览器会话；不要同时启动检测。
+Start the backend launcher in explicit --assist mode and open http://127.0.0.1:8766/maps/. The entry uses integration/assist-product.html and dedicated product styles with the existing maps-page.js, navigation-ui.js, camera.js, VideoReplay, speech/vibration drivers, and MCP integration. It does not change navigation or algorithm calculations. Setup and startup differences from the offline entry are documented in backend/LOCAL-MVP.md.
 
-统一页的语音输出、导航播报、风险提醒默认开启；浏览器支持振动 API 时也默认开启振动，
-不支持时显示设备限制，不提供替代振动。产品播报跟随界面语言，自动选取同语言的本地声音；
-优先精确语言标记和系统默认本地声音，声音列表异步出现时重新匹配，不发起朗读。
-没有匹配的本地声音时明确提示不可用，不切换语言或采用远程声音。产品页固定语速2倍、
-应用音量100%，实际听音音量通过设备按键调节，不展示音色和音量控件。
-使用原地图规划并开始导航。顶部“环境感知”和卡片“开始检测”均会在一次真实点击中申请
-后置摄像头并启动感知，直接展示原始画面与回传的标记画面，不再要求产品用户选择设备。
-集成入口显式配置 `CameraApp.localFacingMode="environment"`，只有产品页使用这项默认；
-诊断页和旧独立入口保留明确的设备选择。后置约束不受支持、没有后置镜头或权限被拒时
-明确提示，不自动采用其它镜头或重试。开始过程阻止重复点击，等待授权时停止也会清理
-迟到的流。不申请麦克风、不录制。
+An iPhone on another network can reach the same entry through the public guest HTTPS relay at /mvp/. Mobile permissions and runtime requirements are in backend/PHONE-MVP.md.
 
-默认开启是输出意愿，不能当作已取得权限、已开始检测/定位或扬声器已发声。页面加载不
-自动申请设备权限、规划路线或提交语音。`SpeechActivation` 通过真实点击同步提交匹配语言的
-启动提示，直到当前请求收到原生引擎 `start` 才放行自动导航和风险语音；仅提交成功不算
-解锁。除“启动语音”外，首次真实点击摄像头检测、开始导航或视频检测按钮也执行这项
-校准，不要求先在手动语音测试区试播。未起播或报错时看状态提示并明确重新启动，不自动
-重试。引擎开始仍不证明实际可听，iPhone Safari 也不能据振动开关获得其未支持的硬件能力。
-此默认开启策略只用于统一入口及其诊断页；诊断页保留手动选择声音，以下独立感知、导航
-回放、原地图及手动输出测试页保留默认关闭。
+The product page provides walking navigation, the device camera, press-and-hold speech input submitted on release, and a stop-all action. The user sets the origin with “Use my location” and selects a destination on the map; sample and coordinate-testing controls are hidden. The perception area shows only the Detection Results annotated image and current target list. Raw camera video is used internally for inference. Common controls are sized for touch input.
 
-`assist-mvp.js` 只接线输入、权限和生命周期，`AssistGuidanceManager` 统一输出仲裁；
-风险措辞、类别、方向和“靠近”条件沿用 `video-alerts.js`，导航措辞沿用
-`navigationSpeechText`。所有共享模块只从同一挂载点下的 `assets/` 加载，保证MCP与UI共用同一导航和
-语音实例。统一页不加载两个独立页面各自的自动播报管理器。
+Speech/vibration test controls, announcement toggles, and output diagnostics are hidden from the product UI. The same hidden control bindings and shared controllers remain available internally. The navigation controller receives location and map selections through page-internal coordinate fields. integration/product-ui.js maps controller state to user-facing status. Test and diagnostic entry is /maps/test (no trailing slash), or /mvp/maps/test through the phone relay. Manual camera selection, speech testing, voice/rate/volume controls, video replay, detection statistics, and output-lifecycle checks remain there. Both pages use the same service but separate browser sessions; do not run detection on both at once.
 
-算法要求提醒时优先播报风险，结束后重新检查最新导航步骤和原GPS有效期；不重放过期指令。
-摄像头/视频停止不停止导航，导航停止不结束感知。“停止全部”和隐藏/离页终止两类输入，
-重新进入前台不会自动续接。取消失败保留归属与暂停状态，显式清理成功后才能手动恢复。
-自动输出不取消手动语音/振动；本地声音不可用或输出开关关闭时，不代表检测输入已经停止。
-原始检测结果及详细输出诊断可在专门的测试页查看。
+Speech output, navigation announcements, and risk alerts are enabled by default on the unified page. Vibration is also enabled when supported by the browser. Product announcements follow UI language and select a matching local voice. If the voice list arrives asynchronously, matching is repeated; the page does not switch languages or select remote voices. Automatic announcements are not submitted if no matching local voice exists. Product speech uses fixed 2× rate and 100% application volume; audible volume is adjusted with device controls.
 
-统一入口使用显式连续PRF2会话，不自动重连；旧单独测试页在默认离线启动时保持原有会话上限，
-在统一模式访问旧GPU页面会得到明确入口提示。地图、
-真实ORS和设备GPS仍依赖现有软件侧条件，视频风险不生成导航路线或自动绕障建议。
-原生引擎start/end或振动API接受不能证明扬声器/马达实物效果。
+Use the existing map to plan and start navigation. A real click on “Perception” or the “Start detection” card requests the rear-facing camera and starts perception; the page shows only the returned annotated image and does not ask product users to select a camera. The integrated entry sets CameraApp.localFacingMode="environment". Only the product page uses this default; the diagnostic page and older standalone entry retain explicit device selection. Unsupported rear-camera constraints, no rear camera, and permission denial produce clear messages; the page does not switch cameras or retry. Microphone permission is requested from the same origin only while the user holds the speech button. Releasing submits the recording. Page load requests neither camera nor microphone permission and does not record automatically.
 
-## 独立本地感知入口
+Enabled output controls express intent; they do not prove permission, detection/location start, or speaker output. Page load does not plan a route or submit speech. On the first speech-button release, camera detection start, or navigation start, SpeechActivation synchronously submits a startup prompt in the matching language. Automatic navigation and risk speech are unlocked only when that request receives the native engine start event; successful submission alone is insufficient. A request that fails to start or errors is not retried. The diagnostic page retains lifecycle and manual voice checks. Engine start does not prove audibility, and iPhone Safari cannot gain unsupported hardware capabilities from the Vibration API. This default-on policy applies only to the unified entry and its diagnostic page. Standalone perception, navigation replay, the original map page, and manual output test pages remain default-off.
 
-本地MVP由 `integration.asgi` 启动，默认入口 http://127.0.0.1:8766/live/ ，启用独立的
-**本地 CUDA** 模式与浏览器Guidance。原 `config.asgi` 页面保留Echo/HF，本地选项禁用。
-准备、两个环境、启动器、验证目标与设备边界见 [本地MVP](../backend/LOCAL-MVP.md)。
-Guidance默认关闭，消费服务端风险字段；用户启用后复用现有语音/振动控制器，
-手动语音与振动测试仍可独立使用。Guidance中的导航示例用于仲裁联调；独立导航回放见下文。
+assist-mvp.js wires inputs, permissions, and lifecycle; AssistGuidanceManager arbitrates shared output. Risk wording, categories, direction, and the “approaching” condition continue to use video-alerts.js; navigation wording continues to use navigationSpeechText. Shared modules load from assets/ under one mount point so MCP and UI share the same navigation and speech instances. The unified page does not load the two standalone pages' separate automatic announcement managers.
 
-## 独立本地导航回放与播报
+Risk speech takes priority when the algorithm requests an alert. After it ends, the system checks the latest navigation step and original GPS freshness deadline; expired instructions are not replayed. Stopping camera/video does not stop navigation, and stopping navigation does not stop perception. Stop-all, hiding the page, and leaving the page terminate their own work; returning to foreground does not resume it. If cancellation fails, ownership and paused state are retained until explicit cleanup succeeds, after which the user may resume manually. Automatic output does not cancel manual speech or vibration. An unavailable local voice or disabled output toggle does not mean perception input has stopped. Raw detection results and detailed output diagnostics remain on the dedicated test page.
 
-入口为 http://127.0.0.1:8766/integration/navigation/ ，与视频检测分开运行。
-点击“加载内置回放示例”，或选择本地路线与定位点JSON；选择匹配语言的本地声音，
-勾选“启用语音输出”和“启用导航播报”，再点击“开始导航回放”。默认语速2倍，
-可手动调整语速与音量；两个输出开关默认关闭，不自动选择或替换声音。
-可先用手动语音区确认声音，再开始回放。声音错误暂停播报，修正后需手动恢复。
-若取消语音失败，保留请求归属和停止按钮；须再次明确停止成功后才能恢复，不自动重试。
+The unified entry uses an explicit continuous PRF2 session without automatic reconnect. The older standalone test page keeps its existing session limit in default offline mode. Opening the old GPU page in unified mode displays an explicit entry-point notice. Maps, real ORS, and device GPS remain subject to existing software prerequisites. Video risk does not generate a navigation route or automatic obstacle-avoidance advice. Native engine start/end events and Vibration API acceptance do not prove physical speaker or motor output.
 
-`integration/navigation-mvp.js` 只连接 `ReplayGeolocation`、已有 `WalkingNavigation`
-与独立 `NavigationSpeechAdapter`，不加载视频、摄像头、Guidance、地图页或AI控制模块。
-页面仅访问同源静态资源，Permissions-Policy禁止设备定位、摄像头和麦克风；不请求ORS、
-地图瓦片或外部语音，不建立推理连接，不存储或上传回放文件。SVG仅示意合成路线，
-其显示投影不参与导航计算。导航核心、地图客户端与共享语音驱动保持原实现。
+## Standalone Local Perception
 
-示例 [navigation-sample.json](integration/navigation-sample.json) 明确标记为合成数据，
-约36秒依次覆盖出发、左转、定位精度不足、恢复、偏航、回到路线、右转和到达。
-不是实际道路、设备GPS或真实步行速度。自选JSON沿用该结构：`schema_version=1`、
-`source=synthetic`、`label`、`description`、现有地图契约的 `route`，以及 `fixes` 数组。
-每点含 `offset_ms/longitude/latitude/accuracy_m`；偏移从0开始严格递增，最多2000点，
-文件最大1MiB。回放只注入原导航接口，时间戳使用开始时刻加原偏移；延迟回调不刷新定位。
-完整步骤连贯性、精度、偏航、新鲜度和到达判定均由已有导航控制器负责。
+The local MVP runs through integration.asgi at http://127.0.0.1:8766/live/. It enables a separate local CUDA mode and browser Guidance. The original config.asgi page retains Echo/HF modes and disables the local option. See backend/LOCAL-MVP.md for setup, both environments, launchers, validation targets, and device boundaries.
 
-播报在步骤或状态变化时触发，同一步骤的每次定位更新不重复朗读；“当前动作”与
-“距下一动作距离”分别描述，不把下一路段的转向提前作为当前动作。下一步为终点时仅说
-终点在前方，原控制器确认到达后才说“已到达”。定位精度不足暂停转向并提示，偏航明确提示
-手动重新规划；回到路线后跟随原控制器恢复。没有重新规划、接近路口距离阈值或道路安全判断。
-只保留最新候选，过期定位不能新建提示，排队语音保留原来源期限；停止、隐藏和离页清理
-本轮定位及自有语音，返回前台不自动恢复。手动语音请求不由导航取消。
+Guidance is off by default and consumes server-provided risk fields. When enabled by the user, it reuses existing speech/vibration controllers; manual speech and vibration tests remain independently available. The navigation example in Guidance is for arbitration integration. Standalone navigation replay is described next.
 
-真实Chrome检查工具使用原生本地中文声音，分别验证手动停止和完整回放，核对实际引擎
-utterance与来源状态、2倍语速、完整结束与取消、请求隔离及320/390/1280px布局。
-先启动本地服务并设置 `PRS_PLAYWRIGHT_PATH`，从 `frontend` 执行：
+## Standalone Local Navigation Replay
 
-```powershell
-node tools/check_local_navigation_browser.mjs http://127.0.0.1:8766/integration/navigation/ NEW_NAVIGATION_REPORT.json
-```
+Open http://127.0.0.1:8766/integration/navigation/ to run navigation separately from video detection. Load the built-in replay sample or select local route and location-fix JSON files. Select a matching local voice, enable Speech output and Navigation announcements, then start navigation replay. Rate defaults to 2× and can be adjusted; both output toggles default off. The page does not select or replace a voice automatically.
 
-输出路径必须不存在；工具不启动服务、修改路线或伪造语音引擎事件。补充边界检查使用
-明确的同源响应交付门控验证迟到读取，以及可见性测试替身验证隐藏清理、显式重新开始；
-另在本地取消接口注入一次明确标记的拒绝，验证请求归属保留、单次停止不重试和再次显式清理。
-这些补充检查保留原始语音引擎、事件和回放内容；完整回放不使用替身，隐藏检查不代表
-操作系统后台测试。语音提交、起播和终态按请求ID逐一配对，拒绝错配或遗漏；原生引擎
-start/end不证明扬声器实际可听；
-真机定位、实际道路、在线规划和视频风险联动仍须分别验收。
+Use the manual speech area to confirm the voice before replay. A voice error pauses announcements; after fixing configuration, the user must resume manually. If speech cancellation fails, request ownership and the stop control are retained. Replay resumes only after a subsequent explicit stop succeeds; there is no automatic retry.
 
-连续视频入口为 http://127.0.0.1:8766/integration/video/ 。独立页面只加载
-`integration/video-mvp.js`、`video-replay.js`和现有检测传输、流水线、语音/震动与Guidance模块，
-不加载摄像头控制器、场景、地图或AI控制。用户明确选择本机视频后点击“开始本地检测”；
-原文件以Blob保留在浏览器，浏览器只发送按原640/JPEG0.8/1MiB契约编码的采样帧。
-不请求摄像头/麦克风权限，不上传原视频，不隐式下载、转码或替换不支持的编解码器。
-成功读取元数据后清空文件选择控件值，同时保留controller中的File及状态所示文件名，
-这样用户可重新选择同一个已播完的文件；取消文件选择保留当前来源。读取期间可显式停止，
-取消会结算等待、移除监听并释放所属Blob，旧加载回调不能改变新选择。
+integration/navigation-mvp.js connects only ReplayGeolocation, existing WalkingNavigation, and separate NavigationSpeechAdapter. It does not load video, camera, Guidance, map page, or AI controls. The page accesses same-origin static resources only. Permissions-Policy denies device location, camera, and microphone. It does not request ORS, map tiles, or external speech; opens no inference connection; and does not store or upload replay files. The SVG illustrates a synthetic route; its display projection is not used in navigation calculations. Navigation core, map client, and shared speech driver retain their implementations.
 
-视频固定1倍速、无循环/跳转控件，采样由真实`requestVideoFrameCallback`的新呈现帧驱动。
-先取得采集额度再绘制，输入上限30FPS；编码、传输及等待顺序显示的总窗口为12，
-首帧结果独占期间视频仍向前播放，不重复静止图像。浏览器时钟的`capturedAt`在实际
-`drawImage`前读取并沿PRF2送入算法；`sourceMediaTime`仅观测原视频呈现时间，
-不会代替算法的motion/TTC时间戳。速度、循环、跳转或重复/倒退呈现时间明确停止，不修正或重试。
-不同的源视频时间跨度、浏览器采集跨度及回传延迟分别记录，不能把文件回放视为物理摄像头验证。
+The navigation-sample.json fixture is explicitly synthetic. Its approximately 36-second replay covers departure, left turn, insufficient location accuracy, recovery, off-route state, return to route, right turn, and arrival. It is not a real road, device GPS trace, or real walking speed. Custom JSON follows the same structure: schema_version=1, source=synthetic, label, description, the existing map-contract route, and a fixes array. Each point contains offset_ms/longitude/latitude/accuracy_m. Offsets start at zero and increase strictly; at most 2,000 points and 1 MiB are accepted. Replay injects points through the existing navigation interface and timestamps them as start time plus original offset. Delayed callbacks do not refresh a fix. The existing navigation controller handles step continuity, accuracy, off-route state, freshness, and arrival.
 
-自然EOF或显式调用`videoReplay.finish(reason)`会停止新采集、等待已获额度的编码及全部已发送
-结果排空后停止client和Guidance；用户“停止”、页面隐藏、离页或错误立即取消自身任务，
-晚到编码/解码不重新发送或更新结果。原55秒服务端上限保持，provider正常结束不自动重连；
-未发送编码及未交付帧诚实计数。需要重新开始时由用户手动操作，不自动倒带或循环。
-视频页面的本地引导仍默认关闭；风险直接消费服务端结果，另须明确开启原语音/震动通道，
-声音须匹配语言且`local_service=true`。源帧TTL、冷却及请求所有权沿用下述Guidance契约。
+Announcements trigger on step or state changes; repeated location updates for one step are not reread. “Current action” and “distance to next action” are stated separately so the next road's turn is not presented prematurely. If the next step is the destination, speech says only that it is ahead; “Arrived” is spoken only after the existing controller confirms arrival. Insufficient accuracy pauses turn guidance and prompts the user. Off-route state asks the user to replan manually; after returning to route, the existing controller determines when guidance resumes. There is no replanning, intersection-proximity threshold, or road-safety assessment.
 
-视频页面通过 `integration/video-alerts.js` 独立选择和生成警报语音，摄像头与导航保持原策略。
-只有服务端 `alert_required=true` 且优先级为正的目标参与；优先级较高者优先，同级依次按
-有效正TTC、距离及track ID升序选择。TTC来自已有算法，不在浏览器重新计算或改变风险等级。
-中风险使用“注意”，高风险使用“警告”，极高风险使用“危险”，等级直接沿用算法结果。
-语音只描述目标相对画面的方向和类别；较快接近时加“靠近”，例如“危险，左前方有行人靠近。”，
-慢速中风险示例为“注意右前方的行人。”；慢速高/极高风险仍保持原等级，只省略“靠近”。
-“靠近”要求 `motion_state=approaching`、有限负相对速度，以及后端 `risk_reasons` 同时含
-`approaching` 和 `closing_mps_ge_2`。后者是当前算法已有的≥2m/s接近速度分段，不在前端重复计算
-阈值、不从TTC推断快慢。若算法后续修改速度分段，需要同步对齐这项文案契约。
-静止、远离、未知或标记不一致时不声称靠近；方向未知时明确说未知，不推断地理方位或避让方向。
-类别使用服务端已识别且经契约校验的 `label`，中文覆盖 `models/yolo26n.json` 中的全部80类，
-例如行人、汽车、自行车、长椅、雨伞；未映射标签明确称“物体”，英文保留原类别标签。
-语音不读距离、TTC或速度数值，也不追加碰撞时间未知等长句；这些字段仍保留在结果显示和原选择策略中。
-同级TTC变化不绕过原3秒起播冷却，警报优先级升级仍可立即打断自身低级输出；视频页语速默认2倍，
-可在0.5至2倍范围手动调整，音量继续使用用户设置，不随风险等级自动改变。不新增TTC分档或重新
-告警阈值。视频语音可独立验收，不要求实际导航接入。
-视频入口显式启用 `finishStartedRiskSpeech`：已起播的警报允许自然播完，不因下一帧无告警或最新结果
-过期而截断；更高等级风险仍可立即抢占。未起播请求仍在源帧失效时取消，过期结果不能产生新提醒，
-语音结束后只检查当时最新且有效的结果，不缓存或重播旧目标。手动停止、关闭引导、页面隐藏、会话错误
-和视频结束仍立即清理自有输出；振动与摄像头默认行为保持。验收须区分起播、完整结束与中途取消，
-引擎报告完整结束仍不等于实际扬声器听音验证。
+Only the latest candidate is retained. An expired location cannot create a new prompt, and queued speech retains its original source deadline. Stop, page hide, and page exit clean up current location work and navigation-owned speech; foreground return does not resume automatically. Navigation does not cancel manually submitted speech.
 
-`videoReplay.subscribe(listener)`提供`session/frame/submitted/stop/ended/error/loaded`事件；
-`frame`携带原始`capturedAt`、`sourceMediaTime`、`presentedFrames`、metadata及完整计时。
-`stats`区分`sourceCallbacks/observedPresentedFrames/callbackGaps`、未采集的
-`skippedCadence/skippedCredit/skippedFirstFrame`、`admitted/encoded/sent/delivered`、
-`cancelledBeforeSend/maxInFlight/currentInFlight`和源PTS范围；原生callback计数跨越的呈现帧
-计入gap，采样前跳过的源帧不会先采集再丢弃。入口导出`videoReplay/guidanceManager/videoMvpReady`，
-便于验证工具订阅真实事件。Node的媒体/编码/传输替身不证明真实MP4解码、GPU或实际声响/马达。
+The real-Chrome check uses the browser's native local Chinese voice to verify manual stop and complete replay. It checks actual engine utterance and source state, 2× rate, completion and cancellation, request isolation, and 320/390/1280 px layouts. Start the local service, set PRS_PLAYWRIGHT_PATH, and run from frontend:
 
-运行连续视频真实Chrome/GPU验证工具时，需先启动本地双服务并设置`PRS_PLAYWRIGHT_PATH`；
-从`frontend`执行以下命令（报告路径须不存在，视频须为明确选定的本地文件；转码副本须保留来源及处理记录）：
+    node tools/check_local_navigation_browser.mjs http://127.0.0.1:8766/integration/navigation/ NEW_NAVIGATION_REPORT.json
 
-```powershell
-node tools/check_local_video_browser.mjs http://127.0.0.1:8766/integration/video/ NEW_REPORT.json LOCAL_VIDEO.mp4
-```
+The output path must not exist. The tool does not start a service, change routes, or fabricate speech-engine events. Additional boundary checks use an explicit same-origin response-delivery gate for late reads and a visibility-test substitute for cleanup and explicit restart. A marked rejection is injected at the local cancellation interface to verify retained ownership, no retry after one stop, and cleanup after a second explicit stop. These checks preserve the original speech engine, events, and replay content. Complete replay uses no substitute; the visibility check does not represent OS background behavior. Speech submission, engine start, and terminal events are paired by request ID; mismatches or missing events fail. Native engine start/end does not prove speaker audibility. Device-location accuracy, real roads, online routing, and video-risk integration require separate validation.
 
-工具检查原生File/Blob解码、多帧严格递增源PTS/采集关联、一次用户停止与一次自然EOF，
-保留每帧与所有失败；明确选择匹配本地声音，缺少声音则记为不可用，不伪造风险或引擎start。
-工具在真实风险语音引擎start时核对实际utterance与视频方向/类别/接近文案一致，以及引擎语速与请求配置
-一致；报告保存匹配结果、源帧、等级、TTC和语速。`speech_lifecycle` 按会话/请求记录提交、起播、
-完整结束、中途取消、错误与起播至终止时长，不把起播计为整句完成。不记录语音正文，也不把
-引擎事件视为实际扬声器已验证。
-视频回放素材包括MOT17-07白天和MOT17-10夜间移动相机序列，各自提供原始预览与H.264
-浏览器副本。用户选择 `*-browser-h264.mp4`；页面不执行自动转码。4个视频及来源清单属于
-版本管理范围，完整标注及逐帧运行报告单独管理。素材属性见 [视频数据说明](../backend/model_tests/DATASETS.md#连续街景视频用于本地联调)，
-验收方法见 [本地MVP说明](../backend/LOCAL-MVP.md#验收方法与边界)。
+## Continuous Local Video Replay
 
-本地操作顺序：先读取摄像头列表；若首次权限导致deviceId为空，点击“授权并读取摄像头列表”，
-该显式操作仅申请video权限并立即停止临时tracks，不启动检测、不选择默认设备。
-授权后仍须明确选择摄像头，保持“本地CUDA”模式再点击原摄像头开始按钮；
-要播报时，另外勾选原“启用语音输出”，在本地Guidance区选择中/英文及匹配的本地声音，
-再勾选“启用提醒”。可按需勾选原振动开关。Guidance不会自动开启设备输出或选择默认/远程声音；
-设备或声音消失时不替换，通道错误保持暂停，修正配置后由用户点击对应恢复按钮。
+Open http://127.0.0.1:8766/integration/video/ for continuous video replay. The standalone page loads integration/video-mvp.js, video-replay.js, and existing detection transport, pipeline, speech/vibration, and Guidance modules. It does not load the camera controller, scene description, map, or AI control. The user explicitly selects a local video and starts local detection. The original file remains a browser Blob; only sampled frames encoded under the existing 640 px/JPEG 0.8/1 MiB contract are sent. No camera/microphone permission is requested, the original video is not uploaded, and unsupported codecs are not silently downloaded, transcoded, or replaced.
 
-`integration/guidance.js` 只保存最新感知快照，按原采集时间判断1秒新鲜度；
-旧结果仍显示并计入性能统计，但不新建提醒。只在服务端 `alert_required=true` 的对象中，
-按优先级降序、当前距离升序、track ID升序选一个；不补告警、不改变风险阈值。
-同会话/tracking epoch/track同级提醒从真实语音引擎start或振动API接受开始冷却3秒，升级可立即提醒，
-降级不产生新的重复提醒。风险可打断Guidance拥有的低优先级/导航输出，不取消手动输出；
-手动振动请求未明确取消前，Guidance不提交新的风险振动。
-关闭Guidance、停止视频、会话结束或隐藏页面会取消自身请求并清除状态，不重试或自动恢复。
+After metadata is read, the file-input value is cleared while the controller retains its File and the displayed filename. This allows selecting the same file again after playback ends; cancelling selection retains the current source. The user can stop while metadata is loading. Cancellation settles pending waits, removes listeners, and releases the associated Blob; an old load callback cannot change a newer selection.
 
-导航示例按钮生成明确标记为demo的指令，只保留一条待播报指令，原始有效期10秒；
-风险中断不延长有效期，过期丢弃，无FIFO积压、GPS、定位或路线请求。
-语音提交和引擎start、振动API接受及节奏计时均是软件事件，不证明实际声音/马达已验证。
-批准目标为≥10FPS且采集→告警<500ms；采集→解码、采集→真实引擎start及实际声音/马达
-分别记录，不用解码或替身事件替代告警实测。请求保存原始源帧上下文，后续新帧不刷新其时钟。
+Video plays at fixed 1× with no loop or seek controls. Sampling is driven by newly presented frames through requestVideoFrameCallback. Capture credit is obtained before drawing, with a 30 FPS input cap and a total window of 12 encoding, transmission, and ordered-display jobs. Video continues while the first result is outstanding; a still image is not resent. Browser-clock capturedAt is read immediately before drawImage and sent through PRF2 to the algorithm. sourceMediaTime observes source-video presentation time only and does not replace the algorithm's motion/TTC clock. Speed change, loop, seek, or repeated/backward presentation time stops explicitly; none is corrected or retried. Source-video duration, browser capture span, and result latency are reported separately. File replay is not evidence of physical-camera behavior.
 
-地图页新增“步行导航”：规划路线后点击“开始导航”，浏览器持续定位并显示设备位置、
-当前/下一条 ORS 指令、距下一指令距离、剩余路线距离、预计时间、偏航和到达状态。
-可手动停止；隐藏或离开页面、修改起终点、重新规划会取消当前定位。返回前台不自动恢复。
-`navigation.js` 维护与 UI/MCP 共用的状态，`navigation-ui.js` 负责面板，`maps-page.js` 更新位置标记。
-导航核心不请求新路线、不调用摄像头/语音/震动，也不写入数据库或浏览器存储。
-位置在页面内计算；MCP 查询和开始/停止响应包含当前坐标、精度和时间戳，由 agent 接收。
+Natural EOF or explicit videoReplay.finish(reason) stops new capture, drains admitted encoding and all submitted results, then stops the client and Guidance. User stop, page hide/exit, or error immediately cancels page-owned work; late encoding/decoding cannot resubmit frames or update results. The server's 55-second limit remains. A normal provider end does not reconnect automatically. Unsent encodes and undelivered frames are counted honestly. Restart requires user action; the page does not rewind or loop automatically.
 
-地图页的导航播报由 `integration/maps-navigation-speech.js` 和
-`integration/maps-navigation-bridge.js` 薄连接层接入；只订阅已有 `prs-navigation-change`
-并读取一次现有实例状态，不新建导航控制器、定位监听或路线请求，也不修改原导航方法。
-页面、MCP和连接层共用 `/assets/navigation-ui.js` 的同一导航实例，手动输出与导航播报
-共用 `/assets/speech-output.js`。新增资源保留 `/assets/integration/` 目录层级，按精确白名单提供。
 
-先选择匹配语言的本地声音，启用“语音输出”和“导航播报”，再通过原地图按钮或MCP开始导航；
-两个语音开关默认关闭，语速默认2倍，可手动调整。步骤、精度不足、偏航和到达直接使用
-已有导航快照，语音文案与有效期沿用独立适配器，不从界面文字解析指令，不新增导航规则。
-路线修改、停止、隐藏和离页清理自有语音；到达后保留原控制器的最终状态用于播报。
-“停止导航播报”仅结束本轮语音，不停止定位；重新开始导航后才重新接收本轮指令。
-取消失败保留输出归属，用户再次明确停止清理后手动解除错误暂停；原导航/MCP状态不被语音改写。
-语音参数和正文不进入定位或规划请求，视频警报保持独立。
+Local video Guidance is off by default. It consumes server risk results directly; the user must also explicitly enable existing speech/vibration channels. The voice must match UI language and have local_service=true. Source-frame TTL, cooldown, and request ownership follow the Guidance contract below.
 
-地图语音联调使用原 `config.asgi:application` 的 `/maps/`，不是离线MVP包装器；
-`integration.asgi` 继续禁止地图及外部规划。本地合成验收不需要真实ORS key或GPU。
-启动原ASGI单worker服务后，设置 `PRS_PLAYWRIGHT_PATH` 和后端解释器 `PYTHON`，从frontend执行：
+The video page uses integration/video-alerts.js to select and generate alert speech independently; camera and navigation retain existing policies. Only targets with alert_required=true and positive priority are eligible. Higher priority wins; ties use valid positive TTC, distance, then track ID. TTC comes from the existing algorithm; the browser does not recalculate it or change risk levels. Medium risk says “Caution,” high risk “Warning,” and critical risk “Danger,” using the algorithm's level. Speech describes only image-relative direction and object category. For a quickly approaching target it adds “approaching,” e.g. “Danger, a pedestrian is approaching from the front left.” A slower medium-risk example is “Caution, a pedestrian is ahead on the right.” Slow high/critical alerts retain their level and omit only “approaching.”
 
-```powershell
-node tools/check_maps_navigation_speech_browser.mjs http://127.0.0.1:8766/maps/ NEW_MAPS_SPEECH_REPORT.json
-```
+“Approaching” requires motion_state=approaching, a finite negative relative speed, and both approaching and closing_mps_ge_2 in backend risk_reasons. The latter is the existing algorithm's ≥2 m/s closing-speed band; frontend does not recalculate the threshold or infer speed from TTC. If the algorithm changes its speed bands, update this wording contract. Stationary, receding, unknown, or inconsistent targets are not described as approaching. Unknown direction is stated as unknown; the page does not infer compass or evasion direction.
 
-工具明确使用合成ORS响应和定位点，复用原地图UI/MCP控制链路；中文声音使用真实本地原生引擎，
-核对逐请求文案/来源/语速/终态、单一定位监听和清理。Leaflet CDN、CSP/SRI及OSM请求保持原行为，
-不因网络失败切换替身；实际GPS、ORS认证、真实底图可用性、扬声器听感和OS后台能力分别验收。
-可见性场景使用显式事件替身。报告与截图路径必须不存在，工具不启动服务或部署代码。
+Categories use the server-recognized, contract-validated label. Chinese labels cover all 80 classes in models/yolo26n.json, including pedestrians, cars, bicycles, benches, and umbrellas. An unmapped label is called an object; English retains the original category label. Speech omits distance, TTC, speed values, and long phrases such as “collision time unknown.” Those fields remain in results and the existing selection policy.
 
-固定策略（由 `navigation_status.policy` 同时返回）：精度大于30m时不提供进度；
-距路线大于40m时报告偏航并清空转向指令，由用户明确重新规划；定位15秒未更新则停止。
-每次 watch 使用高精度、零缓存、10秒浏览器超时，另设15秒新鲜度期限以覆盖等待授权/无回调。
-定位拒绝、不可用或超时明确终止，不重试或采用示例位置。停止失败返回 `stop_failed`，
-保留待清理句柄供用户再次停止；迟到回调不能恢复导航。
-到达须同时满足沿路线剩余长度与到终点直线距离均不超过15m，且精度不超过15m。
-基于局部线段投影和球面距离计算，3m内近似等距投影优先接近前次进度，初次优先较早线段。
-环路/重叠路线仍有歧义；没有道路匹配、楼层识别或避障。距离使用路线几何长度，
-预计时间按 ORS 总时长乘剩余几何比例，不是实时速度估算，也未经过真机行走精度评估。
-这些是新增导航默认值，原 ORS 请求、模型、摄像头和推理实验参数不变。
+Changing TTC for a same-priority target does not bypass the three-second start cooldown. A risk upgrade can immediately interrupt lower-priority output owned by this video page. Video speech defaults to 2× and is adjustable from 0.5× to 2×. Volume follows user settings and does not change with risk. No TTC bands or alert thresholds are added. Video speech can be validated independently; live navigation integration is not required.
 
-导航 MCP 的 `navigation_start/stop/status` 必须指定地图 tab 的 `session_id`，
-在 `full` 与 `outputs` 配置均注册；详情见 [MCP 契约](../backend/MCP.md)。
-`start.accepted=true` 仅说明提交定位监听，之后应查询状态；查询不会触发定位。
-原生定位权限仍由浏览器控制，不能通过 MCP 绕过。
+The video entry enables finishStartedRiskSpeech: started alerts may finish naturally and are not cut off because a later frame has no alert or a result expires. Higher risk can still take over immediately. A request that has not started is cancelled when its source frame expires; expired results cannot create new alerts. After speech ends, only the latest result valid at that time is checked. Older targets are not cached or replayed. Manual stop, disabling Guidance, page hide, session error, and video end immediately clean up page-owned output. Vibration/camera defaults are unchanged. Validation distinguishes speech start, full completion, and mid-utterance cancellation; engine completion does not prove the speaker was heard.
 
-本地真实 Chrome/HTTP/WS 联调（显式使用合成 ORS/GPS，无真机定位、数据库写入或 GPU 调用）：
-先以 `PRS_MCP_PROFILE=outputs` 在8766启动单 worker ASGI/lifespan，
-设置 `PRS_PLAYWRIGHT_PATH` 为 Playwright 包绝对路径、`PYTHON` 为后端解释器，再从 frontend 执行：
-`node tools/check_navigation_browser.mjs http://127.0.0.1:8766/maps/ NEW_NAVIGATION_MAP_REPORT.json`。
-检查 MCP 触发/读取/停止、UI 共用状态、偏航、到达、迟到回调、隐藏清理、语言及320/390/1280px布局。
-其中隐藏状态由显式测试替身触发，不代表操作系统锁屏/后台测试；CDN/SRI/CSP 保持实际校验。
+videoReplay.subscribe(listener) emits session/frame/submitted/stop/ended/error/loaded events. frame includes original capturedAt, sourceMediaTime, presentedFrames, metadata, and complete timing. stats distinguishes sourceCallbacks/observedPresentedFrames/callbackGaps; frames not captured due to cadence, credit, or first-frame constraints (skippedCadence/skippedCredit/skippedFirstFrame); admitted/encoded/sent/delivered; cancelledBeforeSend/maxInFlight/currentInFlight; and source PTS range. Presentation frames skipped across native callback counts contribute to gaps; frames skipped before sampling are not captured then discarded. The entry exports videoReplay/guidanceManager/videoMvpReady so tools can subscribe to real events. Node media/encoding/transport substitutes do not verify real MP4 decoding, GPU behavior, or physical speaker/motor output.
 
-页面提供独立“语音输出测试”：默认关闭，可输入文本、填入中英文示例、选择设备声音、
-语速0.5至2及音量0至1，再朗读/停止。只调用浏览器SpeechSynthesis，不申请录音或摄像头，
-不生成音频文件、不自动启用检测提醒或替换失效声音。语音服务是否联网以设备声音的
-`localService`属性为准，UI以`[local]/[remote]`标明原生身份。
-`speech-output.js`的共享`SpeechOutput`接口负责`describe/voiceList/speak/stop`，
-MCP提供`speech_status/speech_voices/speech_speak/speech_stop`，须明确指定tab。
-用户开关、前台和真实激活要求保持，MCP不自动启用。文本最多1000个Unicode码点，
-状态区分提交、引擎开始、结束、取消和错误；实际扬声器声音始终待设备确认。
-取消或旧对象的迟到回调不能更新新请求；取消异常保留未确认状态并明确提示，不重试。
-正文只用于当前utterance，不保存或记录进应用日志；英文UI不翻译用户输入/原生声音名称。
-接口参数、机器可读错误和调用示例见[语音MCP契约](../backend/MCP.md)。
+For real-Chrome/GPU validation, start both local services, set PRS_PLAYWRIGHT_PATH, and run from frontend. The report path must not exist, and the video must be an explicitly selected local file. Any transcoded copy must retain its source and processing record:
 
-真实Chrome/UI/MCP回归从frontend执行（需先在8768启动单worker ASGI/lifespan）：
-`node tools/check_speech_browser.mjs http://127.0.0.1:8768/live/ NEW_SPEECH_REPORT.json`。
-设置`PRS_PLAYWRIGHT_PATH`及后端解释器`PYTHON`。测试使用明确原生引擎替身验证UI/参数/事件/错误，
-保留真实用户激活及HTTP/WS链路，检查中英切换和320/390/1280px布局；没有数据库写入或GPU调用。
-另以真实本地英文语音提交一次短样例，独立记录引擎结果；无此声音/超时会明确报告。
-可在同一命令末尾显式加`--native-chinese-only`并使用另一个输出路径，独立验证本地中文，
-保留原英文结果。各测试按明确语言选择本地声音，不互相替代，
-不选择默认或远程声音来制造通过。所有结果均不证明物理声音已被听到。
+    node tools/check_local_video_browser.mjs http://127.0.0.1:8766/integration/video/ NEW_REPORT.json LOCAL_VIDEO.mp4
 
-摄像头和地图均加载 `ai-control.js`，通过 `/ws/control/` 向 MCP 注册当前 tab。
-AI 可读取控件和状态、点击/填表/选择/提交、地图选点及跨页面跳转，既有控制器处理实际业务。
-断线后手动刷新，浏览器权限要求保持；操作与验证方法见 [MCP 说明](../backend/MCP.md)。
+The tool checks native File/Blob decoding, strictly increasing source PTS associated with captured frames, one user stop, and natural EOF. It retains every frame and failure. The user selects a matching local voice; if unavailable, the report says so rather than fabricating risk or engine start. On real risk-speech engine start, the tool checks actual utterance against video direction/category/approach wording and engine rate against requested configuration. The report records match, source frame, risk level, TTC, and rate. speech_lifecycle records submission, start, full completion, mid-utterance cancellation, errors, and start-to-terminal duration per session/request. Speech text is not recorded, and engine events do not prove the speaker was heard.
 
-摄像头页新增独立“手机震动测试”：默认关闭，勾选启用后可手动测试短震200ms、长震800ms、
-双震150ms/暂停100ms/震动150ms；“停止震动”在接口可用时始终可操作。
-`vibration.js` 不开启摄像头、不联网、不自动启用检测提醒，也不保存开关偏好。
-关闭测试、页面隐藏或离开时，对曾被接受且尚未取消的请求发送 `navigator.vibrate(0)`。
-接口缺失、拒绝和异常分别显示诊断并记录日志，不自动重试或替代为其他提醒。
-“请求已接受”只说明浏览器返回true，不能证明马达实际震动；安卓Chrome等可测试，
-iPhone Safari不支持。请在真实手机前台页面检查短震、长震、双震、停止及系统震动设置。
-Node与桌面Chrome替身测试只验证调用和UI状态，不代表真机硬件、锁屏或后台提醒能力。
-MCP提供 `vibration_status`、`vibration_test`、`vibration_stop`，通过当前tab的控制连接
-复用同一个 `VibrationTester`。调用必须明确指定session，测试保留用户开关、前台和真实交互要求，
-不自动启用或重试；结果使用稳定的 `accepted/reason` 字段，详情与例子见[震动MCP契约](../backend/MCP.md)。
-真实HTTP/WS/Chrome联调从frontend执行
-`node tools/check_vibration_mcp_browser.mjs http://127.0.0.1:8768/live/ NEW_VIBRATION_MCP_REPORT.json`，
-需在8768启动现有单worker ASGI，并设置 `PRS_PLAYWRIGHT_PATH` 与后端解释器 `PYTHON`。
-验证默认关闭、合成事件不能授予激活、真实点击后的三个节奏及停止、原生拒绝/异常和接口缺失。
-原生震动/媒体API是显式替身；用户激活与MCP HTTP/WS为真实路径，不写数据库、不调用GPU。
-设好 `PRS_PLAYWRIGHT_PATH` 后，从frontend执行
-`node tools/check_vibration_browser.mjs http://127.0.0.1:8766/live/ NEW_VIBRATION_REPORT.json`，
-在真实Chrome验证支持/缺失/拒绝/异常、默认关闭及停止、零媒体授权调用、中英切换和320/390/1280px布局。
-输出JSON和手机宽度区域PNG；原生震动和媒体API在测试中明确替换，不能据此声称真机马达已验证。
+Replay assets include daytime MOT17-07 and nighttime MOT17-10 moving-camera sequences, each with an original preview and H.264 browser copy. The user selects the *-browser-h264.mp4 copy; the page does not transcode automatically. Four videos and the source manifest are version-controlled; complete annotations and per-frame reports are managed separately. See backend/model_tests/DATASETS.md and backend/LOCAL-MVP.md for video sources and validation boundaries.
 
-本地集成入口默认 `http://127.0.0.1:8766/live/`，公网路径示例 `https://47.239.50.129/prs/live/`；原 `/prs/` 转到同页。页面提供四个显式模式，Echo 为默认，本地 CUDA 仅由 integration 入口启用：
+For local camera operation, first read the camera list. If initial permission leaves deviceId empty, click “Grant access and read cameras.” This explicit action requests video permission only, then stops temporary tracks immediately; it does not start detection or select a default camera. After permission, explicitly select a camera, keep Local CUDA selected, and click the existing camera start control. To enable speech, also enable Speech output, select a language and matching local voice in local Guidance, then enable Alerts. The existing vibration toggle is optional. Guidance does not enable device output or select a default/remote voice automatically. If a device or voice disappears, it is not replaced; channel errors stay paused until the user corrects configuration and clicks the corresponding resume control.
 
-- **Echo／原样回传**：`/ws/echo/`，用于检查摄像头与网络，返回输入原始字节。
-- **常驻 GPU**：`/ws/detect/resident/`，由常驻 ASGI 单进程处理；原生 FP32，显式 detection/depth/full 工作负载，无 HF 分配时长上限。见 [常驻服务说明](../backend/RESIDENT.md)。
-- **本地 CUDA**：`/ws/detect/local/` 转到独立推理进程；PRF2 携带原始采集时间戳，保留本地视频、告警及导航集成。
-- **Hugging Face ZeroGPU**：`/ws/detect/hf/`，最新视频检测，返回 YOLO26n 标注 JPEG。
+integration/guidance.js retains only the latest perception snapshot and uses original capture time for a one-second freshness check. Old results stay visible and count in performance statistics but do not create alerts. Among objects with server-provided alert_required=true, one is selected by priority descending, current distance ascending, and track ID ascending; alerts are not invented and risk thresholds are unchanged. For the same session/tracking epoch/track, cooldown begins at real speech-engine start or Vibration API acceptance and lasts three seconds. A risk upgrade may alert immediately; a downgrade does not create a duplicate. Risk may interrupt lower-priority Guidance/navigation output owned by Guidance, but does not cancel manual output. While a manual vibration request remains uncancelled, Guidance submits no risk vibration. Disabling Guidance, stopping video, ending the session, or hiding the page cancels Guidance-owned requests and clears state without retry or automatic resume.
 
-`camera.js` 管理媒体、停止状态和计时；`echo-client.js` 校验原样回传；
-`live-detection-client.js` 校验二进制序号、模型/80类/原权重 SHA、框和 JPEG SHA，
-并要求每帧计算精度、后端与所选模式的会话声明一致；FP32输出与计算精度分别标记。
-本地声明为原生FP32 CUDA，不伪装HF编译模式；HF服务端读取显式方案文件，至少三个独立完整5000图 COCO验证的 mAP下降均不得超过0.5个百分点；
-客户端验证其公开证据字段，不能据此声称自己重新测量了mAP。
-常驻使用独立 `resident-v1` 准入：原生 FP32、明确 detection/depth/full 工作负载、无分配时长上限；不得附带 HF 质量声明或跨模式准入。每帧必须包含该工作负载对应阶段；正常结束须确认所有请求和返回计数一致。
-`frame-pipeline.js` 管理采集及顺序解码显示。摄像头最大边640、JPEG质量0.8。
-公开页面在首帧独立完成后使用30FPS输入上限，最多12个采集/传输/等待显示作业，
-先取得空位再采集。PRS/HF首帧返回前执行一次512KiB双向传输预热，耗时计入首帧，
-共1MiB额外流量。客户端、PRS relay和HF parent严格要求同一12帧协议，须协调发布；
-窗口包含网络在途帧，并不要求预先积压12张待推理图。
-调度按预定时间线推进，普通定时器晚醒不逐帧累积；等待信用或错过完整采样间隔后重新计时，
-不重放错过的采样槽。每5秒及停止时汇总定时器晚醒和信用等待，区分采样与网络窗口限制。
-没有额外200ms等待、旧帧积压、自动重连或自动更换模式。
+The navigation-sample control creates a command explicitly marked as a demo. Only one command waits for speech; its original TTL is 10 seconds. A risk interruption does not extend the TTL, and expired commands are discarded. There is no FIFO backlog, GPS, location, or route request. Speech submission, engine start, Vibration API acceptance, and vibration timing are software events, not proof of physical speaker/motor output. The target is ≥10 FPS and capture-to-alert below 500 ms. Capture-to-decode, capture-to-real-engine-start, and physical sound/motor behavior are reported separately; decode or substitute events are not alert measurements. Each request retains its original source-frame context; later frames do not refresh its clock.
 
-一次 ZeroGPU 视频最长55秒，结束或出错后手动重新开始。免费额度不足时拒绝申请；
-模型参数和评估目标不变。画布尺寸不变时复用；exact facingMode 失败明确提示，不自动切镜头。
-页面 API 挂载点只允许同源相对路径，HF token 留在服务端。
+## Walking Navigation on the Map Page
 
-`node --test tests/*.test.mjs` 执行客户端协议、状态、调度、语言和地图检查。
-`tools/benchmark_phone_browser.mjs URL FRAMES OUTPUT` 使用实际 Chrome、CameraApp、JPEG编码、
-WS与解码，以开发目录 `tools/fixtures/detection-sample.jpg` 替代物理传感器。
-图片不部署为公开资源，原字节保留；测试不代表真实手机传感器、无线网络或最终屏幕绘制。
-诊断可显式加`--pipeline-file PATH`对照本地调度源码，报告其SHA；默认使用公开部署源码。
-`tools/profile_frame_pipeline.mjs URL OUTPUT PIPELINE_FILE [--cpu-profile]`执行真实浏览器
-12/24FPS、0/250ms合成Echo控制，不调用HF/GPU；合成传输不能代替公网推理结论。
-CPU采样默认关闭，因为profiling本身可能影响定时器精度；开启时保存原始CPU profile。
-`tools/benchmark_phone_windows.mjs URL OUTPUT [--echo-delay MS] [--30fps]`默认保留12/24FPS和5/8帧对照。
-默认以一个真实HF连接/一次GPU分配运行四个明确分段并保留每一帧；各段首帧单列并完整排空。
-`--echo-delay 300`为本地源码、实际Chrome编码/解码/HUD和合成传输的零GPU控制，不作推理结论。
-`--30fps`显式选择24/8、30/8、30/12、30/12、30/8、24/8六段平衡顺序，共606帧；
-对应61/91/151/151/91/61帧，30/12两个约五秒测试段保留，缩短对照段减少HF调用时长。
-结合`--echo-delay`可做本地合成控制，真实模式使用已协调发布的12帧公开协议。
-测量分别报告全程FPS、相同非首帧集合的完成间隔FPS、实际采集FPS和信用等待总时长；
-完成间隔可能受端点延迟变化影响，不能替代原全程延迟验收。
-入口在任何媒体或provider启动前校验所加载客户端的窗口，八帧部署运行十二帧测试会明确
-拒绝，不会部分运行后才失败或自动改成较小窗口；源码指纹和实际上限都进入报告。
-该工具不自动重试，真实HF模式需先检查90秒预留额度。
-本地原生Graph基准由后端 `tools/benchmark_phone_native.py` 启动，需显式传入完整验证的
-eager Graph方案 `--plan`；该native控制不会加载AOT包。公网证据见
-[PHONE-LIVE.md](../backend/PHONE-LIVE.md)。已有地图页面和模块保持原契约。
+The map page adds Walking navigation. After planning a route, click Start navigation. The browser watches location and displays device position, current/next ORS instruction, distance to the next instruction, remaining route distance, estimated time, off-route state, and arrival state. The user can stop manually. Hiding/leaving the page, changing an endpoint, or replanning cancels the location watch; foreground return does not resume it.
 
-实时结果支持 BoT-SORT 的 `track_id/motion_state/relative_speed_mps/smoothed_distance_m`；
-客户端校验并保留新增字段，展示服务端包含 ID、距离和运动状态的标注 JPEG，继续接受旧字段。
-已确认运动的标签增加带符号 m/s；短暂缺距离允许保留服务端未过期的历史运动估计。
-JSON 上限256KiB、JPEG1MiB，服务端包上限1310728字节，须与 HF/PRS 协调发布。
-跟踪生命周期、手机运动补偿、运行配置及验证局限见 [TRACKING.md](../backend/TRACKING.md)。
-结果还支持方向、TTC秒数、risk_score/risk_level/alert_priority/alert_required/risk_reasons。
-客户端校验和保留字段，high/critical服务端标注追加简洁TTC和等级。
-本地Guidance在用户启用后消费告警字段，仲裁语音/振动与导航示例，不在浏览器重复评分。
-缺当前深度时风险unknown、TTC为空，即使运动历史仍有效。规则配置和默认值见
-[RISK.md](../backend/RISK.md)。旧包仍兼容，元数据上限保持256KiB。
+navigation.js maintains state shared with UI/MCP, navigation-ui.js manages the panel, and maps-page.js updates the location marker. Navigation core does not request another route or call camera/speech/vibration and writes nothing to a database or browser storage. Location is processed within the page. MCP query/start/stop responses include current coordinates, accuracy, and timestamp for the agent.
 
-摄像头与 `/prs/maps/` 地图页共用“跟随系统 / English / 中文”选择器，语言偏好同源保存。
-地图的按钮、定位/底图状态、来源/精度、路线汇总、转向类型、标记提示、错误及无障碍标签
-随语言即时切换。已返回的 ORS 英文原始指令与地名保持原样；切换语言不重新定位或请求路线。
-发布工具同时上传地图页面/模块和共享语言资源，避免地图页遗漏语言支持更新。
+Map announcements connect through thin adapters integration/maps-navigation-speech.js and integration/maps-navigation-bridge.js. They subscribe only to existing prs-navigation-change and read current instance state once. They create no navigation controller, location watch, or route request and do not modify existing navigation methods. Page, MCP, and adapters share the navigation instance from /assets/navigation-ui.js; manual output and announcements share /assets/speech-output.js. Added assets retain /assets/integration/ and are served through the exact allowlist.
 
-真实 Chrome 回归工具使用开发运行时的 Playwright，保留 TLS/SRI/CSP 校验。
-从 `frontend` 执行；`PRS_PLAYWRIGHT_PATH` 需指向已安装的 Playwright 包绝对路径：
+Select a matching local voice, enable Speech output and Navigation announcements, then start navigation with the map control or MCP. Both speech toggles default off; rate defaults to 2× and can be adjusted. Step, low-accuracy, off-route, and arrival messages use the existing navigation snapshot. Wording and expiry follow the standalone adapter; instructions are not parsed from UI text and no navigation rules are added. Route changes, stop, hide, and page exit clean up navigation-owned speech. After arrival, the controller's final state remains available for an announcement. Stop navigation announcements ends only current speech, not location tracking; announcements resume only after navigation is started again. Cancellation failure retains output ownership; the user must explicitly stop again to clear the paused error. Speech does not modify original navigation/MCP state. Speech parameters/text are excluded from location and route requests; video alerts remain independent.
 
-```powershell
-node tools/check_maps_browser.mjs http://127.0.0.1:8766/maps/ NEW_MAPS_REPORT.json
-node tools/check_maps_browser.mjs https://47.239.50.129/prs/maps/ NEW_PUBLIC_MAPS_REPORT.json --live-route
-```
+Map speech integration uses the original config.asgi:application /maps/ entry, not the offline MVP wrapper. integration.asgi continues to prohibit maps and external routing. Synthetic local validation needs neither a real ORS key nor GPU. Start the original single-worker ASGI service, set PRS_PLAYWRIGHT_PATH and backend interpreter PYTHON, then run from frontend:
 
-默认模式以合成 API 响应和合成定位验证真实页面的语言切换、错误、跨页面偏好及390px布局，
-输出 JSON 和英文页面 PNG；不代表真实 GPS、浏览器权限弹窗或 ORS 上游验证。
-`--live-route` 另执行一次明确标记的 NUS 示例真实 ORS 请求，并检查既有路线切换语言时不重复请求。
-失败保存诊断并退出，不自动重试或回滚。
+    node tools/check_maps_navigation_speech_browser.mjs http://127.0.0.1:8766/maps/ NEW_MAPS_SPEECH_REPORT.json
 
-## 场景描述（Qwen2.5-VL，feat/vlm-scene）
+The tool uses synthetic ORS responses and location fixes while reusing the original map UI/MCP path. A real local Chinese voice checks per-request wording/source/rate/terminal state, one location watch, and cleanup. Leaflet CDN, CSP/SRI, and OSM requests retain existing behavior; network failure does not switch to a substitute. Real GPS, ORS authentication, basemap availability, speaker audibility, and OS background behavior require separate validation. Visibility scenarios use an explicit event substitute. Report and screenshot paths must not exist; the tool neither starts a service nor deploys code.
 
-摄像头页的“场景描述”区块（`scene-client.js`）：开启摄像头后点击“描述场景”（可选填最多200字的提问），
-浏览器向同源 `POST scene/describe/`（沿用 `data-api-base`，`/live/` 页即 `/scene/describe/`）发送
-`{image_jpeg_base64, language, question?, objects?}`，显示返回的 `text`；接口契约见后端 `core/scene.py` / `backend/VLM.md`。
-- 取帧：`CameraApp.latestJpeg()` 复用推流中最近一帧已编码 JPEG（640 最大边/质量0.8，≤1秒）；过期或未推流但摄像头已开启时按同一参数重新抓取一帧；摄像头未开启则提示，不申请权限。
-- objects：`CameraApp.latestBoxes()` 取最近（≤1秒）一次 HF 或常驻检测结果的 boxes（Echo 模式无检测则不带 objects），
-  映射 `score→confidence`，携带 `distance_m/direction/risk_level/motion_state/track_id`（缺失即省略，不编造），
-  按 alert_priority 降序、距离升序、置信度降序排序后截断到50。
-- 语音：仅当页面“启用语音输出”已勾选时调用共享 `SpeechOutput.speak`（语言随页面语言）；否则只显示文字。
-- 单次在途（按钮禁用）、30秒浏览器超时、不自动重试；错误按后端 `code` 显示中英文提示并附 `request_id`，不显示 `detail`。
-- 图像仅在内存中经 HTTPS 发给服务端再转发给视觉模型，不保存。结果是 AI 生成，可能有误，不能替代白手杖等。
-- 新鲜度限制：阈值为 `camera.js` 导出的 `SCENE_MAX_AGE_MS`（1000毫秒）。复用的帧与检测框可能各自最多1秒旧，且二者不一定来自同一时刻，检测框可能与图像略有错位。
-- 未预期的异常只显示通用失败文案（控制台仅记录异常类型），不展示原始异常文本。
-- 后端静态白名单 `core/camera.py::ASSETS` 必须包含 `scene-client.js`。
-### 在其他页面调用
+The fixed policy is returned in navigation_status.policy. Accuracy worse than 30 m means no progress is provided. More than 40 m from route reports off-route and clears turn instructions; the user must replan explicitly. Navigation stops after a 15-second location gap. Each watch uses high accuracy, zero cache, and a 10-second browser timeout, plus a 15-second freshness deadline for permission prompts or missing callbacks. Permission denial, unavailable location, or timeout terminates without retry or sample location. If stop fails, stop_failed is returned and the pending handle is retained for another user stop; late callbacks cannot resume navigation.
 
-```js
-import {describeScene, describeCurrentScene} from "./assets/scene-client.js";
-const {text} = await describeCurrentScene("前面能走吗？");          // 用摄像头页最近帧与检测框（摄像头未开抛 camera_unavailable）
-const r = await describeScene(jpegBytes, metadata.boxes, null, {language: "zh-CN"}); // 自带 JPEG(<=1 MiB)与框
-```
+Arrival requires remaining along-route length and straight-line destination distance both ≤15 m, with accuracy ≤15 m. Position uses local segment projection and spherical distance. Among projections within 3 m, the one closest to previous progress wins; on the first fix, the earlier segment wins. Looped/overlapping routes remain ambiguous; there is no map matching, floor detection, or obstacle avoidance. Distance uses route geometry. Estimated time is ORS total duration multiplied by the remaining-geometry fraction, not live-speed estimate, and has not been evaluated against real walking accuracy. These are new navigation defaults; original ORS requests, models, camera, and inference experiment parameters are unchanged.
 
-失败抛 `SceneApiError`（`.code/.status/.requestId`，`message` 为中文界面文案），不自动重试；`options` 含 `language/apiBase/fetchImpl/timeoutMs(30000)/signal`。新页面必须与 API 同源，其 JS 文件需加入 `backend/core/camera.py::ASSETS` 及部署清单（由后端负责，此处仅说明）。
+Navigation MCP tools navigation_start/stop/status require the map tab's session_id and are registered in full and outputs profiles; see backend/MCP.md. start.accepted=true means only that the location watch was submitted; query status for its state. A query does not trigger location. MCP cannot bypass browser-controlled location permission.
 
-`tests/scene-client.test.mjs` 用 fetch/语音/取帧替身覆盖映射、请求体、错误与语音；真实浏览器与手机未测。
+For local real-Chrome/HTTP/WS integration, use synthetic ORS/GPS; no real-device location, database writes, or GPU calls are involved. Start the single-worker ASGI/lifespan service on port 8766 with PRS_MCP_PROFILE=outputs. Set PRS_PLAYWRIGHT_PATH to the absolute Playwright package path and PYTHON to the backend interpreter, then run from frontend:
+
+    node tools/check_navigation_browser.mjs http://127.0.0.1:8766/maps/ NEW_NAVIGATION_MAP_REPORT.json
+
+The check covers MCP start/read/stop, shared UI state, off-route and arrival, late callbacks, hide cleanup, language, and 320/390/1280 px layouts. Hidden state is triggered by an explicit test substitute and does not represent OS lock-screen/background behavior. CDN/SRI/CSP checks remain real.
+
+
+## Speech Output Test and MCP
+
+The page has a separate Speech output test, off by default. It accepts text, fills English/Chinese examples, selects a device voice, supports 0.5×–2× rate and 0–1 volume, and offers Speak/Stop. It uses browser SpeechSynthesis only; it requests no microphone/camera access, creates no audio file, enables no detection alerts, and does not replace an unavailable voice. Network use is determined by the voice's localService property; UI marks native identity as [local] or [remote].
+
+The shared SpeechOutput interface in speech-output.js provides describe/voiceList/speak/stop. MCP exposes speech_status/speech_voices/speech_speak/speech_stop and requires an explicit tab. User toggles, foreground state, and real user-activation requirements remain in effect; MCP does not enable them. Text is limited to 1,000 Unicode code points. Status distinguishes submission, engine start, end, cancellation, and error. Actual speaker output requires device verification. Late callbacks from cancelled/old objects cannot update a newer request. Cancellation exceptions preserve unconfirmed state and show a clear message; no retry occurs. Text is used only for the current utterance and is not stored or logged by the app. The English UI does not translate user text or native voice names. See backend/MCP.md for parameters, machine-readable errors, and examples.
+
+For real-Chrome/UI/MCP regression, start a single-worker ASGI/lifespan service on port 8768, set PRS_PLAYWRIGHT_PATH and the backend interpreter PYTHON, then run from frontend:
+
+    node tools/check_speech_browser.mjs http://127.0.0.1:8768/live/ NEW_SPEECH_REPORT.json
+
+An explicit native-engine substitute checks UI, parameters, events, and errors while retaining real user activation and HTTP/WS paths. It checks English/Chinese switching and 320/390/1280 px layouts; it writes no database and calls no GPU. A short sample is also submitted with a real local English voice and its engine result is recorded separately; missing voice or timeout is reported. Append --native-chinese-only and use a separate output path to validate a local Chinese voice while retaining the English result. Each test selects a local voice for its declared language; tests do not substitute for one another and do not select a default or remote voice to force a pass. No result proves physical sound was heard.
+
+## Camera and Map AI Control
+
+Camera and map pages load ai-control.js and register the current tab with MCP through /ws/control/. AI can read controls/state, click, fill/select/submit, select map points, and navigate between pages; existing controllers handle business operations. After disconnection, refresh manually. Browser permission requirements remain; see backend/MCP.md.
+
+## Vibration Test and MCP
+
+The camera page adds a separate Phone vibration test, off by default. When enabled, the user can test short vibration (200 ms), long vibration (800 ms), and double vibration (150 ms / 100 ms pause / 150 ms). Stop vibration remains available whenever the API exists. vibration.js does not start the camera, access the network, enable detection alerts, or save the toggle preference.
+
+When the test is disabled, the page is hidden, or the page is exited, any accepted uncancelled request is stopped with navigator.vibrate(0). Missing API, rejection, and exception each have their own diagnostic and log entry; there is no automatic retry or substitute alert. Request accepted means only that the browser returned true; it does not prove the motor vibrated. Android Chrome and similar browsers can be tested; iPhone Safari does not support this API. Verify short, long, double, stop, and system vibration settings on a real foreground phone. Node and desktop-Chrome substitute tests verify calls and UI state only, not real hardware, lock-screen, or background behavior.
+
+MCP exposes vibration_status, vibration_test, and vibration_stop through the current tab's control connection, reusing VibrationTester. Calls must name a session explicitly. Tests preserve user toggles, foreground state, and real interaction requirements; they do not enable or retry automatically. Results use stable accepted/reason fields; see backend/MCP.md.
+
+For real HTTP/WS/Chrome integration, start the single-worker ASGI service on port 8768, set PRS_PLAYWRIGHT_PATH and the backend interpreter PYTHON, and run from frontend:
+
+    node tools/check_vibration_mcp_browser.mjs http://127.0.0.1:8768/live/ NEW_VIBRATION_MCP_REPORT.json
+
+This verifies default-off behavior, that synthetic events cannot grant user activation, all three patterns and stop after a real click, native rejection/exception, and missing API. Native vibration/media APIs are explicit substitutes; user activation and MCP HTTP/WS are real. No database is written and no GPU is called.
+
+After setting PRS_PLAYWRIGHT_PATH, run:
+
+    node tools/check_vibration_browser.mjs http://127.0.0.1:8766/live/ NEW_VIBRATION_REPORT.json
+
+Real Chrome checks support/missing/rejection/exception, default-off and stop behavior, zero media permission calls, language switching, and 320/390/1280 px layouts. JSON and phone-width-region PNG reports are produced. Native vibration and media APIs are explicitly replaced in this test, so it does not verify a real phone motor.
+
+## Local and Public Detection Modes
+
+The local integration entry defaults to http://127.0.0.1:8766/live/; a public path example is https://47.239.50.129/prs/live/. The old /prs/ entry redirects to the same page. Modes:
+
+- Echo: /ws/echo/ checks camera/network transport and returns input bytes unchanged, without detection.
+- Local CUDA: available only on the separate integration entry. /ws/detect/local/ forwards to a separate inference process using two local models, BoT-SORT, TTC/rule-based risk, and returning annotated JPEGs with object metadata.
+- Hugging Face ZeroGPU: /ws/detect/hf/ runs current video detection and returns YOLO26n-annotated JPEGs.
+
+camera.js manages media, stop state, and timing; echo-client.js validates byte-exact echo. live-detection-client.js validates binary sequence, model/80-class/original-weight SHA, boxes, JPEG SHA, computation precision, and the selected mode's session declaration on every frame. FP32 output and computation precision are identified separately. Local mode declares native FP32 CUDA and does not pretend to be HF-compiled mode. HF reads an explicit plan file; mAP decrease must be ≤0.5 percentage points on at least three separate, complete 5,000-image COCO validations. The client validates published evidence fields; this does not mean it measured mAP again.
+
+frame-pipeline.js manages capture and ordered decode/display. Camera frames have a 640 px maximum edge and JPEG quality 0.8. After the first frame completes independently, the public page allows up to 30 FPS input and at most 12 capture/transmit/display-wait jobs; a slot is obtained before capture. Before the first PRS/HF frame returns, one 512 KiB bidirectional transport warmup runs and its time counts toward that frame, adding 1 MiB total traffic. Client, PRS relay, and HF parent require the same 12-frame protocol and must be deployed together. The window includes network in-flight frames; it does not require 12 inference images to be pre-buffered.
+
+Scheduling follows a planned timeline. A late ordinary timer does not accumulate one job per missed frame. After waiting for credit or missing a full sampling interval, timing restarts; missed sampling slots are not replayed. Every five seconds and at stop, timer wake delays and credit waits are summarized separately to distinguish sampling limits from network-window limits. There is no extra 200 ms delay, stale-frame queue, automatic reconnect, or automatic mode switch.
+
+A ZeroGPU video session is limited to 55 seconds and must be restarted manually after end/error. Insufficient free quota rejects the request; model parameters and evaluation targets remain unchanged. The canvas is reused if dimensions do not change. An unsupported exact facingMode is reported clearly without switching cameras. The page API mount point accepts same-origin relative paths only; the HF token remains server-side.
+
+node --test tests/*.test.mjs runs client protocol, state, scheduling, language, and map checks. tools/benchmark_phone_browser.mjs URL FRAMES OUTPUT uses real Chrome, CameraApp, JPEG encoding, WebSocket, and decoding, with development-tree tools/fixtures/detection-sample.jpg replacing a physical sensor. The image is not deployed publicly and its original bytes are retained. The test does not represent a real phone sensor, wireless network, or final screen rendering. Add --pipeline-file PATH to compare local scheduler source and report its SHA; public deployed source is used by default.
+
+tools/profile_frame_pipeline.mjs URL OUTPUT PIPELINE_FILE [--cpu-profile] runs a real browser at 12/24 FPS with synthetic Echo delays of 0/250 ms; it does not call HF/GPU. Synthetic transport cannot replace a public inference result. CPU sampling is off by default because profiling may affect timer precision; when enabled, raw CPU profile is saved.
+
+tools/benchmark_phone_windows.mjs URL OUTPUT [--echo-delay MS] [--30fps] defaults to 12/24 FPS and 5/8-frame comparisons. By default, one real HF connection/GPU allocation runs four defined segments and retains every frame. Each segment's first frame is reported separately and fully drained. --echo-delay 300 is a zero-GPU local-source control with real Chrome encoding/decoding/HUD and synthetic transport; it is not an inference result.
+
+--30fps explicitly selects six balanced segments: 24/8, 30/8, 30/12, 30/12, 30/8, 24/8, for 606 frames (61/91/151/151/91/61). Both approximately five-second 30/12 segments are retained; comparison segments are shortened to reduce HF call time. Combined with --echo-delay, this can run a local synthetic control. Real mode uses the coordinated public 12-frame protocol.
+
+Reports include full-run FPS, completion-interval FPS over the same non-first-frame set, actual capture FPS, and total credit-wait time. Completion-interval FPS can vary with endpoint latency and does not replace original full-run latency acceptance. Before media/provider startup, the entry validates the loaded client's window. A 12-frame test against an eight-frame deployment fails before partial execution; it does not reduce the window automatically. Source fingerprint and actual limit are reported. The tool does not retry. Check the 90-second free-quota reservation before real HF runs.
+
+The backend tools/benchmark_phone_native.py launches the local native Graph benchmark and requires a fully validated eager Graph plan supplied with --plan. This native control does not load the AOT package. Public evidence is in backend/PHONE-LIVE.md. Existing map pages/modules retain their contracts.
+
+Live results support BoT-SORT fields track_id/motion_state/relative_speed_mps/smoothed_distance_m. The client validates and preserves them and displays the server-annotated JPEG with IDs, distance, and motion state, while remaining compatible with older fields. Confirmed-motion labels add signed m/s. If distance is briefly unavailable, an unexpired server-side motion estimate may remain. JSON is capped at 256 KiB, JPEG at 1 MiB, server packet at 1,310,728 bytes; coordinate releases with HF/PRS. Tracking lifecycle, mobile-motion compensation, runtime configuration, and validation limits are in backend/TRACKING.md.
+
+Results also support direction, TTC seconds, risk_score/risk_level/alert_priority/alert_required/risk_reasons. The client validates and preserves them; high/critical server annotations add concise TTC and level. Local Guidance consumes alert fields only after user activation and arbitrates speech/vibration with the navigation example; it does not rescore in the browser. Without current depth, risk is unknown and TTC is null even if motion history remains valid. Rules/defaults are in backend/RISK.md. Older packets remain compatible and metadata stays capped at 256 KiB.
+
+
+## Map Language Support and Browser Checks
+
+Camera and /prs/maps/ share a “Follow system / English / Chinese” selector and same-origin language preference. Map buttons, location/basemap status, source/accuracy, route summary, turn type, marker hints, errors, and accessibility labels update immediately with language. Returned ORS English instructions and place names remain unchanged. Switching language does not request location or another route. The release tool uploads map pages/modules and shared language resources together so map language updates are not omitted.
+
+The real-Chrome regression tool uses the development runtime's Playwright and retains TLS/SRI/CSP checks. Run from frontend with PRS_PLAYWRIGHT_PATH set to the installed Playwright package's absolute path:
+
+    node tools/check_maps_browser.mjs http://127.0.0.1:8766/maps/ NEW_MAPS_REPORT.json
+    node tools/check_maps_browser.mjs https://47.239.50.129/prs/maps/ NEW_PUBLIC_MAPS_REPORT.json --live-route
+
+Default mode uses synthetic API responses and location fixes to check language switching, errors, cross-page preference, and a 390 px layout on the real page. It outputs JSON and an English-page PNG; it does not verify real GPS, browser permission prompts, or ORS upstream. --live-route additionally makes one clearly marked real ORS request for the NUS sample route and checks that switching the existing route's language does not issue another request. Failure saves diagnostics and exits without retry or rollback.
+
+## Scene Description (Qwen2.5-VL, feat/vlm-scene)
+
+The camera page's Scene Description panel (scene-client.js) is available when the camera is on. Clicking “Describe scene” optionally accepts a question of up to 200 characters. The browser sends {image_jpeg_base64, language, question?, objects?} to same-origin POST scene/describe/ (using data-api-base; on /live/ it resolves to /scene/describe/), then displays returned text. The API contract is in backend/core/scene.py and backend/VLM.md.
+
+- Frame capture: CameraApp.latestJpeg() reuses the most recent encoded JPEG from streaming (640 px maximum edge, quality 0.8, at most one second old). If stale, or if streaming has not started while the camera is on, it captures a new frame using the same parameters. If camera is off, the UI explains this and requests no permission.
+- Objects: CameraApp.latestBoxes() reads boxes from the most recent local/HF detection within one second. Echo has no detections and omits objects. score maps to confidence; distance_m/direction/risk_level/motion_state/track_id are included when present, otherwise omitted rather than fabricated. Results are sorted by alert priority descending, distance ascending, then confidence descending, and capped at 50.
+- Speech: shared SpeechOutput.speak runs only when the page's Speech output toggle is enabled; speech follows page language. Otherwise, only text is shown.
+- Request lifecycle: one request may be in flight and the button is disabled. Browser timeout is 30 seconds; no automatic retry. Errors use bilingual UI messages selected by backend code and include request_id; detail is hidden.
+- Privacy and reliability: the image remains in memory and is sent over HTTPS to the server, then forwarded to the vision model; it is not saved. AI-generated results may be wrong and cannot replace a white cane or other mobility aid.
+- Freshness: threshold is SCENE_MAX_AGE_MS (1,000 ms), exported by camera.js. A reused frame and detection boxes may each be up to one second old and may come from different times, so boxes can be slightly misaligned with the image.
+- Unexpected errors: show a generic failure message; the console records exception type, not raw exception text.
+- Static assets: backend allowlist core/camera.py::ASSETS must include scene-client.js.
+
+### Calling from Another Page
+
+    import {describeScene, describeCurrentScene} from "./assets/scene-client.js";
+    const {text} = await describeCurrentScene("Can I walk ahead?"); // Uses the latest camera-page frame and boxes; throws camera_unavailable if the camera is off.
+    const result = await describeScene(jpegBytes, metadata.boxes, null, {language: "zh-CN"}); // Supplies JPEG (<= 1 MiB) and boxes directly.
+
+Failures throw SceneApiError with .code/.status/.requestId; message is localized UI text. There is no automatic retry. options accepts language/apiBase/fetchImpl/timeoutMs(30000)/signal. A new page must share the API origin; its JavaScript file must be added to backend/core/camera.py::ASSETS and the deployment manifest (backend-owned responsibility, documented here for completeness).
+
+tests/scene-client.test.mjs uses fetch/speech/frame-capture substitutes to cover mapping, request body, errors, and speech. Real browser and phone behavior have not been tested.

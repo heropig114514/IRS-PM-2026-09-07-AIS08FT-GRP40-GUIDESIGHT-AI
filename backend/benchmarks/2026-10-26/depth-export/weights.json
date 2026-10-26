@@ -1,0 +1,14 @@
+[
+  {
+    "filename": "yolo26n.pt",
+    "attachment_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "local_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "equal": true
+  },
+  {
+    "filename": "yolo26n-depth.pt",
+    "attachment_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "local_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "equal": true
+  }
+]

@@ -1,0 +1,557 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-22",
+  "status": "complete",
+  "distance_target": "kitti_camera_reference_z_m",
+  "scope": "Working independent E experiment; limited training, complete common validation, no A/B/C/E ranking or safety claim",
+  "environment": {
+    "torch": "2.8.0+cu126",
+    "torchvision": "0.23.0+cu126",
+    "ultralytics": "8.4.171",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "gpu_total_memory_bytes": 6441926656
+  },
+  "dataset": {
+    "schema_version": 1,
+    "distance_target": "kitti_camera_reference_z_m",
+    "raw_audit": {
+      "training": {
+        "images": 7481,
+        "calibrations": 7481,
+        "labels": 7481
+      },
+      "testing": {
+        "images": 7518,
+        "calibrations": 7518,
+        "labels": 0
+      },
+      "image_validation": "PNG CRC verification"
+    },
+    "class_mapping": {
+      "Car": "car",
+      "Pedestrian": "person"
+    },
+    "split": {
+      "method": "provided_common_object_split",
+      "files": {
+        "train.txt": "b6417a1d9b18c8fdb085128e633d28ff321b7674a6d1b3841b8f43d865b281cb",
+        "val.txt": "657ac4bcc1e156e5b106a4ca18e1f88e012787ea1d2b5d0adeea97fee903fa86"
+      },
+      "seed_used": false,
+      "source": {
+        "train": {
+          "url": "https://raw.githubusercontent.com/open-mmlab/OpenPCDet/master/data/kitti/ImageSets/train.txt",
+          "sha256": "b6417a1d9b18c8fdb085128e633d28ff321b7674a6d1b3841b8f43d865b281cb",
+          "images": 3712
+        },
+        "val": {
+          "url": "https://raw.githubusercontent.com/open-mmlab/OpenPCDet/master/data/kitti/ImageSets/val.txt",
+          "sha256": "657ac4bcc1e156e5b106a4ca18e1f88e012787ea1d2b5d0adeea97fee903fa86",
+          "images": 3769
+        }
+      },
+      "limitation": "Image-ID split; sequence-level independence is not established"
+    },
+    "splits": {
+      "train": {
+        "images": 3712,
+        "objects": 16563,
+        "classes": {
+          "person": 2207,
+          "car": 14356
+        },
+        "filter_counts": {
+          "accepted": 16563,
+          "unsupported_class:DontCare": 5399,
+          "unsupported_class:Cyclist": 734,
+          "unsupported_class:Van": 1297,
+          "unsupported_class:Truck": 488,
+          "unsupported_class:Tram": 224,
+          "unsupported_class:Misc": 337,
+          "unsupported_class:Person_sitting": 56,
+          "nonpositive_z": 1
+        },
+        "manifest_sha256": "925d25dc4ab4a5f43c32bd5de4004e0ea6ced088f4331d01e6855ba180937e0a"
+      },
+      "val": {
+        "images": 3769,
+        "objects": 16665,
+        "classes": {
+          "car": 14385,
+          "person": 2280
+        },
+        "filter_counts": {
+          "unsupported_class:Truck": 606,
+          "accepted": 16665,
+          "unsupported_class:Cyclist": 893,
+          "unsupported_class:DontCare": 5896,
+          "unsupported_class:Misc": 636,
+          "unsupported_class:Van": 1617,
+          "unsupported_class:Tram": 287,
+          "unsupported_class:Person_sitting": 166
+        },
+        "manifest_sha256": "4b42d9dc3c0ced1727faf691282fc662dbfa21e21df9ad3a2f27a9deb74256d9"
+      }
+    }
+  },
+  "training": {
+    "artifact": "models/experiments/object-distance-smoke-20261022/run.json",
+    "checkpoint": "models/experiments/object-distance-smoke-20261022/best.pt",
+    "config": {
+      "freeze_backbone": true,
+      "unfreeze_last_layers": 0,
+      "learning_rate": 0.001,
+      "batch_size": 2,
+      "epochs": 5,
+      "image_size": 640,
+      "device": "cuda:0",
+      "seed": 42,
+      "amp": true,
+      "workers": 0,
+      "roi_size": 3,
+      "hidden_dim": 128,
+      "initial_distance_m": 20.0,
+      "confidence": 0.25,
+      "match_iou": 0.5,
+      "supported_classes": [
+        "car",
+        "person"
+      ],
+      "distance_bins_m": [
+        0,
+        10,
+        20,
+        40,
+        80
+      ],
+      "cpu_threads": 1
+    },
+    "dataset": {
+      "train_images": 64,
+      "val_images": 32,
+      "train_objects": 243,
+      "val_objects": 102,
+      "train_manifest_sha256": "925d25dc4ab4a5f43c32bd5de4004e0ea6ced088f4331d01e6855ba180937e0a",
+      "val_manifest_sha256": "4b42d9dc3c0ced1727faf691282fc662dbfa21e21df9ad3a2f27a9deb74256d9"
+    },
+    "initial_gt_validation": {
+      "overall": {
+        "ground_truth_objects": 102,
+        "valid_predictions": 102,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": 0.0,
+        "mae_m": 12.411267105270834,
+        "rmse_m": 16.603435144764322,
+        "abs_rel": 0.6827074139997387
+      },
+      "class:car": {
+        "ground_truth_objects": 89,
+        "valid_predictions": 89,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": 0.0,
+        "mae_m": 13.140692670693559,
+        "rmse_m": 17.40814610733798,
+        "abs_rel": 0.6975044289361328
+      },
+      "class:person": {
+        "ground_truth_objects": 13,
+        "valid_predictions": 13,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": 0.0,
+        "mae_m": 7.417507465069111,
+        "rmse_m": 9.396717709466966,
+        "abs_rel": 0.5814047732813484
+      },
+      "range:0-10m": {
+        "ground_truth_objects": 14,
+        "valid_predictions": 14,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": 0.0,
+        "mae_m": 13.290277702467781,
+        "rmse_m": 13.49689151440953,
+        "abs_rel": 2.592661844018989
+      },
+      "range:10-20m": {
+        "ground_truth_objects": 30,
+        "valid_predictions": 30,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": 0.0,
+        "mae_m": 4.6559951146443685,
+        "rmse_m": 5.639046228230976,
+        "abs_rel": 0.3670845517790806
+      },
+      "range:20-40m": {
+        "ground_truth_objects": 40,
+        "valid_predictions": 40,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": 0.0,
+        "mae_m": 8.849650716781616,
+        "rmse_m": 10.259433168408174,
+        "abs_rel": 0.2839775517171923
+      },
+      "range:40-80m": {
+        "ground_truth_objects": 18,
+        "valid_predictions": 18,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": 0.0,
+        "mae_m": 32.567748599582245,
+        "rmse_m": 33.668502278112506,
+        "abs_rel": 0.6092917660915216
+      },
+      "range:80-infm": {
+        "ground_truth_objects": 0,
+        "valid_predictions": 0,
+        "missing_predictions": 0,
+        "missing_prediction_ratio": null,
+        "mae_m": null,
+        "rmse_m": null,
+        "abs_rel": null
+      }
+    },
+    "best_gt_val_mae_m": 4.616913713660895,
+    "epoch_curve": [
+      {
+        "epoch": 1.0,
+        "steps": 32.0,
+        "train_loss_m": 9.62488125871729,
+        "val_mae_m": 5.432225379289365,
+        "val_rmse_m": 7.604080053435567
+      },
+      {
+        "epoch": 2.0,
+        "steps": 64.0,
+        "train_loss_m": 5.272529351367872,
+        "val_mae_m": 4.67930527528127,
+        "val_rmse_m": 6.8231360857364045
+      },
+      {
+        "epoch": 3.0,
+        "steps": 96.0,
+        "train_loss_m": 4.373423601128928,
+        "val_mae_m": 4.616913713660895,
+        "val_rmse_m": 6.555049612205365
+      },
+      {
+        "epoch": 4.0,
+        "steps": 128.0,
+        "train_loss_m": 3.7823353382785623,
+        "val_mae_m": 5.167389446613836,
+        "val_rmse_m": 7.018795876848235
+      },
+      {
+        "epoch": 5.0,
+        "steps": 160.0,
+        "train_loss_m": 3.541393465711256,
+        "val_mae_m": 5.133393977202621,
+        "val_rmse_m": 6.966815908218034
+      }
+    ],
+    "training_iterations": 160,
+    "optimizer_updates_verified_from_last_checkpoint": 156,
+    "amp_overflow_skips_verified_from_last_checkpoint": 4,
+    "best_checkpoint_iterations": 96,
+    "best_checkpoint_optimizer_updates": 92,
+    "optimizer_step_audit": "Post-hoc checkpoint audit; the original smoke preceded per-step AMP counters",
+    "parameters": {
+      "detector": 2572280,
+      "distance_head": 517377,
+      "total": 3089657,
+      "trainable": 517377
+    },
+    "feature_sources": [
+      16,
+      19,
+      22
+    ],
+    "feature_channels": [
+      64,
+      128,
+      256
+    ],
+    "detector_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "detector_state_unchanged": true,
+    "detector_initial_state_sha256": "fe9c8a53c717441416014c519d6ba771fef5722f4040b1d23eff97f0bbcc0907",
+    "detector_final_state_sha256": "fe9c8a53c717441416014c519d6ba771fef5722f4040b1d23eff97f0bbcc0907",
+    "peak_gpu_memory_bytes": 122548736,
+    "elapsed_s": 55.618076400016434
+  },
+  "amp_counter_validation": {
+    "iterations": 8,
+    "optimizer_updates": 6,
+    "amp_overflow_skipped_updates": 2,
+    "detector_state_unchanged": true
+  },
+  "full_common_validation": {
+    "gt": {
+      "bbox_evaluation": "gt",
+      "distance_target": "kitti_camera_reference_z_m",
+      "split_manifest_sha256": "4b42d9dc3c0ced1727faf691282fc662dbfa21e21df9ad3a2f27a9deb74256d9",
+      "evaluated_images": 3769,
+      "metrics": {
+        "overall": {
+          "ground_truth_objects": 16665,
+          "valid_predictions": 16665,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 4.337169814444289,
+          "rmse_m": 6.003364991564884,
+          "abs_rel": 0.34006727806577713
+        },
+        "class:car": {
+          "ground_truth_objects": 14385,
+          "valid_predictions": 14385,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 3.953124839782715,
+          "rmse_m": 5.5462565922931635,
+          "abs_rel": 0.31330145617029875
+        },
+        "class:person": {
+          "ground_truth_objects": 2280,
+          "valid_predictions": 2280,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 6.760190411157775,
+          "rmse_m": 8.32762994246662,
+          "abs_rel": 0.5089384833142228
+        },
+        "range:0-10m": {
+          "ground_truth_objects": 2906,
+          "valid_predictions": 2906,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 4.320866336999725,
+          "rmse_m": 5.535707856820964,
+          "abs_rel": 1.1624088431022757
+        },
+        "range:10-20m": {
+          "ground_truth_objects": 4580,
+          "valid_predictions": 4580,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 3.359414484074022,
+          "rmse_m": 4.946498495047164,
+          "abs_rel": 0.22756648326006929
+        },
+        "range:20-40m": {
+          "ground_truth_objects": 6138,
+          "valid_predictions": 6138,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 3.912960203580338,
+          "rmse_m": 5.165881118137849,
+          "abs_rel": 0.14162914611335345
+        },
+        "range:40-80m": {
+          "ground_truth_objects": 3037,
+          "valid_predictions": 3037,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 6.6591870143188245,
+          "rmse_m": 8.767483382399792,
+          "abs_rel": 0.12398041881029868
+        },
+        "range:80-infm": {
+          "ground_truth_objects": 4,
+          "valid_predictions": 4,
+          "missing_predictions": 0,
+          "missing_prediction_ratio": 0.0,
+          "mae_m": 23.669588317871092,
+          "rmse_m": 23.704523197571774,
+          "abs_rel": 0.2895917023011564
+        }
+      },
+      "matched_ground_truth": 16665,
+      "unmatched_predictions": 0,
+      "matching": "aligned_GT_slots",
+      "match_iou": 0.5,
+      "confidence": 0.25,
+      "parameters": {
+        "detector": 2572280,
+        "distance_head": 517377,
+        "total": 3089657,
+        "trainable": 517377
+      },
+      "artifact": "model_tests/outputs/object-distance-full-val-20261022/gt_metrics.json"
+    },
+    "predicted": {
+      "bbox_evaluation": "predicted",
+      "distance_target": "kitti_camera_reference_z_m",
+      "split_manifest_sha256": "4b42d9dc3c0ced1727faf691282fc662dbfa21e21df9ad3a2f27a9deb74256d9",
+      "evaluated_images": 3769,
+      "metrics": {
+        "overall": {
+          "ground_truth_objects": 16665,
+          "valid_predictions": 11085,
+          "missing_predictions": 5580,
+          "missing_prediction_ratio": 0.33483348334833485,
+          "mae_m": 3.300806960507239,
+          "rmse_m": 4.390035863788923,
+          "abs_rel": 0.2573839166967256
+        },
+        "class:car": {
+          "ground_truth_objects": 14385,
+          "valid_predictions": 9973,
+          "missing_predictions": 4412,
+          "missing_prediction_ratio": 0.3067083767813695,
+          "mae_m": 3.1566050896070363,
+          "rmse_m": 4.1885456523764475,
+          "abs_rel": 0.23966041234696267
+        },
+        "class:person": {
+          "ground_truth_objects": 2280,
+          "valid_predictions": 1112,
+          "missing_predictions": 1168,
+          "missing_prediction_ratio": 0.512280701754386,
+          "mae_m": 4.594085070658073,
+          "rmse_m": 5.896991816353222,
+          "abs_rel": 0.4163376117328638
+        },
+        "range:0-10m": {
+          "ground_truth_objects": 2906,
+          "valid_predictions": 2544,
+          "missing_predictions": 362,
+          "missing_prediction_ratio": 0.12456985547143841,
+          "mae_m": 3.244530967024138,
+          "rmse_m": 3.8084687018027537,
+          "abs_rel": 0.6700071517773662
+        },
+        "range:10-20m": {
+          "ground_truth_objects": 4580,
+          "valid_predictions": 3376,
+          "missing_predictions": 1204,
+          "missing_prediction_ratio": 0.262882096069869,
+          "mae_m": 2.397377437132795,
+          "rmse_m": 3.4448630278841565,
+          "abs_rel": 0.1620356801158364
+        },
+        "range:20-40m": {
+          "ground_truth_objects": 6138,
+          "valid_predictions": 3749,
+          "missing_predictions": 2389,
+          "missing_prediction_ratio": 0.38921472792440537,
+          "mae_m": 3.388110274149278,
+          "rmse_m": 4.347043885205107,
+          "abs_rel": 0.12129542708737456
+        },
+        "range:40-80m": {
+          "ground_truth_objects": 3037,
+          "valid_predictions": 1416,
+          "missing_predictions": 1621,
+          "missing_prediction_ratio": 0.5337504115903853,
+          "mae_m": 5.324708143762275,
+          "rmse_m": 6.818267728663904,
+          "abs_rel": 0.10369598180787622
+        },
+        "range:80-infm": {
+          "ground_truth_objects": 4,
+          "valid_predictions": 0,
+          "missing_predictions": 4,
+          "missing_prediction_ratio": 1.0,
+          "mae_m": null,
+          "rmse_m": null,
+          "abs_rel": null
+        }
+      },
+      "matched_ground_truth": 11085,
+      "unmatched_predictions": 6686,
+      "matching": "same_class_highest_IoU_first",
+      "match_iou": 0.5,
+      "confidence": 0.25,
+      "parameters": {
+        "detector": 2572280,
+        "distance_head": 517377,
+        "total": 3089657,
+        "trainable": 517377
+      },
+      "artifact": "model_tests/outputs/object-distance-full-val-20261022/predicted_metrics.json"
+    }
+  },
+  "performance": {
+    "artifact": "model_tests/outputs/object-distance-isolated-benchmark-20261022.json",
+    "scope": "Single-image sequential benchmark after full validation; no other task-owned GPU job ran concurrently; excludes file decode/render/network",
+    "inference_batch_size": 1,
+    "amp": true,
+    "image_size": 640,
+    "load_ms": 1848.392200015951,
+    "cold_first_call": {
+      "detection_ms": 9069.080099987332,
+      "distance_ms": 491.4928000071086,
+      "distance_head_ms": 387.9066000226885,
+      "end_to_end_ms": 9586.057400039863,
+      "fps": 0.10431817360032099
+    },
+    "warmup_calls": 3,
+    "steady_latency": {
+      "frames": 30,
+      "detection_ms": {
+        "mean": 56.91863000004863,
+        "p50": 49.77985002915375,
+        "p95": 75.75190500065216
+      },
+      "distance_ms": {
+        "mean": 6.493536662310362,
+        "p50": 5.693849991075695,
+        "p95": 9.956339982454663
+      },
+      "distance_head_ms": {
+        "mean": 4.954133332163717,
+        "p50": 4.328250040998682,
+        "p95": 8.273439991171468
+      },
+      "end_to_end_ms": {
+        "mean": 78.20922666190502,
+        "p50": 72.51304999226704,
+        "p95": 101.55415999761317
+      },
+      "fps": 12.78621516516146
+    },
+    "peak_gpu_memory_bytes": 64757248,
+    "limitations": "Full-validation timing is observational; an initial separate prediction probe overlapped startup. Use this separate sequential benchmark for stage timing; no cross-method acceleration ratio."
+  },
+  "checks": {
+    "backend": {
+      "passed": 347,
+      "failed": 0,
+      "new_e_tests": 17
+    },
+    "frontend_default": {
+      "passed": 365,
+      "failed": 1,
+      "failure": "Unchanged agent.test.mjs mocks lazily initialized global WebSocket under Node22.11"
+    },
+    "frontend_native_websocket_initialized": {
+      "passed": 366,
+      "failed": 0,
+      "command": "node --import \"data:text/javascript,void%20globalThis.WebSocket\" --test tests/*.test.mjs",
+      "note": "Accesses the original built-in; does not replace WebSocket, skip assertions or modify frontend source"
+    },
+    "django_check": "passed",
+    "migration_dry_run": "no changes",
+    "ruff": "passed",
+    "pip_check": "passed",
+    "git_diff_check": "passed",
+    "production_sources_byte_identical_to_head": [
+      "realtime/detector.py",
+      "realtime/distance.py",
+      "realtime/distance_config.py",
+      "realtime/depth.py",
+      "zerogpu/runtime.py",
+      "core/detector.py",
+      "model_tests/run_depth.py"
+    ],
+    "data_checkpoints_logs_ignored": true,
+    "external_full_prediction_rescore_exactly_equal": true,
+    "comments_and_indexes": "reviewed"
+  },
+  "not_validated": [
+    "Full3712-image training beyond smoke subset",
+    "GPU partial-feature training beyond CPU gradient test",
+    "A/B/C/E fair accuracy/latency comparison with aligned target and preprocessing",
+    "Physical nearest-surface distance, phone alerts, tracking/TTC/risk integration",
+    "Teammate real future checkpoint; compatibility rejection/identity paths are tested"
+  ],
+  "git_commit_created": false,
+  "deployed": false
+}

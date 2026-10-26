@@ -1,32 +1,22 @@
-# 可切换目标测距
+# Selectable Object-Distance Modes
 
-`distance_mode` 默认是 `depth`，保留原 YOLO26 检测、YOLO26-Depth 和 ROI 中位数算法。
-新增模式复用原检测、BoT-SORT、运动估计、Risk Assessment、标注和二进制接口。
-Web/中台负责转发，测距模式由 GPU 进程启动配置选择；切换后重启推理进程/会话。
+`distance_mode` defaults to `depth`, preserving the original YOLO26 detector, YOLO26-Depth model, and ROI median algorithm. Added modes reuse the existing detector, BoT-SORT, motion estimation, risk assessment, annotations, and binary interface. Web/integration forwards requests; the GPU process selects the distance mode at startup. Restart the inference process/session after changing modes.
 
-## 数据流与输出
+## Data Flow and Output
 
-| 模式 | 距离阶段 | Depth 权重/调用 | 下游 |
+| Mode | Distance stage | Depth weights/calls | Downstream |
 |---|---|---|---|
-| A `depth` | 每帧原图 bbox 内正有限深度的中位数 | 加载一次，每帧调用 | 原跟踪运动、TTC、风险、Guidance |
-| B `geometry` | `fy_px * object_height_m / bbox_height_px` | 不读取、不加载、不激活、不调用 | 使用相同距离字段 |
-| C `temporal_depth` | Depth 帧调用 A 的融合；其余帧按 Track ID 取 Last Valid Distance | 加载一次，首帧及每隔 N 帧调用 | 使用相同距离字段；缓存值不计为新运动测量 |
+| A `depth` | Median of positive finite depth inside each original-frame bounding box | Load once; call on every frame | Existing tracking, motion, TTC, risk, and Guidance |
+| B `geometry` | `fy_px * object_height_m / bbox_height_px` | Not read, loaded, initialized, or called | Same distance fields |
+| C `temporal_depth` | Run A's fusion on Depth frames; use Last Valid Distance by Track ID on other frames | Load once; call on the first frame and every N frames | Same distance fields; cached values are not new motion measurements |
 
-共同链路：JPEG → 原检测/反 letterbox → BoT-SORT 关联 → 所选距离策略 →
-原运动历史 → 原 TTC/风险 → 标注 JPEG 和对象元数据。CLI 独立照片可以关闭跟踪；C 必须开启。
-检测模型、检测精度、输入640、confidence0.25、JPEG80及深度模型768/FP32均沿用原配置。
+Shared path: JPEG → original detection/unletterboxing → BoT-SORT association → selected distance strategy → existing motion history → original TTC/risk → annotated JPEG and object metadata. Tracking may be disabled for independent CLI photos; mode C requires it. Detector model, detection precision, input size 640, confidence 0.25, JPEG quality 80, and depth model size 768/FP32 remain unchanged.
 
-对象沿用 `class_id/label/score/xyxy`，测距输出沿用
-`class_name/confidence/bbox/distance_m`，跟踪时仍有 `track_id` 等运动/风险字段。
-单位为米，缺失距离为 JSON `null`，不新增替代性的 `distance` 字段。
-B/C 另加 `distance_source`：`geometry`、`depth`、`cached` 或 `unavailable`。
-A 的对象字段不变。B 的帧元数据使用 `distance_estimator: pinhole-height-v1`，不声明 `depth_model`。
-浏览器仅增加所选策略的标识校验；Guidance、语音/振动调度及风险规则无需修改。
+Objects retain `class_id/label/score/xyxy`; distance output retains `class_name/confidence/bbox/distance_m`; tracked objects also retain `track_id` and other motion/risk fields. Units are meters. Missing distance is JSON `null`; no substitute `distance` field is added. Modes B/C also set `distance_source` to `geometry`, `depth`, `cached`, or `unavailable`. Mode A's object fields are unchanged. Mode B frame metadata uses `distance_estimator: pinhole-height-v1` and does not declare `depth_model`. The browser adds validation for the selected strategy identifier only; Guidance, speech/vibration scheduling, and risk rules do not need modification.
 
-## 配置
+## Configuration
 
-集中默认值在 [distance_config.py](realtime/distance_config.py)，可编辑的完整 JSON 示例在
-[models/distance-config.json](models/distance-config.json)。文件默认示例仍选择 A：
+Centralized defaults are in [distance_config.py](realtime/distance_config.py); the editable full JSON example is [models/distance-config.json](models/distance-config.json). The file's default example still selects mode A:
 
 ```json
 {
@@ -41,127 +31,76 @@ A 的对象字段不变。B 的帧元数据使用 `distance_estimator: pinhole-h
 }
 ```
 
-配置文件需要通过 `--distance-config` 或 `PRS_DISTANCE_CONFIG` 显式选择。
-优先级：集中默认值 < JSON 文件 < 环境变量 < CLI 参数。
-`PRS_DISTANCE_CONFIG` 的相对路径按 backend 根目录解析；CLI 显式文件路径按当前终端目录解析。
-`PRS_DISTANCE_MODE` 覆盖模式；`PRS_DEPTH_INTERVAL` 覆盖 C 的间隔。
-无效模式、非正整数间隔、无效焦距/高度和未知 JSON 参数直接报错。
+Select a configuration file explicitly with `--distance-config` or `PRS_DISTANCE_CONFIG`. Precedence is centralized defaults < JSON file < environment variables < CLI arguments. Relative paths in `PRS_DISTANCE_CONFIG` resolve from the backend root; explicit CLI file paths resolve from the current terminal directory. `PRS_DISTANCE_MODE` overrides the mode; `PRS_DEPTH_INTERVAL` overrides the interval for C. Invalid modes, non-positive/non-integer intervals, invalid focal lengths/heights, and unknown JSON parameters raise errors directly.
 
-`focal_length_px` 是参考图像宽度 `reference_width_px` 下的**垂直焦距 fy**，不是毫米焦距。
-因为 bbox 属于当前解码画面而非检测器的 letterbox 方图，实际使用
+`focal_length_px` is the **vertical focal length fy** for reference image width `reference_width_px`, not a focal length in millimeters. Because bounding boxes belong to the current decoded frame rather than the detector's letterboxed square image, the effective value is
 `fy_current = focal_length_px * frame_width / reference_width_px`。
-真实标定的内参 `K[1,1]` 可以直接填入该配置，并把参考宽度设为标定图像宽度。
-缩放假设画面保持宽高比且没有裁剪；有裁剪/旋转的摄像头应使用对应输出画面的标定参数。
-默认700px及类别高度只是实验假设；姿态、车辆型号、遮挡和截断会影响 B 的距离。
-不在高度表中的类别，以及无效、空、越界 bbox 返回 `null`；不会猜测其他类别高度。
-高度表按整个字典替换，方便显式限制参与实验的类别。
+The calibrated camera intrinsic `K[1,1]` can be used directly by setting the reference width to the calibration image width. Scaling assumes the frame retains its aspect ratio and is not cropped; cameras that crop or rotate should use calibration parameters for the corresponding output image. The default 700-pixel focal length and class heights are experimental assumptions; pose, vehicle model, occlusion, and truncation affect mode B's distances. Classes absent from the height table and invalid, empty, or out-of-bounds boxes return `null`; other class heights are not guessed. The height table replaces the entire dictionary, allowing an experiment to explicitly restrict participating classes.
 
-## 分别运行 A/B/C
+## Run Modes A/B/C Separately
 
-从 `backend` 运行，`$gpuPython` 选择已安装固定 CUDA 推理依赖的解释器。
-现有分离式部署通常为 `.venv-inference`；组合开发环境可使用已有 `.venv`。
-不需要为本功能安装新依赖。输出目录必须尚不存在。
+Run from `backend`; `$gpuPython` selects the interpreter with the pinned CUDA inference dependencies installed. Existing split deployments typically use `.venv-inference`; a combined development environment may use the existing `.venv`. This feature requires no new dependencies. The output directory must not already exist.
 
 ```powershell
 $gpuPython = '.\.venv-inference\Scripts\python.exe'
 
-# A：原方案；不传 --distance-mode 时默认也是 A
+# A: original mode; omitting --distance-mode also defaults to A
 & $gpuPython -X utf8 -m model_tests.run_depth --distance-mode depth --track --repeat 9 --output model_tests/outputs/abc-a
 
-# B：显式配置焦距/类别高度；不需要 Depth 权重
+# B: explicitly configure focal length/class heights; Depth weights are not required
 & $gpuPython -X utf8 -m model_tests.run_depth --distance-config models/distance-config.json --distance-mode geometry --track --repeat 9 --output model_tests/outputs/abc-b
 
-# C：首帧、第四帧、第七帧……调用 Depth
+# C: call Depth on frames 1, 4, 7, ...
 & $gpuPython -X utf8 -m model_tests.run_depth --distance-mode temporal_depth --depth-interval 3 --track --repeat 9 --output model_tests/outputs/abc-c
 
-# C 每帧 Depth，与 A 使用相同测量/融合及下游算法
+# C with Depth on every frame, using the same measurement/fusion and downstream algorithms as A
 & $gpuPython -X utf8 -m model_tests.run_depth --distance-mode temporal_depth --depth-interval 1 --track --repeat 9 --output model_tests/outputs/abc-c1
 ```
 
-`depth_interval=2/3/5` 分别隔2/3/5帧推理；只对 C 生效，A 始终每帧 Depth。
-`--input <连续同尺寸RGB帧目录>` 可替换随附样例；排序及 CLI 时钟沿用原实现。
-不同照片/相机应分别运行；静态重复仅用于检查接口，不证明视频运动精度。
+`depth_interval=2/3/5` runs inference every 2/3/5 frames and applies only to C; A always runs Depth on every frame. `--input <directory-of-consecutive-same-size-RGB-frames>` can replace the bundled sample; ordering and the CLI clock retain their original implementation. Run different photos/cameras separately. Repeated static images check the interface only and do not establish video-motion accuracy.
 
-本地浏览器实时/视频入口也使用同一配置。启动前在 PowerShell 设置，例如：
+The local browser live/video entries use the same configuration. Set the environment variables in PowerShell before startup, for example:
 
 ```powershell
 $env:PRS_DISTANCE_CONFIG = 'models/distance-config.json'
-$env:PRS_DISTANCE_MODE = 'geometry'       # A: depth；C: temporal_depth
-$env:PRS_DEPTH_INTERVAL = '3'             # C 可改为 1、2、3、5
+$env:PRS_DISTANCE_MODE = 'geometry'       # A: depth; C: temporal_depth
+$env:PRS_DEPTH_INTERVAL = '3'             # C can use 1, 2, 3, or 5
 .\.venv\Scripts\python.exe -B -m tools.run_local_mvp
 ```
 
-按原 [LOCAL-MVP.md](LOCAL-MVP.md) 准备独立环境后，打开 `/live/` 或 `/integration/video/`。
-启动器继承这些进程环境变量；B 的预检只要求检测权重；A/C 仍要求两份权重。
-单独启动 `integration.inference.asgi:application` 也读取同样环境变量。
-推理 worker 不读取 Django `.env`，请设置进程变量或显式传配置文件。
-模式在整个 worker 生命周期固定，避免会话中途混用距离、运动缓存和风险来源。
+Prepare the separate environment as described in [LOCAL-MVP.md](LOCAL-MVP.md), then open `/live/` or `/integration/video/`. The launcher passes these process environment variables through. Mode B preflight requires detector weights only; A/C still require both weight files. Starting `integration.inference.asgi:application` separately reads the same environment variables. The inference worker does not read Django `.env`; set process variables or pass a configuration file explicitly. The mode remains fixed for the worker's lifetime to prevent distance, motion-cache, and risk sources from being mixed within a session.
 
-HF Space 使用同名环境变量；A/C 继续需要原 `PRS_DEPTH_WEIGHTS`。
-B 即使保留该变量也不会构造 DepthEstimator。HF 未配置深度权重且未选 B/C 时，
-仍保留旧的 detection-only 行为；C 缺少深度权重会启动失败。
-源码 staging allowlist 已包含新增模块和 JSON；此功能不自动部署或设置远端变量。
+HF Space uses the same environment variables; A/C continue to require the original `PRS_DEPTH_WEIGHTS`. Mode B does not construct a DepthEstimator even if that variable is present. If HF has no depth weights configured and B/C is not selected, the existing detection-only behavior remains; C fails at startup without depth weights. The source-staging allowlist includes the new module and JSON file; this feature does not deploy or set remote variables automatically.
 
-## C 的时序缓存
+## Mode C Temporal Cache
 
-`TemporalDepthCache` 持有 `track_id -> TemporalDepthEntry`，字段包括
-`last_distance/last_depth_frame/timestamp/class_name`，不保留稠密 Depth Map。
-只写入 Depth 帧的正有限距离；非 Depth 帧只读取最近一次有效值。
-Depth 帧当前无效时输出 `null`，保留先前有效记录供后续非 Depth 帧使用。
-新目标/没有 ID/还没有测量的目标输出 `null`，等待下一 Depth 帧。
+`TemporalDepthCache` stores `track_id -> TemporalDepthEntry`, with fields `last_distance`, `last_depth_frame`, `timestamp`, and `class_name`. It does not retain dense depth maps. Only positive finite distances from Depth frames are written; non-Depth frames read the most recent valid value. If the current Depth frame is invalid, the output is `null` while the previous valid record remains available to later non-Depth frames. New targets, targets without IDs, and targets without a measurement produce `null` until the next Depth frame.
 
-当前帧中消失的 ID 立即移除，重新出现也要等待新测量；类别改变会清除对应项。
-显式 tracker reset 改变 epoch，新会话或画面尺寸变化清空全部缓存并重新以 Depth 帧开始。
-tracker 失败输出空 ID，缓存随之清除。缓存只与当前可见目标数量有关。
-性能统计也在 tracker epoch 改变时重新计数。
+IDs absent from the current frame are removed immediately; if they reappear, they must wait for a new measurement. A class change clears the corresponding entry. An explicit tracker reset changes the epoch. A new session or frame-size change clears the entire cache and restarts with a Depth frame. A tracker failure returns empty IDs and clears the cache. Cache size depends only on the number of currently visible targets. Performance counters also reset when the tracker epoch changes.
 
-缓存值用 `distance_source=cached` 标识。运动模块依然接收原有对象接口，但不会把缓存值
-追加到距离/时间样本队列；避免在静止复制值之间生成虚假的速度测量。
-原运动历史超时机制继续生效：有效 Depth 间隔超过默认2秒时可能回到 unknown，直到积累
-足够的新测量。风险按原规则消费当前距离及已有运动估计；C 的缓存会带来响应滞后。
-插值、速度预测和 Kalman Filter 尚未实现，可在缓存/策略接口内扩展。
+Cached values are marked `distance_source=cached`. The motion module still receives the original object interface, but cached values are not appended to the distance/time sample queue; this prevents repeated stationary copies from creating false velocity measurements. The original motion-history timeout remains active: if valid Depth measurements are more than the default 2 seconds apart, state may return to `unknown` until enough new measurements accumulate. Risk consumes the current distance and existing motion estimate under the original rules; mode C's cache introduces response lag. Interpolation, velocity prediction, and Kalman filtering are not implemented and can be added through the cache/strategy interface.
 
-## 性能记录和实验边界
+## Performance Records and Experimental Boundaries
 
-保留原 `inference_ms/forward_event_ms/depth_ms/tracking_ms/risk_ms/server_ms` 的含义。
-新增帧字段：
+The original meanings of `inference_ms/forward_event_ms/depth_ms/tracking_ms/risk_ms/server_ms` are retained. The following per-frame fields are added:
 
-| 字段 | 范围 |
+| Field | Scope |
 |---|---|
-| `detection_ms` | JPEG 解码、预处理、检测、bbox 解码，含首帧 Graph 设置 |
-| `distance_ms` | A 的深度推理/融合；B 的几何计算；C 的深度/缓存阶段 |
-| `end_to_end_ms` | worker 从解码到完成标注，与 `server_ms` 相同 |
-| `fps` | `1000 / end_to_end_ms`，单帧处理速率 |
-| `depth_frame` | 当前是否实际调用 Depth 模型 |
-| `depth_interval` | 实际策略间隔：A=1，B=0，C=所配置 N |
+| `detection_ms` | JPEG decoding, preprocessing, detection, and bounding-box decoding, including first-frame Graph setup |
+| `distance_ms` | Depth inference/fusion for A; geometric calculation for B; depth/cache stage for C |
+| `end_to_end_ms` | Worker time from decode to completed annotation; same as `server_ms` |
+| `fps` | `1000 / end_to_end_ms`, per-frame processing rate |
+| `depth_frame` | Whether the Depth model was actually called for this frame |
+| `depth_interval` | Actual strategy interval: A=1, B=0, C=configured N |
 
-`performance` 提供 `total_frames/depth_model_calls/actual_depth_inference_ratio`、
-`average_detection_ms/average_distance_ms/average_end_to_end_ms/fps`，以及
-`depth_frame_count/non_depth_frame_count/average_depth_frame_ms/average_non_depth_frame_ms`。
-累计 FPS 是 `1000 * total_frames / sum(end_to_end_ms)`，不是逐帧 FPS 的平均值。
-空分组的平均耗时为 `null`。C 的首帧必做 Depth，因此有限长度序列调用率为
-`ceil(frames/N)/frames`，长序列趋近 `1/N`。
+`performance` provides `total_frames/depth_model_calls/actual_depth_inference_ratio`, `average_detection_ms/average_distance_ms/average_end_to_end_ms/fps`, and `depth_frame_count/non_depth_frame_count/average_depth_frame_ms/average_non_depth_frame_ms`. Aggregate FPS is `1000 * total_frames / sum(end_to_end_ms)`, not the mean of per-frame FPS. Empty groups have `null` average duration. Because C always runs Depth on the first frame, the call ratio for a finite sequence is `ceil(frames/N)/frames`; for a long sequence it approaches `1/N`.
 
-统计仅用常数大小的计数与求和，不增加逐帧日志或 I/O，不剔除冷启动帧。
-沿用已有 GPU 同步边界：检测 runner 返回 CPU 结果，深度融合返回距离标量后计时。
-这里的 end-to-end 是服务端流水线时间，不包括网络、输入节奏、模型加载、校验元数据、
-磁盘保存或浏览器显示。实际浏览器耗时/送达 FPS 继续使用现有 frame-pipeline 统计。
+Statistics use only constant-size counts and sums; they add no per-frame logging or I/O and do not exclude cold-start frames. Existing GPU synchronization boundaries remain: detection is timed when the runner returns CPU results, and depth fusion when it returns a distance scalar. Here, end-to-end means server pipeline time and excludes network, input pacing, model loading, metadata validation, disk writes, and browser display. Actual browser duration/delivered FPS remain covered by existing frame-pipeline statistics.
 
-CLI 每帧保存在 `results.jsonl.metadata`，最终累计摘要保存在 `run.json.performance`；
-有效策略/相机参数和模型哈希也写入 `run.json`。B 的深度哈希和路径为 `null`。
-比较精度需要独立的距离真值；单图 smoke test 和调用次数不能证明物理准确率或持续视频 FPS。
+CLI stores each frame in `results.jsonl.metadata` and the final aggregate summary in `run.json.performance`. Effective strategy/camera parameters and model hashes are also written to `run.json`. Mode B's depth hash and path are `null`. Accuracy comparisons require independent distance ground truth; a single-image smoke test and call count do not prove physical accuracy or sustained-video FPS.
 
-## 实现位置与检查
+## Implementation and Checks
 
-`realtime/distance.py` 封装几何、TemporalDepthCache 与策略调度；
-`realtime/distance_config.py` 管理配置；`realtime/performance.py` 管理统计。
-`ResidentDetector` 只将原深度阶段委托给策略；`realtime/depth.py` 原算法不变。
-本地/ZeroGPU 构造器及 CLI 按模式选择是否加载 Depth 模型。
-本地握手/浏览器校验增加显式 B/C 分支，仍要求原检测身份、跟踪、风险及采集时钟。
+`realtime/distance.py` encapsulates geometry, `TemporalDepthCache`, and strategy scheduling. `realtime/distance_config.py` manages configuration; `realtime/performance.py` manages statistics. `ResidentDetector` delegates only the original depth stage to the strategy; the algorithm in `realtime/depth.py` is unchanged. Local/ZeroGPU constructors and the CLI select whether to load the Depth model based on mode. Local handshake/browser validation adds explicit B/C branches while retaining the original detector identity, tracking, risk, and capture-clock requirements.
 
-从 backend 运行 `python manage.py check`、
-`python manage.py makemigrations --check --dry-run`、`python manage.py test`、`ruff check .`；
-前端运行 `node --test tests/*.test.mjs`。
-`core.test_distance_modes` 检查公式/缩放/缺失值、A 融合兼容、C 调用间隔1/2/3/5、
-新旧 ID 隔离/epoch/几何重置、缓存与运动样本隔离、B 不加载 Depth、协议和统计。
-真实 GPU、手机、HF 与真值实验需要分别验证，单元测试不替代这些验证。
+From `backend`, run `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py test`, and `ruff check .`; from `frontend`, run `node --test tests/*.test.mjs`. `core.test_distance_modes` checks formulas/scaling/missing values, compatibility of A's fusion, C intervals 1/2/3/5, old/new ID isolation, epoch and geometry resets, separation of cache from motion samples, no Depth loading in B, protocol behavior, and statistics. Real GPU, phone, HF, and ground-truth experiments require separate validation; unit tests do not replace them.

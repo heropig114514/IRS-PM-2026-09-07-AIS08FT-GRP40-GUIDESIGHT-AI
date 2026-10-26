@@ -1,9 +1,9 @@
 <!doctype html>
-<!-- Responsibilities: OSM 位置、ORS 步行路线和持续导航界面。
-Implementation: 固定 Leaflet 1.9.4/SRI；先安装共享语言控制，再初始化地图；加载 AI 控制桥及默认关闭的独立导航语音连接层；明确定位、选点、示例和规划；nonce 由 core.maps 替换。
-Related Modules: i18n.js, translations.js, maps-client.js, maps-page.js, navigation-ui.js, ai-control.js, speech-output.js, integration/maps-navigation-speech.js, camera.css, core.maps/services。
-Declaration Index: None。
-Variable Index: __CSP_NONCE__ — CSS nonce；language — 语言偏好；表单 id 供控制器引用；navigation-* — 导航按钮/状态；Leaflet URL/integrity — 固定依赖。 -->
+<!-- Responsibilities: Present OSM location, ORS walking routes and continuous navigation.
+Implementation: Pin Leaflet 1.9.4/SRI; install shared language controls before maps; load the AI bridge and separate navigation speech wiring, disabled by default; require explicit location, selection, sample and planning actions; core.maps substitutes the nonce.
+Related Modules: agent-client.js/agent.css (voice/text assistant), i18n.js, translations.js, maps-client.js, maps-page.js, navigation-ui.js, ai-control.js, speech-output.js, integration/maps-navigation-speech.js, camera.css, core.maps/services.
+Declaration Index: None.
+Variable Index: __CSP_NONCE__ — CSS nonce; language — preference; form IDs — controller bindings; navigation-* — navigation buttons/status; Leaflet URL/integrity — pinned dependency. -->
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
@@ -11,6 +11,8 @@ Variable Index: __CSP_NONCE__ — CSS nonce；language — 语言偏好；表单
     <title>PRS · 步行路线测试</title>
     <link rel="stylesheet" href="../assets/camera.css" />
     <link rel="stylesheet" href="../assets/integration/maps-navigation-speech.css" />
+    <link rel="stylesheet" href="../assets/agent.css" />
+    <script type="module" src="../assets/agent-client.js"></script>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -225,7 +227,7 @@ Variable Index: __CSP_NONCE__ — CSS nonce；language — 语言偏好；表单
             <div class="navigation-speech-actions"><button id="navigation-voices-refresh" class="button secondary" type="button">读取本地声音</button><button id="navigation-speech-stop" class="button secondary" type="button" disabled>停止导航播报</button><button id="navigation-speech-resume" class="button secondary" type="button" disabled>手动恢复导航语音</button></div>
             <p>还需启用下方语音输出。只播报导航模块提供的步骤和状态，同一步骤的定位更新不重复播报。</p>
             <p>停止导航播报不会停止定位；仅结束本轮播报，下次重新开始导航后恢复。取消失败时先显式停止清理，再手动恢复错误暂停。</p>
-            <p id="navigation-speech-status" role="status" data-language-original>导航播报已关闭。</p>
+            <p id="navigation-speech-status" role="status">导航播报已关闭。</p>
           </section>
           <section id="speech-test" class="route-details speech-test" aria-label="原生语音输出">
             <h2>原生语音输出 <span id="speech-status" class="status">正在检查接口</span></h2>

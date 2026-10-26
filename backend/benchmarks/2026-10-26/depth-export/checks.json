@@ -1,0 +1,6 @@
+{
+  "django_check": 0,
+  "migrations_check": 0,
+  "backend_tests": 0,
+  "ruff": 0
+}

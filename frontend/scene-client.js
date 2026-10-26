@@ -1,26 +1,26 @@
-/** Responsibilities: 摄像头页“描述场景”：取最近帧与检测结果，请求 POST /scene/describe/，显示并按需朗读。
- * Implementation: 导出 describeScene/describeCurrentScene 供任意同源页面一行调用(失败抛 SceneApiError)，
- * SceneClient.describe 复用 describeScene；复用 CameraApp 已编码 JPEG(640/0.8)与最近 HF 检测框，映射为契约 objects(<=50，按
- * alert_priority/距离/置信度排序)；同源 fetch，单次在途，无重试/降级；错误按后端 code 本地化；
- * 仅当语音输出开关已启用时调用共享 SpeechOutput.speak。
+/** Responsibilities: Describe a camera-page scene by reusing the latest frame/detections, calling POST /scene/describe/, displaying, and optionally speaking the result.
+ * Implementation: Export describeScene/describeCurrentScene for one-call use from any same-origin page (failures throw SceneApiError).
+ * SceneClient.describe reuses describeScene; CameraApp supplies encoded JPEG (640/0.8) and recent HF boxes, mapped to contract objects (<=50, sorted by
+ * alert_priority/distance/confidence). Use same-origin fetch with one in-flight request and no retry/fallback; localize errors by backend code.
+ * Call shared SpeechOutput.speak only when speech output is enabled.
  * Related Modules: index.html, camera.js(latestJpeg/latestBoxes), speech-output.js, i18n.js,
- * translations.js; backend core.scene/core.vlm 与 core.camera.ASSETS；tests/scene-client.test.mjs。
+ * translations.js; backend core.scene/core.vlm and core.camera.ASSETS; tests/scene-client.test.mjs.
  * Declaration Index: SceneError; mapBox; mapObjects; encodeBase64; sceneLanguage; errorMessage; resolveSceneUrl;
  * SceneApiError; SceneApiError.constructor; normalizeJpeg; describeScene; describeCurrentScene;
  * SceneClient; SceneClient.constructor; SceneClient.setBusy; SceneClient.show; SceneClient.fail;
  * SceneClient.describe; SceneClient.speak。
- * Variable Index: MAX_OBJECTS=50/MAX_QUESTION_CHARS=200/MAX_JPEG_BYTES=1MiB 为契约上限；REQUEST_TIMEOUT_MS 为浏览器等待上限
- * （大于后端20s上游超时）；ERROR_MESSAGES 为后端错误码到中文界面键(由 translations.js 译英)；
- * SceneApiError.code/status/requestId 为错误字段；sceneClient 为摄像头页实例，其他页/测试为 null。实例 busy 为单次在途标记。
- * 不保存图像、问题或回答，日志只含 code/request_id/对象数。
+ * Variable Index: MAX_OBJECTS=50/MAX_QUESTION_CHARS=200/MAX_JPEG_BYTES=1MiB — contract limits; REQUEST_TIMEOUT_MS — browser wait limit
+ * (longer than the backend's 20-second upstream timeout); ERROR_MESSAGES — backend error codes mapped to translation keys in translations.js;
+ * SceneApiError.code/status/requestId — error fields; sceneClient — camera-page instance, null on other pages/tests; instance busy — single in-flight marker.
+ * Do not store images/questions/answers; logs contain only code/request_id/object count.
  */
 export const MAX_OBJECTS = 50;
 export const MAX_QUESTION_CHARS = 200;
 export const REQUEST_TIMEOUT_MS = 30000;
 export const MAX_JPEG_BYTES = 1024 * 1024;
 
-/** Functionality: 携带已本地化界面文案的可预期错误。Logic: message 必须是 translations.js 中的键。
- * Constraints: 只有此类错误的 message 会直接展示；其他异常只显示通用失败文案。 */
+/** Functionality: Carry an expected error with localized UI text. Logic: message must be a key from translations.js.
+ * Constraints: Only this error's message is displayed directly; other exceptions use generic failure text. */
 export class SceneError extends Error {}
 const DIRECTIONS = ["front", "front_left", "front_right", "left", "right", "behind", "unknown"];
 const RISK_LEVELS = ["low", "medium", "high", "critical", "unknown"];
@@ -42,11 +42,11 @@ export const ERROR_MESSAGES = {
   vlm_response_too_large: "场景描述响应无效，请稍后再试。",
 };
 
-/** Functionality: 把一个检测框映射为契约 object。Inputs: HF box。Outputs: object 或 null。
- * Logic: 与后端 boxes_to_objects 对齐以免一个坏框使整批 400：label 先 trim，须为 1..40 字符且不含
- * Unicode 控制类字符(\p{C})，发送 trim 后的值；score 只接受 typeof number 且有限、在 [0,1]；
- * distance_m 为有限正数且四舍五入到毫米后仍 >0 才携带；其余字段仅在值合法时携带，缺失即省略。
- * Constraints: distance_m 只用原始深度值，不用平滑值替代；非法 label/score 的框被丢弃，不做类型转换。 */
+/** Functionality: Map one detection box to the API object contract. Inputs: HF box. Outputs: object or null.
+ * Logic: Match backend boxes_to_objects to prevent one bad box from rejecting the whole batch: trim label, require 1..40 characters without
+ * Unicode control-category characters (\p{C}), and send the trimmed value; accept score only as a finite number in [0,1].
+ * Include distance_m only when finite/positive and still >0 after rounding to millimeters; include other fields only when valid and omit missing values.
+ * Constraints: Use raw depth for distance_m, not a smoothed substitute; discard invalid label/score without type coercion. */
 export function mapBox(box) {
   if (!box || typeof box.label !== "string") return null;
   const label = box.label.trim();
@@ -62,9 +62,9 @@ export function mapBox(box) {
   return item;
 }
 
-/** Functionality: 选取并映射最重要的 <=50 个对象。Inputs: boxes 数组。Outputs: objects 数组。
- * Logic: 先按 alert_priority 降序，再按距离升序(无距离靠后)，再按置信度降序；稳定排序后截断。
- * Constraints: 不修改输入；非数组视为空。 */
+/** Functionality: Select and map the most important <=50 objects. Inputs: boxes array. Outputs: objects array.
+ * Logic: Sort by alert_priority descending, distance ascending (missing values last), then confidence descending; stable-sort and truncate.
+ * Constraints: Do not mutate input; treat non-arrays as empty. */
 export function mapObjects(boxes) {
   if (!Array.isArray(boxes)) return [];
   const ranked = boxes.map((box, index) => ({box, index})).filter(entry => mapBox(entry.box));
@@ -79,8 +79,8 @@ export function mapObjects(boxes) {
   return ranked.slice(0, MAX_OBJECTS).map(entry => mapBox(entry.box));
 }
 
-/** Functionality: ArrayBuffer 转标准 base64。Inputs: ArrayBuffer/Uint8Array。Outputs: 字符串。
- * Logic: 分块 fromCharCode 后 btoa，避免大数组展开栈溢出。Constraints: 只在内存中转换。 */
+/** Functionality: Convert ArrayBuffer to standard base64. Inputs: ArrayBuffer/Uint8Array. Outputs: String.
+ * Logic: Convert in chunks with fromCharCode before btoa to avoid stack overflow from spreading large arrays. Constraints: Keep conversion in memory. */
 export function encodeBase64(buffer) {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = "";
@@ -89,35 +89,35 @@ export function encodeBase64(buffer) {
   return btoa(binary);
 }
 
-/** Functionality: 页面语言到契约 language。Inputs: document.documentElement.lang。
- * Outputs: "zh-CN" | "en-US"。Logic: i18n.js 只会写 zh-CN 或 en。Constraints: 其余一律英文。 */
+/** Functionality: Map page language to the API language. Inputs: document.documentElement.lang.
+ * Outputs: "zh-CN" | "en-US". Logic: i18n.js writes only zh-CN or en. Constraints: Treat all other values as English. */
 export function sceneLanguage(lang) { return /^zh(?:-|$)/i.test(lang || "") ? "zh-CN" : "en-US"; }
 
-/** Functionality: 后端错误码到界面键。Inputs: code, requestId。Outputs: 文本。
- * Logic: 已知码用固定键，未知码用通用键；request_id 以全角括号附在末尾供 i18n 保留。
- * Constraints: 不显示 detail 原文（可能含上游信息）。 */
+/** Functionality: Map backend error codes to UI keys. Inputs: code and requestId. Outputs: Text.
+ * Logic: Use fixed keys for known codes and a generic key for unknown ones; append request_id in full-width parentheses for i18n preservation.
+ * Constraints: Do not display raw detail, which may contain upstream information. */
 export function errorMessage(code, requestId) {
   const base = Object.hasOwn(ERROR_MESSAGES, code) ? ERROR_MESSAGES[code]
     : typeof code === "string" && /^[a-z_]{1,48}$/.test(code) ? `场景描述失败：${code}` : "场景描述失败。";
   return typeof requestId === "string" && /^[\w-]{1,64}$/.test(requestId) ? `${base}（${requestId}）` : base;
 }
 
-/** Functionality: 解析同源 API 地址。Inputs: apiBase, path, pageHref。Outputs: URL。
- * Logic: 同 CameraApp.apiUrl 的 data-api-base 约定；Constraints: 跨源抛错，无回退。 */
+/** Functionality: Resolve a same-origin API URL. Inputs: apiBase, path, pageHref. Outputs: URL.
+ * Logic: Follow CameraApp.apiUrl's data-api-base convention; Constraints: Throw for cross-origin URLs without fallback. */
 export function resolveSceneUrl(apiBase, path, pageHref) {
   const page = new URL(pageHref), base = new URL(apiBase, page), url = new URL(path, base);
   if (base.origin !== page.origin || url.origin !== page.origin) throw new SceneError("场景描述接口必须与页面同源。");
   return url;
 }
 
-/** Functionality: describeScene/describeCurrentScene 抛出的可预期错误。
- * Logic: message 为已本地化界面键(含 request_id 后缀)；code 为后端错误码或本地码（invalid_image/
- * invalid_question/invalid_api_base/camera_unavailable/network_error/timeout/aborted/invalid_response/
- * http_error）；status 为 HTTP 状态(无响应时为 null)；requestId 无则为 null。
- * Constraints: 不携带 detail 原文、图像或问题内容。 */
+/** Functionality: Expected error thrown by describeScene/describeCurrentScene.
+ * Logic: message is a localized UI key (optionally with request_id suffix); code is a backend or local code
+ * (invalid_image/invalid_question/invalid_api_base/camera_unavailable/network_error/timeout/aborted/invalid_response/http_error);
+ * status is HTTP status (null without a response); requestId is null when absent.
+ * Constraints: Do not include raw detail, image, or question content. */
 export class SceneApiError extends Error {
-  /** Functionality: 构造错误。Inputs: code, message, {status, requestId}。Outputs: 实例。
-   * Logic: 字段只读语义，仅赋值。Constraints: 无副作用。 */
+  /** Functionality: Construct an error. Inputs: code, message, {status, requestId}. Outputs: Instance.
+   * Logic: Assign fields only; Constraints: No side effects. */
   constructor(code, message, {status = null, requestId = null} = {}) {
     super(message);
     this.name = "SceneApiError";
@@ -127,9 +127,9 @@ export class SceneApiError extends Error {
   }
 }
 
-/** Functionality: 把 jpeg 输入规整为 Uint8Array 并校验。Inputs: ArrayBuffer/视图/Blob/其他。
- * Outputs: Uint8Array。Logic: 仅接受非空、<=1 MiB、以 FF D8 开头的字节。
- * Constraints: 不合格抛 SceneApiError(invalid_image)；不读取 Blob 之外的资源。 */
+/** Functionality: Normalize and validate JPEG input as Uint8Array. Inputs: ArrayBuffer/view/Blob/other.
+ * Outputs: Uint8Array. Logic: Accept only non-empty bytes <=1 MiB that start with FF D8.
+ * Constraints: Invalid input throws SceneApiError(invalid_image); do not read resources beyond the supplied Blob. */
 async function normalizeJpeg(jpeg) {
   const bad = () => new SceneApiError("invalid_image", errorMessage("invalid_image"));
   let bytes = null;
@@ -141,14 +141,14 @@ async function normalizeJpeg(jpeg) {
   return bytes;
 }
 
-/** Functionality: 对任意同源页面发起一次场景描述。Inputs: jpeg(ArrayBuffer|Uint8Array|Blob), boxes(HF
- * metadata.boxes 原样), question(可选, trim 后空视为不传), options{language, apiBase, fetchImpl,
- * timeoutMs=30000, signal, pageHref, logger}。pageHref/logger 供测试与 SceneClient 注入，缺省取
- * globalThis.location.href / console。
- * Outputs: 成功响应对象 {text, model, language, elapsed_ms, usage, request_id}；失败抛 SceneApiError。
- * Logic: 非外部 signal 引起的 AbortError 一律按 timeout 处理（与原页面行为一致）；校验图像与问题(不发请求)→mapObjects→同源 POST(AbortController 超时)→按 HTTP/body 分类；
- * language 缺省取 document.documentElement.lang，apiBase 缺省取 data-api-base 或 "./"。
- * Constraints: 不重试、不降级、不截断问题；调用方自行保证单次在途；日志仅 code/request_id/对象数。 */
+/** Functionality: Submit one scene-description request from any same-origin page. Inputs: jpeg(ArrayBuffer|Uint8Array|Blob), boxes (HF
+ * metadata.boxes unchanged), optional question (trimmed; blank means omitted), and options {language, apiBase, fetchImpl,
+ * timeoutMs=30000, signal, pageHref, logger}. pageHref/logger support tests and SceneClient injection; defaults are
+ * globalThis.location.href / console.
+ * Outputs: Success object {text, model, language, elapsed_ms, usage, request_id}; failures throw SceneApiError.
+ * Logic: Treat AbortError as timeout unless caused by the external signal (matching the original page); validate image/question without a request, mapObjects, then same-origin POST with AbortController timeout and classify HTTP/body response.
+ * language defaults to document.documentElement.lang; apiBase defaults to data-api-base or "./".
+ * Constraints: No retry, fallback, or question truncation; caller enforces one in-flight request; logs contain only code/request_id/object count. */
 export async function describeScene(jpeg, boxes = [], question = null, options = {}) {
   const {timeoutMs = REQUEST_TIMEOUT_MS, signal = null} = options;
   const doc = typeof document !== "undefined" ? document : null;
@@ -208,10 +208,10 @@ export async function describeScene(jpeg, boxes = [], question = null, options =
   return body;
 }
 
-/** Functionality: 用摄像头页最近帧与检测框描述当前场景。Inputs: question, options(同 describeScene，另可
- * 注入 source={latestJpeg, latestBoxes} 供测试)。Outputs: 同 describeScene。
- * Logic: 在函数内动态 import camera.js（避免非摄像头页加载副作用）；取帧失败或无帧抛 camera_unavailable。
- * Constraints: 摄像头未开不发请求；不重试；本页需已加载 camera.js 所需 DOM，否则按 camera_unavailable 处理。 */
+/** Functionality: Describe the current scene using the camera page's latest frame and boxes. Inputs: question and options (same as describeScene, plus optional
+ * injected source={latestJpeg, latestBoxes} for tests). Outputs: Same as describeScene.
+ * Logic: Dynamically import camera.js inside the function to avoid side effects on non-camera pages; capture failure/no frame throws camera_unavailable.
+ * Constraints: Do not send when the camera is off; do not retry; the page must have loaded the DOM required by camera.js or camera_unavailable is raised. */
 export async function describeCurrentScene(question = null, options = {}) {
   const unavailable = () => new SceneApiError("camera_unavailable", "请先开启摄像头再描述场景。");
   let source = options.source;
@@ -224,12 +224,12 @@ export async function describeCurrentScene(question = null, options = {}) {
   return describeScene(jpeg, source.latestBoxes(), question, options);
 }
 
-/** Functionality: 管理场景描述区块。
- * Logic: source 提供 latestJpeg()/latestBoxes()；speech 为共享 SpeechOutput(或 null)；busy 保证单次在途。
- * Constraints: 不自动触发、不重试、不降级；失败后按钮恢复，由用户再次点击。 */
+/** Functionality: Manage the scene-description panel.
+ * Logic: source supplies latestJpeg()/latestBoxes(); speech is shared SpeechOutput or null; busy enforces one in-flight request.
+ * Constraints: No automatic trigger, retry, or fallback; after failure the button is restored for a manual attempt. */
 export class SceneClient {
-  /** Functionality: 绑定控件与依赖。Inputs: {doc, win, fetchImpl, source, speech}。
-   * Outputs: 实例及 click 注册。Logic: 依赖可注入以便测试。Constraints: 不请求权限或网络。 */
+  /** Functionality: Bind controls and dependencies. Inputs: {doc, win, fetchImpl, source, speech}.
+   * Outputs: Instance and click handler. Logic: Dependencies are injectable for tests. Constraints: No permission or network request. */
   constructor({doc = document, win = window, fetchImpl = (...args) => fetch(...args), source, speech = null}) {
     this.doc = doc;
     this.win = win;
@@ -246,33 +246,33 @@ export class SceneClient {
     this.describe = this.describe.bind(this);
     this.button.addEventListener("click", this.describe);
   }
-  /** Functionality: 切换忙碌态。Inputs: busy, statusText。Outputs: 按钮 disabled 与状态文字。
-   * Constraints: 状态仅用 textContent。 */
+  /** Functionality: Change busy state. Inputs: busy, statusText. Outputs: Button disabled state and status text.
+   * Constraints: Render status with textContent only. */
   setBusy(busy, statusText, kind = "idle") {
     this.busy = busy;
     this.button.disabled = busy;
     this.status.textContent = statusText;
     this.status.dataset.kind = kind;
   }
-  /** Functionality: 显示成功文本。Inputs: text。Outputs: 结果区。Constraints: textContent，不插 HTML。 */
+  /** Functionality: Display successful text. Inputs: text. Outputs: Result area. Constraints: Use textContent, never HTML insertion. */
   show(text) {
     this.result.textContent = text;
     this.message.textContent = "";
     this.message.dataset.kind = "idle";
   }
-  /** Functionality: 显示失败。Inputs: 已本地化键文本。Outputs: 状态与消息；清空旧结果以免误读。
-   * Constraints: 不记录用户内容。 */
+  /** Functionality: Display failure. Inputs: Localized UI-key text. Outputs: Status and message; clear stale results to prevent misinterpretation.
+   * Constraints: Do not log user content. */
   fail(text) {
     this.result.textContent = "";
     this.message.textContent = text;
     this.message.dataset.kind = "error";
     this.setBusy(false, "失败", "error");
   }
-  /** Functionality: 执行一次描述请求。Inputs: 当前帧、检测框、问题、语言（均来自页面与注入的取帧源）。
-   * Outputs: 结果文本/本地化错误；可能触发朗读。
-   * Logic: busy 则忽略；取帧→调用 describeScene→显示→按需朗读；SceneApiError/SceneError 的 message
-   * 已是本地化界面键，直接展示。
-   * Constraints: 无摄像头帧明确提示；不重试；日志仅 code/request_id/对象数。 */
+  /** Functionality: Run one description request. Inputs: Current frame, boxes, question, and language from the page/injected frame source.
+   * Outputs: Result text/localized error; may trigger speech.
+   * Logic: Ignore while busy; capture, call describeScene, display, and optionally speak. SceneApiError/SceneError messages
+   * are already localized UI keys and can be displayed directly.
+   * Constraints: Explain missing camera frame; do not retry; logs contain only code/request_id/object count. */
   async describe() {
     if (this.busy) return;
     this.setBusy(true, "正在描述场景");
@@ -302,9 +302,9 @@ export class SceneClient {
       if (this.busy) this.setBusy(false, "失败", "error");
     }
   }
-  /** Functionality: 语音输出已启用时朗读结果。Inputs: text, language。Outputs: 无。
-   * Logic: 读取共享 SpeechOutput 的开关；未启用或无该控件则只显示。
-   * Constraints: 朗读被拒绝时由 SpeechOutput 自己在语音区块反馈，这里不重试、不改参数。 */
+  /** Functionality: Speak the result when speech output is enabled. Inputs: text and language. Outputs: None.
+   * Logic: Read the shared SpeechOutput toggle; if disabled or absent, display text only.
+   * Constraints: SpeechOutput reports rejected speech in its own panel; do not retry or change parameters here. */
   speak(text, language) {
     if (!this.speech?.enabled?.checked) return;
     this.speech.speak(text, {language});
@@ -313,7 +313,7 @@ export class SceneClient {
 
 export let sceneClient = null;
 if (typeof document !== "undefined" && document.getElementById("scene-describe")) {
-  // 动态导入避免非页面环境(测试)实例化 CameraApp；与 index.html 的 camera.js 为同一模块实例。
+  // Dynamic import avoids instantiating CameraApp outside the page (for tests); index.html and this module share the same camera.js instance.
   const [{cameraApp}, {speechOutput}] = await Promise.all([import("./camera.js"), import("./speech-output.js")]);
   sceneClient = new SceneClient({source: cameraApp, speech: speechOutput});
 }

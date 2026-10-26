@@ -1,43 +1,42 @@
 # PRS Practice Module
 
-前后端开发仓库。后端沿用 AiInterviewer 的 Django + DRF + ASGI 技术栈及分层思路，独立维护业务与数据库；前端使用原生浏览器 API。
+This repository contains the frontend and backend. The backend follows the Django, DRF, and ASGI stack and layered design used by AiInterviewer while maintaining its own business logic and database. The frontend uses native browser APIs.
 
-仓库以 `backend/` 和 `frontend/` 为顶层，按实际克隆路径启动。本机MVP通过独立Web和CUDA推理进程接通已有软件与算法；两个环境、官方权重、启动器和验证边界见 [本地MVP](backend/LOCAL-MVP.md)。
+The repository is organized around `backend/` and `frontend/`; run commands from the relevant directory. The local MVP connects existing software and algorithms through a separate web process and CUDA inference process. See [Local MVP](backend/LOCAL-MVP.md) for environment setup, official weights, launchers, and verification boundaries.
 
-手机可通过既有服务器的独立 `/mvp/` HTTPS 中转使用本机导航与检测，无需与电脑同网；
-访问认证、启动和停止见 [手机MVP](backend/PHONE-MVP.md)，原 `/prs/` 服务保持独立。
+Phones can use the existing server's independent `/mvp/` HTTPS relay for local navigation and detection without sharing a network with the development computer. See [Phone MVP](backend/PHONE-MVP.md) for access, startup, and shutdown. The existing `/prs/` service remains independent.
 
 ```text
-backend/              后端唯一开发入口
-  config/             开发/生产配置与 ASGI/WSGI 入口
-  core/               公共接口、错误处理及框架测试
-  deploy/             独立摄像头服务、Nginx 路由和运维说明
-  requirements*.txt   固定直接依赖
-  README.md           安装、启动、检查与扩展说明
-frontend/             摄像头回传、Leaflet/OSM 步行路线与客户端测试
-.github/workflows/    后端自动检查
+backend/              Backend development entry point
+  config/             Development/production configuration and ASGI/WSGI entry points
+  core/               Public interfaces, error handling, and framework tests
+  deploy/             Isolated camera service, Nginx routes, and operations notes
+  requirements*.txt   Pinned direct dependencies
+  README.md           Setup, startup, checks, and extension guide
+frontend/             Camera streaming, Leaflet/OSM walking routes, and client tests
+.github/workflows/    Backend automated checks
 ```
 
-页面入口为 `/live/`。原软件提供Echo/HF；本地集成入口额外启用本地CUDA双模型检测，浏览器经同源WebSocket发送JPEG并显示标注结果。实时图像只在内存中处理，不录制、不存储，无自动重连或重试；Echo最多4个连接，检测会话按各自协议限流。
+The live page is `/live/`. The original software provides Echo/HF modes; the local integration entry additionally enables local CUDA dual-model detection. The browser sends JPEG frames over a same-origin WebSocket and displays annotated results. Live images are processed in memory: there is no recording, storage, automatic reconnection, or retry. Echo permits at most four connections; detection sessions are rate-limited according to their protocol.
 
-本机入口由 `backend/tools/run_local_mvp.py` 启动，默认 http://127.0.0.1:8766/live/ 。算法复用YOLO26n、YOLO26 Depth、BoT-SORT、距离运动状态及TTC/规则风险；浏览器Guidance在用户启用后仲裁语音/振动提醒与导航示例。中台负责协议和运行环境适配，不修改模型参数或风险规则。工件与许可见 [模型说明](backend/models/README.md)。
+Start the local entry point with `backend/tools/run_local_mvp.py`; the default URL is `http://127.0.0.1:8766/live/`. The algorithms reuse YOLO26n, YOLO26 Depth, BoT-SORT, distance-motion state, and TTC/rule-based risk logic. Browser Guidance arbitrates speech/vibration alerts and navigation examples after the user enables it. The integration layer adapts protocols and runtime environments without changing model parameters or risk rules. See [model documentation](backend/models/README.md) for artifacts and licenses.
 
-统一MVP使用启动器的显式 `--assist` 模式，入口为 http://127.0.0.1:8766/maps/ 。产品页集中显示步行导航、设备摄像头、提醒设置与停止操作；导航区的“填入 NUS 示例”只填写固定起终点，仍须手动规划路线，示例不代表设备位置。点击“环境感知”即可申请手机后置镜头并显示原始画面及回传标记画面，无须再选择设备，失败时明确提示且不切换镜头或重试。它复用原地图、导航MCP和唯一的自动语音/振动仲裁器；风险优先，结束后只恢复当前有效的导航指令。语音、导航播报与风险提醒默认开启，设备支持时也默认开启振动。声音自动匹配界面语言的本地音色，语速固定2倍，实际音量通过设备按键调节；没有匹配声音时明确提示，不改用其它语言或远程声音。通过“启动语音”或首次真实点击检测/导航开始按钮同步校准，收到原生引擎开始事件后才放行自动语音。默认开启不代表权限已获准、输入已启动或声音实际可听，页面加载不自动申请摄像头/定位、规划路线或朗读。测试按钮、手动镜头选择、声音调节、视频回放和详细统计位于 `/maps/test`，手机中转下为 `/mvp/maps/test`，该诊断页保留手动声音选择。此模式支持连续本地推理，ORS凭据只在明确配置后供Web进程使用，HF与场景服务保持关闭。其它独立测试入口使用默认离线模式并保留原输出开关策略；启动与验收边界见 [统一入口说明](backend/LOCAL-MVP.md#统一导航与感知入口)。
+The unified MVP uses the launcher's explicit `--assist` mode at `http://127.0.0.1:8766/maps/`. The product page groups walking navigation, the device camera, alert settings, and stop controls. The “Fill NUS example” action fills fixed endpoints only; users must still plan the route, and the example does not represent device location. Selecting “Environmental awareness” requests the phone's rear camera and displays both the raw image and returned annotated image without requiring device selection. Failures are reported explicitly; the app does not switch cameras or retry. The page reuses the existing map, navigation MCP, and single automatic speech/vibration arbiter. Risk alerts take priority, and only the currently valid navigation instruction resumes afterward. Speech, navigation announcements, and risk alerts are enabled by default; vibration is also enabled when supported by the device. The app matches a local voice to the interface language, fixes speech rate at 2×, and leaves actual volume to the device controls. If no matching voice exists, it reports that condition without switching languages or using a remote voice. The first real click on “Start speech”, detection, or navigation synchronously activates the native engine; automatic speech is released only after the engine emits its start event. Defaults do not imply granted permissions, active input, or audible output. Page load does not request camera/location access, plan routes, or speak. Test buttons, manual camera selection, voice controls, video replay, and detailed statistics are under `/maps/test` (or `/mvp/maps/test` through the phone relay). The diagnostic page retains manual voice selection. This mode supports continuous local inference; the web process uses ORS credentials only when explicitly configured, while HF and scene services remain disabled. Other independent test entry points retain their default offline mode and output-switch policy. See [unified entry documentation](backend/LOCAL-MVP.md#unified-navigation-and-perception-entry) for startup and acceptance boundaries.
 
-独立本地视频入口为 `/integration/video/`，用户选择本地文件后按原生1倍速回放，不申请电脑摄像头权限。它复用相同双模型与提醒链路，保留原参数及55秒会话预算；当前选用MOT17白天/夜间移动街景样本，来源及显式转码记录见 [视频数据说明](backend/model_tests/DATASETS.md#连续街景视频用于本地联调)，采集/媒体两个时钟和验收命令见 [连续视频说明](backend/LOCAL-MVP.md#连续本地视频入口)。
+The independent local-video entry point is `/integration/video/`. After the user selects a local file, it plays at native 1× speed and does not request computer-camera access. It reuses the same dual models and alert path, preserving existing parameters and the 55-second session budget. Current samples are MOT17 daytime/nighttime moving street scenes; see [video dataset notes](backend/model_tests/DATASETS.md#continuous-street-video-for-local-integration) for sources and explicit transcoding records, and [continuous video notes](backend/LOCAL-MVP.md#continuous-local-video-entry) for the capture/media clocks and acceptance commands.
 
-MOT17的两个原始预览、两个H.264回放副本及来源清单属于仓库测试素材；完整数据集、标注包和运行输出按目录规则单独管理。验收应区分吞吐、采集到告警的时延和设备实际输出，具体方法见 [本地验收说明](backend/LOCAL-MVP.md#验收方法与边界)。
+The two original MOT17 previews, two H.264 playback copies, and source manifest are repository test assets. The full dataset, annotations, and runtime outputs are managed separately according to directory rules. Acceptance checks distinguish throughput, capture-to-alert latency, and actual device output. See [local acceptance notes](backend/LOCAL-MVP.md#acceptance-method-and-boundaries) for details.
 
-开发启动与检查见 [后端说明](backend/README.md)，协议与操作见 [前端说明](frontend/README.md)，隔离部署见 [运维说明](backend/deploy/README.md)。当前未实现持久化媒体或业务账号接口。
+See the [backend guide](backend/README.md) for development startup and checks, the [frontend guide](frontend/README.md) for protocols and operations, and the [operations guide](backend/deploy/README.md) for isolated deployment. Persistent media and business-account APIs are not implemented.
 
-可选 [Hugging Face ZeroGPU Space](https://huggingface.co/spaces/Heropig114514/prs-yolo26) 模式需服务端token及足够免费额度，一次视频最多55秒，首帧/后续等待预算55/10秒。配置及额度边界见 [ZeroGPU说明](backend/ZEROGPU.md)；本地MVP默认离线模式明确关闭外部凭据，统一模式仅显式允许ORS。
+The optional [Hugging Face ZeroGPU Space](https://huggingface.co/spaces/Heropig114514/prs-yolo26) mode requires a server token and sufficient free quota. A video is limited to 55 seconds, with 55/10-second budgets for the first and subsequent frames. See [ZeroGPU notes](backend/ZEROGPU.md) for configuration and quota boundaries. The local MVP's default offline mode explicitly disables external credentials; the unified mode permits ORS only when explicitly configured.
 
-当前提供原样回传、本地CUDA集成、HF GPU检测、可选场景描述和定位/步行路线。模型导出、Space发布及验证工具集中于 `backend/tools/`；结构化实验结果存放于 `backend/benchmarks/`。
+The repository currently provides pass-through, local CUDA integration, HF GPU detection, optional scene description, and location/walking routes. Model export, Space publishing, and verification tools are in `backend/tools/`; structured experiment results are in `backend/benchmarks/`.
 
-[步行路线测试页面](https://47.239.50.129/prs/maps/) 使用 Leaflet 1.9.4 + OpenStreetMap 底图和 ORS `foot-walking` 路线。服务端配置 `ORS_API_KEY`，浏览器仅获配置状态。点击获取设备起点，点选地图终点，再提交路线；也可明确选择 NUS 固定示例。规划时起终点发送 PRS 和 ORS，不存数据库；返回路线、距离、预计时间和转向步骤。初始 NUS 区域预览和示例均不是设备位置。
+The [walking-route test page](https://47.239.50.129/prs/maps/) uses Leaflet 1.9.4, an OpenStreetMap basemap, and ORS `foot-walking` routes. The server configures `ORS_API_KEY`; the browser receives only the configuration status. Select “Get device origin”, choose a destination on the map, and submit the route, or explicitly select the fixed NUS example. The origin and destination are sent to PRS and ORS for planning and are not stored in a database. The response includes the route, distance, estimated duration, and turn-by-turn steps. The initial NUS map preview and example are not device locations.
 
-按用户选择以 ORS 替代原 proposal 中的 Google 路线实现；原 proposal 文件未改写。地图页现支持持续定位、转向指令、剩余距离、偏航提示、到达判断和手动停止；agent 可通过 `navigation_start`、`navigation_stop`、`navigation_status` 操作同一控制器。需先规划路线并允许浏览器定位，隐藏页面停止，不自动重规划。统一入口连接导航TTS与风险提醒，保持两类输入和原计算逻辑独立，不自动生成绕障路线；阈值与验证边界见 [前端说明](frontend/README.md) 和 [MCP 契约](backend/MCP.md)。后续正式实验需记录导航实现与地图数据来源。
+At the user's request, ORS replaces the Google route implementation from the original proposal; the proposal file itself was not rewritten. The map page now supports continuous location updates, turn instructions, remaining distance, off-route warnings, arrival detection, and manual stopping. The agent can use `navigation_start`, `navigation_stop`, and `navigation_status` on the same controller. Route planning and browser location permission are prerequisites. Hiding the page stops navigation; it does not automatically replan. The unified entry connects navigation TTS and risk alerts while keeping their inputs and original calculations independent; it does not generate obstacle-avoidance routes. See the [frontend guide](frontend/README.md) and [MCP contract](backend/MCP.md) for thresholds and verification boundaries. Future formal experiments should record the navigation implementation and map-data source.
 
-本地Guidance的导航示例用于提醒仲裁，不代表GPS/ORS或完整导航验证；真实手机声音、振动和风险准确率需另行验证。
+Local Guidance navigation examples are for alert-arbitration integration only; they do not verify GPS, ORS, or complete navigation. Actual phone audio, vibration, and risk accuracy require separate verification.
 
-本地已有课程文件、报告和压缩包不纳入 Git；`.gitignore` 使用根目录白名单。未来新增需要提交的根目录路径时，须显式加入白名单。
+Local course files, reports, and archives are not committed to Git. `.gitignore` uses a root-directory allowlist. Any new root-level path intended for version control must be added to that allowlist explicitly.

@@ -1,0 +1,222 @@
+{
+  "format": "Selected pip install provenance; descriptive package README metadata omitted",
+  "pip_version": "25.0.1",
+  "environment": {
+    "implementation_name": "cpython",
+    "implementation_version": "3.12.14",
+    "os_name": "nt",
+    "platform_machine": "AMD64",
+    "platform_release": "11",
+    "platform_system": "Windows",
+    "platform_version": "10.0.26200",
+    "python_full_version": "3.12.14",
+    "platform_python_implementation": "CPython",
+    "python_version": "3.12",
+    "sys_platform": "win32"
+  },
+  "install": [
+    {
+      "name": "onnx",
+      "version": "1.17.0",
+      "requested": true,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/35/55/c4d11bee1fdb0c4bd84b4e3562ff811a19b63266816870ae1f95567aa6e1/onnx-1.17.0-cp312-cp312-win_amd64.whl",
+        "archive_info": {
+          "hash": "sha256=659b8232d627a5460d74fd3c96947ae83db6d03f035ac633e20cd69cfa029227",
+          "hashes": {
+            "sha256": "659b8232d627a5460d74fd3c96947ae83db6d03f035ac633e20cd69cfa029227"
+          }
+        }
+      },
+      "requires_dist": [
+        "numpy >=1.20",
+        "protobuf >=3.20.2",
+        "google-re2 ; extra == 'reference'",
+        "Pillow ; extra == 'reference'"
+      ]
+    },
+    {
+      "name": "onnxruntime-gpu",
+      "version": "1.23.2",
+      "requested": true,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/87/da/2685c79e5ea587beddebe083601fead0bdf3620bc2f92d18756e7de8a636/onnxruntime_gpu-1.23.2-cp312-cp312-win_amd64.whl",
+        "archive_info": {
+          "hash": "sha256=fe925a84b00e291e0ad3fac29bfd8f8e06112abc760cdc82cb711b4f3935bd95",
+          "hashes": {
+            "sha256": "fe925a84b00e291e0ad3fac29bfd8f8e06112abc760cdc82cb711b4f3935bd95"
+          }
+        }
+      },
+      "requires_dist": [
+        "coloredlogs",
+        "flatbuffers",
+        "numpy>=1.21.6",
+        "packaging",
+        "protobuf",
+        "sympy",
+        "nvidia-cuda-nvrtc-cu12~=12.0; extra == \"cuda\"",
+        "nvidia-cuda-runtime-cu12~=12.0; extra == \"cuda\"",
+        "nvidia-cufft-cu12~=11.0; extra == \"cuda\"",
+        "nvidia-curand-cu12~=10.0; extra == \"cuda\"",
+        "nvidia-cudnn-cu12~=9.0; extra == \"cudnn\""
+      ]
+    },
+    {
+      "name": "tensorrt_cu12",
+      "version": "10.13.3.9",
+      "requested": true,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/1a/aa/5a630ac02d05f7bbc774bd11b2bc9a3d31aa0bd7d38b4cfeef06733544b3/tensorrt_cu12-10.13.3.9.tar.gz",
+        "archive_info": {
+          "hash": "sha256=b507abc536ceeaac3b2e6527bd65100bef19000d204e7072db6fe85f9f859a84",
+          "hashes": {
+            "sha256": "b507abc536ceeaac3b2e6527bd65100bef19000d204e7072db6fe85f9f859a84"
+          }
+        }
+      },
+      "requires_dist": [
+        "tensorrt_cu12_libs==10.13.3.9",
+        "tensorrt_cu12_bindings==10.13.3.9",
+        "numpy; extra == \"numpy\""
+      ]
+    },
+    {
+      "name": "tensorrt_cu12_bindings",
+      "version": "10.13.3.9",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/f5/e4/19aff120be055418bac8f012cf38c682e540f983b55a5037d98c00b8b65c/tensorrt_cu12_bindings-10.13.3.9-cp312-none-win_amd64.whl",
+        "archive_info": {
+          "hash": "sha256=8dd3ad04874563f28a7ab5e6db394082b50351006da6c834253d864d777591f3",
+          "hashes": {
+            "sha256": "8dd3ad04874563f28a7ab5e6db394082b50351006da6c834253d864d777591f3"
+          }
+        }
+      },
+      "requires_dist": [
+        "numpy ; extra == 'numpy'"
+      ]
+    },
+    {
+      "name": "tensorrt_cu12_libs",
+      "version": "10.13.3.9",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/e1/d3/82b9a603cac94975dbb25d33c7ffb1dba6851980f2dc630f2bf9caf0bffb/tensorrt_cu12_libs-10.13.3.9.tar.gz",
+        "archive_info": {
+          "hash": "sha256=99d11dd42a27705bcb2ea4e2e0f76817a2a9403d892ec1272c502bd2722ebbd9",
+          "hashes": {
+            "sha256": "99d11dd42a27705bcb2ea4e2e0f76817a2a9403d892ec1272c502bd2722ebbd9"
+          }
+        }
+      },
+      "requires_dist": [
+        "nvidia-cuda-runtime-cu12"
+      ]
+    },
+    {
+      "name": "protobuf",
+      "version": "7.36.2",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/8a/55/b77bda4e5e5f5971fb51b07663694690e9afdb9402136c16a522bd621cad/protobuf-7.36.2-cp310-abi3-win_amd64.whl",
+        "archive_info": {
+          "hash": "sha256=a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353",
+          "hashes": {
+            "sha256": "a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353"
+          }
+        }
+      },
+      "requires_dist": null
+    },
+    {
+      "name": "coloredlogs",
+      "version": "15.0.1",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/a7/06/3d6badcf13db419e25b07041d9c7b4a2c331d3f4e7134445ec5df57714cd/coloredlogs-15.0.1-py2.py3-none-any.whl",
+        "archive_info": {
+          "hash": "sha256=612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934",
+          "hashes": {
+            "sha256": "612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934"
+          }
+        }
+      },
+      "requires_dist": [
+        "humanfriendly (>=9.1)",
+        "capturer (>=2.4) ; extra == 'cron'"
+      ]
+    },
+    {
+      "name": "flatbuffers",
+      "version": "25.12.19",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl",
+        "archive_info": {
+          "hash": "sha256=7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+          "hashes": {
+            "sha256": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4"
+          }
+        }
+      },
+      "requires_dist": null
+    },
+    {
+      "name": "humanfriendly",
+      "version": "10.0",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/f0/0f/310fb31e39e2d734ccaa2c0fb981ee41f7bd5056ce9bc29b2248bd569169/humanfriendly-10.0-py2.py3-none-any.whl",
+        "archive_info": {
+          "hash": "sha256=1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477",
+          "hashes": {
+            "sha256": "1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477"
+          }
+        }
+      },
+      "requires_dist": [
+        "monotonic ; python_version == \"2.7\"",
+        "pyreadline ; sys_platform == \"win32\" and python_version<\"3.8\"",
+        "pyreadline3 ; sys_platform == \"win32\" and python_version>=\"3.8\""
+      ]
+    },
+    {
+      "name": "nvidia-cuda-runtime-cu12",
+      "version": "12.9.79",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/59/df/e7c3a360be4f7b93cee39271b792669baeb3846c58a4df6dfcf187a7ffab/nvidia_cuda_runtime_cu12-12.9.79-py3-none-win_amd64.whl",
+        "archive_info": {
+          "hash": "sha256=8e018af8fa02363876860388bd10ccb89eb9ab8fb0aa749aaf58430a9f7c4891",
+          "hashes": {
+            "sha256": "8e018af8fa02363876860388bd10ccb89eb9ab8fb0aa749aaf58430a9f7c4891"
+          }
+        }
+      },
+      "requires_dist": null
+    },
+    {
+      "name": "pyreadline3",
+      "version": "3.5.6",
+      "requested": false,
+      "download_info": {
+        "url": "https://files.pythonhosted.org/packages/f7/5e/35c856e186b74678c24927847ad9895a51f1bc02a0c6126477a6c6040064/pyreadline3-3.5.6-py3-none-any.whl",
+        "archive_info": {
+          "hash": "sha256=8449b734232e42a5dcd74048e39b60db2839a4c38cf3ae2bf7707d58b5389c0d",
+          "hashes": {
+            "sha256": "8449b734232e42a5dcd74048e39b60db2839a4c38cf3ae2bf7707d58b5389c0d"
+          }
+        }
+      },
+      "requires_dist": [
+        "build; extra == \"dev\"",
+        "flake8; extra == \"dev\"",
+        "mypy; extra == \"dev\"",
+        "pytest; extra == \"dev\"",
+        "twine; extra == \"dev\""
+      ]
+    }
+  ]
+}

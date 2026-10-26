@@ -1,14 +1,18 @@
-"""Responsibilities: 为现有 Nginx 后的摄像头诊断应用提供独立 SQLite 部署配置。
-Implementation: 仅明确代理 IP 来源；必填路径和 Origin，独立 cookie 避免影响其他 Django 应用。
+"""Responsibilities: Provide isolated SQLite deployment settings for the camera diagnostic app
+behind the existing Nginx proxy.
+Implementation: Explicitly define the proxy IP source; require the database path and Origin, and use
+isolated cookies to avoid affecting other Django applications.
 Related Modules: config.base, deploy/prs-camera.service, deploy/nginx.locations.conf。
 Declaration Index: None。
 Variable Index:
-- ALLOWED_HOSTS — 显式单机 Host；CAMERA_ALLOWED_ORIGINS — 单一 HTTPS Origin。
-- DATABASES — /var/lib 下本应用专用数据库；FORCE_SCRIPT_NAME — /prs 反向代理前缀。
-- SECURE_PROXY_SSL_HEADER — 仅信任同机代理覆写的协议头；SECURE_SSL_REDIRECT — 强制 HTTPS。
-- SESSION_COOKIE_NAME/CSRF_COOKIE_NAME — 独立 cookie 名称。
-- SESSION_COOKIE_PATH/CSRF_COOKIE_PATH — 独立 /prs/ cookie 路径。
-- SESSION_COOKIE_SECURE/CSRF_COOKIE_SECURE — 只在 HTTPS 发送 cookie。
+- ALLOWED_HOSTS — explicit single-server hosts; CAMERA_ALLOWED_ORIGINS — the sole HTTPS Origin.
+- DATABASES — application-specific database under /var/lib; FORCE_SCRIPT_NAME — /prs reverse-proxy
+prefix.
+- SECURE_PROXY_SSL_HEADER — trust only the protocol header overwritten by the same-host proxy;
+SECURE_SSL_REDIRECT — require HTTPS.
+- SESSION_COOKIE_NAME/CSRF_COOKIE_NAME — isolated cookie names.
+- SESSION_COOKIE_PATH/CSRF_COOKIE_PATH — isolated /prs/ cookie paths.
+- SESSION_COOKIE_SECURE/CSRF_COOKIE_SECURE — send cookies over HTTPS only.
 """
 
 import os

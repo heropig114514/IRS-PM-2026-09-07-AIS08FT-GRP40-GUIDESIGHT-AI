@@ -1,0 +1,15 @@
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "eager_before"}
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "onnx_cuda"}
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+Fatal Python error: Aborted
+
+Thread 0x00003124 (most recent call first):
+  File "E:\AI_map\backend\tools\benchmark_depth_export.py", line 314 in benchmark
+  File "E:\AI_map\backend\tools\benchmark_depth_export.py", line 395 in main
+  File "E:\AI_map\backend\tools\benchmark_depth_export.py", line 408 in <module>
+  File "<frozen runpy>", line 88 in _run_code
+  File "<frozen runpy>", line 198 in _run_module_as_main
+
+Extension modules: numpy.core._multiarray_umath, numpy.core._multiarray_tests, numpy.linalg._umath_linalg, numpy.fft._pocketfft_internal, numpy.random._common, numpy.random.bit_generator, numpy.random._bounded_integers, numpy.random._mt19937, numpy.random.mtrand, numpy.random._philox, numpy.random._pcg64, numpy.random._sfc64, numpy.random._generator, torch._C, torch._C._dynamo.autograd_compiler, torch._C._dynamo.eval_frame, torch._C._dynamo.guards, torch._C._dynamo.utils, torch._C._fft, torch._C._linalg, torch._C._nested, torch._C._nn, torch._C._sparse, torch._C._special, PIL._imaging, yaml._yaml, PIL._imagingft, PIL._imagingmath (total: 28)

@@ -1,19 +1,17 @@
-"""Responsibilities: Provision only the dedicated HTTPS relay and its private access settings.
-Implementation: Pinned server, bounded SFTP reads, bcrypt-bounded ASCII Basic auth and one additive
-Nginx include; syntax-check before reload and preserve existing app/service identity.
+"""Responsibilities: Manage the isolated public guest relay and pinned app-server SSH operations.
+Implementation: Bound remote reads/commands, install only the additive Nginx include when requested,
+remove its retired access hash, and preserve the independent application-service identity.
 Related Modules: tools.run_phone_mvp; tools.deploy_phone_live; deploy/phone-relay.locations.conf.
-Declaration Index: PhoneDeploymentError; private_access; read_remote; write_remote;
+Declaration Index: PhoneDeploymentError; read_remote; write_remote;
 remote_command; connect_server; read_ors; prepare_vhost; verify_relay; install_relay.
-Variable Index: SERVER/PUBLIC_ORIGIN/REMOTE_PORT/MOUNT are explicit inspected deployment targets;
-VHOST/INCLUDE/AUTH/ANCHOR/INCLUDE_LINE select only relay-owned files and one additive include;
-ROOT is backend; access/password/ORS values must never appear in logs or exception messages.
+Variable Index: SERVER/PUBLIC_ORIGIN/WEB_PORT/INFERENCE_REMOTE_PORT/MOUNT are explicit deployment
+targets; WEB_PORT is the app-server service and INFERENCE_REMOTE_PORT is the laptop reverse tunnel;
+VHOST/INCLUDE/LEGACY_AUTH/ANCHOR/INCLUDE_LINE select only relay-owned Nginx files; ROOT is backend.
+SSH/ORS values must never appear in logs or exception messages.
 """
 
 import hashlib
 import io
-import json
-import os
-import re
 import secrets
 import shlex
 import time
@@ -28,11 +26,12 @@ from tools.deploy_phone_live import FINGERPRINT, PinnedHost
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = "47.239.50.129"
 PUBLIC_ORIGIN = "https://" + SERVER
-REMOTE_PORT = 18766
+WEB_PORT = 18766
+INFERENCE_REMOTE_PORT = 18767
 MOUNT = "/mvp"
 VHOST = "/etc/nginx/sites-enabled/ai-interviewer"
 INCLUDE = "/etc/nginx/prs-phone-relay.locations.conf"
-AUTH = "/etc/nginx/prs-phone-relay.htpasswd"
+LEGACY_AUTH = "/etc/nginx/prs-phone-relay.htpasswd"
 ANCHOR = "include /etc/nginx/prs-camera.locations.conf;"
 INCLUDE_LINE = "include " + INCLUDE + ";"
 
@@ -41,52 +40,6 @@ class PhoneDeploymentError(Exception):
     """Functionality: Carry a fixed non-secret deployment diagnostic.
     Logic: Fail without retry or changes to unrelated services. Constraints: No raw remote output.
     """
-
-
-def private_access(path, *, create=False):
-    """Functionality: Load or exclusively create the dedicated phone access credential.
-    Inputs: Explicit dotenv Path and create flag. Outputs: username/password tuple.
-    Logic: Generate a random password once; validate unambiguous fields without expansion;
-    require 20–72 ASCII password characters to respect bcrypt's 72-byte limit without truncation.
-    Constraints: Creation stays under backend; no SSH/ORS persistence, overwrite or secret logging.
-    """
-    path = Path(path).resolve()
-    if create and not path.exists():
-        if not path.is_relative_to(ROOT):
-            raise PhoneDeploymentError("Access-file creation must stay inside backend.")
-        try:
-            with path.open("x", encoding="utf-8") as output:
-                output.write(
-                    "PHONE_ACCESS_USER=phone\nPHONE_ACCESS_PASSWORD="
-                    + secrets.token_urlsafe(24)
-                    + "\n"
-                )
-            if os.name != "nt":
-                path.chmod(0o600)
-        except FileExistsError:
-            pass
-    try:
-        with path.open("rb") as source:
-            raw = source.read(8193)
-        if len(raw) > 8192:
-            raise ValueError
-        bindings = list(parse_stream(io.StringIO(raw.decode("utf-8-sig"))))
-        if any(item.error for item in bindings):
-            raise ValueError
-        values = {}
-        for name in ("PHONE_ACCESS_USER", "PHONE_ACCESS_PASSWORD"):
-            found = [item.value for item in bindings if item.key == name]
-            if len(found) != 1:
-                raise ValueError
-            values[name] = found[0]
-        user, password = values["PHONE_ACCESS_USER"], values["PHONE_ACCESS_PASSWORD"]
-        if not re.fullmatch(r"[A-Za-z0-9_-]{1,32}", user or "") or not re.fullmatch(
-            r"[A-Za-z0-9_-]{20,72}", password or ""
-        ):
-            raise ValueError
-        return user, password
-    except (OSError, UnicodeError, ValueError):
-        raise PhoneDeploymentError("Invalid dedicated phone access file.") from None
 
 
 def read_remote(sftp, path, limit=65536):
@@ -169,10 +122,11 @@ def connect_server(password):
 
 
 def read_ors(client):
-    """Functionality: Read only the existing server ORS key for the local Web child.
-    Inputs: Authenticated SSH client. Outputs: Credential string in memory.
+    """Functionality: Read the existing ORS key for an isolated app-server MVP environment.
+    Inputs: Authenticated SSH client. Outputs: Credential string in caller memory.
     Logic: Read one bounded config; select exactly one valid ORS assignment without interpolation.
-    Constraints: No remote writes, key printing, copying other external keys or local persistence.
+    Constraints: No remote writes, key printing, laptop transfer, other credentials or local
+    storage.
     """
     with client.open_sftp() as sftp:
         sftp.get_channel().settimeout(25)
@@ -201,63 +155,45 @@ def prepare_vhost(raw):
     return raw if own in raw else raw.replace(anchor, anchor + b"\n    " + own, 1)
 
 
-def verify_relay(client, user, password):
-    """Functionality: Verify the installed relay template and password hash without changes.
-    Inputs: Pinned SSH client and local access credential. Outputs: Safe verification metadata.
-    Logic: Compare exact owned template, one include and bcrypt password identity.
-    Constraints: Does not reload Nginx, rotate credentials, read private keys or contact the GPU.
+def verify_relay(client):
+    """Functionality: Verify the public guest relay template and absence of the retired password
+    hash.
+    Inputs: Pinned SSH client. Outputs: Safe template and guest-access metadata.
+    Logic: Compare exact owned template and one include; fail while the legacy hash remains.
+    Constraints: Does not reload Nginx, read private keys or contact the GPU.
     """
-    import bcrypt
-
     expected = (ROOT / "deploy/phone-relay.locations.conf").read_bytes()
     try:
         with client.open_sftp() as sftp:
             sftp.get_channel().settimeout(25)
             actual = read_remote(sftp, INCLUDE)
             vhost = read_remote(sftp, VHOST)
-            auth = read_remote(sftp, AUTH).strip()
-        name, separator, digest = auth.partition(b":")
-        if (
-            actual != expected
-            or vhost.count(INCLUDE_LINE.encode()) != 1
-            or not separator
-            or name.decode() != user
-            or not bcrypt.checkpw(password.encode(), digest)
-        ):
+            try:
+                read_remote(sftp, LEGACY_AUTH)
+            except FileNotFoundError:
+                legacy_auth_present = False
+            else:
+                legacy_auth_present = True
+        if actual != expected or vhost.count(INCLUDE_LINE.encode()) != 1 or legacy_auth_present:
             raise ValueError
     except (OSError, ValueError, UnicodeError):
         raise PhoneDeploymentError(
             "Relay is not installed with this configuration; use --install-relay."
         ) from None
-    return {"template_sha256": hashlib.sha256(actual).hexdigest(), "access_hash_matches": True}
+    return {"template_sha256": hashlib.sha256(actual).hexdigest(), "guest_access": True,
+            "legacy_access_hash_removed": True}
 
 
-def install_relay(client, user, password):
-    """Functionality: Install the explicitly requested additive Nginx relay configuration.
-    Inputs: Pinned client/access settings. Outputs: Backup path and checked existing-app identity.
+def install_relay(client):
+    """Functionality: Install the explicitly requested additive public guest relay configuration.
+    Inputs: Pinned SSH client. Outputs: Backup path and checked existing-app identity.
     Logic: Preserve originals, compare before activation, syntax-check and reload once; any error
-    during mutation or reload restores all selected prior files before reporting failure.
+    before successful reload restores selected files. Remove the legacy hash after Nginx serves the
+    guest configuration.
     Constraints: No PRS restart, TLS changes, code uploads, migrations or automatic restart/retry.
     """
-    import bcrypt
-
     _, pid_before = remote_command(client, "systemctl show prs-camera --property=MainPID --value")
     template = (ROOT / "deploy/phone-relay.locations.conf").read_bytes()
-    digest = bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=12))
-    # Verify crypt support before touching Nginx: only the hash and password travel over SSH stdin.
-    verify = (
-        "import crypt,hmac,json,sys;d=json.load(sys.stdin);"
-        "print(hmac.compare_digest(crypt.crypt(d['password'],d['hash']),d['hash']))"
-    )
-    _, compatible = remote_command(
-        client,
-        "python3 -W ignore -c " + shlex.quote(verify),
-        body=json.dumps({"password": password, "hash": digest.decode()}),
-    )
-    if compatible.strip() != b"True":
-        raise PhoneDeploymentError(
-            "Existing Nginx host does not support the selected password hash."
-        )
     tag = uuid4().hex
     backup = "/etc/nginx/prs-phone-relay-backups/" + tag
     with client.open_sftp() as sftp:
@@ -268,7 +204,7 @@ def install_relay(client, user, password):
         original = read_remote(sftp, target)
         candidate = prepare_vhost(original)
         previous = {}
-        for name in (INCLUDE, AUTH):
+        for name in (INCLUDE, LEGACY_AUTH):
             try:
                 previous[name] = read_remote(sftp, name)
             except FileNotFoundError:
@@ -283,8 +219,6 @@ def install_relay(client, user, password):
         stage = target + ".phone-next-" + tag
         try:
             write_remote(sftp, INCLUDE, template, 0o644)
-            write_remote(sftp, AUTH, user.encode() + b":" + digest + b"\n", 0o640)
-            remote_command(client, "chown root:www-data " + shlex.quote(AUTH))
             write_remote(sftp, stage, candidate, 0o644)
             sftp.posix_rename(stage, target)
             code, _ = remote_command(client, "nginx -t", check=False)
@@ -308,20 +242,25 @@ def install_relay(client, user, password):
                         except FileNotFoundError:
                             pass
                     else:
-                        write_remote(sftp, name, raw, 0o640 if name == AUTH else 0o644)
-                        if name == AUTH:
-                            remote_command(client, "chown root:www-data " + shlex.quote(AUTH))
+                        write_remote(sftp, name, raw, 0o600 if name == LEGACY_AUTH else 0o644)
                 except Exception:
                     restored = False
             detail = ("Previous files restored; reload completion is unconfirmed."
                       if restored else "File restoration incomplete; inspect the relay backup.")
             raise PhoneDeploymentError("Relay installation failed. " + detail) from None
+        try:
+            remote_command(client, "rm -f -- " + shlex.quote(LEGACY_AUTH))
+        except Exception:
+            raise PhoneDeploymentError(
+                "Guest relay is active, but legacy password-hash cleanup could not be confirmed; "
+                "inspect the server file and relay backup."
+            ) from None
     _, pid_after = remote_command(client, "systemctl show prs-camera --property=MainPID --value")
     if pid_before != pid_after:
         raise PhoneDeploymentError(
             "Existing PRS service identity changed during relay installation."
         )
-    verified = verify_relay(client, user, password)
+    verified = verify_relay(client)
     return {
         "backup": backup,
         "nginx_syntax_valid": True,

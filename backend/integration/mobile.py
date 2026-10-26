@@ -1,18 +1,16 @@
-"""Responsibilities: Admit one explicit HTTPS relay around the unchanged local assist application.
+"""Responsibilities: Admit public guest traffic through one explicit HTTPS relay around the
+unchanged local assist application.
 Implementation: Loopback peer, exact Host/Origin/path gates; canonical internal headers preserve
-existing Web/GPU checks. Public responses retain /mvp/WSS; two fixed map assets adapt only
-same-origin credential transport so the proxy's existing browser authentication is retained.
+existing Web/GPU checks. Public responses retain /mvp/WSS, with no account authentication.
 Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol; core.ai_bridge/ai_mcp;
 deployment reverse SSH and Nginx terminate public TLS without exposing the worker or MCP.
 Declaration Index: mobile_origin; reject; MobileApplication; MobileApplication.__init__;
-MobileApplication.__call__; MobileApplication.public_path; MobileApplication.authenticated_asset;
-MobileApplication.forward;
+MobileApplication.__call__; MobileApplication.public_path; MobileApplication.forward;
 MobileApplication.forward.public_send.
 Variable Index: MOUNT — fixed public /mvp prefix; HTTP_METHODS — exact public endpoint methods;
-WS_PATHS — two original browser sockets; STRIPPED_HEADERS — proxy/relay headers never trusted
-downstream; logger — body-free admission diagnostics. Public origin is explicit configuration,
-not an authentication credential; the external proxy owns the deployment access gate.
-MAP_AUTH_ASSETS/MAX_ASSET_BYTES/OMIT_CREDENTIALS — exact map-only byte adaptation contract.
+WS_PATHS — exact control, assistant, and local-detection sockets; STRIPPED_HEADERS — proxy/relay
+headers never trusted downstream; logger — body-free admission diagnostics. Public origin is an
+explicit routing boundary, not user identity. No MCP/admin or general API route is exposed.
 """
 
 import json
@@ -21,7 +19,6 @@ import os
 from urllib.parse import urlsplit
 
 from .protocol import is_loopback, web_origins
-from .services import FRONTEND
 
 MOUNT = "/mvp"
 HTTP_METHODS = {
@@ -32,13 +29,7 @@ HTTP_METHODS = {
     "/maps/route/": frozenset({"POST"}),
     "/integration/status/": frozenset({"GET"}),
 }
-WS_PATHS = frozenset({"/ws/control/", "/ws/detect/local/"})
-MAP_AUTH_ASSETS = {
-    "/assets/maps-page.js": "maps-page.js",
-    "/assets/maps-client.js": "maps-client.js",
-}
-MAX_ASSET_BYTES = 65536
-OMIT_CREDENTIALS = b'credentials: "omit"'
+WS_PATHS = frozenset({"/ws/control/", "/ws/agent/", "/ws/detect/local/"})
 STRIPPED_HEADERS = frozenset(
     {
         b"host",
@@ -127,8 +118,8 @@ class MobileApplication:
     """Functionality: Isolate one public mobile relay from original localhost capabilities.
     Logic: validate original peer/headers before mapping admitted public traffic to canonical local
     inputs. Same process/hub remains available to the computer's original local MCP client.
-    Constraints: one worker, proxy-stripped path contract; no public MCP/admin/API, authentication
-    substitution, trusted forwarded headers, algorithm changes or extra controllers.
+    Constraints: one worker and proxy-stripped paths; no public MCP/admin/general API routes,
+    account authentication, trusted forwarded headers, algorithm changes or extra controllers.
     """
 
     def __init__(self, application, *, public_origin=None):
@@ -193,8 +184,8 @@ class MobileApplication:
     def public_path(self, path, kind):
         """Functionality: Resolve exact allowed public endpoint methods.
         Inputs: already stripped decoded path and protocol. Outputs: permitted method set or None.
-        Logic: two original WS paths and fixed HTTP routes; asset serving retains assist's exact
-        allowlist.
+        Logic: three exact browser WS paths and fixed HTTP routes; asset serving retains assist's
+        exact allowlist.
         Constraints: prefixed/double-prefixed paths, traversal, empty segments and backslashes
         rejected;
         this layer never invents an asset filename or delegates unrelated software routes.
@@ -211,33 +202,6 @@ class MobileApplication:
                 return frozenset({"GET", "HEAD"})
         return None
 
-    async def authenticated_asset(self, scope, receive, send):
-        """Functionality: Deliver a fixed public map asset with same-origin proxy authentication.
-        Inputs: admitted GET/HEAD scope for one MAP_AUTH_ASSETS key and ASGI channels.
-        Outputs: derived JavaScript bytes, or explicit503 when the source contract changes.
-        Logic: bounded original read; replace exactly one literal credential option only.
-        Constraints: no source writes, localhost changes, arbitrary asset map, route/navigation
-        edits, global fetch interception, secret injection, fallback or implicit retry.
-        """
-        name = MAP_AUTH_ASSETS[scope["path"]]
-        try:
-            with (FRONTEND / name).open("rb") as source:
-                original = source.read(MAX_ASSET_BYTES + 1)
-            if len(original) > MAX_ASSET_BYTES or original.count(OMIT_CREDENTIALS) != 1:
-                raise ValueError
-        except (OSError, ValueError):
-            return await reject(scope, receive, send, status=503,
-                                reason="mobile_asset_contract_invalid")
-        body = original.replace(OMIT_CREDENTIALS, b'credentials: "same-origin"', 1)
-        logger.info("Mobile map credential transport served asset=%s", name)
-        await send({"type": "http.response.start", "status": 200, "headers": [
-            (b"content-type", b"text/javascript; charset=utf-8"),
-            (b"cache-control", b"no-store"), (b"x-content-type-options", b"nosniff"),
-            (b"content-length", str(len(body)).encode()),
-        ]})
-        await send({"type": "http.response.body",
-                    "body": b"" if scope["method"] == "HEAD" else body})
-
     async def forward(self, scope, receive, send, headers):
         """Functionality: Delegate an admitted public route with immutable local contracts.
         Inputs: validated original scope/headers/channels. Outputs: original response with mount/CSP
@@ -246,17 +210,14 @@ class MobileApplication:
         scope remains untouched. Public transport scheme reflects the explicitly configured TLS
         origin.
         Constraints: no widened worker/Django origin policy, proxy-header trust, path
-        auto-detection,
-        general body rewriting, retry, media processing or unknown public capabilities.
-        Only the two fixed public map assets adapt credential transport before delegation.
+        auto-detection, user authentication, general body rewriting, retry, media processing or
+        unknown public capabilities. Public assets and requests reach the original local handler.
         """
         allowed = self.public_path(scope.get("path"), scope["type"])
         if allowed is None:
             return await reject(scope, receive, send, status=404, reason="not_found")
         if scope["type"] == "http" and scope.get("method") not in allowed:
             return await reject(scope, receive, send, status=405, reason="method_not_allowed")
-        if scope["type"] == "http" and scope["path"] in MAP_AUTH_ASSETS:
-            return await self.authenticated_asset(scope, receive, send)
         mapped_headers = [(name, value) for name, value in headers if name not in STRIPPED_HEADERS]
         mapped_headers.append((b"host", self.canonical_host))
         if any(name == b"origin" for name, _ in headers):

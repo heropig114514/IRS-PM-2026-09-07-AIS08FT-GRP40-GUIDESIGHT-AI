@@ -1,5 +1,5 @@
-# Responsibilities: 声明源码、测试视频与已部署模型元数据的 Git 文件处理方式。
-# Implementation: 普通文本统一 LF；视频按二进制保存；两个模型 JSON 保留原始字节并识别 CRLF。
+# Responsibilities: Define Git handling for source, test videos, and deployed model metadata.
+# Implementation: Normalize text to LF, preserve videos as binary, and retain model JSON bytes with CRLF handling.
 # Related Modules: .gitignore, backend/model_tests/DATASETS.md, backend/tools/deploy_phone_live.py。
 # Declaration Index: None。
 # Variable Index: None。

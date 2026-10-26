@@ -1,0 +1,34 @@
+E501 Line too long (110 > 100)
+  --> core\test_echo.py:17:101
+   |
+15 | - CameraPageTests — HTTP page and asset allowlist tests.
+16 | - CameraPageTests.test_page_and_script — page/modules and same-origin microphone policy.
+17 | - CameraPageTests.test_retired_routes_and_modes — preserve four explicit modes and reject retired HTTP routes.
+   |                                                                                                     ^^^^^^^^^^
+18 | - CameraPageTests.test_retired_websockets — reject retired WebSocket routes.
+19 | - CameraPageTests.test_unknown_asset_is_not_exposed — reject unlisted files.
+   |
+
+E501 Line too long (101 > 100)
+   --> integration\mobile.py:121:101
+    |
+119 |     Logic: validate original peer/headers before mapping admitted public traffic to canonical local
+120 |     inputs. Same process/hub remains available to the computer's original local MCP client.
+121 |     Constraints: one worker and proxy-stripped path contract; no public MCP/admin/general API routes,
+    |                                                                                                     ^
+122 |     account authentication, trusted forwarded headers, algorithm changes or extra controllers.
+123 |     """
+    |
+
+E501 Line too long (103 > 100)
+ --> integration\test_mobile.py:3:101
+  |
+1 | """Responsibilities: Verify the explicit mobile relay without listeners, SSH, TLS or CUDA.
+2 | Implementation: Real ASGI packets and assist/Django handlers exercise exact public admission,
+3 | the guest assistant socket, canonical forwarding, mount-relative resources and localhost/MCP isolation.
+  |                                                                                                     ^^^
+4 | Related Modules: integration.mobile/assist/asgi; core.maps/camera;
+5 | frontend/integration/assist-mvp.js.
+  |
+
+Found 3 errors.

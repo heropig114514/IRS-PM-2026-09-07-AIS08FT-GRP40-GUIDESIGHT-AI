@@ -1,12 +1,12 @@
-/** Responsibilities: 验证场景描述客户端的 objects 映射/截断、请求体、错误显示、语音与同源约束。
- * Implementation: DOM、fetch、取帧源和 SpeechOutput 使用显式替身；不联网、不调用真实 VLM。
- * Related Modules: scene-client.js, translations.js, i18n.js；真实浏览器/手机另行验证。
+/** Responsibilities: Verify scene-client object mapping/truncation, request bodies, error display, speech, and same-origin boundaries.
+ * Implementation: Use explicit fixtures for DOM, fetch, frame source, and SpeechOutput; no network or real VLM calls.
+ * Related Modules: scene-client.js, translations.js, i18n.js; real browser/phone behavior is verified separately.
  * Declaration Index: Control; Control.constructor; Control.addEventListener; makeDoc; makeClient;
  * jsonResponse; box; testMapping; testMapBoxAlignment; testRequestShape; testNoCameraAndQuestionLimit; testErrors;
  * testNetworkAndBusy; testUnexpected; testSpeech; testSameOrigin; testTranslations; okFetch; testDescribeSceneSuccess; testDescribeSceneErrors;
  * testDescribeSceneTimeout; testDescribeSceneInvalidImage; testDescribeSceneBlobQuestion; testDescribeSceneDefaults;
  * testDescribeCurrentScene。
- * Variable Index: JPEG — 合成的5字节 FF D8 ... FF D9；其余为测试局部状态。
+ * Variable Index: JPEG — synthetic five-byte FF D8 ... FF D9 marker; other state is test-local.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -17,16 +17,16 @@ import {translate} from "../i18n.js";
 
 const JPEG = Uint8Array.from([0xff, 0xd8, 1, 0xff, 0xd9]).buffer;
 
-/** Functionality: 最小控件替身。Logic: 保存值/状态并记录 click 处理器。Constraints: 非完整 DOM。 */
+/** Functionality: Minimal control fixture. Logic: Store values/state and record click handlers. Constraints: Not a complete DOM. */
 class Control {
-  /** Functionality: 初始化。Inputs: None。Outputs: 控件。Logic: 默认空值。Constraints: 无事件传播。 */
+  /** Functionality: Initialize. Inputs: None. Outputs: Control. Logic: Empty value by default. Constraints: No event propagation. */
   constructor() { Object.assign(this, {value: "", textContent: "", disabled: false, dataset: {}, handlers: {}}); }
-  /** Functionality: 注册事件。Inputs: name, handler。Outputs: 无。Logic: 保存。Constraints: 不派发。 */
+  /** Functionality: Register an event. Inputs: name, handler. Outputs: None. Logic: Store the handler. Constraints: Do not dispatch. */
   addEventListener(name, handler) { this.handlers[name] = handler; }
 }
 
-/** Functionality: 创建场景区块 DOM。Inputs: lang。Outputs: doc 替身。
- * Logic: 固定 id 控件 + documentElement.dataset.apiBase。Constraints: 无 HTML 解析。 */
+/** Functionality: Create scene-region DOM. Inputs: lang. Outputs: doc fixture.
+ * Logic: Fixed-ID controls plus documentElement.dataset.apiBase. Constraints: No HTML parsing. */
 function makeDoc(lang = "zh-CN") {
   const nodes = new Map(["scene-describe", "scene-question", "scene-result", "scene-status", "scene-message"]
     .map(id => [id, new Control()]));
@@ -34,14 +34,14 @@ function makeDoc(lang = "zh-CN") {
     getElementById(id) { return nodes.get(id); }};
 }
 
-/** Functionality: 创建 JSON Response 风格替身。Inputs: status, body。Outputs: 对象。
- * Logic: ok 由状态决定。Constraints: 不含 headers。 */
+/** Functionality: Create a JSON Response-style fixture. Inputs: status, body. Outputs: Object.
+ * Logic: Derive ok from status. Constraints: No headers. */
 function jsonResponse(status, body) {
   return {ok: status >= 200 && status < 300, status, json: async () => body};
 }
 
-/** Functionality: 创建客户端及调用记录。Inputs: 选项。Outputs: {client, doc, calls, speech}。
- * Logic: fetch 替身记录 URL/init；source 返回固定帧与 boxes。Constraints: 无真实网络/语音。 */
+/** Functionality: Create a client and call record. Inputs: Options. Outputs: {client, doc, calls, speech}.
+ * Logic: fetch fixture records URL/init; source returns fixed frame and boxes. Constraints: No real network or speech. */
 function makeClient({response = jsonResponse(200, {text: "前方有人。", request_id: "r1", elapsed_ms: 5}),
   boxes = [], frame = JPEG, speechEnabled = false, lang = "zh-CN", fetchImpl} = {}) {
   const doc = makeDoc(lang), calls = [], spoken = [];
@@ -52,8 +52,8 @@ function makeClient({response = jsonResponse(200, {text: "前方有人。", requ
   return {client, doc, calls, spoken};
 }
 
-/** Functionality: 构造合成 HF 检测框。Inputs: 覆盖字段。Outputs: box。Logic: 带全部风险字段。
- * Constraints: 数值为合成。 */
+/** Functionality: Build a synthetic HF detection box. Inputs: Field overrides. Outputs: box.
+ * Logic: Include all risk fields. Constraints: Values are synthetic. */
 function box(extra = {}) {
   return {class_id: 0, label: "person", score: 0.9, xyxy: [0, 0, 10, 10], distance_m: 3, track_id: 7,
     motion_state: "approaching", relative_speed_mps: -1, smoothed_distance_m: 3, direction: "front",
@@ -61,7 +61,7 @@ function box(extra = {}) {
     risk_reasons: ["x"], ...extra};
 }
 
-test("objects 映射字段、过滤缺失值、排序并截断到50", function testMapping() {
+test("Map objects, omit missing fields, rank, and truncate to 50", function testMapping() {
   const mapped = mapObjects([box()])[0];
   assert.deepEqual(mapped, {label: "person", confidence: 0.9, distance_m: 3, direction: "front",
     risk_level: "high", motion_state: "approaching", track_id: 7});
@@ -83,7 +83,7 @@ test("objects 映射字段、过滤缺失值、排序并截断到50", function t
   assert.equal(many.length, 120);
 });
 
-test("mapBox 与后端校验对齐：trim/控制字符/score 类型/毫米距离", function testMapBoxAlignment() {
+test("mapBox matches backend validation for trim, control characters, score type, and millimeter distance", function testMapBoxAlignment() {
   assert.equal(mapObjects([{label: "   ", score: 0.5}, {label: "a\tb", score: 0.5}, {label: "a\u0000", score: 0.5}]).length, 0);
   assert.equal(mapObjects([{label: "x".repeat(41), score: 0.5}, {label: " " + "x".repeat(41) + " ", score: 0.5}]).length, 0);
   assert.equal(mapObjects([{label: " " + "x".repeat(40) + " ", score: 0.5}])[0].label, "x".repeat(40));
@@ -94,7 +94,7 @@ test("mapBox 与后端校验对齐：trim/控制字符/score 类型/毫米距离
   assert.equal(mapObjects([{label: "a", score: 0.5, distance_m: 0.0006}])[0].distance_m, 0.0006);
 });
 
-test("请求体形状符合契约并显示结果", async function testRequestShape() {
+test("Request body matches the contract and displays the result", async function testRequestShape() {
   const {client, doc, calls} = makeClient({boxes: [box()]});
   doc.nodes.get("scene-question").value = "  前面是什么？ ";
   await client.describe();
@@ -121,7 +121,7 @@ test("请求体形状符合契约并显示结果", async function testRequestSha
   assert.equal(encodeBase64(new Uint8Array(70000)).length, Math.ceil(70000 / 3) * 4);
 });
 
-test("未开启摄像头或问题过长时不发请求", async function testNoCameraAndQuestionLimit() {
+test("Do not send a request when the camera is stopped or the question is too long", async function testNoCameraAndQuestionLimit() {
   const none = makeClient({frame: null});
   await none.client.describe();
   assert.equal(none.calls.length, 0);
@@ -137,7 +137,7 @@ test("未开启摄像头或问题过长时不发请求", async function testNoCa
   assert.equal(long.calls.length, 1);
 });
 
-test("每个后端错误码显示本地化提示与 request_id，不显示 detail", async function testErrors() {
+test("Map each backend error code to localized feedback and request_id without showing detail", async function testErrors() {
   for (const code of Object.keys(ERROR_MESSAGES)) {
     const {client, doc, calls} = makeClient({response: jsonResponse(503, {code, detail: "SECRET-DETAIL", request_id: "rid-9"})});
     doc.nodes.get("scene-result").textContent = "旧结果";
@@ -159,7 +159,7 @@ test("每个后端错误码显示本地化提示与 request_id，不显示 detai
   assert.equal(invalid.doc.nodes.get("scene-message").textContent, "场景描述响应格式无效。");
 });
 
-test("网络失败/超时显示错误，进行中忽略重复点击，无自动重试", async function testNetworkAndBusy() {
+test("Show network/timeout errors, ignore duplicate clicks while busy, and do not retry", async function testNetworkAndBusy() {
   const failing = makeClient({fetchImpl: async () => { throw new TypeError("net"); }});
   await failing.client.describe();
   assert.equal(failing.doc.nodes.get("scene-message").textContent, "场景描述请求失败，请检查网络后重试。");
@@ -180,7 +180,7 @@ test("网络失败/超时显示错误，进行中忽略重复点击，无自动�
   assert.equal(slow.doc.nodes.get("scene-result").textContent, "ok");
 });
 
-test("仅在语音输出启用时朗读，并使用响应语言", async function testSpeech() {
+test("Speak only when speech output is enabled and use the response language", async function testSpeech() {
   const off = makeClient({speechEnabled: false});
   await off.client.describe();
   assert.equal(off.spoken.length, 0);
@@ -193,7 +193,7 @@ test("仅在语音输出启用时朗读，并使用响应语言", async function
   assert.equal(failed.spoken.length, 0);
 });
 
-test("未预期异常只显示通用本地化文案，不泄露原始文本", async function testUnexpected() {
+test("Unexpected exceptions show generic localized feedback without leaking raw text", async function testUnexpected() {
   const boom = makeClient({boxes: undefined});
   boom.client.source.latestBoxes = () => { throw new TypeError("Cannot read properties of undefined (reading 'boxes')"); };
   await boom.client.describe();
@@ -207,14 +207,14 @@ test("未预期异常只显示通用本地化文案，不泄露原始文本", as
   assert.notEqual(translate("无法获取摄像头画面，请稍后重试。", "en"), "无法获取摄像头画面，请稍后重试。");
 });
 
-test("API 地址遵循 data-api-base 且必须同源", function testSameOrigin() {
+test("API URL follows data-api-base and must remain same-origin", function testSameOrigin() {
   assert.equal(resolveSceneUrl("../", "scene/describe/", "https://h.example/prs/live/").href,
     "https://h.example/prs/scene/describe/");
   assert.equal(resolveSceneUrl("./", "scene/describe/", "https://h.example/").href, "https://h.example/scene/describe/");
   assert.throws(() => resolveSceneUrl("https://evil.example/", "scene/describe/", "https://h.example/"), /同源/);
 });
 
-test("页面、白名单提示与翻译覆盖场景区块", async function testTranslations() {
+test("Page, allowlisted messages, and translations cover the scene region", async function testTranslations() {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   for (const id of ["scene-describe", "scene-question", "scene-result", "scene-status"])
     assert.match(html, new RegExp(`id="${id}"`));
@@ -229,14 +229,14 @@ test("页面、白名单提示与翻译覆盖场景区块", async function testT
 const PAGE = "https://prs.example/maps/";
 const OK = {text: "前方有人。", model: "m", language: "zh-CN", elapsed_ms: 5, usage: {}, request_id: "r1"};
 
-/** Functionality: 记录调用的 fetch 替身。Inputs: response。Outputs: {fetchImpl, calls}。
- * Logic: 返回固定响应。Constraints: 无网络。 */
+/** Functionality: Create a fetch fixture that records calls. Inputs: response. Outputs: {fetchImpl, calls}.
+ * Logic: Return a fixed response. Constraints: No network. */
 function okFetch(response = jsonResponse(200, OK)) {
   const calls = [];
   return {calls, fetchImpl: async (url, init) => { calls.push({url, init}); return response; }};
 }
 
-test("describeScene 成功返回响应对象并构造契约请求体", async function testDescribeSceneSuccess() {
+test("describeScene returns a successful response and builds a contract-shaped request", async function testDescribeSceneSuccess() {
   const {calls, fetchImpl} = okFetch();
   const result = await describeScene(JPEG, [box()], "前面能走吗？", {language: "zh-CN", apiBase: "./", fetchImpl, pageHref: PAGE});
   assert.deepEqual(result, OK);
@@ -252,7 +252,7 @@ test("describeScene 成功返回响应对象并构造契约请求体", async fun
   assert.equal(calls[1].url, "https://prs.example/scene/describe/");
 });
 
-test("describeScene 把错误映射为 SceneApiError 字段，不重试", async function testDescribeSceneErrors() {
+test("describeScene maps errors to SceneApiError fields without retrying", async function testDescribeSceneErrors() {
   for (const code of Object.keys(ERROR_MESSAGES)) {
     const {calls, fetchImpl} = okFetch(jsonResponse(503, {code, detail: "SECRET", request_id: "rid-9"}));
     await assert.rejects(describeScene(JPEG, [], null, {language: "zh-CN", apiBase: "./", fetchImpl, pageHref: PAGE}), error => {
@@ -276,7 +276,7 @@ test("describeScene 把错误映射为 SceneApiError 字段，不重试", async 
     error => error.code === "invalid_api_base");
 });
 
-test("describeScene 超时与外部取消分别映射为 timeout/aborted", async function testDescribeSceneTimeout() {
+test("describeScene maps timeout and external cancellation to timeout/aborted", async function testDescribeSceneTimeout() {
   const hang = (url, init) => new Promise((_, reject) => init.signal.addEventListener("abort",
     () => reject(Object.assign(new Error("a"), {name: "AbortError"}))));
   const opts = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl: hang};
@@ -287,7 +287,7 @@ test("describeScene 超时与外部取消分别映射为 timeout/aborted", async
   await assert.rejects(pending, error => error.code === "aborted");
 });
 
-test("非法 jpeg 抛 invalid_image 且不发请求", async function testDescribeSceneInvalidImage() {
+test("Invalid JPEG throws invalid_image without making a request", async function testDescribeSceneInvalidImage() {
   const {calls, fetchImpl} = okFetch();
   const opts = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl};
   const tooBig = new Uint8Array(1024 * 1024 + 1);
@@ -300,7 +300,7 @@ test("非法 jpeg 抛 invalid_image 且不发请求", async function testDescrib
   assert.equal(calls.length, 1);
 });
 
-test("Blob 输入与 question 处理（trim、超 200 字抛错不截断）", async function testDescribeSceneBlobQuestion() {
+test("Blob input and question handling trims and rejects over 200 characters without truncation", async function testDescribeSceneBlobQuestion() {
   const {calls, fetchImpl} = okFetch();
   const opts = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl};
   await describeScene(new Blob([new Uint8Array(JPEG)], {type: "image/jpeg"}), [], "  问  ", opts);
@@ -314,7 +314,7 @@ test("Blob 输入与 question 处理（trim、超 200 字抛错不截断）", as
   assert.equal(calls.length, 2);
 });
 
-test("language 与 apiBase 缺省取自 document.documentElement", async function testDescribeSceneDefaults() {
+test("Default language and apiBase come from document.documentElement", async function testDescribeSceneDefaults() {
   const {calls, fetchImpl} = okFetch();
   const saved = {document: globalThis.document, location: globalThis.location};
   Object.defineProperty(globalThis, "document", {configurable: true, writable: true,
@@ -335,7 +335,7 @@ test("language 与 apiBase 缺省取自 document.documentElement", async functio
   }
 });
 
-test("describeCurrentScene 使用摄像头帧与框，未开启时 camera_unavailable", async function testDescribeCurrentScene() {
+test("describeCurrentScene uses camera frames and boxes and returns camera_unavailable when stopped", async function testDescribeCurrentScene() {
   const {calls, fetchImpl} = okFetch();
   const base = {language: "zh-CN", apiBase: "./", pageHref: PAGE, fetchImpl};
   const result = await describeCurrentScene("前面能走吗？", {...base,

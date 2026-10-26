@@ -1,28 +1,28 @@
-/** Responsibilities: 用真实Chrome验证手动震动UI、语言切换和手机布局。
- * Implementation: 保留真实HTML/CSS/模块/CSP；明确替换原生vibrate及媒体权限边界来控制接受/拒绝/异常。
+/** Responsibilities: Verify manual vibration UI, language switching, and mobile layout in real Chrome.
+ * Implementation: Retain real HTML/CSS/modules/CSP; explicitly replace native vibrate and media-permission boundaries to control acceptance/rejection/errors.
  * Related Modules: index.html, vibration.js, camera.css, i18n.js, translations.js。
  * Declaration Index: installFixture; installFixture.vibrate; installFixture.denyCamera;
  * expectText; assertLayout; collectUntranslated; checkSupported; checkUnavailable; main。
- * Variable Index: None；main读取PRS_PLAYWRIGHT_PATH开发运行时，report保存非敏感断言与截图路径。
- * Constraints: 无真实马达、GPS、摄像头、HF或GPU验证；不禁用TLS/CSP、不重试网络或发布。
+ * Variable Index: None; main reads the development runtime from PRS_PLAYWRIGHT_PATH; report stores non-sensitive assertions and screenshot paths.
+ * Constraints: No real motor, GPS, camera, HF, or GPU verification; do not disable TLS/CSP, retry network calls, or publish.
  */
 import assert from "node:assert/strict";
 import {createRequire} from "node:module";
 import {mkdir, writeFile} from "node:fs/promises";
 import {dirname} from "node:path";
 
-/** Functionality: 在模块加载前安装明确的浏览器API替身。
- * Inputs: supported决定原生接口是否存在；浏览器navigator/window。
- * Outputs: __vibrationFixture的请求/媒体计数及可控outcome。
- * Logic: 仅替换vibrate和getUserMedia；其他DOM、用户点击及翻译仍由真实浏览器处理。
- * Constraints: 返回true是假定接受，不证明硬件；意外媒体请求直接失败而不申请权限。
+/** Functionality: Install explicit browser API fixtures before loading the module.
+ * Inputs: supported controls whether the native API exists; browser navigator/window.
+ * Outputs: Request/media counters and configurable outcome in __vibrationFixture.
+ * Logic: Replace only vibrate and getUserMedia; real browser code still handles DOM, user clicks, and translations.
+ * Constraints: Returning true simulates acceptance and proves no hardware state; unexpected media requests fail without requesting permission.
  */
 function installFixture(supported) {
   window.__vibrationFixture = {calls: [], cameraRequests: 0, outcome: "accept"};
-  /** Functionality: 记录API接收者及预定测试结果。
-   * Inputs: pattern和__vibrationFixture.outcome。Outputs: boolean或NotAllowedError。
-   * Logic: 验证接收者为navigator，复制固定数组，按显式测试状态返回。
-   * Constraints: 不是实际原生API，不访问系统马达。
+  /** Functionality: Record the API receiver and return the configured test outcome.
+   * Inputs: pattern and __vibrationFixture.outcome. Outputs: Boolean or NotAllowedError.
+   * Logic: Verify navigator as the receiver, copy fixed arrays, and follow explicit fixture state.
+   * Constraints: This is not the native API and does not access the system motor.
    */
   function vibrate(pattern) {
     if (this !== navigator) throw new TypeError("Incorrect vibration receiver");
@@ -32,9 +32,10 @@ function installFixture(supported) {
     return state.outcome === "accept";
   }
   Object.defineProperty(navigator, "vibrate", {configurable: true, value: supported ? vibrate : undefined});
-  /** Functionality: 检测意外媒体授权请求。
-   * Inputs: navigator.mediaDevices隐式调用。Outputs: 计数及明确异常。
-   * Logic: 拒绝请求，防止手动震动回归访问传感器。Constraints: 不验证真实摄像头权限。
+  /** Functionality: Detect unexpected media-permission requests.
+   * Inputs: Implicit calls to navigator.mediaDevices. Outputs: Counter increment and explicit exception.
+   * Logic: Reject requests so the manual-vibration regression cannot access sensors.
+   * Constraints: Does not verify real camera permissions.
    */
   function denyCamera() {
     window.__vibrationFixture.cameraRequests++;
@@ -45,18 +46,20 @@ function installFixture(supported) {
   });
 }
 
-/** Functionality: 等待实际DOM呈现期望文字。
- * Inputs: page/selector/text。Outputs: 有界等待或超时。
- * Logic: 等待翻译观察器完成，而不使用固定延时。Constraints: 不重试业务请求。
+/** Functionality: Wait for expected text to appear in the real DOM.
+ * Inputs: page/selector/text. Outputs: Bounded wait or timeout.
+ * Logic: Wait for the translation observer instead of using a fixed delay.
+ * Constraints: Do not retry business requests.
  */
 async function expectText(page, selector, text) {
   await page.waitForFunction(({selector, text}) => document.querySelector(selector)?.textContent.trim() === text,
     {selector, text}, {timeout: 5000});
 }
 
-/** Functionality: 检查当前宽度无横向溢出及按钮触控尺寸。
- * Inputs: page和当前viewport。Outputs: DOM布局断言。
- * Logic: 从真实布局读取页面宽度与按钮矩形。Constraints: 不等同于物理手机触控验证。
+/** Functionality: Check for horizontal overflow and button touch-target size at the current width.
+ * Inputs: page and current viewport. Outputs: DOM layout assertions.
+ * Logic: Read page width and button rectangles from the actual layout.
+ * Constraints: Does not equal physical phone touch testing.
  */
 async function assertLayout(page) {
   const layout = await page.evaluate(() => ({width: innerWidth, contentWidth: document.documentElement.scrollWidth,
@@ -71,9 +74,10 @@ async function assertLayout(page) {
   }
 }
 
-/** Functionality: 检查震动区域的英文翻译完整性。
- * Inputs: 浏览器DOM。Outputs: 中文文本/无障碍属性列表。
- * Logic: 遍历实际文本节点与aria-label。Constraints: 不读取摄像头画面或用户输入。
+/** Functionality: Check English translation completeness for the vibration region.
+ * Inputs: Browser DOM. Outputs: List of remaining Chinese text/accessibility attributes.
+ * Logic: Traverse actual text nodes and aria-label values.
+ * Constraints: Do not read camera images or user input.
  */
 function collectUntranslated() {
   const root = document.getElementById("vibration-test"), missing = [];
@@ -85,10 +89,10 @@ function collectUntranslated() {
   return missing;
 }
 
-/** Functionality: 验证支持接口时的真实控件和拒绝/异常状态。
- * Inputs: browser/url/output/report。Outputs: 请求序列、布局、语言及无媒体调用证据和截图。
- * Logic: 独立英文390pxcontext加载模块；实际点击按钮，切换语言并控制原生替身返回值。
- * Constraints: 硬件结果始终未验证；只进行页面加载和用户测试，不执行检测/发布。
+/** Functionality: Verify real controls and rejection/error states when the API is available.
+ * Inputs: browser/url/output/report. Outputs: Request sequence, layout, languages, proof of no media calls, and screenshots.
+ * Logic: Load the module in an isolated English 390px context; click real controls, switch languages, and control native-fixture outcomes.
+ * Constraints: Hardware remains unverified; this covers page loading and user interaction only, not detection or publication.
  */
 async function checkSupported(browser, url, output, report) {
   const context = await browser.newContext({locale: "en-US", viewport: {width: 390, height: 844}});
@@ -144,9 +148,10 @@ async function checkSupported(browser, url, output, report) {
   } finally { await context.close(); }
 }
 
-/** Functionality: 验证接口不存在时真实UI的操作边界和翻译。
- * Inputs: browser/url/report。Outputs: 全部禁用、支持提示和零请求断言。
- * Logic: 新context显式不提供vibrate，加载同一页面。Constraints: 不是实际Safari设备测试。
+/** Functionality: Verify UI boundaries and translations when the API is unavailable.
+ * Inputs: browser/url/report. Outputs: All controls disabled, support message, and zero-call assertions.
+ * Logic: Load the same page in a new context that explicitly omits vibrate.
+ * Constraints: Not a test on a real Safari device.
  */
 async function checkUnavailable(browser, url, report) {
   const context = await browser.newContext({locale: "en-US", viewport: {width: 390, height: 844}});
@@ -166,11 +171,11 @@ async function checkUnavailable(browser, url, report) {
   } finally { await context.close(); }
 }
 
-/** Functionality: 运行明确边界的浏览器回归并保存证据。
- * Inputs: CLI URL/OUTPUT及PRS_PLAYWRIGHT_PATH；已安装Chrome。
- * Outputs: JSON/PNG、退出码；浏览器启动后的失败写入JSON，随后关闭浏览器。
- * Logic: URL只接受无凭据HTTPS或显式loopback，分别验证支持与缺失场景。
- * Constraints: 输出声明无硬件验证，不修改生产依赖、TLS或页面源码；不自动重试。
+/** Functionality: Run a browser regression with explicit boundaries and save evidence.
+ * Inputs: CLI URL/OUTPUT, PRS_PLAYWRIGHT_PATH, and installed Chrome.
+ * Outputs: JSON/PNG and exit code; after browser startup, write failures to JSON and close the browser.
+ * Logic: Accept only credential-free HTTPS or explicit loopback URLs; verify both supported and unavailable cases.
+ * Constraints: Output states that hardware is unverified; do not modify production dependencies, TLS, or page source; do not retry automatically.
  */
 async function main() {
   const [url, output] = process.argv.slice(2), runtime = process.env.PRS_PLAYWRIGHT_PATH;

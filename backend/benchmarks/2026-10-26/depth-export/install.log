@@ -1,0 +1,68 @@
+Collecting onnx==1.17.0
+  Downloading onnx-1.17.0-cp312-cp312-win_amd64.whl.metadata (16 kB)
+Collecting onnxruntime-gpu==1.23.2
+  Downloading onnxruntime_gpu-1.23.2-cp312-cp312-win_amd64.whl.metadata (5.6 kB)
+Collecting tensorrt-cu12==10.13.3.9
+  Downloading tensorrt_cu12-10.13.3.9.tar.gz (18 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Installing backend dependencies: started
+  Installing backend dependencies: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: numpy>=1.20 in e:\ai_map\backend\.venv\lib\site-packages (from onnx==1.17.0) (1.26.4)
+Collecting protobuf>=3.20.2 (from onnx==1.17.0)
+  Downloading protobuf-7.36.2-cp310-abi3-win_amd64.whl.metadata (595 bytes)
+Collecting coloredlogs (from onnxruntime-gpu==1.23.2)
+  Downloading coloredlogs-15.0.1-py2.py3-none-any.whl.metadata (12 kB)
+Collecting flatbuffers (from onnxruntime-gpu==1.23.2)
+  Downloading flatbuffers-25.12.19-py2.py3-none-any.whl.metadata (1.0 kB)
+Requirement already satisfied: packaging in e:\ai_map\backend\.venv\lib\site-packages (from onnxruntime-gpu==1.23.2) (26.3)
+Requirement already satisfied: sympy in e:\ai_map\backend\.venv\lib\site-packages (from onnxruntime-gpu==1.23.2) (1.14.0)
+Collecting tensorrt_cu12_libs==10.13.3.9 (from tensorrt-cu12==10.13.3.9)
+  Downloading tensorrt_cu12_libs-10.13.3.9.tar.gz (703 bytes)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting tensorrt_cu12_bindings==10.13.3.9 (from tensorrt-cu12==10.13.3.9)
+  Downloading tensorrt_cu12_bindings-10.13.3.9-cp312-none-win_amd64.whl.metadata (606 bytes)
+Collecting nvidia-cuda-runtime-cu12 (from tensorrt_cu12_libs==10.13.3.9->tensorrt-cu12==10.13.3.9)
+  Downloading nvidia_cuda_runtime_cu12-12.9.79-py3-none-win_amd64.whl.metadata (1.7 kB)
+Collecting humanfriendly>=9.1 (from coloredlogs->onnxruntime-gpu==1.23.2)
+  Downloading humanfriendly-10.0-py2.py3-none-any.whl.metadata (9.2 kB)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in e:\ai_map\backend\.venv\lib\site-packages (from sympy->onnxruntime-gpu==1.23.2) (1.3.0)
+Collecting pyreadline3 (from humanfriendly>=9.1->coloredlogs->onnxruntime-gpu==1.23.2)
+  Downloading pyreadline3-3.5.6-py3-none-any.whl.metadata (4.7 kB)
+Downloading onnx-1.17.0-cp312-cp312-win_amd64.whl (14.5 MB)
+   ---------------------------------------- 14.5/14.5 MB 458.9 kB/s eta 0:00:00
+Downloading onnxruntime_gpu-1.23.2-cp312-cp312-win_amd64.whl (244.5 MB)
+   -------------------------------------- 244.5/244.5 MB 432.1 kB/s eta 0:00:00
+Downloading tensorrt_cu12_bindings-10.13.3.9-cp312-none-win_amd64.whl (877 kB)
+   -------------------------------------- 877.0/877.0 kB 442.0 kB/s eta 0:00:00
+Downloading protobuf-7.36.2-cp310-abi3-win_amd64.whl (456 kB)
+Downloading coloredlogs-15.0.1-py2.py3-none-any.whl (46 kB)
+Downloading flatbuffers-25.12.19-py2.py3-none-any.whl (26 kB)
+Downloading humanfriendly-10.0-py2.py3-none-any.whl (86 kB)
+Downloading nvidia_cuda_runtime_cu12-12.9.79-py3-none-win_amd64.whl (3.6 MB)
+   ---------------------------------------- 3.6/3.6 MB 422.0 kB/s eta 0:00:00
+Downloading pyreadline3-3.5.6-py3-none-any.whl (85 kB)
+Building wheels for collected packages: tensorrt-cu12, tensorrt_cu12_libs
+  Building wheel for tensorrt-cu12 (pyproject.toml): started
+  Building wheel for tensorrt-cu12 (pyproject.toml): finished with status 'done'
+  Created wheel for tensorrt-cu12: filename=tensorrt_cu12-10.13.3.9-py2.py3-none-any.whl size=17558 sha256=ba5400f1657e15538caaf3a6b22574b1f57bb9c2fb2f15d9362cf83f631af61f
+  Stored in directory: c:\users\pc\appdata\local\pip\cache\wheels\e8\73\8b\8414146aa6f58cf067c13d66a2436c23e75e4c3a18c311841c
+  Building wheel for tensorrt_cu12_libs (pyproject.toml): started
+  Building wheel for tensorrt_cu12_libs (pyproject.toml): finished with status 'done'
+  Created wheel for tensorrt_cu12_libs: filename=tensorrt_cu12_libs-10.13.3.9-py2.py3-none-win_amd64.whl size=1518425990 sha256=1bb1c4200855e87bc2c878033863d27617c446eddfb411ef08f824020e52ec99
+  Stored in directory: c:\users\pc\appdata\local\pip\cache\wheels\5e\ad\6e\772d82d898de9610e1cec67cfa083eaeef6e79f40a8b02ede4
+Successfully built tensorrt-cu12 tensorrt_cu12_libs
+Installing collected packages: tensorrt_cu12_bindings, flatbuffers, pyreadline3, protobuf, nvidia-cuda-runtime-cu12, tensorrt_cu12_libs, onnx, humanfriendly, tensorrt-cu12, coloredlogs, onnxruntime-gpu
+Successfully installed coloredlogs-15.0.1 flatbuffers-25.12.19 humanfriendly-10.0 nvidia-cuda-runtime-cu12-12.9.79 onnx-1.17.0 onnxruntime-gpu-1.23.2 protobuf-7.36.2 pyreadline3-3.5.6 tensorrt-cu12-10.13.3.9 tensorrt_cu12_bindings-10.13.3.9 tensorrt_cu12_libs-10.13.3.9
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.2
+[notice] To update, run: E:\AI_map\backend\.venv\depth-export\Scripts\python.exe -m pip install --upgrade pip

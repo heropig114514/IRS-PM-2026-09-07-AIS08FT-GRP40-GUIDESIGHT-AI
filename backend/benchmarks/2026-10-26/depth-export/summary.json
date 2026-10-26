@@ -1,0 +1,2067 @@
+{
+  "scope": "FP32 depth forward only, fixed samples; no accuracy acceptance",
+  "accepted_timing_reports": [
+    "forward-verified-default.json",
+    "forward-verified-dedicated.json"
+  ],
+  "selected_caller_schedule": "default",
+  "dedicated_stream_conclusion": "No consistent additional speedup; retain the original caller schedule.",
+  "rows": [
+    {
+      "schedule": "default",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 15.823600000203442,
+      "setup_ms": 4.333300000325835,
+      "wall_ms": {
+        "count": 30,
+        "mean": 17.13053666662745,
+        "p50": 15.915299999960553,
+        "p95": 23.593879999793888,
+        "max": 29.0234999997665
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 17.003905232747396,
+        "p50": 15.849376201629639,
+        "p95": 23.503052616119376,
+        "max": 28.909568786621094
+      },
+      "eager_before_p50_ms": 15.915299999960553,
+      "eager_after_p50_ms": 16.46500000015294,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -84.50382563702816,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 8.197999999993044,
+      "setup_ms": 269.7645999996894,
+      "wall_ms": {
+        "count": 30,
+        "mean": 8.632056666677576,
+        "p50": 8.62600000027669,
+        "p95": 9.1317999999319,
+        "max": 9.361800000078802
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.505289681752522,
+        "p50": 8.32256031036377,
+        "p95": 9.058764982223511,
+        "max": 9.254912376403809
+      },
+      "eager_before_p50_ms": 15.915299999960553,
+      "eager_after_p50_ms": 16.46500000015294,
+      "latency_reduction_vs_eager_before_pct": 45.80058182819005,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 321.34099999984755,
+      "setup_ms": 302.1813000000293,
+      "wall_ms": {
+        "count": 30,
+        "mean": 11.141399999951318,
+        "p50": 10.823999999956868,
+        "p95": 12.796974999969276,
+        "max": 18.402400000013586
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 11.074060821533203,
+        "p50": 10.783119678497314,
+        "p95": 12.756070470809933,
+        "max": 18.355199813842773
+      },
+      "eager_before_p50_ms": 15.915299999960553,
+      "eager_after_p50_ms": 16.46500000015294,
+      "latency_reduction_vs_eager_before_pct": 31.989971913921224,
+      "latency_reduction_vs_graph_pct": -25.481103635632675,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.9073486328125e-05,
+      "aligned_max_abs_m": 1.71661376953125e-05,
+      "mirrored_input_max_abs_m": 1.52587890625e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 65.58320000021922,
+      "setup_ms": 514.3047999999908,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.466296666643757,
+        "p50": 7.416449999936958,
+        "p95": 7.961175000218645,
+        "max": 8.008799999970506
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.33682557741801,
+        "p50": 7.320064067840576,
+        "p95": 7.893280005455017,
+        "max": 7.925600051879883
+      },
+      "eager_before_p50_ms": 15.915299999960553,
+      "eager_after_p50_ms": 16.46500000015294,
+      "latency_reduction_vs_eager_before_pct": 53.400501404589676,
+      "latency_reduction_vs_graph_pct": 14.022142363794732,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.9073486328125e-05,
+      "aligned_max_abs_m": 1.52587890625e-05,
+      "mirrored_input_max_abs_m": 2.47955322265625e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 17.41360000005443,
+      "setup_ms": 0.0718000001143082,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.591499999973774,
+        "p50": 16.46500000015294,
+        "p95": 19.108065000000348,
+        "max": 21.143299999948795
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 16.505490239461263,
+        "p50": 16.39408016204834,
+        "p95": 18.98664922714233,
+        "max": 21.04422378540039
+      },
+      "eager_before_p50_ms": 15.915299999960553,
+      "eager_after_p50_ms": 16.46500000015294,
+      "latency_reduction_vs_eager_before_pct": -3.453909132682087,
+      "latency_reduction_vs_graph_pct": -90.87642012085328,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 15.050200000132463,
+      "setup_ms": 0.05620000001727021,
+      "wall_ms": {
+        "count": 30,
+        "mean": 18.667353333391173,
+        "p50": 16.8303499999638,
+        "p95": 25.243695000085605,
+        "max": 27.014999999664724
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 18.52802127202352,
+        "p50": 16.745887756347656,
+        "p95": 25.12675914764404,
+        "max": 26.603551864624023
+      },
+      "eager_before_p50_ms": 16.8303499999638,
+      "eager_after_p50_ms": 15.573700000231838,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -80.80625234789838,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 8.647999999993772,
+      "setup_ms": 255.43100000004415,
+      "wall_ms": {
+        "count": 30,
+        "mean": 9.13582666662478,
+        "p50": 9.308500000088316,
+        "p95": 9.518905000095401,
+        "max": 9.559399999943707
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 9.024760500590007,
+        "p50": 9.199615955352783,
+        "p95": 9.408491563796996,
+        "max": 9.451519966125488
+      },
+      "eager_before_p50_ms": 16.8303499999638,
+      "eager_after_p50_ms": 15.573700000231838,
+      "latency_reduction_vs_eager_before_pct": 44.69217811805258,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 135.4498999999123,
+      "setup_ms": 91.05389999967883,
+      "wall_ms": {
+        "count": 30,
+        "mean": 10.738133333309937,
+        "p50": 10.746700000026976,
+        "p95": 11.117340000123477,
+        "max": 11.285699999916687
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 10.692250537872315,
+        "p50": 10.70904016494751,
+        "p95": 11.075327825546264,
+        "max": 11.236319541931152
+      },
+      "eager_before_p50_ms": 16.8303499999638,
+      "eager_after_p50_ms": 15.573700000231838,
+      "latency_reduction_vs_eager_before_pct": 36.1469012822069,
+      "latency_reduction_vs_graph_pct": -15.45039479964565,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 4.291534423828125e-06,
+      "aligned_max_abs_m": 3.814697265625e-06,
+      "mirrored_input_max_abs_m": 4.76837158203125e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 8.518199999798526,
+      "setup_ms": 167.3478000002433,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.315426666582425,
+        "p50": 7.244949999858363,
+        "p95": 7.908024999687768,
+        "max": 7.998099999895203
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.192968511581421,
+        "p50": 7.1444480419158936,
+        "p95": 7.817420935630798,
+        "max": 7.876607894897461
+      },
+      "eager_before_p50_ms": 16.8303499999638,
+      "eager_after_p50_ms": 15.573700000231838,
+      "latency_reduction_vs_eager_before_pct": 56.953063959609,
+      "latency_reduction_vs_graph_pct": 22.16844819477224,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 3.5762786865234375e-06,
+      "aligned_max_abs_m": 3.5762786865234375e-06,
+      "mirrored_input_max_abs_m": 5.7220458984375e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 17.81189999974231,
+      "setup_ms": 0.07199999981821747,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.224730000021736,
+        "p50": 15.573700000231838,
+        "p95": 18.727419999936497,
+        "max": 28.19869999984803
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 16.14467519124349,
+        "p50": 15.502703666687012,
+        "p95": 18.658458042144773,
+        "max": 28.12825584411621
+      },
+      "eager_before_p50_ms": 16.8303499999638,
+      "eager_after_p50_ms": 15.573700000231838,
+      "latency_reduction_vs_eager_before_pct": 7.466570806517192,
+      "latency_reduction_vs_graph_pct": -67.3062254937324,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 15.271400000074209,
+      "setup_ms": 0.05689999989044736,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.162103333332805,
+        "p50": 15.444999999999709,
+        "p95": 20.49623499992776,
+        "max": 21.47640000021056
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 16.09263474146525,
+        "p50": 15.38094425201416,
+        "p95": 20.434522342681884,
+        "max": 21.335039138793945
+      },
+      "eager_before_p50_ms": 15.444999999999709,
+      "eager_after_p50_ms": 14.540749999923719,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -86.2604993831252,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 7.696000000123604,
+      "setup_ms": 249.54100000013568,
+      "wall_ms": {
+        "count": 30,
+        "mean": 8.191323333267064,
+        "p50": 8.29215000021577,
+        "p95": 8.679579999989073,
+        "max": 8.865100000093662
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.10978988011678,
+        "p50": 8.209919929504395,
+        "p95": 8.60603985786438,
+        "max": 8.788991928100586
+      },
+      "eager_before_p50_ms": 15.444999999999709,
+      "eager_after_p50_ms": 14.540749999923719,
+      "latency_reduction_vs_eager_before_pct": 46.31175137445176,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 134.95100000000093,
+      "setup_ms": 92.04670000008264,
+      "wall_ms": {
+        "count": 30,
+        "mean": 10.357519999994716,
+        "p50": 10.248049999972864,
+        "p95": 11.157604999925752,
+        "max": 14.177099999869824
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 10.311703395843505,
+        "p50": 10.207200050354004,
+        "p95": 11.07738857269287,
+        "max": 14.135456085205078
+      },
+      "eager_before_p50_ms": 15.444999999999709,
+      "eager_after_p50_ms": 14.540749999923719,
+      "latency_reduction_vs_eager_before_pct": 33.64810618340527,
+      "latency_reduction_vs_graph_pct": -23.587368772950313,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.0728836059570312e-06,
+      "aligned_max_abs_m": 9.5367431640625e-07,
+      "mirrored_input_max_abs_m": 7.748603820800781e-07,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 9.45159999992029,
+      "setup_ms": 164.86040000017965,
+      "wall_ms": {
+        "count": 30,
+        "mean": 6.931066666705495,
+        "p50": 6.98629999988043,
+        "p95": 7.781660000296141,
+        "max": 8.158499999808555
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 6.846518468856812,
+        "p50": 6.921728134155273,
+        "p95": 7.728179192543029,
+        "max": 8.072192192077637
+      },
+      "eager_before_p50_ms": 15.444999999999709,
+      "eager_after_p50_ms": 14.540749999923719,
+      "latency_reduction_vs_eager_before_pct": 54.76659113058879,
+      "latency_reduction_vs_graph_pct": 15.74802675182384,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.1920928955078125e-06,
+      "aligned_max_abs_m": 1.1920928955078125e-06,
+      "mirrored_input_max_abs_m": 1.0728836059570312e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 16.269999999622087,
+      "setup_ms": 0.08609999986219918,
+      "wall_ms": {
+        "count": 30,
+        "mean": 14.580373333289268,
+        "p50": 14.540749999923719,
+        "p95": 15.62589499992555,
+        "max": 15.876500000103988
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 14.522400061289469,
+        "p50": 14.453760147094727,
+        "p95": 15.575654697418212,
+        "max": 15.830016136169434
+      },
+      "eager_before_p50_ms": 15.444999999999709,
+      "eager_after_p50_ms": 14.540749999923719,
+      "latency_reduction_vs_eager_before_pct": 5.854645516840451,
+      "latency_reduction_vs_graph_pct": -75.35560740634641,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 14.62569999966945,
+      "setup_ms": 3.3653999998932704,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.616269999955573,
+        "p50": 16.149699999914446,
+        "p95": 20.32144500008144,
+        "max": 26.411100000132137
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 16.535006777445474,
+        "p50": 16.043519973754883,
+        "p95": 20.250777435302734,
+        "max": 26.315776824951172
+      },
+      "eager_before_p50_ms": 16.149699999914446,
+      "eager_after_p50_ms": 15.617550000342817,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -78.09451866631943,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 8.59519999994518,
+      "setup_ms": 245.9662000001117,
+      "wall_ms": {
+        "count": 30,
+        "mean": 8.961523333330964,
+        "p50": 9.06804999999622,
+        "p95": 9.51098500011085,
+        "max": 9.58249999985128
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.838984521230062,
+        "p50": 8.884160041809082,
+        "p95": 9.344716644287109,
+        "max": 9.499648094177246
+      },
+      "eager_before_p50_ms": 16.149699999914446,
+      "eager_after_p50_ms": 15.617550000342817,
+      "latency_reduction_vs_eager_before_pct": 43.8500405577549,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 137.3502000001281,
+      "setup_ms": 108.45370000015464,
+      "wall_ms": {
+        "count": 30,
+        "mean": 10.220653333302229,
+        "p50": 10.212349999846992,
+        "p95": 10.699655000030361,
+        "max": 10.93650000029811
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 10.167882664998372,
+        "p50": 10.150943756103516,
+        "p95": 10.661734342575073,
+        "max": 10.900480270385742
+      },
+      "eager_before_p50_ms": 16.149699999914446,
+      "eager_after_p50_ms": 15.617550000342817,
+      "latency_reduction_vs_eager_before_pct": 36.76446002154162,
+      "latency_reduction_vs_graph_pct": -12.619030550683451,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.811981201171875e-05,
+      "aligned_max_abs_m": 1.71661376953125e-05,
+      "mirrored_input_max_abs_m": 1.9073486328125e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 9.600400000181253,
+      "setup_ms": 157.6441000001978,
+      "wall_ms": {
+        "count": 30,
+        "mean": 6.964120000035716,
+        "p50": 6.96379999999408,
+        "p95": 7.60438500010423,
+        "max": 8.761400000366848
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 6.8597813447316485,
+        "p50": 6.816256046295166,
+        "p95": 7.52858076095581,
+        "max": 8.646656036376953
+      },
+      "eager_before_p50_ms": 16.149699999914446,
+      "eager_after_p50_ms": 15.617550000342817,
+      "latency_reduction_vs_eager_before_pct": 56.87969435945577,
+      "latency_reduction_vs_graph_pct": 23.20509922202697,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 2.47955322265625e-05,
+      "aligned_max_abs_m": 2.09808349609375e-05,
+      "mirrored_input_max_abs_m": 2.47955322265625e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 18.67630000015197,
+      "setup_ms": 0.06430000030377414,
+      "wall_ms": {
+        "count": 30,
+        "mean": 15.895786666684822,
+        "p50": 15.617550000342817,
+        "p95": 17.953460000012456,
+        "max": 19.01670000006561
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 15.787957445780437,
+        "p50": 15.560640335083008,
+        "p95": 17.864397048950195,
+        "max": 18.927616119384766
+      },
+      "eager_before_p50_ms": 16.149699999914446,
+      "eager_after_p50_ms": 15.617550000342817,
+      "latency_reduction_vs_eager_before_pct": 3.2951076464234563,
+      "latency_reduction_vs_graph_pct": -72.2261125638845,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 15.47179999988657,
+      "setup_ms": 0.057700000070326496,
+      "wall_ms": {
+        "count": 30,
+        "mean": 15.802299999965422,
+        "p50": 15.241399999922578,
+        "p95": 18.100980000031083,
+        "max": 25.459800000135147
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 15.703508281707764,
+        "p50": 15.18233585357666,
+        "p95": 18.026137256622313,
+        "max": 25.30406379699707
+      },
+      "eager_before_p50_ms": 15.241399999922578,
+      "eager_after_p50_ms": 15.805900000032125,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -74.06607964137466,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 8.095599999705883,
+      "setup_ms": 256.4137000003939,
+      "wall_ms": {
+        "count": 30,
+        "mean": 8.619286666665479,
+        "p50": 8.756100000255174,
+        "p95": 9.19056999998702,
+        "max": 9.340399999928195
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.53185183207194,
+        "p50": 8.565248012542725,
+        "p95": 9.062400007247925,
+        "max": 9.280511856079102
+      },
+      "eager_before_p50_ms": 15.241399999922578,
+      "eager_after_p50_ms": 15.805900000032125,
+      "latency_reduction_vs_eager_before_pct": 42.550553096830654,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 145.86869999993723,
+      "setup_ms": 93.98830000009184,
+      "wall_ms": {
+        "count": 30,
+        "mean": 10.906316666629815,
+        "p50": 10.686299999861149,
+        "p95": 12.55121500003042,
+        "max": 17.056199999842647
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 10.86441167195638,
+        "p50": 10.644495964050293,
+        "p95": 12.504319763183588,
+        "max": 17.015615463256836
+      },
+      "eager_before_p50_ms": 15.241399999922578,
+      "eager_after_p50_ms": 15.805900000032125,
+      "latency_reduction_vs_eager_before_pct": 29.88636214576461,
+      "latency_reduction_vs_graph_pct": -22.044060706818392,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 8.106231689453125e-06,
+      "aligned_max_abs_m": 7.62939453125e-06,
+      "mirrored_input_max_abs_m": 9.5367431640625e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 10.837899999842193,
+      "setup_ms": 196.85049999998228,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.402460000078766,
+        "p50": 7.385449999901539,
+        "p95": 8.077335000052699,
+        "max": 8.303499999783526
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.3275199731191,
+        "p50": 7.300607919692993,
+        "p95": 8.007526111602782,
+        "max": 8.233983993530273
+      },
+      "eager_before_p50_ms": 15.241399999922578,
+      "eager_after_p50_ms": 15.805900000032125,
+      "latency_reduction_vs_eager_before_pct": 51.543493380273105,
+      "latency_reduction_vs_graph_pct": 15.653658595878195,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 5.245208740234375e-06,
+      "aligned_max_abs_m": 5.245208740234375e-06,
+      "mirrored_input_max_abs_m": 1.049041748046875e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "default",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 17.35210000015286,
+      "setup_ms": 0.068700000156241,
+      "wall_ms": {
+        "count": 30,
+        "mean": 15.797236666639947,
+        "p50": 15.805900000032125,
+        "p95": 16.793489999827216,
+        "max": 17.003700000259414
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 15.704052384694418,
+        "p50": 15.716864109039307,
+        "p95": 16.71516237258911,
+        "max": 16.906240463256836
+      },
+      "eager_before_p50_ms": 15.241399999922578,
+      "eager_after_p50_ms": 15.805900000032125,
+      "latency_reduction_vs_eager_before_pct": -3.703728004726692,
+      "latency_reduction_vs_graph_pct": -80.51301377978213,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 17.357800000354473,
+      "setup_ms": 3.7555999997493927,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.401340000038545,
+        "p50": 16.303200000038487,
+        "p95": 17.7148399998714,
+        "max": 18.46590000013748
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 16.296127033233642,
+        "p50": 16.237056732177734,
+        "p95": 17.36391677856445,
+        "max": 18.40835189819336
+      },
+      "eager_before_p50_ms": 16.303200000038487,
+      "eager_after_p50_ms": 15.733550000049945,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -95.06568714038318,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 7.803100000273844,
+      "setup_ms": 239.6469000000252,
+      "wall_ms": {
+        "count": 30,
+        "mean": 8.467719999983577,
+        "p50": 8.357800000112547,
+        "p95": 9.13436500015905,
+        "max": 9.382100000038918
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.331322654088337,
+        "p50": 8.13102388381958,
+        "p95": 9.048883390426635,
+        "max": 9.25376033782959
+      },
+      "eager_before_p50_ms": 16.303200000038487,
+      "eager_after_p50_ms": 15.733550000049945,
+      "latency_reduction_vs_eager_before_pct": 48.735217625418215,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 270.31339999984993,
+      "setup_ms": 242.31000000008862,
+      "wall_ms": {
+        "count": 30,
+        "mean": 10.751946666687218,
+        "p50": 10.759850000113147,
+        "p95": 11.326739999799429,
+        "max": 11.540899999999965
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 10.704111893971762,
+        "p50": 10.720175743103027,
+        "p95": 11.28812026977539,
+        "max": 11.485535621643066
+      },
+      "eager_before_p50_ms": 16.303200000038487,
+      "eager_after_p50_ms": 15.733550000049945,
+      "latency_reduction_vs_eager_before_pct": 34.001607045931195,
+      "latency_reduction_vs_graph_pct": -28.740218717464572,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.9073486328125e-05,
+      "aligned_max_abs_m": 1.71661376953125e-05,
+      "mirrored_input_max_abs_m": 1.52587890625e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 63.57520000028671,
+      "setup_ms": 268.2441000001745,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.350866666668783,
+        "p50": 7.317699999930483,
+        "p95": 7.832409999627998,
+        "max": 7.94980000000578
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.253123188018799,
+        "p50": 7.217056035995483,
+        "p95": 7.718553566932678,
+        "max": 7.85203218460083
+      },
+      "eager_before_p50_ms": 16.303200000038487,
+      "eager_after_p50_ms": 15.733550000049945,
+      "latency_reduction_vs_eager_before_pct": 55.11494675945086,
+      "latency_reduction_vs_graph_pct": 12.444662472995994,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.9073486328125e-05,
+      "aligned_max_abs_m": 1.52587890625e-05,
+      "mirrored_input_max_abs_m": 2.47955322265625e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "model_tests\\samples\\bus.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "first_ms": 16.960499999640888,
+      "setup_ms": 0.06759999996575061,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.19660000001204,
+        "p50": 15.733550000049945,
+        "p95": 18.98085999982868,
+        "max": 19.822300000214454
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 16.086762619018554,
+        "p50": 15.596480369567871,
+        "p95": 18.822209358215332,
+        "max": 19.707807540893555
+      },
+      "eager_before_p50_ms": 16.303200000038487,
+      "eager_after_p50_ms": 15.733550000049945,
+      "latency_reduction_vs_eager_before_pct": 3.4940993178467883,
+      "latency_reduction_vs_graph_pct": -88.2498982966579,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 18.08049999999639,
+      "setup_ms": 0.08200000002034358,
+      "wall_ms": {
+        "count": 30,
+        "mean": 15.9397466667239,
+        "p50": 15.882100000226274,
+        "p95": 16.93128499996419,
+        "max": 16.96620000029725
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 15.85480744043986,
+        "p50": 15.814575672149658,
+        "p95": 16.854642868041992,
+        "max": 16.895999908447266
+      },
+      "eager_before_p50_ms": 15.882100000226274,
+      "eager_after_p50_ms": 17.7083500000208,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -84.62620461973842,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 8.584399999563175,
+      "setup_ms": 361.94690000002083,
+      "wall_ms": {
+        "count": 30,
+        "mean": 8.6835066666481,
+        "p50": 8.602300000120522,
+        "p95": 9.656145000167271,
+        "max": 9.726899999805028
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.550018151601156,
+        "p50": 8.369152069091797,
+        "p95": 9.497088289260864,
+        "max": 9.596927642822266
+      },
+      "eager_before_p50_ms": 15.882100000226274,
+      "eager_after_p50_ms": 17.7083500000208,
+      "latency_reduction_vs_eager_before_pct": 45.836507766618,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 156.51610000031724,
+      "setup_ms": 140.11040000013963,
+      "wall_ms": {
+        "count": 30,
+        "mean": 11.99694666661344,
+        "p50": 11.667200000147204,
+        "p95": 14.06653499980166,
+        "max": 14.289799999914976
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 11.940348847707112,
+        "p50": 11.615248203277588,
+        "p95": 13.98915400505066,
+        "max": 14.225248336791992
+      },
+      "eager_before_p50_ms": 15.882100000226274,
+      "eager_after_p50_ms": 17.7083500000208,
+      "latency_reduction_vs_eager_before_pct": 26.538681912461314,
+      "latency_reduction_vs_graph_pct": -35.62884344865609,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 4.291534423828125e-06,
+      "aligned_max_abs_m": 3.814697265625e-06,
+      "mirrored_input_max_abs_m": 4.76837158203125e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 10.963200000333018,
+      "setup_ms": 187.69440000005488,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.684993333350576,
+        "p50": 7.248900000149661,
+        "p95": 9.05667000001813,
+        "max": 9.263100000225677
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.575321563084921,
+        "p50": 7.144432067871094,
+        "p95": 8.931953525543213,
+        "max": 9.149439811706543
+      },
+      "eager_before_p50_ms": 15.882100000226274,
+      "eager_after_p50_ms": 17.7083500000208,
+      "latency_reduction_vs_eager_before_pct": 54.35805088718504,
+      "latency_reduction_vs_graph_pct": 15.733001638537358,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 3.5762786865234375e-06,
+      "aligned_max_abs_m": 3.5762786865234375e-06,
+      "mirrored_input_max_abs_m": 5.7220458984375e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000036.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 16.10900000014226,
+      "setup_ms": 0.07159999995565158,
+      "wall_ms": {
+        "count": 30,
+        "mean": 17.42892999994486,
+        "p50": 17.7083500000208,
+        "p95": 18.850734999909946,
+        "max": 20.280100000036327
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 17.35245329538981,
+        "p50": 17.655295372009277,
+        "p95": 18.754405784606934,
+        "max": 20.02943992614746
+      },
+      "eager_before_p50_ms": 15.882100000226274,
+      "eager_after_p50_ms": 17.7083500000208,
+      "latency_reduction_vs_eager_before_pct": -11.498794238598853,
+      "latency_reduction_vs_graph_pct": -105.85599199949662,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 14.140299999780837,
+      "setup_ms": 0.05030000011174707,
+      "wall_ms": {
+        "count": 30,
+        "mean": 14.955790000067282,
+        "p50": 14.83355000004849,
+        "p95": 16.494989999978316,
+        "max": 16.915200000312325
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 14.89486707051595,
+        "p50": 14.781439781188965,
+        "p95": 16.415801143646238,
+        "max": 16.84377670288086
+      },
+      "eager_before_p50_ms": 14.83355000004849,
+      "eager_after_p50_ms": 21.53920000000653,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -73.24764513411239,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 7.380899999589019,
+      "setup_ms": 273.68169999999736,
+      "wall_ms": {
+        "count": 30,
+        "mean": 8.593933333349923,
+        "p50": 8.562049999909505,
+        "p95": 9.192280000115716,
+        "max": 9.422099999937927
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.446169630686443,
+        "p50": 8.45204782485962,
+        "p95": 9.079859304428101,
+        "max": 9.302016258239746
+      },
+      "eager_before_p50_ms": 14.83355000004849,
+      "eager_after_p50_ms": 21.53920000000653,
+      "latency_reduction_vs_eager_before_pct": 42.279157720966886,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 128.85180000012042,
+      "setup_ms": 88.85579999969195,
+      "wall_ms": {
+        "count": 30,
+        "mean": 11.216600000049462,
+        "p50": 11.154150000265872,
+        "p95": 12.028999999938605,
+        "max": 13.503700000001118
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 11.159946632385253,
+        "p50": 11.086943626403809,
+        "p95": 11.976579284667968,
+        "max": 13.438431739807129
+      },
+      "eager_before_p50_ms": 14.83355000004849,
+      "eager_after_p50_ms": 21.53920000000653,
+      "latency_reduction_vs_eager_before_pct": 24.80458150456627,
+      "latency_reduction_vs_graph_pct": -30.274291792079744,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.0728836059570312e-06,
+      "aligned_max_abs_m": 9.5367431640625e-07,
+      "mirrored_input_max_abs_m": 7.748603820800781e-07,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 9.19530000010127,
+      "setup_ms": 173.8375999998425,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.682813333364417,
+        "p50": 7.4047499999778665,
+        "p95": 9.323090000111732,
+        "max": 10.6857000000673
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.582901302973429,
+        "p50": 7.310847997665405,
+        "p95": 9.20225920677185,
+        "max": 10.573823928833008
+      },
+      "eager_before_p50_ms": 14.83355000004849,
+      "eager_after_p50_ms": 21.53920000000653,
+      "latency_reduction_vs_eager_before_pct": 50.08106623192923,
+      "latency_reduction_vs_graph_pct": 13.516622770760156,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.1920928955078125e-06,
+      "aligned_max_abs_m": 1.1920928955078125e-06,
+      "mirrored_input_max_abs_m": 1.0728836059570312e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000042.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "first_ms": 20.870299999842246,
+      "setup_ms": 0.09820000013860408,
+      "wall_ms": {
+        "count": 30,
+        "mean": 21.362996666675826,
+        "p50": 21.53920000000653,
+        "p95": 25.992024999845853,
+        "max": 26.342200000271987
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 21.193851788838703,
+        "p50": 21.378560066223145,
+        "p95": 25.74932117462158,
+        "max": 26.11507225036621
+      },
+      "eager_before_p50_ms": 14.83355000004849,
+      "eager_after_p50_ms": 21.53920000000653,
+      "latency_reduction_vs_eager_before_pct": -45.20596890114721,
+      "latency_reduction_vs_graph_pct": -151.5659217154091,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 19.265799999629962,
+      "setup_ms": 3.3881999997902312,
+      "wall_ms": {
+        "count": 30,
+        "mean": 18.568759999940692,
+        "p50": 17.945299999837516,
+        "p95": 22.591250000050422,
+        "max": 23.34130000008372
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 18.44907191594442,
+        "p50": 17.853983879089355,
+        "p95": 22.457579135894775,
+        "max": 23.215103149414062
+      },
+      "eager_before_p50_ms": 17.945299999837516,
+      "eager_after_p50_ms": 15.475300000161951,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -88.37540086486055,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 9.144000000105734,
+      "setup_ms": 269.44349999985207,
+      "wall_ms": {
+        "count": 30,
+        "mean": 9.49256333330292,
+        "p50": 9.526349999759987,
+        "p95": 9.99866499998916,
+        "max": 10.300199999619508
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 9.34546030362447,
+        "p50": 9.425392150878906,
+        "p95": 9.88424792289734,
+        "max": 10.178560256958008
+      },
+      "eager_before_p50_ms": 17.945299999837516,
+      "eager_after_p50_ms": 15.475300000161951,
+      "latency_reduction_vs_eager_before_pct": 46.91451243586765,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 138.6555999997654,
+      "setup_ms": 91.06569999994463,
+      "wall_ms": {
+        "count": 30,
+        "mean": 11.001226666697525,
+        "p50": 10.971349999863378,
+        "p95": 11.735994999980903,
+        "max": 11.932400000205234
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 10.947775999704996,
+        "p50": 10.922688007354736,
+        "p95": 11.691883373260497,
+        "max": 11.871904373168945
+      },
+      "eager_before_p50_ms": 17.945299999837516,
+      "eager_after_p50_ms": 15.475300000161951,
+      "latency_reduction_vs_eager_before_pct": 38.862264771484924,
+      "latency_reduction_vs_graph_pct": -15.168453816412342,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 1.811981201171875e-05,
+      "aligned_max_abs_m": 1.71661376953125e-05,
+      "mirrored_input_max_abs_m": 1.9073486328125e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 8.476299999983894,
+      "setup_ms": 160.97350000018196,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.707726666679567,
+        "p50": 7.68940000011753,
+        "p95": 8.379264999871339,
+        "max": 8.882800000264979
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.510206953684489,
+        "p50": 7.43833589553833,
+        "p95": 8.271053075790405,
+        "max": 8.743935585021973
+      },
+      "eager_before_p50_ms": 17.945299999837516,
+      "eager_after_p50_ms": 15.475300000161951,
+      "latency_reduction_vs_eager_before_pct": 57.15089744842854,
+      "latency_reduction_vs_graph_pct": 19.282831301482073,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 2.47955322265625e-05,
+      "aligned_max_abs_m": 2.09808349609375e-05,
+      "mirrored_input_max_abs_m": 2.47955322265625e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000049.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "first_ms": 19.4894999999633,
+      "setup_ms": 0.08260000004156609,
+      "wall_ms": {
+        "count": 30,
+        "mean": 15.911010000021028,
+        "p50": 15.475300000161951,
+        "p95": 19.129285000121854,
+        "max": 20.2302999996391
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 15.818616517384847,
+        "p50": 15.383999824523926,
+        "p95": 19.021209907531738,
+        "max": 19.989503860473633
+      },
+      "eager_before_p50_ms": 17.945299999837516,
+      "eager_after_p50_ms": 15.475300000161951,
+      "latency_reduction_vs_eager_before_pct": 13.764049638055253,
+      "latency_reduction_vs_graph_pct": -62.44731718393557,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "eager_before",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 15.431299999818293,
+      "setup_ms": 0.06349999966914766,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.213703333293477,
+        "p50": 16.176750000113316,
+        "p95": 17.736674999878232,
+        "max": 18.04130000027726
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 16.121652380625406,
+        "p50": 16.11724853515625,
+        "p95": 17.647616481781004,
+        "max": 17.940479278564453
+      },
+      "eager_before_p50_ms": 16.176750000113316,
+      "eager_after_p50_ms": 15.750600000046688,
+      "latency_reduction_vs_eager_before_pct": 0.0,
+      "latency_reduction_vs_graph_pct": -75.63378752427106,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "torch_graph",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 7.360199999766337,
+      "setup_ms": 260.4924999996001,
+      "wall_ms": {
+        "count": 30,
+        "mean": 9.10367000002831,
+        "p50": 9.210500000108368,
+        "p95": 9.816570000089085,
+        "max": 10.02070000004096
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 8.940365854899088,
+        "p50": 9.088496208190918,
+        "p95": 9.663078165054321,
+        "max": 9.912320137023926
+      },
+      "eager_before_p50_ms": 16.176750000113316,
+      "eager_after_p50_ms": 15.750600000046688,
+      "latency_reduction_vs_eager_before_pct": 43.06334708737014,
+      "latency_reduction_vs_graph_pct": 0.0,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "onnx_cuda",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 133.41289999971195,
+      "setup_ms": 91.62590000005366,
+      "wall_ms": {
+        "count": 30,
+        "mean": 11.228133333315782,
+        "p50": 11.139150000190057,
+        "p95": 12.880134999932125,
+        "max": 13.877800000045681
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 11.170245361328124,
+        "p50": 11.076607704162598,
+        "p95": 12.822793769836426,
+        "max": 13.804736137390137
+      },
+      "eager_before_p50_ms": 16.176750000113316,
+      "eager_after_p50_ms": 15.750600000046688,
+      "latency_reduction_vs_eager_before_pct": 31.14098938221813,
+      "latency_reduction_vs_graph_pct": -20.939688399750246,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 8.106231689453125e-06,
+      "aligned_max_abs_m": 7.62939453125e-06,
+      "mirrored_input_max_abs_m": 9.5367431640625e-06,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "tensorrt",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 8.988900000076683,
+      "setup_ms": 172.15329999999085,
+      "wall_ms": {
+        "count": 30,
+        "mean": 7.4871299999813345,
+        "p50": 7.383749999689826,
+        "p95": 8.30386499992528,
+        "max": 8.878999999978987
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 7.382856543858846,
+        "p50": 7.29804801940918,
+        "p95": 8.227247714996336,
+        "max": 8.716287612915039
+      },
+      "eager_before_p50_ms": 16.176750000113316,
+      "eager_after_p50_ms": 15.750600000046688,
+      "latency_reduction_vs_eager_before_pct": 54.355788402255676,
+      "latency_reduction_vs_graph_pct": 19.833342385289065,
+      "raw_exact": false,
+      "aligned_exact": false,
+      "raw_max_abs_m": 5.245208740234375e-06,
+      "aligned_max_abs_m": 5.245208740234375e-06,
+      "mirrored_input_max_abs_m": 1.049041748046875e-05,
+      "output_ownership_verified": true
+    },
+    {
+      "schedule": "dedicated",
+      "input": "models\\experiments\\coco8\\images\\val\\000000000061.jpg",
+      "backend": "eager_after",
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "first_ms": 18.330299999888666,
+      "setup_ms": 0.07409999989249627,
+      "wall_ms": {
+        "count": 30,
+        "mean": 16.06697000005018,
+        "p50": 15.750600000046688,
+        "p95": 18.15494000009039,
+        "max": 18.587200000183657
+      },
+      "caller_event_ms": {
+        "count": 30,
+        "mean": 15.964508787790935,
+        "p50": 15.651840209960938,
+        "p95": 18.0599289894104,
+        "max": 18.520063400268555
+      },
+      "eager_before_p50_ms": 16.176750000113316,
+      "eager_after_p50_ms": 15.750600000046688,
+      "latency_reduction_vs_eager_before_pct": 2.634336316402508,
+      "latency_reduction_vs_graph_pct": -71.00700287564597,
+      "raw_exact": true,
+      "aligned_exact": true,
+      "raw_max_abs_m": 0.0,
+      "aligned_max_abs_m": 0.0,
+      "mirrored_input_max_abs_m": 0.0,
+      "output_ownership_verified": true
+    }
+  ],
+  "quality_accepted": false,
+  "default_service_backend": "unchanged PyTorch",
+  "superseded_and_failed": [
+    {
+      "report": "forward.json",
+      "status": "failed",
+      "reason": "Windows report replacement collided with an active reader; also predates explicit ORT stream completion."
+    },
+    {
+      "report": "forward-default.json",
+      "status": "superseded",
+      "reason": "ORT completion was not explicitly synchronized on its owned nonblocking stream. Do not use the earlier 6-7ms ORT timing as completed forward latency."
+    },
+    {
+      "report": "forward-dedicated.jsonl",
+      "status": "native_abort",
+      "exit_code": -1073740791,
+      "reason": "Borrowed nonzero Torch stream; ORT session destruction aborted (0xC0000409)."
+    },
+    {
+      "report": "stream-lifecycle-diagnostic.log",
+      "status": "native_abort",
+      "reason": "Unbuffered faulthandler located abort at runner release after successful forward and comparisons."
+    },
+    {
+      "report": "ort-stream-close.log",
+      "status": "native_abort",
+      "reason": "Synchronizing and changing teardown to the default stream did not fix borrowed-stream destruction."
+    },
+    {
+      "report": "ort-owned-stream.log",
+      "status": "completed",
+      "reason": "Explicit ORT ownership, producer/output synchronization, repeated close, closed-session rejection and subsequent producer-stream reuse succeeded."
+    }
+  ],
+  "manifest": {
+    "schema": 1,
+    "weights_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "precision": "FP32",
+    "tf32": false,
+    "identity": {
+      "python": "3.12.14",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "torch": "2.8.0+cu126",
+      "cuda": "12.6",
+      "cudnn": 91002,
+      "ultralytics": "8.4.171",
+      "onnx": "1.17.0",
+      "onnxruntime": "1.23.2",
+      "tensorrt": "10.13.3.9",
+      "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+      "compute_capability": [
+        8,
+        6
+      ],
+      "total_memory": 6441926656,
+      "depth_head_sha256": "6b118882874ee2550b2c5c819a712774e1c729faf9fdc5ae6f068996c9893d02",
+      "depth_predictor_sha256": "f0f5c1dbf588579be44ec2ebb4692e576a83aa281d2d13845f818c85830b8397"
+    },
+    "artifacts": [
+      {
+        "input_shape": [
+          1,
+          3,
+          768,
+          576
+        ],
+        "output_shape": [
+          1,
+          1,
+          192,
+          144
+        ],
+        "onnx": "depth-1x3x768x576.onnx",
+        "onnx_sha256": "57c97b832599763338c084b13bd7a6aba0dd7f1c497656a20ab0e62fdc0bd8fd",
+        "export_ms": 3392.538400000376,
+        "opset": 17,
+        "native_head_export": false,
+        "cal_a": [
+          1.0
+        ],
+        "cal_b": [
+          -0.19384765625
+        ],
+        "engine": "depth-1x3x768x576.engine",
+        "engine_sha256": "c114e48ac7e989aea7c6371ca37737e7d0d161799f61c7868a4b1dee1530fa3b",
+        "build_ms": 65196.305500000104,
+        "builder": {
+          "strongly_typed": true,
+          "tf32": false,
+          "workspace_bytes": 1073741824,
+          "max_aux_streams": 0,
+          "fp16": false,
+          "int8": false
+        }
+      },
+      {
+        "input_shape": [
+          1,
+          3,
+          768,
+          608
+        ],
+        "output_shape": [
+          1,
+          1,
+          192,
+          152
+        ],
+        "onnx": "depth-1x3x768x608.onnx",
+        "onnx_sha256": "6133393f4317d2075dd67b4eef6f1ee01d31a6bf72b97275b0de38b3d5b77363",
+        "export_ms": 3080.051299999923,
+        "opset": 17,
+        "native_head_export": false,
+        "cal_a": [
+          1.0
+        ],
+        "cal_b": [
+          -0.19384765625
+        ],
+        "engine": "depth-1x3x768x608.engine",
+        "engine_sha256": "6326f1b5c60d77d2c5b5dad6b065c26da1dece126b9e55d7d2ed3f11c39136de",
+        "build_ms": 62341.14360000013,
+        "builder": {
+          "strongly_typed": true,
+          "tf32": false,
+          "workspace_bytes": 1073741824,
+          "max_aux_streams": 0,
+          "fp16": false,
+          "int8": false
+        }
+      },
+      {
+        "input_shape": [
+          1,
+          3,
+          576,
+          768
+        ],
+        "output_shape": [
+          1,
+          1,
+          144,
+          192
+        ],
+        "onnx": "depth-1x3x576x768.onnx",
+        "onnx_sha256": "ae5f1a7e739b1851847c2063f6cfc660200e1040eba9ccf4ea275ecb2e2ed139",
+        "export_ms": 3052.5601000003917,
+        "opset": 17,
+        "native_head_export": false,
+        "cal_a": [
+          1.0
+        ],
+        "cal_b": [
+          -0.19384765625
+        ],
+        "engine": "depth-1x3x576x768.engine",
+        "engine_sha256": "00718839c0bcac2cf2edd590fd0e6c6eba61c12c30f5c0f469e3b03a3e984c3d",
+        "build_ms": 61396.524799999956,
+        "builder": {
+          "strongly_typed": true,
+          "tf32": false,
+          "workspace_bytes": 1073741824,
+          "max_aux_streams": 0,
+          "fp16": false,
+          "int8": false
+        }
+      },
+      {
+        "input_shape": [
+          1,
+          3,
+          608,
+          768
+        ],
+        "output_shape": [
+          1,
+          1,
+          152,
+          192
+        ],
+        "onnx": "depth-1x3x608x768.onnx",
+        "onnx_sha256": "6e8a4eb3ff76675e226b144b831aafb75bf1228631012441ae2916d992c0dbc9",
+        "export_ms": 3013.130799999999,
+        "opset": 17,
+        "native_head_export": false,
+        "cal_a": [
+          1.0
+        ],
+        "cal_b": [
+          -0.19384765625
+        ],
+        "engine": "depth-1x3x608x768.engine",
+        "engine_sha256": "e023e9c884e9f224bbef03c661000c5e59f276dbf239ebf0d109509f0371b94e",
+        "build_ms": 58308.813099999956,
+        "builder": {
+          "strongly_typed": true,
+          "tf32": false,
+          "workspace_bytes": 1073741824,
+          "max_aux_streams": 0,
+          "fp16": false,
+          "int8": false
+        }
+      }
+    ]
+  }
+}

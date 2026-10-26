@@ -1,8 +1,12 @@
-/** Responsibilities: 中英文界面词典，包括动态状态、错误和无障碍文字。
- * Implementation: 中文原文作为键；{n} 表示运行时字段，字段内容不翻译。
- * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js, frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js, integration/maps-navigation-speech.js。
- * Declaration Index: None。
- * Variable Index: translations — 中文到英文的固定界面词典；不包含坐标或图像数据。
+/** Responsibilities: Bilingual UI dictionary for static and dynamic interface text, errors, and accessibility labels.
+ * Implementation: Chinese source text is the key; {n} marks interpolated text that is translated
+ * only when it matches a known entry, while unknown content remains verbatim.
+ * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js,
+ * frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js,
+ * integration/maps-navigation-speech.js, integration/assist-mvp.js, integration/assist-panel.html,
+ * backend/integration/assist.py.
+ * Declaration Index: None.
+ * Variable Index: translations — fixed Chinese-to-English UI dictionary; contains no coordinates or image data.
  */
 export const translations = {
   "常驻 GPU · 80 类": "Resident GPU · 80 classes",
@@ -18,7 +22,15 @@ export const translations = {
   "未知视频会话协议。": "Unknown video session protocol.",
   "导航语音": "Navigation speech",
   "启用导航播报（默认关闭）": "Enable navigation speech (off by default)",
+  "启用导航播报（默认开启）": "Enable navigation announcements (on by default)",
+  "导航与风险播报声音": "Navigation and risk alert audio",
+  "语音输出默认开启，首次请点击启动语音。只播报导航模块提供的步骤和状态，同一步骤的定位更新不重复播报。": "Speech output is enabled by default. Tap Activate voice before using it for the first time. Announcements are limited to navigation steps and states; location updates within the same step are not repeated.",
+  "返回导航": "Back to navigation",
+  "PRS · 集成测试": "PRS · Integration test",
+  "本页可同时运行本地感知与导航播报。": "This page can run local perception and navigation announcements together.",
+  "导航与感知由本页统一调度输出。": "Navigation and perception output are coordinated on this page.",
   "播报语言": "Announcement language",
+  "中文": "Chinese",
   "本地声音": "Local voice",
   "请选择本地声音": "Select a local voice explicitly",
   "读取本地声音": "Read local voices",
@@ -176,7 +188,7 @@ export const translations = {
   "检测服务正在处理图像，请稍后手动开始。": "Detection is busy processing an image. Start again manually later.",
   "图像检测失败，请检查服务端诊断日志。": "Image detection failed. Check server diagnostic logs.",
   "图像为空或超过 1 MiB。": "Image is empty or exceeds 1 MiB.",
-  "仅接受最大边不超过 640 的 JPEG。": "Only JPEG images with a maximum edge of 640 pixels are accepted.",
+  "仅接受最大边不超过 1280 的 JPEG。": "Only JPEG images with a maximum edge of 1280 pixels are accepted.",
   "JPEG 图像损坏或无法解码。": "JPEG image is damaged or cannot be decoded.",
   "模型输出格式无效。": "Invalid model output format.",
   "模型类别或置信度无效。": "Invalid model class or confidence.",
@@ -411,5 +423,53 @@ export const translations = {
   "场景描述额度已用尽，请联系管理员。": "The scene description quota is used up. Contact the administrator.",
   "场景描述上游服务出错，请稍后再试。": "The upstream scene description service failed. Please retry later.",
   "场景描述超时，请稍后再试。": "Scene description timed out. Please retry later.",
-  "场景描述响应无效，请稍后再试。": "The scene description response was invalid. Please retry later."
+  "场景描述响应无效，请稍后再试。": "The scene description response was invalid. Please retry later.",
+  "导航与环境感知": "Navigation and obstacle awareness",
+  "停止全部": "Stop all",
+  "语音输出、导航播报和风险提醒默认开启。选择本地中文声音后，点击“启动语音”；首次开始导航或检测时也会启动提示语音。风险优先播报，结束后只恢复仍有效的最新导航指令。": "Speech output, navigation announcements, and risk alerts are enabled by default. After selecting a local voice, click “Activate voice.” The first time you start navigation or detection, the voice prompt also activates. Risk alerts take priority; afterward, only the latest still-valid navigation instruction resumes.",
+  "启动语音": "Activate voice",
+  "语音提醒已开启，等待首次点击启动。": "Voice alerts are enabled and waiting for the first activation.",
+  "默认使用打开此页面的设备摄像头：在手机 Safari 打开时，调用的是手机摄像头。请先授权、选择后置镜头，再开始检测。地图路线和避障提醒独立计算，不据此生成避让路线。": "The camera on the device that opened this page is used by default. In mobile Safari, this is the phone camera. Grant permission, choose the rear camera, then start detection. Map routing and obstacle alerts are calculated independently and do not generate an avoidance route.",
+  "感知来源": "Perception source",
+  "当前设备摄像头（实时检测）": "Current device camera (live detection)",
+  "视频回放（仅供测试）": "Video replay (testing only)",
+  "启用风险提醒（默认开启）": "Enable risk alerts (on by default)",
+  "手动恢复输出": "Resume output manually",
+  "手动恢复振动": "Resume vibration manually",
+  "感知和导航均未开始。": "Neither perception nor navigation has started.",
+  "风险提醒已开启，等待语音启动与检测结果。": "Risk alerts are enabled and waiting for voice activation and detection results.",
+  "连续视频测试": "Continuous video test",
+  "选择本机视频": "Choose a local video",
+  "开始视频检测": "Start video detection",
+  "停止视频检测": "Stop video detection",
+  "请选择测试视频；不申请摄像头权限。": "Choose a test video; camera permission is not requested.",
+  "本机测试视频": "Local test video",
+  "视频检测结果": "Video detection result",
+  "实时摄像头感知": "Live camera perception",
+  "指定摄像头": "Select a camera",
+  "请明确选择摄像头": "Select a camera explicitly",
+  "授权并读取摄像头": "Grant permission and list cameras",
+  "读取摄像头列表": "Refresh camera list",
+  "尚未开启摄像头": "Camera not started",
+  "摄像头检测结果": "Camera detection result",
+  "等待检测结果": "Waiting for detection results",
+  "当前设备摄像头": "Current device camera",
+  "本地 CUDA": "Local CUDA",
+  "摄像头方向": "Camera orientation",
+  "后置": "Rear",
+  "前置": "Front",
+  "开始摄像头检测": "Start camera detection",
+  "停止摄像头检测": "Stop camera detection",
+  "仅使用明确选择的摄像头，不录制视频。": "Only the explicitly selected camera is used; video is not recorded.",
+  "ms · 帧": "ms · frames",
+  "等待检测结果。": "Waiting for detection results.",
+  "感知统计": "Perception statistics",
+  "风险振动输出": "Risk vibration output",
+  "启用振动输出（设备支持时）": "Enable vibration output (when supported)",
+  "测试短震": "Test short vibration",
+  "停止振动": "Stop vibration",
+  "正在检查接口。": "Checking the interface.",
+  "导航继续使用设备定位与现有 MCP 控制。隐藏或离开页面会停止感知、导航及输出，回到前台后需手动开始。": "Navigation continues to use device location and the existing MCP controller. Hiding or leaving the page stops perception, navigation, and output; start them manually after returning.",
+  "语音引擎事件不等于实际扬声器听音验证。导航与感知由本页统一调度输出。": "Speech engine events do not verify loudspeaker audibility. Navigation and perception outputs are coordinated on this page.",
+  "规划时起终点发送 PRS 和 ORS；导航位置在页面内计算，agent 查询时经 MCP 返回，不存数据库。本页可同时运行本地感知与导航播报。": "When planning, the origin and destination are sent to PRS and ORS. Navigation positions are calculated in the page and returned through MCP when an agent queries; they are not stored in a database. This page can run local perception and navigation announcements together.",
 };

@@ -1,5 +1,5 @@
 """Responsibilities: Stage/publish Echo, the latest phone live path, bilingual maps, MCP
-and manual vibration/speech UI with shared walking navigation dependencies.
+and manual vibration/speech UI with shared walking navigation and voice-agent dependencies.
 Implementation: Pinned SSH, private local credentials, explicit source allowlist over the
 current release; validate the full-COCO qualified plan before staging;
 prune retired modes and replace owned page/asset/WS routes, including maps and shared language
@@ -14,7 +14,8 @@ The navigation profile overlays map guidance and its shared MCP/static dependenc
 explicit current runtime; preserves camera/inference sources, routes, templates and credentials.
 Navigation/outputs require the active shared nested asset route before staging any files.
 Related Modules: hf_video_relay/inference_plan/ai_mcp/ai_bridge; realtime.depth/tracking/risk;
-frontend live pipeline;
+frontend live pipeline; core.agent and agent_skills Markdown/JSON intent catalog, routing prompts
+and tool scopes (full releases only);
 deploy templates;
 private server_info.txt.
 Declaration Index: PinnedHost — SSH policy; PinnedHost.missing_host_key — fingerprint check;
@@ -23,6 +24,8 @@ require_shared_asset_route — read-only compatibility contract for scoped navig
 wait_ready — listener/health observation; stage — hash-verified inactive release;
 activate_overlay — configuration-preserving vibration, live-tuning or navigation release;
 activate_outputs — isolated-runtime device-output deployment;
+load_agent_environment — explicitly select and validate private voice/VLM settings;
+merge_agent_environment — preserve unrelated private environment bytes;
 activate — publish reviewed release; main — explicit stage/activate CLI.
 Variable Index: ROOT — local backend; PREFIX — dedicated remote workspace; FINGERPRINT — inspected
 SSH host key; logger — deployment transition diagnostics without secrets;
@@ -36,6 +39,8 @@ NAVIGATION_FRONTEND/NAVIGATION_BACKEND — map/MCP files, preserving camera/infe
 runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest;
 shared_asset_route_sha256 — verified active route identity for navigation/output prerequisites.
 Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
+AGENT_ENV_FIELDS — permitted voice/VLM/search-scope settings;
+mcp_profile — explicit public registry.
 """
 
 import argparse
@@ -58,6 +63,11 @@ ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "/opt/prs-practice"
 FINGERPRINT = "hIrYH0S2vhyiU53ScT9Ei03o1ClcuHAb2pL/VrMMg90="
 logger = logging.getLogger(__name__)
+AGENT_ENV_FIELDS = (
+    "PRS_AGENT_API_KEY", "PRS_AGENT_BASE_URL", "PRS_AGENT_MODEL", "PRS_ASR_MODEL",
+    "DASHSCOPE_API_KEY", "DASHSCOPE_HOST", "VLM_MODEL",
+    "PRS_AGENT_SEARCH_COUNTRY", "PRS_AGENT_SEARCH_LANGUAGE",
+)
 NAVIGATION_FRONTEND = (
     "maps.html", "maps-page.js", "maps-client.js", "navigation.js", "navigation-ui.js",
     "ai-control.js", "i18n.js", "translations.js", "vibration.js", "speech-output.js",
@@ -116,6 +126,11 @@ OUTPUT_BACKEND = (
     "tools/check_speech_mcp.py",
 )
 FRONTEND = (
+    "agent-client.js", "agent-device.js", "agent.css", "voice-input.js", "voice-worklet.js",
+    "tests/agent.test.mjs", "tools/check_agent_browser.mjs", "tools/check_agent_extended.mjs",
+    "tools/check_agent_location.mjs",
+    "tools/check_agent_discovery.mjs",
+    "tools/check_agent_intents.mjs",
     "index.html",
     "camera.js",
     "camera.css",
@@ -151,9 +166,22 @@ FRONTEND = (
     "tools/check_local_navigation_browser.mjs",
 )
 BACKEND = (
+    "core/agent/__init__.py", "core/agent/provider.py", "core/agent/skills.py",
+    "core/agent/intents.py", "core/test_agent_intents.py",
+    "core/agent/place_resolution.py", "core/test_place_resolution.py",
+    "core/agent/selection.py",
+    "core/agent/places.py", "core/agent/poi.py", "core/agent/tools.py", "core/agent/runtime.py",
+    "core/agent/transport.py", "core/test_agent.py", "core/test_agent_discovery.py",
+    "agent_skills/system.md", "agent_skills/navigation/SKILL.md",
+    "agent_skills/navigation/tools.json", "agent_skills/camera/tools.json",
+    "agent_skills/outputs/tools.json",
+    "agent_skills/intents.json", "agent_skills/intent_router.md",
+    "agent_skills/general_assistant.md",
+    "agent_skills/camera/SKILL.md", "agent_skills/outputs/SKILL.md", "AGENT.md",
     "config/asgi.py",
     "config/urls.py",
     "core/camera.py",
+    "core/maps.py",
     "core/scene.py",
     "core/vlm.py",
     "core/test_scene.py",
@@ -170,6 +198,7 @@ BACKEND = (
     "realtime/protocol.py",
     "realtime/detector.py",
     "realtime/depth.py",
+    "realtime/distance.py", "realtime/distance_config.py", "realtime/performance.py",
     "realtime/tracking.py",
     "realtime/risk.py",
     "zerogpu/__init__.py",
@@ -204,6 +233,7 @@ BACKEND = (
     "models/README.md",
     "models/yolo26n.json",
     "models/inference-plan.json",
+    "models/distance-config.json", "DISTANCE-MODES.md", "core/test_distance_modes.py",
     ".env.example",
     "core/test_maps.py",
     "core/test_deploy_phone_live.py",
@@ -215,6 +245,7 @@ BACKEND = (
     "deploy/README.md",
 )
 RETIRED = (
+    "backend/agent_skills/navigation/references/place-knowledge.md",
     "frontend/live",
     "frontend/detection-client.js",
     "frontend/stream-client.js",
@@ -357,10 +388,11 @@ def require_shared_asset_route(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def stage(client, sftp, profile="full", source_root=None, git_commit=None, runtime_path=None):
+def stage(client, sftp, profile="full", source_root=None, git_commit=None, runtime_path=None,
+          mcp_profile=None):
     """Functionality: Build a checked live/maps/MCP release while preserving unrelated services.
     Inputs: client/sftp, profile(full/vibration/outputs/live-tuning/navigation),
-    source_root/git_commit and runtime_path;
+    source_root/git_commit, runtime_path and optional full-release mcp_profile;
     current release, measured inference plan and owned source/template allowlists.
     Outputs: safe hash manifest including the measured plan identity.
     Logic: validate the plan, copy current release, prune explicit retired paths in the new release,
@@ -370,6 +402,8 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     no credentials, database, weights, browser fixtures or environment upload.
     No implicit promotion or rollback; logs release identity and verification transitions.
     Full profile dependencies must be installed explicitly; no implicit pip install.
+    Agent-enabled HTML requires full publication; legacy UI overlays must use an explicit
+    pre-agent snapshot so their narrow manifests cannot produce missing runtime/assets.
     Vibration profile verifies the active plan is byte-identical and does not replace runtime,
     service/proxy templates or credentials; no retirement pruning outside the full profile.
     Outputs includes shared map/navigation UI and requires an isolated runtime; preserves inference;
@@ -383,6 +417,8 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     """
     if profile not in {"full", "vibration", "outputs", "live-tuning", "navigation"}:
         raise ValueError("Unknown deployment profile")
+    if mcp_profile is not None and (profile != "full" or mcp_profile not in {"outputs", "full"}):
+        raise ValueError("Explicit MCP profile requires a full release and full/outputs value")
     if profile == "live-tuning" and runtime_path is None:
         raise ValueError("Live-tuning profile requires an explicit existing runtime")
     if profile == "navigation" and runtime_path is None:
@@ -397,6 +433,14 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
     if profile == "outputs" and runtime == PREFIX + "/runtime-venv":
         raise ValueError("Outputs profile requires an isolated runtime under owned runtimes")
     source = ROOT if source_root is None else Path(source_root).resolve() / "backend"
+    # Functionality: Reject incomplete legacy overlays of agent-enabled sources.
+    # Logic: New HTML/ASGI imports need the complete runtime and skill bundle.
+    # Constraints: Explicit old snapshots remain usable; never silently widen an overlay.
+    if profile in {"vibration", "outputs", "navigation"}:
+        page = source.parent / "frontend" / "index.html"
+        if page.exists() and "agent-client.js" in page.read_text(encoding="utf-8"):
+            raise ValueError("Agent-enabled sources require a full release; legacy overlays "
+                             "must use an explicit pre-agent source snapshot")
     plan = read_plan(source / "models/inference-plan.json",
                      json.loads((source / "models/yolo26n.json").read_bytes()))
     old = execute(client, f"readlink -f {PREFIX}/current").strip()
@@ -469,6 +513,8 @@ def stage(client, sftp, profile="full", source_root=None, git_commit=None, runti
                   if profile == "vibration" else
                   "Echo, latest HF live, bilingual maps and MCP control; root redirects"),
         "profile": profile,
+        "mcp_profile": (mcp_profile or ("outputs" if profile == "outputs" else "full"))
+                       if profile in {"full", "outputs"} else None,
         "runtime": runtime,
         "generated": generated,
         "git_commit": git_commit,
@@ -519,7 +565,7 @@ print('Retired source removed from inactive release')
         if hashlib.sha256(sftp.open(remote).read()).hexdigest() != hashes[name]:
             raise ValueError("Uploaded file hash mismatch: " + name)
     logger.info("Upload hashes verified release=%s; running remote checks", release)
-    registry_profile = "outputs" if profile == "outputs" else "full"
+    registry_profile = manifest["mcp_profile"]
     profile_export = (f"export PRS_MCP_PROFILE={registry_profile}\n"
                       if profile in {"full", "outputs"} else "")
     registry_check = (
@@ -527,7 +573,7 @@ print('Retired source removed from inactive release')
         "OUTPUT_TOOL_NAMES; assert MCP_PROFILE == 'outputs'; "
         "assert {tool.name for tool in asyncio.run(mcp.list_tools())} == OUTPUT_TOOL_NAMES; "
         "print('Device output/navigation MCP registry verified')\"\n"
-    ) if profile == "outputs" else ""
+    ) if profile in {"full", "outputs"} and registry_profile == "outputs" else ""
     if profile == "navigation":
         registry_check = (
             f"{runtime}/bin/python -c \"import asyncio; from core.ai_mcp import mcp; "
@@ -610,19 +656,78 @@ def activate_overlay(client, manifest):
     logger.info("Source overlay activated release=%s; previous release retained", release)
 
 
-def activate(client, sftp, manifest):
+def load_agent_environment(path):
+    """Functionality: Read explicitly selected private voice/VLM and place-scope configuration.
+    Inputs: local dotenv path; Outputs: whitelisted nonempty settings held only in memory.
+    Logic: Require complete voice config, fixed regional endpoint and valid model identifiers.
+    Constraints: No unrelated keys, newline injection, credential logs or model/region fallback.
+    """
+    source = dotenv_values(path)
+    values = {name: source[name] for name in AGENT_ENV_FIELDS if source.get(name)}
+    if any(name not in values for name in AGENT_ENV_FIELDS[:4]):
+        raise ValueError("Explicit agent environment must contain all four voice settings")
+    if any(any(char in value for char in "\r\n\0") for value in values.values()):
+        raise ValueError("Private environment contains a forbidden control character")
+    if values["PRS_AGENT_BASE_URL"] not in {
+        "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    }:
+        raise ValueError("Agent region must be an explicitly supported HTTPS endpoint")
+    for name in ("PRS_AGENT_MODEL", "PRS_ASR_MODEL", "VLM_MODEL"):
+        if name in values and not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", values[name]):
+            raise ValueError("Invalid model identifier in private environment")
+    if "PRS_AGENT_SEARCH_COUNTRY" in values and not re.fullmatch(
+        r"[A-Z]{3}", values["PRS_AGENT_SEARCH_COUNTRY"]
+    ):
+        raise ValueError("Search country must be an uppercase alpha-3 code")
+    if "PRS_AGENT_SEARCH_LANGUAGE" in values and not re.fullmatch(
+        r"[a-z]{2,3}", values["PRS_AGENT_SEARCH_LANGUAGE"]
+    ):
+        raise ValueError("Search language must be a lowercase language code")
+    if "DASHSCOPE_HOST" in values and values["DASHSCOPE_HOST"] not in {
+        "dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com",
+    }:
+        raise ValueError("Invalid VLM region in private environment")
+    return values
+
+
+def merge_agent_environment(original, values):
+    """Functionality: Apply only explicitly supplied agent settings to private env bytes.
+    Inputs: original bytes and already validated values; Outputs: replacement bytes.
+    Logic: Remove exact updated assignments, retain every other line, append shell-safe values.
+    Constraints: Reject non-whitelisted names; never modifies HF/ORS/database/registry settings.
+    """
+    if set(values) - set(AGENT_ENV_FIELDS):
+        raise ValueError("Unrelated private environment update refused")
+    prefixes = tuple((name + "=").encode() for name in values)
+    retained = b"".join(line for line in original.splitlines(keepends=True)
+                        if not line.startswith(prefixes))
+    if retained and not retained.endswith(b"\n"):
+        retained += b"\n"
+    return retained + "".join(f"{name}={shlex.quote(value)}\n"
+                               for name, value in values.items()).encode()
+
+
+def activate(client, sftp, manifest, agent_env_path=None):
     """Functionality: Publish one staged, checked minimal-mode release and preserve recovery
     material.
-    Inputs: client/sftp/manifest; full profile also reads PRS configs and private HF token.
+    Inputs: client/sftp/manifest and optional explicit agent_env_path;
+    legacy full registry also reads private HF token.
     Outputs: activation info.
     Logic: check old-current match and staged hashes;
     vibration/live-tuning/navigation only switch sources.
-    Full profile: backup unit/include/env, update token through SFTP mode0600,
+    Full release with outputs registry: preserve HF/ORS and apply only explicit voice/VLM values.
+    Legacy full registry: backup unit/include/env, update token through SFTP mode0600,
     validate nginx, atomic current link, restart only PRS, check readiness, graceful nginx reload.
     Constraints: no migration, other application restart, auto rollback or GPU call;
     logs activation/readiness transitions without credential values.
     """
     target, previous, release = manifest["path"], manifest["previous"], manifest["release"]
+    agent_values = None
+    if agent_env_path is not None:
+        if manifest.get("profile") != "full" or manifest.get("mcp_profile") != "outputs":
+            raise ValueError("Agent settings require a full bundle with explicit outputs registry")
+        agent_values = load_agent_environment(agent_env_path)
     if execute(client, f"readlink -f {PREFIX}/current").strip() != previous:
         raise ValueError("Current release changed since staging")
     for name, expected in manifest["files"].items():
@@ -632,8 +737,8 @@ def activate(client, sftp, manifest):
     if manifest.get("profile", "full") in {"vibration", "live-tuning", "navigation"}:
         activate_overlay(client, manifest)
         return
-    if manifest.get("profile", "full") == "outputs":
-        activate_outputs(client, sftp, manifest)
+    if manifest.get("profile", "full") == "outputs" or manifest.get("mcp_profile") == "outputs":
+        activate_outputs(client, sftp, manifest, agent_values=agent_values)
         return
     backup = "/etc/prs-camera/backups/" + release
     backup_unit = shlex.quote(backup + "/prs-camera.service")
@@ -683,11 +788,12 @@ systemctl is-active prs-camera
     logger.info("Release activated=%s; previous release/config backups retained", release)
 
 
-def activate_outputs(client, sftp, manifest):
+def activate_outputs(client, sftp, manifest, agent_values=None):
     """Functionality: Activate reviewed device outputs with an isolated interpreter and registry.
-    Inputs: client/sftp and precondition-verified manifest; existing private service environment.
+    Inputs: client/sftp, precondition-verified manifest and optional validated agent_values;
+    existing private service environment.
     Outputs: Activation/health evidence and recoverable previous release/config backups.
-    Logic: Back up owned configuration, change only PRS_MCP_PROFILE in the environment, install
+    Logic: Back up configuration, set outputs registry and explicit agent values, install
     reviewed service/proxy templates, atomically switch current, restart only prs-camera, check
     listener/health then reload nginx. HF/ORS credentials are preserved byte-for-byte.
     Constraints: No migration, inference change, other service restart, retry or automatic rollback;
@@ -707,6 +813,9 @@ def activate_outputs(client, sftp, manifest):
                          if not line.startswith(b"PRS_MCP_PROFILE="))
     updated = preserved + (b"" if preserved.endswith(b"\n") else b"\n")
     updated += b"PRS_MCP_PROFILE=outputs\n"
+    if agent_values is not None:
+        updated = merge_agent_environment(updated, agent_values)
+        manifest["updated_environment_names"] = sorted(agent_values)
     with sftp.open("/etc/prs-camera/app.env.outputs-next", "wb") as output:
         output.write(updated)
     sftp.chmod("/etc/prs-camera/app.env.outputs-next", 0o600)
@@ -734,7 +843,8 @@ systemctl is-active prs-camera
 
 def main():
     """Functionality: Stage first or activate the explicit reviewed manifest.
-    Inputs: stage/activate, manifest/profile, optional source-root/git-commit/runtime.
+    Inputs: stage/activate, manifest/profile, source-root/git-commit/runtime/mcp-profile;
+    agent-env supplies only explicit activation-time private voice/VLM values.
     Outputs: non-secret manifest/exit failure.
     Logic: configure transition logging; operations remain separate, never implicit promotion.
     Constraints: credentials stay private; exceptions preserve a failing exit status.
@@ -750,16 +860,20 @@ def main():
     parser.add_argument("--source-root", type=Path)
     parser.add_argument("--git-commit")
     parser.add_argument("--runtime")
+    parser.add_argument("--mcp-profile", choices=("full", "outputs"))
+    parser.add_argument("--agent-env", type=Path)
     args = parser.parse_args()
+    if args.agent_env and not args.activate:
+        parser.error("--agent-env is only used during explicit activation")
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     client = connect_server()
     try:
         with client.open_sftp() as sftp:
             manifest = (stage(client, sftp, args.profile, args.source_root,
-                              args.git_commit, args.runtime)
+                              args.git_commit, args.runtime, args.mcp_profile)
                         if args.stage else json.loads(args.manifest.read_text()))
             if args.activate:
-                activate(client, sftp, manifest)
+                activate(client, sftp, manifest, args.agent_env)
             args.manifest.parent.mkdir(parents=True, exist_ok=True)
             args.manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             print(json.dumps({key: value for key, value in manifest.items() if key != "files"}))

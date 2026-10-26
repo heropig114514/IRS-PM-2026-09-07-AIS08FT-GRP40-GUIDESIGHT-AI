@@ -1,180 +1,104 @@
-# 手机导航与本机推理 MVP
+# Phone Navigation and Local Inference MVP
 
-手机使用既有服务器的可信 HTTPS 访问本机统一 MVP，手机和电脑无需处于同一局域网。
-入口为 [手机导航与检测](https://47.239.50.129/mvp/maps/)。服务器负责 HTTPS、访问认证和
-中转，检测、深度、跟踪及风险推理仍在本机 GPU 上运行。原服务器 `/prs/` 应用、服务、
-导航核心和算法实现保持独立。
+The phone uses the existing server's trusted HTTPS endpoint to access the public guest version of the unified MVP; the phone and laptop do not need to share a local network. The official page is [Phone Navigation and Detection](https://47.239.50.129/mvp/maps/); the diagnostic page is [Phone MVP Tests](https://47.239.50.129/mvp/maps/test). Neither page requires a username or password. The application server permanently hosts both pages and their map APIs. Detection, depth, tracking, and risk inference run only on the laptop GPU while its inference worker and SSH tunnel are active. The existing `/prs/` service, navigation core, and algorithms remain independent.
 
-## 连接与职责
+## Connection and Responsibilities
 
 ```text
-iPhone Safari：https://47.239.50.129/mvp/maps/
-  └─ 既有 HTTPS Nginx：/mvp/，独立访问认证
-       └─ 服务器 127.0.0.1:18766
-            └─ 固定服务器身份的反向 SSH 隧道
-                 └─ 本机 127.0.0.1:8766：integration.mobile_asgi
-                      ├─ 原地图、设备 GPS、导航和统一语音调度
-                      └─ 本机 127.0.0.1:8767：独立 CUDA 推理进程
+iPhone Safari: https://47.239.50.129/mvp/maps/
+  └─ Existing HTTPS Nginx: public /mvp/ guest relay with a fixed path allowlist
+       └─ App server 127.0.0.1:18766: prs-mvp-web.service
+            ├─ Official and diagnostic pages, maps API, navigation and speech scheduling
+            ├─ Guest voice/text assistant over the exact /ws/agent/ path
+            └─ App server 127.0.0.1:18767: inference-only reverse SSH tunnel
+                 └─ Laptop 127.0.0.1:8767: isolated CUDA inference process
 ```
 
-服务器只在回环地址开放隧道端口，不直接开放本机 Web 或 GPU 端口。`MobileApplication`
-在外层检查精确 Host、Origin、代理标记和允许的路径，再将已准入请求转为原本机契约。
-页面、资源和两个浏览器 WebSocket 均保留 `/mvp/` 前缀；公网 MCP、admin 和其它 API
-不开放。电脑通过原 localhost MCP 操作同一手机页面的导航控制器，不增加定位监听。
+The permanent Web service and the inference tunnel use separate loopback ports. Port 18766 remains available on the application server when the laptop is off; only detection requires the laptop's tunnel on port 18767. Neither laptop Web port nor GPU port is publicly exposed. `MobileApplication` checks the exact Host, Origin, proxy marker, and allowed path at the outer boundary, then maps admitted requests to the original local contract. This is a public guest route, not user identity authentication. The page, assets, and three exact browser WebSockets retain the `/mvp/` prefix: control, assistant, and local detection. Assistant tab ownership is verified through the control socket; this does not add account authentication. Public MCP, admin, and general API routes remain closed. Assistant requests use the provider settings isolated to `prs-mvp-web` and remain subject to the documented per-task limits. No second navigation controller or location watcher is added.
 
-中转仅为地图配置和规划请求对应的两个固定 JS 资源提供派生响应，使同源请求沿用 Safari
-已完成的网页访问认证；原前端文件、localhost 响应和导航计算保持不变。源文件中的明确
-适配位置变化时返回 503，不自动修改其它代码、注入凭据或绕过认证。
+The Nginx relay forwards public page assets unchanged to the app-server Web service. Map requests omit browser credentials and use the existing same-origin route; no login cookie, browser password or access token is injected. The relay path and HTTP/WebSocket allowlists remain fixed. The inference-only SSH listener is also loopback-only and carries no browser traffic.
 
-浏览器只发送用于检测的 JPEG 帧；选择本地视频时，原视频文件留在浏览器。媒体只在内存
-处理，不录制或保存。移动网络、服务器中转与本机推理共同影响结果年龄；原有效期、
-采集时间、模型参数和风险规则不因手机部署而改变。
+The browser sends only JPEG frames used for detection; when a local video is selected, the original video remains in the browser. Media is processed in memory and is not recorded or saved. Mobile networks, the server relay, and local inference all affect result age; the original expiry, capture time, model parameters, and risk rules do not change for phone deployment.
 
-## 环境准备与检查
+## Application Server Web Service
 
-先按 [本地 MVP](LOCAL-MVP.md#环境与模型准备) 准备 `.venv`、`.venv-inference`、CUDA
-及所选算法需要的权重。手机中转依赖安装在 Web 环境，从 `backend` 执行：
+The app-server service is defined by [`deploy/prs-mvp-web.service`](deploy/prs-mvp-web.service), runs as the dedicated `prs-mvp-web` user, and serves only the fixed MVP ASGI allowlist on `127.0.0.1:18766`. Its environment file is `/etc/prs-mvp-web/app.env`; it contains a separate Django key, the existing ORS key for maps, `LOCAL_WEB_ORIGIN=http://127.0.0.1:18766`, and `LOCAL_INFERENCE_URL=ws://127.0.0.1:18767/ws/infer/`. When the guest assistant is enabled, the same file holds only the allowlisted `PRS_AGENT_*` and `PRS_ASR_MODEL` provider settings. These credentials remain scoped to the MVP service and are never copied to the laptop or committed. Store the SQLite state in `/var/lib/prs-mvp-web/db.sqlite3`.
+
+Deploy each source revision to a versioned directory under `/opt/prs-practice/mvp/releases/`, update only `/opt/prs-practice/mvp/current`, and install the unit file to `/etc/systemd/system/prs-mvp-web.service`. Then run `systemctl daemon-reload` and `systemctl enable --now prs-mvp-web`. Check `systemctl status prs-mvp-web` and request both public page URLs. This deployment does not switch `/opt/prs-practice/current`, restart `prs-camera`, or change the Nginx virtual host. The existing `/mvp/` Nginx include continues to proxy only to 18766.
+
+## Laptop Inference Setup and Startup
+
+The laptop needs Python 3.12, a supported NVIDIA driver, the pinned CUDA environment, and the exact configured model weights. This repository's current default distance mode uses the official YOLO26n depth checkpoint, so both detection and depth weights are required. From `backend`, provision a fresh inference environment as follows; the CUDA 12.6 wheels are compatible with the inspected CUDA 12.7 laptop driver:
+
+```powershell
+python -m venv .venv-inference
+.\.venv-inference\Scripts\python.exe -m pip install torch==2.8.0 torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cu126
+.\.venv-inference\Scripts\python.exe -m pip install -r requirements-inference.txt --retries 0
+Invoke-WebRequest https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n-depth.pt -OutFile models/yolo26n-depth.pt
+Get-FileHash -Algorithm SHA256 models/yolo26n.pt, models/yolo26n-depth.pt
+```
+
+The depth checkpoint must have SHA-256 `befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9`; `yolo26n.pt` must match `models/yolo26n.json`. These files are not downloaded implicitly by the launcher. Install relay-client dependencies in `.venv`, then run from `backend`:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-phone.txt --retries 0
 .\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --check
 ```
 
-`requirements-phone.txt` 包含既有开发依赖及固定版本的密码哈希依赖。`--check` 核对两个
-环境、直接依赖、CUDA、模型和本机端口；不连接 SSH、不写服务器配置、不启动服务或
-执行模型预测。它不验证公网访问、iPhone 权限或手机实际播报，也不能与 `--install-relay`
-同时使用。
+`requirements-phone.txt` reuses the Web/deployment dependencies. `--check` verifies both laptop environments, direct dependency pins, CUDA, model hashes, and the local inference port. It does not connect over SSH, write server configuration, start services, load a model, or submit frames. It does not verify iPhone permissions, camera behavior, actual phone speech output, or detection quality.
 
-默认 Web 端口为 8766、推理端口为 8767。端口占用会明确失败，不自动杀进程或寻找其它
-端口；应在原启动终端停止对应实例，或显式使用 `--web-port`、`--inference-port` 指定
-不同端口。服务器的专用反向端口固定为 18766。
+The permanent Web port is 18766 on the application server. The laptop worker defaults to `127.0.0.1:8767`; the pinned SSH connection maps that worker to server loopback port 18767. An occupied local port fails explicitly. The launcher does not kill processes, start a Web service, edit Nginx, or select another port.
 
-## 安装中转与日常启动
-
-首次安装或明确更新本项目拥有的中转配置时执行：
-
-```powershell
-.\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --install-relay
-```
-
-该选项在既有 HTTPS 虚拟主机中加入独立 `/mvp/` include 和访问口令哈希，保留原配置
-备份，检查 Nginx 语法后 reload；不上传算法或软件源码、不更换证书、不重启原
-`prs-camera` 服务。语法校验失败时恢复此前配置且不 reload。安装成功后继续启动本次
-本机服务和隧道。
-
-已安装相同中转配置及访问口令时，日常启动使用：
+After `prs-mvp-web.service` is active, run the following on the laptop to start inference and connect it to the app server:
 
 ```powershell
 .\.venv\Scripts\python.exe -B -m tools.run_phone_mvp
 ```
 
-日常启动只核对已安装模板、include 和访问口令哈希，不改写配置或 reload Nginx。
-不匹配时明确失败，须核对差异后显式使用安装选项，不自动修复或切换入口。
+The launcher prompts for the app-server SSH password in the terminal and verifies the pinned server fingerprint. The password is not placed in command arguments, saved, or written to the run report. It checks that `prs-mvp-web.service` is already active, starts only `integration.inference.asgi` on the laptop, and establishes the loopback-only reverse tunnel. It reports model state from health without loading the model; native initialization begins only on the first real input. Logs and run details stay under the locally ignored `.venv/tmp/phone-mvp/` directory; `--log-dir` may select another directory under `backend`.
 
-启动器通过终端交互请求 SSH 密码，核对固定服务器的主机指纹；SSH 密码不放入命令行、
-文件或运行报告。它从服务器 `/etc/prs-camera/app.env` 只读取 `ORS_API_KEY`，仅在本机
-监督进程和 Web 子进程内存中使用，不另存配置、不向推理进程或浏览器提供密钥。HF 和
-DashScope 保持关闭。
+## iPhone Operation
 
-手机网页的独立访问账号默认用户名为 `phone`，随机口令保存在本机私有文件
-`backend/.env.phone-mvp`，字段为 `PHONE_ACCESS_USER` 和 `PHONE_ACCESS_PASSWORD`。
-首次运行在文件缺失时创建，此后复用；可通过 `--access-env` 显式选择文件。该文件由
-`.env.*` 忽略规则保护，不应复制到文档、截图或运行日志。服务器只保存其密码哈希，
-不保存网页明文口令。SSH 密码不写入此文件。
+1. Open the HTTPS entry above in foreground Safari; no website login is required. The certificate must be trusted by iPhone; opening the page in a desktop test that ignores certificate errors does not establish that phone permissions work.
+2. The unified page enables speech output, navigation announcements, and risk alerts by default. Vibration is also enabled when the browser supports its API. iPhone Safari does not support that API and does not switch to another vibration method. Announcements follow the interface language and automatically select a matching local voice, preferring exact language tags and the system's default local voice. If no matching voice exists, the page reports that condition without using another language or remote voice. Select “Start speech” and wait for the speech status to indicate that the native engine has started. Product speech rate is fixed at 2× and app volume at 100%; adjust actual volume with the phone buttons.
+3. Enable iPhone Location Services, Safari website location, and Precise Location. Get the device origin, select a destination on the map, plan, and start navigation; the original navigation module handles the route and continuous location updates.
+4. Select “Environmental awareness” at the top or “Start detection” on the card and grant Safari camera permission. The product page requests the phone's rear camera during that same click; no later device selection is needed. The raw camera image and server-returned annotated image are both shown. Detection boxes use existing algorithm output; the returned image may have no boxes when there are no detections. The page does not request microphone access. If the browser cannot select a rear camera, permission is denied, or the camera is unavailable, it reports the failure without switching to the front camera or retrying. Directions are relative to the camera image, not geographic orientation. Video replay and manual camera selection are on the dedicated test page; replay does not represent the road where the phone is located.
+5. Keep Safari in the foreground and the screen unlocked. Switching to the background, leaving the page, or selecting “Stop navigation and detection” clears input and owned output; start manually after returning to the foreground. For speech errors, check permissions, voice, and output state, explicitly clear the error, then resume manually.
 
-等待启动器显示手机 URL 并完成 HTTPS 页面检查后，再在 Safari 打开入口。安装依赖或
-监听端口可用不等于模型已加载；模型仍由第一次真实输入触发初始化。运行详情保存在
-本机被忽略的 `.venv/tmp/phone-mvp/` 子目录，可通过 `--log-dir` 指定 `backend` 内的目录。
+Enabled defaults express an output preference only; they do not mean camera/location permission was granted, detection/navigation started, or the phone produced sound. Page load does not request permissions, plan routes, or submit speech automatically.
 
-## iPhone 操作
+Safari's first speech request must start during a real user action. Once a matching local voice is available, “Start speech” synchronously submits a startup prompt in the corresponding language. The first real click on camera detection, start navigation, or the test-page video-detection button also performs this speech calibration in the same click; there is no need to play text in the manual speech test area first. `SpeechActivation` blocks automatic navigation and risk speech until the native engine emits `start` for that request; request acceptance alone does not count as started. If status does not reach started or an error occurs, follow the prompt, check voice/device settings, and explicitly select “Start speech” again. No retry is automatic. Native engine start means only that the browser reported playback start; confirm actual audibility on the phone.
 
-1. 在前台 Safari 打开上述 HTTPS 入口，使用本机私有访问文件中的账号和口令完成认证。
-   证书必须被 iPhone 信任；网页能在忽略证书错误的桌面测试中打开，不代表手机权限可用。
-2. 统一页默认开启语音输出、导航播报和风险提醒；浏览器支持振动 API 时也默认开启振动。
-   iPhone Safari 不支持该 API，不会改用其它振动方式。播报跟随界面语言，自动匹配同语言
-   的本地声音；优先精确语言标记和系统默认本地声音，没有匹配声音时明确提示，不使用
-   其它语言或远程声音。点击“启动语音”，等待语音状态指示原生引擎已开始。产品语速固定
-   2倍、应用音量100%，实际音量使用手机按键调整。
-3. 允许 iPhone 系统定位服务、Safari 网站定位和精确位置。获取设备起点，点选地图终点，
-   规划后开始导航；路线和持续定位由原导航模块处理。
-4. 点击顶部“环境感知”或卡片中的“开始检测”，允许 Safari 的摄像头权限；产品页会在
-   这次点击中请求手机后置镜头，无须授权后再选择设备。原始摄像头画面与服务器回传的
-   标记画面同时显示，识别框沿用已有算法输出；没有识别目标时回传画面可能没有框。
-   页面不请求麦克风。浏览器不支持选择后置镜头、权限被拒或镜头不可用时，页面给出
-   明确提示，不自动使用前置镜头或重试。方向描述相对摄像头画面，不是地理方位。
-   视频回放与手动镜头选择位于专门的测试页，回放不代表手机当前道路。
-5. 保持 Safari 在前台、屏幕解锁。切换后台、离开页面或“停止导航与检测”会清理输入与自有输出；
-   返回前台后需手动开始。声音错误先检查权限、声音和输出状态，显式清理后手动恢复。
+## Test and Diagnostic Interface
 
-默认开启只表达允许输出的选择，不代表已经获得摄像头或定位权限、已经开始检测或导航，
-也不代表手机已发出声音。页面加载不自动申请权限、规划路线或提交语音。
+The “Tests and Diagnostics” link at the bottom of the product page opens the [unified test page](https://47.239.50.129/mvp/maps/test), without a trailing slash. Manual speech, voice selection, rate/volume controls, manual camera selection, video replay, frame statistics, and output-lifecycle diagnostics are available only there. The product navigation area also offers “Fill NUS example”; it fills fixed origin/destination values only, and users must still plan the route. The example does not represent device location. The diagnostic page still requires manual local-voice selection. The two pages have separate browser sessions; stop input before switching and do not start detection on both pages simultaneously. Both interfaces reuse the original algorithms, navigation, and output drivers; the diagnostic page does not introduce a second risk policy.
 
-Safari 的首次语音须在真实用户操作中启动。匹配的本地声音可用后，“启动语音”会同步提交
-相应语言的启动提示；首次点击摄像头检测、开始导航或诊断页视频检测按钮时，也会在同一次真实点击中执行
-这项语音校准，无需先去手动语音测试区朗读。`SpeechActivation` 在该请求的原生引擎
-`start` 事件到来前阻止自动导航和风险语音；请求被接受仍不算已启动。状态未进入已启动
-或出现错误时，应按提示检查声音及设备设置，再明确点击“启动语音”，不会自动重试。
-原生引擎已启动仅说明浏览器报告起播，扬声器是否实际可听仍需在手机上确认。
-
-## 测试与诊断界面
-
-产品页底部的“测试与诊断”进入 [统一测试页](https://47.239.50.129/mvp/maps/test)，地址无尾斜杠。
-手动朗读、声音选择、语速/音量调节、手动镜头选择、视频回放、帧与输出生命周期统计仅在
-该页展示。产品导航区也提供“填入 NUS 示例”，只填写固定起终点，仍须手动规划路线，示例不代表设备位置。
-诊断页仍需手动选择本地声音；两个页面各自拥有浏览器会话，切换前应停止输入，
-不要同时启动检测。原算法、导航和输出驱动由两种界面复用，诊断页不提供另一套风险规则。
-
-已启动服务后，可从仓库根目录使用现有 Playwright 验证产品交互与诊断隔离：
+After starting the services, use the existing Playwright tools from the repository root to verify product interaction and diagnostic isolation:
 
 ```powershell
-$env:PRS_PLAYWRIGHT_PATH = '<已安装Playwright包的绝对路径>'
-node frontend/tools/check_product_browser.mjs https://47.239.50.129/mvp/maps/ backend/.env.phone-mvp backend/.venv/tmp/NEW_PRODUCT.json
-node frontend/tools/check_product_browser.mjs https://47.239.50.129/mvp/maps/ backend/.env.phone-mvp backend/.venv/tmp/NEW_BOUNDARIES.json --boundaries
-node frontend/tools/check_product_browser.mjs https://47.239.50.129/mvp/maps/ backend/.env.phone-mvp backend/.venv/tmp/NEW_CAMERA_BOUNDARIES.json --camera-boundaries
-node frontend/tools/check_phone_relay_browser.mjs https://47.239.50.129/mvp/maps/test backend/.env.phone-mvp backend/.venv/tmp/NEW_DIAGNOSTIC.json
+$env:PRS_PLAYWRIGHT_PATH = '<absolute path to installed Playwright package>'
+node frontend/tools/check_product_browser.mjs https://47.239.50.129/mvp/maps/ backend/.venv/tmp/NEW_PRODUCT.json
+node frontend/tools/check_product_browser.mjs https://47.239.50.129/mvp/maps/ backend/.venv/tmp/NEW_BOUNDARIES.json --boundaries
+node frontend/tools/check_product_browser.mjs https://47.239.50.129/mvp/maps/ backend/.venv/tmp/NEW_CAMERA_BOUNDARIES.json --camera-boundaries
+node frontend/tools/check_phone_relay_browser.mjs https://47.239.50.129/mvp/maps/test backend/.venv/tmp/NEW_DIAGNOSTIC.json
 ```
 
-输出文件必须不存在。产品工具检查手机和桌面布局、默认输出意愿、自动匹配中英文本地声音、
-真实点击启动及清理，以及原始画面与已解码回传图的可见性。它记录产品发出的精确后置镜头
-请求；由于 Chrome 原生假摄像头没有实际镜头朝向，工具显式模拟该约束的支持并仅在夹具中
-移除朝向约束后访问假摄像头。合成路线/GPS同样明确标记，推理结果与语音事件来自真实运行
-模块，不能据此证明手机实际选中了后置镜头。诊断工具另行调用真实 ORS。两者都不启动服务、不绕过 TLS、不申请物理
-摄像头，也不能代表 iPhone 真机定位或实际听音验收。
+Output files must not already exist. The product tool checks phone/desktop layouts, default output intent, automatic matching of local Chinese/English voices, start/cleanup from a real click, and visibility of the raw and decoded returned images. It records the exact rear-camera request issued by the product. Because Chrome's native fake camera has no physical camera orientation, the tool explicitly simulates support for the constraint and removes it only in the fixture before opening the fake camera. Synthetic routes/GPS are also explicitly labeled; inference results and speech events come from real runtime modules, but do not prove that a phone selected its actual rear camera. The diagnostic tool separately calls real ORS. Neither tool starts services, bypasses TLS, or requests a physical camera; neither represents actual iPhone location or listening verification.
 
-需要检查真实算法返回的目标标记时，可显式设置 `PRS_FAKE_CAMERA_VIDEO` 为已有 `.y4m`
-测试文件的绝对路径后运行产品工具。Chrome 仍使用原生假摄像头，文件应包含可识别的目标；
-工具同时要求原始预览、解码回传图可见且真实模型结果至少一帧含有目标，并保存感知区截图。
-它不会下载或转换素材，文件内容不代表手机现场，也不用于判断识别框的现实准确率。
+To check target annotations returned by the real algorithm, explicitly set `PRS_FAKE_CAMERA_VIDEO` to the absolute path of an existing `.y4m` test file, then run the product tool. Chrome still uses its native fake camera, and the file should contain a recognizable target. The tool requires both the raw preview and decoded returned image to be visible, and at least one real model result to contain a target; it also saves a screenshot of the perception area. It does not download or convert assets. File content does not represent the phone's surroundings and is not used to assess real-world box accuracy.
 
-产品工具的 `--boundaries` 模式不启动推理，临时隐藏原生声音列表，再显式交付列表变化事件，
-确认本地声音延迟出现后自动匹配但不自动播放；同时检查空坐标提交能展开并聚焦错误字段，
-缓存页面仍保留语言观察器，以及隐藏后清理、回到前台不自动重启。列表事件、页面缓存和
-可见性变化属于明确标记的浏览器夹具，不代表 iPhone 系统后台验证，语音起播事件仍由原生
-引擎产生。
+The product tool's `--boundaries` mode does not start inference. It temporarily hides the native voice list and explicitly dispatches a list-change event, confirming that a local voice appearing later is matched automatically but not played. It also checks that submitting empty coordinates expands/focuses the error field, a cached page retains its language observer, and hiding clears state without automatically restarting when foregrounded. Voice-list events, page cache, and visibility changes use explicitly labeled browser fixtures; they do not represent iPhone OS background testing. Speech-start events still come from the native engine.
 
-`--camera-boundaries` 模式只使用明确的权限 Promise、迟到授权和错误夹具，检查双击只有
-一次摄像头申请、等待授权时可停止、迟到的流会被清理，以及权限拒绝、缺少后置镜头和
-不支持朝向约束时的明确提示与手动恢复。它不打开摄像头、不连接推理、不重试，也不能
-替代 iPhone 上的真实权限与镜头验证。
+`--camera-boundaries` mode uses only explicit permission-Promise, late-permission, and error fixtures. It checks that a double-click makes only one camera request, stopping is possible while permission is pending, late streams are cleaned up, and permission denial/missing rear camera/unsupported orientation constraints produce explicit messages and allow manual recovery. It does not open a camera, connect to inference, or retry, and cannot replace real iPhone permission/camera verification.
 
-风险提醒优先于导航播报，结束后只恢复当时最新且有效的导航指令。停止感知不停止导航，
-停止导航不结束感知。结果超过原有效期时只显示，不产生新的风险提醒；无播报不能解释为
-没有风险。页面不根据视觉目标自动规划绕障路线。
+Risk alerts take priority over navigation announcements. After an alert ends, only the latest still-valid navigation instruction resumes. Stopping perception does not stop navigation; stopping navigation does not end perception. Results past their original expiry are displayed only and do not create new risk alerts; silence does not mean no risk. The page does not automatically plan obstacle-avoidance routes from visual targets.
 
-Safari 摄像头需要 HTTPS 安全上下文，见 [WebKit 媒体访问要求](https://webkit.org/blog/7763/a-closer-look-into-webrtc/)。
-如果使用手动安装的私有证书，还需开启其完整信任，见 [Apple 证书信任说明](https://support.apple.com/en-gb/102390)。
-系统定位和精确位置设置见 [Apple 定位权限说明](https://support.apple.com/en-ca/guide/iphone/iph3dd5f9be/ios)。
+Safari camera access requires an HTTPS secure context; see [WebKit media-access requirements](https://webkit.org/blog/7763/a-closer-look-into-webrtc/). For a manually installed private certificate, enable full trust as described in [Apple's certificate-trust guidance](https://support.apple.com/en-gb/102390). See [Apple's location-permission guide](https://support.apple.com/en-ca/guide/iphone/iph3dd5f9be/ios) for Location Services and Precise Location.
 
-## 停止与故障边界
+## Shutdown and Failure Boundaries
 
-电脑需保持开机、联网且运行启动器；模型运行于电脑，服务器中转不能替代电脑。
-在启动终端按 `Ctrl+C`，启动器只关闭本次拥有的隧道、SSH 连接和两个本机子进程。
-SSH 中断、转发故障或子进程退出会结束本次运行，不自动重连、重启或切换服务。
+The laptop must remain powered on, connected to the network, and running the inference launcher for detection. Press `Ctrl+C` in that terminal to stop only the GPU worker and tunnel. The app-server Web service continues serving both pages and map APIs. Without the laptop tunnel, page requests still work, while detection reports an unavailable inference connection; there is no provider fallback, reconnect or retry.
 
-停止后服务器中转配置和访问认证保留。隧道不在时，已认证的 `/mvp/` 请求返回 502，
-不回退到 `/prs/` 或其它推理服务；重新运行日常启动命令才能恢复本次链路。
-出现 401 时核对网页访问账号；出现 502 时核对本机启动器及隧道；权限或声音错误应在
-手机前台处理，不能靠反复启动服务器代替授权。
+A 502 for either page means the app-server Nginx upstream at `127.0.0.1:18766` or `prs-mvp-web.service` is unavailable; the laptop GPU ports do not cause a page 502. An inference connection error while the pages load means the loopback tunnel at server port 18767 is unavailable. Check the corresponding service only. `/mvp/` does not fall back to `/prs/` or another inference provider.
 
-物理 iPhone 的摄像头、精确定位、扬声器听音以及移动网络下的导航与检测联动仍需用户
-验收。HTTPS 页面检查、合成定位、模型结果和原生语音事件均不能替代实际手机验收。
+The user must still verify the physical iPhone camera, precise location, audible speaker output, and navigation/detection integration over a mobile network. HTTPS page checks, synthetic location, model results, and native speech events do not replace acceptance on an actual phone.

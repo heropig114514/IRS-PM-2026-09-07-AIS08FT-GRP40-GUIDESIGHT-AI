@@ -1,12 +1,14 @@
 <!-- Responsibilities: Unified local perception controls alongside the original maps/navigation UI.
 Implementation: Camera-first UI, default-enabled output intentions with explicit speech activation,
 optional video regression and emergency stop;
-existing maps page supplies the shared navigation/voice controls. No automatic device access.
-Related Modules: assist-mvp.js, assist.css; camera.js, video-replay.js, vibration.js; integration.assist.
+existing maps page supplies the shared navigation/voice controls. The shared i18n module translates
+static UI text and accessibility labels; native voice names remain device-provided. No automatic device access.
+Related Modules: assist-mvp.js, assist.css, i18n.js, translations.js; camera.js, video-replay.js,
+vibration.js; integration.assist.
 Declaration Index: None.
 Variable Index: assist-* owns integration UI; original camera/vibration IDs bind existing singletons;
 video-source/video-result bind the independent file replay. No route, credential or saved media. -->
-<section id="assist-panel" class="workspace assist-panel" aria-labelledby="assist-title" data-language-original>
+<section id="assist-panel" class="workspace assist-panel" aria-labelledby="assist-title">
   <div class="workspace-header">
     <h2 id="assist-title">导航与环境感知</h2>
     <button id="assist-stop-all" class="button secondary" type="button">停止全部</button>

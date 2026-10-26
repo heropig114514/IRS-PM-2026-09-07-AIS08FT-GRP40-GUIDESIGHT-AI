@@ -5,8 +5,9 @@ zerogpu.runtime; zerogpu.live_worker.
 Declaration Index: ResidentDetector; ResidentDetector.__init__; ResidentDetector.predict.
 Variable Index: logger — count/timing diagnostics; model/manifest/tensor/runner/load_ms;
 execution_config/precision/backend — explicit execution identity, original FP32 control by default.
-depth_estimator — optional independent metric model; depth_ms includes decoding/inference/fusion.
-depth_predict_ms/depth_fusion_ms/decode_boxes_ms — host elapsed substage durations, not CUDA events.
+roi — optional extra centre-top traffic-light pass (sequential batch-1 replays of the same Graph).
+depth_estimator — optional independent metric model; depth_ms includes inference/fusion.
+depth_predict_ms/depth_fusion_ms/decode_boxes_ms — nested host durations, not CUDA events.
 object_tracker — instance-owned BoT-SORT/history; tracking_ms covers association/history only.
 risk_config — immutable TTC/rule profile; risk_ms — separate stateless scalar scoring timer.
 distance_strategy/performance/performance_epoch — owned strategy and per-epoch frame statistics.
@@ -19,12 +20,16 @@ import logging
 import time
 
 from core.detector import (
+    CLASS_CONF,
     CONFIDENCE_THRESHOLD,
     INPUT_EDGE,
     annotate,
     decode_boxes,
     decode_frame,
     letterbox,
+    mark_front_light,
+    merge_boxes,
+    roi_crop,
 )
 from realtime.distance import DistanceStrategy
 from realtime.distance_config import DEFAULT_DISTANCE_CONFIG
@@ -44,13 +49,14 @@ class ResidentDetector:
 
     def __init__(self, weights_path, manifest_path, config=None, *, depth_estimator=None,
                  tracking_config=DEFAULT_TRACKING_CONFIG, risk_config=DEFAULT_RISK_CONFIG,
-                 distance_config=DEFAULT_DISTANCE_CONFIG):
+                 distance_config=DEFAULT_DISTANCE_CONFIG, roi=False):
         """Functionality: Load verified local weights once on the GPU worker.
         Inputs: pinned weights/manifest, detection config, optional loaded depth estimator,
         immutable tracking/risk/distance configs (tracking=None disables tracking/risk for stills).
         Outputs: persistent model/tensor state. Logic: same source hash/build/head/fusion via
         load_model; declared precision/TF32-off, one CPU thread; default is original FP32 control.
         Constraints: native CUDA must exist; no downloads, random initialization or global service.
+        roi=True adds one native-resolution centre-top traffic-light pass per frame.
         GraphRunner remains None until first JPEG; optional depth activates once on the same GPU.
         """
         import numpy as np
@@ -70,6 +76,8 @@ class ResidentDetector:
         self.model = load_model(weights_path, self.manifest, "cuda", self.execution_config)
         self.tensor = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
         self.runner = None
+        self.roi = roi
+        self.roi_tensor = np.empty((1, 3, INPUT_EDGE, INPUT_EDGE), dtype=np.float32)
         if distance_config.distance_mode == "temporal_depth" and (
                 depth_estimator is None or tracking_config is None):
             raise ValueError("temporal_depth requires depth and tracking")
@@ -114,8 +122,27 @@ class ResidentDetector:
             setup_ms = self.runner.setup_ms
             logger.info("Resident graph initialized setup_ms=%.1f", setup_ms)
         prediction, inference_ms = self.runner(tensor)
+        forward_event_ms = self.runner.forward_event_ms
+        roi = getattr(self, "roi", False)
+        roi_ms = 0.0
+        crop = roi_crop(image) if roi else None
+        roi = crop is not None  # tiny frames have no usable ROI: full-frame result only
+        if roi:
+            # The compiled Graph is captured for batch 1, so the ROI is a second replay.
+            crop, x_offset, y_offset = crop
+            roi_tensor, roi_scale, roi_left, roi_top = letterbox(crop, output=self.roi_tensor)
+            roi_prediction, roi_ms = self.runner(roi_tensor)
+            forward_event_ms += self.runner.forward_event_ms
         inferred_at = time.perf_counter()
         boxes = decode_boxes(prediction, image.size, (scale, left, top), self.manifest["names"])
+        if roi:
+            roi_boxes = decode_boxes(roi_prediction, crop.size, (roi_scale, roi_left, roi_top),
+                                     self.manifest["names"])
+            for box in roi_boxes:
+                x1, y1, x2, y2 = box["xyxy"]
+                box["xyxy"] = [x1 + x_offset, y1 + y_offset, x2 + x_offset, y2 + y_offset]
+            boxes = merge_boxes(boxes, roi_boxes)
+        boxes = mark_front_light(boxes, image.size)
         decoded_at = time.perf_counter()
         object_tracker = getattr(self, "object_tracker", None)
         if object_tracker is not None:
@@ -148,11 +175,12 @@ class ResidentDetector:
         metadata = {"schema_version": 1, "model": "yolo26n", "backend": self.backend,
                     "precision": self.precision, "output_precision": "FP32", "classes": 80,
                     "confidence_threshold": CONFIDENCE_THRESHOLD,
+                    "class_confidence_thresholds": dict(CLASS_CONF),
                     "source_sha256": self.manifest["source_sha256"], "width": image.width,
                     "height": image.height, "count": len(boxes), "boxes": boxes,
                     "raw_sha256": hashlib.sha256(prediction.tobytes()).hexdigest(),
                     "jpeg_sha256": hashlib.sha256(result).hexdigest(),
-                    "inference_ms": inference_ms, "graph_setup_ms": setup_ms,
+                    "inference_ms": inference_ms + roi_ms, "graph_setup_ms": setup_ms,
                     "prepare_ms": (prepared_at - started) * 1000,
                     "gpu_stage_ms": (inferred_at - prepared_at) * 1000,
                     "render_ms": (finished - (risk_at if object_tracker is not None else
@@ -160,10 +188,12 @@ class ResidentDetector:
                                               self.distance_strategy.geometry is not None else
                                               inferred_at)) * 1000,
                     "server_ms": (finished - started) * 1000,
-                    "forward_event_ms": self.runner.forward_event_ms,
+                    "forward_event_ms": forward_event_ms,
                     "execution": {**self.runner.evidence,
                                   **({"jit_cache": self.cache_evidence}
                                      if getattr(self, "cache_evidence", None) else {})}}
+        if roi:
+            metadata.update(roi=True, roi_ms=roi_ms)
         if depth_estimator is not None:
             metadata.update(depth_model=depth_estimator.model_name, depth_units="m",
                             decode_boxes_ms=(decoded_at - inferred_at) * 1000,

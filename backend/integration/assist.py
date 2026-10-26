@@ -82,11 +82,13 @@ def render_assist_page(frontend=FRONTEND, *, view="product"):
 
 
 async def assist_response(send, status, body, content_type="application/json", *, head=False,
-                          nonce=None, redirect=False):
+                          nonce=None, redirect=False, allow_microphone=False):
     """Functionality: Return the combined entry's explicit maps/media permission boundary.
-    Inputs: send/status/fixed body/MIME, HEAD/nonce and optional fixed maps redirect.
-    Outputs: no-store HTTP messages. Logic: preserve original Leaflet/OSM policy plus local media.
-    Constraints: redirect only targets /maps/; no arbitrary connect target or private data.
+    Inputs: send/status/fixed body/MIME, HEAD/nonce, redirect and microphone-policy flag.
+    Outputs: no-store HTTP messages. Logic: preserve Leaflet/OSM policy; permit same-origin mic
+    only on the product view that offers explicit press-to-talk input.
+    Constraints: policy permits browser requests but does not request permission; redirect targets
+    only /maps/ and no arbitrary connect target or private data is exposed.
     """
     raw = body if isinstance(body, bytes) else json.dumps(body, allow_nan=False).encode()
     sockets = " ".join(item.replace("https://", "wss://").replace("http://", "ws://")
@@ -100,7 +102,8 @@ async def assist_response(send, status, body, content_type="application/json", *
     headers = [
         (b"content-type", content_type.encode()), (b"content-length", str(len(raw)).encode()),
         (b"cache-control", b"no-store"),
-        (b"permissions-policy", b"geolocation=(self), camera=(self), microphone=()"),
+        (b"permissions-policy", b"geolocation=(self), camera=(self), " +
+         (b"microphone=(self)" if allow_microphone else b"microphone=()")),
         (b"referrer-policy", b"strict-origin-when-cross-origin"),
         (b"content-security-policy", csp.encode()),
     ]
@@ -163,8 +166,10 @@ class AssistApplication:
     async def page(self, scope, send):
         """Functionality: Serve a fixed product or diagnostic maps/perception page.
         Inputs: safe same-host GET/HEAD. Outputs: view HTML or explicit contract/method failure.
-        Logic: exact sibling paths preserve existing relative APIs; render with one fresh nonce.
-        Constraints: no source rewriting, automatic permissions or concealed template faults.
+        Logic: exact sibling paths preserve existing relative APIs; render with one fresh nonce and
+        allow same-origin microphone use only for the formal page's explicit hold-to-talk control.
+        Constraints: the permission policy does not request access; no source rewriting or concealed
+        template faults.
         """
         if scope.get("method") not in {"GET", "HEAD"}:
             return await assist_response(send, 405, {"code": "method_not_allowed"})
@@ -182,7 +187,8 @@ class AssistApplication:
             logger.error("Assist template unavailable type=%s", type(error).__name__)
             return await assist_response(send, 503, {"code": "assist_template_unavailable"})
         await assist_response(send, 200, body, "text/html; charset=utf-8",
-                              head=scope.get("method") == "HEAD", nonce=nonce)
+                              head=scope.get("method") == "HEAD", nonce=nonce,
+                              allow_microphone=scope["path"] == "/maps/")
 
     async def asset(self, scope, send):
         """Functionality: Serve only canonical modules belonging to the combined entry.

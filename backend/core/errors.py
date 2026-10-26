@@ -1,8 +1,10 @@
-"""Responsibilities: 保留 DRF 标准错误响应，记录未处理异常并公开固定错误码。
-Implementation: 已知 DRF 异常由其默认处理器处理；未知异常保持 HTTP 500，不重试。
-Related Modules: config.base.REST_FRAMEWORK；由 DRF APIView 调用。
-Declaration Index: api_exception_handler — 转换未知 API 异常并记录位置。
-Variable Index: logger — API 异常控制台日志。
+"""Responsibilities: Preserve DRF error responses, log unhandled exceptions, and expose a fixed
+error code.
+Implementation: Delegate known DRF exceptions to its default handler; keep unknown exceptions as
+HTTP 500 without retrying.
+Related Modules: config.base.REST_FRAMEWORK; called by DRF APIView.
+Declaration Index: api_exception_handler — maps unknown API exceptions and logs their location.
+Variable Index: logger — API exception logger.
 """
 
 import logging
@@ -14,11 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 def api_exception_handler(exc, context):
-    """Functionality: 为 API 未知异常提供安全且可诊断的 500 响应。
-    Inputs: exc 为异常；context 为 DRF 上下文，可能包含当前视图。
-    Outputs: 标准 DRF Response 或固定 internal_error 的 HTTP 500 Response。
-    Logic: 优先使用 DRF 默认映射；未映射时记录视图类型和原异常栈。
-    Constraints: 不记录请求正文、查询参数、cookie 或凭据；不会改变为成功状态。
+    """Functionality: Return a safe, diagnosable HTTP 500 response for an unhandled API exception.
+    Inputs: exc is the exception; context is DRF context and may include the current view.
+    Outputs: A standard DRF Response or a fixed internal_error HTTP 500 Response.
+    Logic: Prefer DRF's default mapping; when unmapped, log the view type and original traceback.
+    Constraints: Do not log request bodies, query parameters, cookies, or credentials; never convert
+    failure to success.
     """
     response = exception_handler(exc, context)
     if response is not None:

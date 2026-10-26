@@ -1,0 +1,44 @@
+{
+  "model": "light_crop",
+  "task": "pedestrian traffic-light state classification on detector crops",
+  "architecture": "torchvision mobilenet_v3_small, classifier[-1] -> Linear(1024, 3)",
+  "classes": [
+    "red",
+    "green",
+    "off"
+  ],
+  "input": {
+    "size": [
+      96,
+      96
+    ],
+    "crop_padding": 0.25,
+    "letterbox_fill": [
+      0,
+      0,
+      0
+    ],
+    "normalize_mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalize_std": [
+      0.229,
+      0.224,
+      0.225
+    ]
+  },
+  "decision": {
+    "green_threshold_tau": 0.95,
+    "rule": "green if p_green >= tau; red if argmax is red; else unknown"
+  },
+  "training": {
+    "data": "ImVisible/PTL 768x576 train split, crops auto-labelled (see TRAFFIC-LIGHT.md)",
+    "script": "tools/traffic_light/train_light_crop.py",
+    "torch": "2.8.0+cu126",
+    "torchvision": "0.23.0"
+  },
+  "file": "light_crop.pt",
+  "sha256": "901c1f24a818bd8dfe7c6f33881d8a02207e864321c4dace651b0b54c075f149"
+}

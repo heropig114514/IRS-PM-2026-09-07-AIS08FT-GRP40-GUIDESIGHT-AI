@@ -1,5 +1,5 @@
-/** Responsibilities: 验证共用语音接口的输入、生命周期、语音选择与MCP分派边界。
- * Implementation: 用EventTarget替身驱动原生事件和设备接口；额外检验重入广播的请求快照与观察者隔离；不播放真实声音或请求网络。
+/** Responsibilities: Verify shared speech API inputs, lifecycle, voice selection, and MCP dispatch boundaries.
+ * Implementation: Drive native events/device APIs with EventTarget fixtures; also verify reentrant event snapshots and observer isolation; play no real audio and make no network requests.
  * Related Modules: speech-output.js, ai-control.js, index.html, translations.js, i18n.js。
  * Declaration Index: Control; Control.constructor; Control.replaceChildren; Control.append;
  * SpeechDocument; SpeechDocument.constructor; SpeechDocument.getElementById;
@@ -8,8 +8,8 @@
  * fixture; enable; testPrerequisites; testLifecycle; testLimits; testVoices;
  * testVoiceQuery; testCancellation; testNativeErrors; testVisibility; testMcp; testTranslations;
  * testGuidanceEvents; testLocalVoiceOnly; testReentrantBroadcast。
- * Variable Index: VOICES — 明确本地/远程测试身份；其他变量只保存本测试的控件、请求和诊断。
- * Constraints: 替身不能证明真实MCP网络、TTS引擎或扬声器；真实浏览器回归另行执行。
+ * Variable Index: VOICES — explicit local/remote test identities; other variables store only this test's controls, requests, and diagnostics.
+ * Constraints: Fixtures do not prove real MCP networking, TTS engine behavior, or speaker output; browser regression is separate.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -86,34 +86,37 @@ test("reentrant end and cancel broadcasts retain their original request and time
   }
 });
 
-/** Functionality: 提供具有实际事件派发的简单控件。
- * Logic: 保存值、状态和选项，不解析HTML。Constraints: 不模拟布局或disabled事件拦截。
+/** Functionality: Provide a simple control with real event dispatch.
+ * Logic: Store values, state, and options without parsing HTML.
+ * Constraints: Does not simulate layout or disabled-event interception.
  */
 class Control extends EventTarget {
-  /** Functionality: 初始化节点。Inputs: value可选初值。
-   * Outputs: 控件对象。Logic: 默认未选中并有空子节点列表。Constraints: 无浏览器环境。
+  /** Functionality: Initialize a node. Inputs: Optional initial value.
+   * Outputs: Control object. Logic: Start unchecked with an empty child list.
+   * Constraints: No browser environment.
    */
   constructor(value = "") {
     super();
     Object.assign(this, {value, checked: false, disabled: false, textContent: "", dataset: {}, children: []});
   }
-  /** Functionality: 替换选项。Inputs: nodes。Outputs: children更新。
-   * Logic: 直接替换列表。Constraints: 不隐式替换value，以便测试控制器明确保留选择。
+  /** Functionality: Replace options. Inputs: nodes. Outputs: Updated children.
+   * Logic: Replace the list directly. Constraints: Do not implicitly replace value, so the controller's selection preservation is explicit.
    */
   replaceChildren(...nodes) { this.children = nodes; }
-  /** Functionality: 添加选项。Inputs: node。Outputs: children追加。
-   * Logic: 保存引用。Constraints: 不实现通用DOM渲染。
+  /** Functionality: Add an option. Inputs: node. Outputs: Appended child.
+   * Logic: Store the reference. Constraints: Does not implement general DOM rendering.
    */
   append(node) { this.children.push(node); }
 }
 
-/** Functionality: 提供语音UI固定节点与可见性。
- * Logic: EventTarget派发生命周期事件。Constraints: 无页面、权限、文本持久化或网络。
+/** Functionality: Provide fixed speech UI nodes and visibility state.
+ * Logic: EventTarget dispatches lifecycle events. Constraints: No page, permissions, text persistence, or network.
  */
 class SpeechDocument extends EventTarget {
-  /** Functionality: 创建完整控制器所需节点。
-   * Inputs: None。Outputs: 节点映射和visible状态。
-   * Logic: rate/volume初值1，language为zh-CN。Constraints: 不读取真实HTML，另有实际页面测试。
+  /** Functionality: Create nodes required by the complete controller.
+   * Inputs: None. Outputs: Node map and visible state.
+   * Logic: Initialize rate/volume to 1 and language to zh-CN.
+   * Constraints: Does not read real HTML; actual page tests cover that separately.
    */
   constructor() {
     super();
@@ -125,62 +128,63 @@ class SpeechDocument extends EventTarget {
     this.getElementById("speech-volume").value = "1";
     this.getElementById("speech-language").value = "zh-CN";
   }
-  /** Functionality: 查找固定节点。Inputs: id。Outputs: 控件或undefined。
-   * Logic: 映射读取。Constraints: 不制造缺失节点。
+  /** Functionality: Find a fixed node. Inputs: id. Outputs: Control or undefined.
+   * Logic: Read from the map. Constraints: Do not create missing nodes.
    */
   getElementById(id) { return this.nodes.get(id); }
-  /** Functionality: 提供示例按钮集合。Inputs: selector。
-   * Outputs: 空集合。Logic: 本组测试不模拟示例按钮，真实UI回归覆盖它。
-   * Constraints: 只接受控制器的固定选择器。
+  /** Functionality: Provide the sample-button collection. Inputs: selector.
+   * Outputs: Empty collection. Logic: This test group does not simulate sample buttons; real UI regression covers them.
+   * Constraints: Accept only the controller's fixed selector.
    */
   querySelectorAll(selector) { assert.equal(selector, "[data-speech-sample]"); return []; }
-  /** Functionality: 创建语音选项节点。Inputs: tag。
-   * Outputs: Control。Logic: 仅支持option。Constraints: 不实现其他DOM类型。
+  /** Functionality: Create a voice-option node. Inputs: tag.
+   * Outputs: Control. Logic: Support only option. Constraints: Does not implement other DOM types.
    */
   createElement(tag) { assert.equal(tag, "option"); return new Control(); }
 }
 
-/** Functionality: 表示可接收start/end/error的语音请求。
- * Logic: EventTarget提供真实事件身份。Constraints: 不合成或播放音频。
+/** Functionality: Represent a speech request that can receive start/end/error events.
+ * Logic: EventTarget provides real event identity. Constraints: Does not synthesize or play audio.
  */
 class Utterance extends EventTarget {
-  /** Functionality: 保存原始文本。Inputs: text。
-   * Outputs: 测试utterance。Logic: 不改写正文。Constraints: 仅测试用内存对象。
+  /** Functionality: Store original text. Inputs: text.
+   * Outputs: Test utterance. Logic: Do not rewrite content. Constraints: In-memory test object only.
    */
   constructor(text) { super(); this.text = text; }
 }
 
-/** Functionality: 明确模拟语音引擎、列表加载和失败。
- * Logic: 请求仅记录，事件由测试显式推进。Constraints: 没有真实系统语音或扬声器。
+/** Functionality: Explicitly simulate the speech engine, voice-list loading, and failures.
+ * Logic: Record requests only; the test advances events explicitly.
+ * Constraints: No real system voice or speaker.
  */
 class Engine extends EventTarget {
-  /** Functionality: 初始化原生状态。
-   * Inputs: None。Outputs: 固定voices、请求列表、计数和可控制异常。
-   * Logic: 不自动触发事件。Constraints: 每个测试独立实例。
+  /** Functionality: Initialize native state.
+   * Inputs: None. Outputs: Fixed voices, request list, counters, and configurable failures.
+   * Logic: Do not trigger events automatically. Constraints: Each test uses an independent instance.
    */
   constructor() {
     super();
     Object.assign(this, {voices: [...VOICES], requests: [], cancels: 0, speaking: false,
       pending: false, paused: false, failSpeak: false, failCancel: false, failVoices: false});
   }
-  /** Functionality: 返回当前语音列表或显式失败。
-   * Inputs: voices/failVoices。Outputs: 列表或Error。
-   * Logic: 测试可更改列表并触发voiceschanged。Constraints: 不调用操作系统服务。
+  /** Functionality: Return the current voice list or fail explicitly.
+   * Inputs: voices/failVoices. Outputs: List or Error.
+   * Logic: Tests can change the list and dispatch voiceschanged. Constraints: Does not call operating-system services.
    */
   getVoices() { if (this.failVoices) throw new Error("Fixture voice lookup failure"); return this.voices; }
-  /** Functionality: 接收一次语音请求。
-   * Inputs: utterance。Outputs: void或Error；请求计数增加。
-   * Logic: 模拟排队但不自动开始。Constraints: API返回不代表播放。
+  /** Functionality: Accept one speech request.
+   * Inputs: utterance. Outputs: void or Error; increments request count.
+   * Logic: Simulate queueing without automatically starting. Constraints: API return does not mean playback occurred.
    */
   speak(utterance) {
     this.requests.push(utterance);
     if (this.failSpeak) throw new Error("Fixture native failure");
     this.pending = true;
   }
-  /** Functionality: 接收一次取消请求。
-   * Inputs: 引擎状态/failCancel。Outputs: void或Error。
-   * Logic: 成功时模拟同步canceled事件，测试控制器是否隔离它。
-   * Constraints: 不证明真实浏览器取消时序或实际停止声音。
+  /** Functionality: Accept one cancellation request.
+   * Inputs: Engine state/failCancel. Outputs: void or Error.
+   * Logic: On success, simulate a synchronous canceled event to check controller isolation.
+   * Constraints: Does not prove real browser cancellation timing or actual audio stop.
    */
   cancel() {
     this.cancels++;
@@ -188,9 +192,9 @@ class Engine extends EventTarget {
     this.pending = this.speaking = false;
     if (this.requests.length) this.emit(this.requests.at(-1), "error", "canceled");
   }
-  /** Functionality: 推进当前或旧请求的标准事件。
-   * Inputs: utterance/type及可选error。Outputs: 事件派发和引擎状态更新。
-   * Logic: 保留真实event.target对象身份。Constraints: 明确受控时序，不代表真实声音。
+  /** Functionality: Advance a standard event for a current or stale request.
+   * Inputs: utterance/type and optional error. Outputs: Event dispatch and engine-state update.
+   * Logic: Preserve the actual event.target object identity. Constraints: Explicitly controlled timing does not represent real audio.
    */
   emit(utterance, type, error) {
     if (type === "start") { this.pending = false; this.speaking = true; }
@@ -199,10 +203,10 @@ class Engine extends EventTarget {
   }
 }
 
-/** Functionality: 创建隔离的真实控制器实例。
- * Inputs: supported决定原生接口是否存在。Outputs: doc/win/engine/output/logs。
- * Logic: 仅模拟设备依赖；控制器与MCP分派使用真实源码。
- * Constraints: console接收器只记录测试数据，不验证真实日志服务。
+/** Functionality: Create an isolated instance of the real controller.
+ * Inputs: supported determines whether native APIs exist. Outputs: doc/win/engine/output/logs.
+ * Logic: Simulate device dependencies only; controller and MCP dispatch use real source code.
+ * Constraints: Console receivers record test data only and do not verify a real logging service.
  */
 function fixture(supported = true) {
   const doc = new SpeechDocument(), win = new EventTarget(), engine = new Engine(), logs = [];
@@ -212,21 +216,21 @@ function fixture(supported = true) {
   return {doc, win, engine, logs, output: new SpeechOutput(doc, win)};
 }
 
-/** Functionality: 派发测试用明确启用选择。
- * Inputs: output。Outputs: 开关变更事件。Logic: 不直接调用speak。
- * Constraints: 可信用户激活由测试状态显式控制，不假冒操作系统交互。
+/** Functionality: Dispatch an explicit enable choice for the test.
+ * Inputs: output. Outputs: Toggle change event. Logic: Do not call speak directly.
+ * Constraints: Trusted user activation is controlled explicitly by test state; do not impersonate operating-system interaction.
  */
 function enable(output) {
   output.enabled.checked = true;
   output.enabled.dispatchEvent(new Event("change"));
 }
 
-/** Functionality: 验证默认关闭、前台/激活限制与不支持结果。
- * Inputs: 独立设备替身和显式可见性/激活。Outputs: 零原生调用与准确原因。
- * Logic: 查询和启用不发声，前提满足前不提交。
- * Constraints: 真实浏览器激活和MCP链路另有回归验证。
+/** Functionality: Verify default-off state, foreground/activation gates, and unsupported result.
+ * Inputs: Independent device fixtures and explicit visibility/activation. Outputs: Zero native calls and exact reasons.
+ * Logic: Querying and enabling do not speak; do not submit before prerequisites are met.
+ * Constraints: Real browser activation and MCP transport have separate regression coverage.
  */
-test("默认关闭、后台和未激活请求不会提交语音", function testPrerequisites() {
+test("Default-off, hidden, and inactive requests do not submit speech", function testPrerequisites() {
   const {doc, win, engine, output} = fixture();
   assert.equal(output.describe().enabled, false);
   assert.equal(output.speak("text").reason, "disabled");
@@ -242,12 +246,12 @@ test("默认关闭、后台和未激活请求不会提交语音", function testP
   assert.equal(unavailable.output.stop().reason, "unsupported");
 });
 
-/** Functionality: 验证提交、开始和结束是不同状态，繁忙时不排第二个请求。
- * Inputs: 明确文本/参数、受控原生事件和paused状态。
- * Outputs: 请求、状态、控件与隐私日志断言。
- * Logic: 使用真实speak与事件处理器。Constraints: completed不代表实际扬声器声音。
+/** Functionality: Verify submitted, started, and ended are distinct states and busy output does not queue another request.
+ * Inputs: Explicit text/options, controlled native events, and paused state.
+ * Outputs: Request, phase, control, and privacy-log assertions.
+ * Logic: Exercise the real speak method and event handlers. Constraints: completed does not prove speaker output.
  */
-test("提交不等于开始/完成且不会自动排队", function testLifecycle() {
+test("Submission differs from start/completion and does not queue automatically", function testLifecycle() {
   const {engine, output, logs} = fixture();
   enable(output);
   const submitted = output.speak(" private fixture text ", {rate: 1.3, volume: 0.4});
@@ -274,12 +278,12 @@ test("提交不等于开始/完成且不会自动排队", function testLifecycle
   assert.doesNotMatch(JSON.stringify(output.describe()), /private fixture text/);
 });
 
-/** Functionality: 验证Unicode码点上限、空白、非有限/超范围参数不触达设备。
- * Inputs: 非法文本/参数与1000个astral字符边界。Outputs: 明确拒绝与保留原始正文。
- * Logic: 使用既定产品边界，而不修改阈值制造通过。
- * Constraints: 不验证引擎对长文本或特定语言的合成能力。
+/** Functionality: Verify Unicode code-point limits and reject whitespace, non-finite, or out-of-range options before device access.
+ * Inputs: Invalid text/options and the 1,000 astral-character boundary. Outputs: Explicit rejection and preserved original text.
+ * Logic: Use established product boundaries without changing thresholds to force a pass.
+ * Constraints: Does not verify engine synthesis for long text or a particular language.
  */
-test("文本和数值边界明确拒绝且Unicode计数一致", function testLimits() {
+test("Text and numeric boundaries reject explicitly with consistent Unicode counting", function testLimits() {
   const {engine, output} = fixture();
   enable(output);
   for (const text of ["", "  ", 123, "x".repeat(MAX_TEXT_LENGTH + 1)])
@@ -294,12 +298,12 @@ test("文本和数值边界明确拒绝且Unicode计数一致", function testLim
   assert.equal(engine.requests[0].volume, 0);
 });
 
-/** Functionality: 验证语音身份、异步列表、选项丢失及语言匹配。
- * Inputs: 固定本地/远程语音和明确voice_id。Outputs: 精确voice对象或显式拒绝。
- * Logic: 失效声音不切换为默认；原列表更新保留无效选择。
- * Constraints: 本地/远程是替身属性，不证明真实离线能力或网络行为。
+/** Functionality: Verify voice identity, asynchronous list updates, missing options, and language matching.
+ * Inputs: Fixed local/remote voices and explicit voice_id. Outputs: Exact voice object or explicit rejection.
+ * Logic: Do not switch a missing voice to the default; preserve an invalid selection when the list changes.
+ * Constraints: Local/remote are fixture properties and do not prove real offline capability or network behavior.
  */
-test("指定声音失效或歧义不会替换为默认声音", function testVoices() {
+test("Missing or ambiguous explicit voices do not fall back to the default", function testVoices() {
   const {engine, output} = fixture();
   enable(output);
   const listed = output.voiceList();
@@ -320,11 +324,11 @@ test("指定声音失效或歧义不会替换为默认声音", function testVoic
   assert.equal(engine.requests[0].voice, VOICES[1]);
 });
 
-/** Functionality: 验证列表读取失败不会把缓存冒充成当前列表。
- * Inputs: 已加载列表后的getVoices失败。Outputs: 结构化错误、空返回及零speak。
- * Logic: 明确声音选择失败即拒绝。Constraints: 不自动重试或改用默认声音。
+/** Functionality: Verify that list-read failure does not present a cache as the current list.
+ * Inputs: getVoices failure after an initial list load. Outputs: Structured error, empty result, and zero speak calls.
+ * Logic: Reject explicitly when voice selection cannot be verified. Constraints: No automatic retry or default-voice fallback.
  */
-test("语音列表查询失败保持可诊断且不替换声音", function testVoiceQuery() {
+test("Voice-list lookup failure remains diagnosable and does not replace the voice", function testVoiceQuery() {
   const {engine, output} = fixture();
   enable(output);
   engine.failVoices = true;
@@ -334,12 +338,12 @@ test("语音列表查询失败保持可诊断且不替换声音", function testV
   assert.equal(engine.requests.length, 0);
 });
 
-/** Functionality: 验证取消异常保留请求，成功取消隔离旧事件和新请求。
- * Inputs: 受控cancel异常/同步取消事件/旧事件。Outputs: 取消计数与准确状态。
- * Logic: 不重试取消；后续显式停止后新请求不受旧回调影响。
- * Constraints: 不代表实际声音已停止，只检查应用状态与调用边界。
+/** Functionality: Verify cancellation failure preserves the request and successful cancellation isolates stale events from new requests.
+ * Inputs: Controlled cancel exception/synchronous cancellation event/stale event. Outputs: Cancellation count and exact phases.
+ * Logic: Do not retry cancellation; after an explicit later stop, stale callbacks cannot affect a new request.
+ * Constraints: Does not prove audio actually stopped; checks application state and call boundaries only.
  */
-test("取消失败保留状态，迟到旧事件不能结束新请求", function testCancellation() {
+test("Cancellation failure preserves state and stale events cannot end a new request", function testCancellation() {
   const {engine, output} = fixture();
   enable(output);
   output.speak("first");
@@ -360,12 +364,12 @@ test("取消失败保留状态，迟到旧事件不能结束新请求", function
   assert.equal(output.describe().state, "speaking");
 });
 
-/** Functionality: 验证同步speak失败及异步错误均明确失败、不重试并过滤外部消息。
- * Inputs: 合成native抛错/事件error。Outputs: 单次请求、资源释放和安全诊断。
- * Logic: 控制器先记录请求身份，错误只记录标准码而不输出正文。
- * Constraints: 不验证真实服务网络或扬声器故障。
+/** Functionality: Verify synchronous speak exceptions and asynchronous errors fail explicitly without retrying or echoing external messages.
+ * Inputs: Synthetic native exception/event error. Outputs: Single request, released resources, and safe diagnostics.
+ * Logic: The controller records request identity first; errors log only standard codes, not utterance content.
+ * Constraints: Does not verify a real speech service network or speaker failure.
  */
-test("同步及异步语音错误不会静默重试或泄露正文", function testNativeErrors() {
+test("Synchronous and asynchronous speech errors do not retry silently or leak text", function testNativeErrors() {
   const {engine, output, logs} = fixture();
   enable(output);
   engine.failSpeak = true;
@@ -384,11 +388,11 @@ test("同步及异步语音错误不会静默重试或泄露正文", function te
   assert.doesNotMatch(JSON.stringify(logs), /private/);
 });
 
-/** Functionality: 验证关闭/隐藏/离页取消且返回前台不恢复朗读。
- * Inputs: 三个独立用户/生命周期事件。Outputs: 每次仅一个cancel，无新speak。
- * Logic: 使用真实注册回调。Constraints: 不是后台音频或手机锁屏验证。
+/** Functionality: Verify cancellation on disable/hide/page exit and no speech resume on foreground return.
+ * Inputs: Three independent user/lifecycle events. Outputs: One cancel per event and no new speak.
+ * Logic: Use the real registered callbacks. Constraints: Not a background-audio or phone-lock test.
  */
-test("关闭、隐藏或离页停止，返回前台不自动继续", function testVisibility() {
+test("Disable, hide, or page exit stops speech without automatic foreground resume", function testVisibility() {
   for (const kind of ["disabled", "hidden", "pagehide"]) {
     const {doc, win, engine, output} = fixture();
     enable(output);
@@ -409,13 +413,13 @@ test("关闭、隐藏或离页停止，返回前台不自动继续", function te
   }
 });
 
-/** Functionality: 验证MCP与手动接口共享一次原生调用和明确状态。
- * Inputs: 实际performSpeech与控制器；设备依赖为替身。
- * Outputs: 状态/列表查询无播放，默认关闭不被绕过，参数精确传递及停止。
- * Logic: 不操作DOM按钮来模拟完成，而委派到共用接口。
- * Constraints: 实际HTTP/WS/MCP transport另有真实浏览器回归。
+/** Functionality: Verify MCP and manual interfaces share one native call and explicit state.
+ * Inputs: Actual performSpeech and controller; device dependencies are fixtures.
+ * Outputs: Status/list queries do not play, default-off is not bypassed, parameters are passed exactly, and stop is shared.
+ * Logic: Delegate to the common interface instead of using DOM buttons to simulate completion.
+ * Constraints: Real HTTP/WS/MCP transport has separate browser regression coverage.
  */
-test("MCP语音接口不自动启用且与UI共享执行路径", function testMcp() {
+test("MCP speech does not auto-enable and shares the UI execution path", function testMcp() {
   assert.equal(performSpeech("speech_status", {}, null).reason, "page_unavailable");
   const {engine, output} = fixture();
   assert.equal(performSpeech("speech_status", {}, output).state, "idle");
@@ -433,13 +437,13 @@ test("MCP语音接口不自动启用且与UI共享执行路径", function testMc
   assert.throws(() => performSpeech("speech_loop", {}, output), /Unknown speech command/);
 });
 
-/** Functionality: 验证静态UI及动态提示的中英词典完整性。
- * Inputs: 真实模块/HTML源码；测试文本作为用户内容保持原文。
- * Outputs: 所有界面字符串可翻译，动态请求摘要与原生错误码保留参数。
- * Logic: 排除明确的示例朗读正文；文本框与原生语音名称由浏览器检查保护。
- * Constraints: 不替代真实DOM翻译、布局或声音验证。
+/** Functionality: Verify bilingual dictionary coverage for static UI and dynamic feedback.
+ * Inputs: Actual module/HTML source; test utterances remain unchanged as user content.
+ * Outputs: All UI strings are translatable; dynamic request summaries and native error codes retain their parameters.
+ * Logic: Exclude explicit sample utterances; browser checks protect the text box and native voice names.
+ * Constraints: Does not replace real-DOM translation, layout, or audio verification.
  */
-test("语音UI和动态状态完整翻译，朗读正文不属于UI词典", async function testTranslations() {
+test("Speech UI and dynamic state are translated while utterance text stays outside the UI dictionary", async function testTranslations() {
   const source = await readFile(new URL("../speech-output.js", import.meta.url), "utf8");
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   const section = html.match(/<section id="speech-test"[\s\S]*?<\/section>/)[0];

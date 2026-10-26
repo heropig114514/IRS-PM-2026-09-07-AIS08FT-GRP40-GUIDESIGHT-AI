@@ -49,7 +49,7 @@ class JpegBoundaryTests(SimpleTestCase):
         jpeg, png, large = io.BytesIO(), io.BytesIO(), io.BytesIO()
         Image.new("RGB", (32, 32), "red").save(jpeg, "JPEG")
         Image.new("RGB", (32, 32), "red").save(png, "PNG")
-        Image.new("RGB", (641, 32), "red").save(large, "JPEG")
+        Image.new("RGB", (1281, 32), "red").save(large, "JPEG")
         cases = [(b"", "frame_size"), (b"invalid JPEG fixture", "invalid_frame"),
                  (jpeg.getvalue()[:-20], "invalid_frame"), (png.getvalue(), "invalid_frame"),
                  (large.getvalue(), "invalid_frame")]

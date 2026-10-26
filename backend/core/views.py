@@ -1,8 +1,9 @@
-"""Responsibilities: 只读数据库健康检查。
-Implementation: 实际执行 SELECT 1；数据库异常返回 503 并记录异常栈，不重试。
-Related Modules: core.urls；数据库由 config.settings/production 指定。
-Declaration Index: health — 公开 GET 检查 HTTP 服务与数据库可用性。
-Variable Index: logger — 公共应用控制台日志。
+"""Responsibilities: Implement a read-only database health check.
+Implementation: Execute SELECT 1; return 503 and log the exception stack on database failure, with
+no retry.
+Related Modules: core.urls; the database is selected by config.settings/production.
+Declaration Index: health — public GET check for HTTP service and database availability.
+Variable Index: logger — shared application console logger.
 """
 
 import logging
@@ -18,11 +19,13 @@ logger = logging.getLogger(__name__)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health(request):
-    """Functionality: 检查数据库连接并返回机器可读的服务状态。
-    Inputs: DRF request；隐式读取默认数据库连接配置，不读取用户输入。
-    Outputs: 成功为 200/status=ok/database=引擎；数据库异常为 503/status=error。
-    Logic: 在上下文管理器中执行 SELECT 1；只捕获 Django DatabaseError。
-    Constraints: 明确允许匿名 GET；失败日志标识接口及数据库引擎，不返回连接凭据。
+    """Functionality: Check the database connection and return machine-readable service status.
+    Inputs: DRF request; implicitly reads the default database connection settings and no user
+    input.
+    Outputs: 200/status=ok/database=engine on success; 503/status=error on database failure.
+    Logic: Execute SELECT 1 inside a context manager; catch only Django DatabaseError.
+    Constraints: Anonymous GET is explicitly allowed; failure logs identify the endpoint and
+    database engine without returning credentials.
     """
     try:
         with connection.cursor() as cursor:

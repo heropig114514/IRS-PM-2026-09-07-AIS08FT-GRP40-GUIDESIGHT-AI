@@ -1,8 +1,10 @@
-"""Responsibilities: OSM 页面、非敏感配置和同源步行路线 HTTP 适配。
-Implementation: 地图资源和路线服务分离；Origin/Host 双重检查；凭据仅由 services 使用。
-Related Modules: core.services, core.camera, config.urls；frontend 地图页面与模块。
-Declaration Index: maps_page — 页面；maps_config — 配置状态；maps_route — 路线 POST。
-Variable Index: logger — 安全诊断日志；MAX_REQUEST_BYTES — 小型坐标请求上限。
+"""Responsibilities: Serve the OSM page, nonsensitive configuration and same-origin walking route
+API.
+Implementation: Separate map assets from route services; check Origin and Host; keep credentials
+in services.
+Related Modules: core.services, core.camera, config.urls; frontend maps and voice agent modules.
+Declaration Index: maps_page — page; maps_config — configuration state; maps_route — route POST.
+Variable Index: logger — safe diagnostics; MAX_REQUEST_BYTES — coordinate request size limit.
 """
 
 import json
@@ -26,16 +28,18 @@ MAX_REQUEST_BYTES = 2048
 
 @require_safe
 def maps_page(request):
-    """Functionality: 显示 Leaflet/OSM 步行路线测试页。
-    Inputs: request、固定 HTML；Outputs: 独立 nonce CSP、定位权限、无缓存 HTML。
-    Logic: 本地模块配合固定版本/SRI 的 Leaflet；OSM 瓦片直连并保留来源与正常缓存。
-    Constraints: 仅地图页面允许 unpkg/OSM；不改变摄像头页面策略。
+    """Functionality: Display the Leaflet/OSM walking route test page.
+    Inputs: request and fixed HTML; Outputs: uncached HTML with nonce CSP and location/microphone
+    policies.
+    Logic: Use local modules and pinned Leaflet/SRI; fetch OSM tiles directly with attribution and
+    normal caching.
+    Constraints: Only this map page permits unpkg/OSM; camera page policy remains independent.
     """
     nonce = secrets.token_urlsafe(24)
     html = (FRONTEND_DIR / "maps.html").read_text(encoding="utf-8")
     response = HttpResponse(html.replace("__CSP_NONCE__", nonce), content_type="text/html")
     response["Cache-Control"] = "no-store"
-    response["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()"
+    response["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=(self)"
     response["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response["Content-Security-Policy"] = (
         "default-src 'self'; script-src 'self' https://unpkg.com; "
@@ -48,10 +52,12 @@ def maps_page(request):
 
 @require_safe
 def maps_config(request):
-    """Functionality: 告知 ORS 是否配置，绝不提供 key。
-    Inputs: request、ORS_API_KEY 环境；Outputs: 200 或缺失配置的 503 JSON，无缓存。
-    Logic: 仅公开 provider/profile/configured；不以配置存在证明真实认证通过。
-    Constraints: 实际认证由路线调用验证。
+    """Functionality: Report whether ORS is configured without exposing its key.
+    Inputs: request and ORS_API_KEY setting; Outputs: uncached JSON, 200 or 503 for missing
+    configuration.
+    Logic: Return only provider/profile/configured; configured does not mean live authentication
+    succeeded.
+    Constraints: Route calls verify actual service authentication.
     """
     configured = bool(os.environ.get("ORS_API_KEY", "").strip())
     response = JsonResponse(
@@ -70,10 +76,15 @@ def maps_config(request):
 @csrf_exempt
 @require_POST
 def maps_route(request):
-    """Functionality: 将明确提交的起终点发送 ORS 并返回规范路线。
-    Inputs: request Origin/Host、JSON start/end 两个 [经度,纬度]；Outputs: 路线或安全错误 JSON。
-    Logic: 代理不传 Cookie，采用严格 Origin/Host 检查代替 cookie CSRF；限尺寸并验证输入。
-    Constraints: 同源不等于身份认证；坐标只处理不存储；不记录正文/密钥；无自动重试。
+    """Functionality: Send explicitly submitted endpoints to ORS and return a normalized route.
+    Inputs: request Origin/Host and JSON start/end coordinates [longitude,latitude].
+    Outputs: Route or safe error JSON.
+    Logic: This anonymous API does not use cookies; strict Origin/Host validation replaces cookie
+    CSRF.
+    Bound request size and validate input before invoking the service.
+    Constraints: Same-origin admission is not identity authentication; forward without storing
+    coordinates,
+    logging coordinates/keys or automatically retrying.
     """
     request_id = uuid.uuid4().hex[:12]
     try:
@@ -82,21 +93,27 @@ def maps_route(request):
             origin not in settings.CAMERA_ALLOWED_ORIGINS
             or urlsplit(origin).netloc != request.get_host()
         ):
-            raise RouteError("origin_rejected", "路线接口仅接受本页面的同源请求。", 403)
+            raise RouteError(
+                "origin_rejected",
+                "The route endpoint accepts same-origin requests from this page only.",
+                403,
+            )
         if request.content_type != "application/json":
-            raise RouteError("invalid_content_type", "请求必须使用 application/json。", 415)
+            raise RouteError("invalid_content_type", "The request must use application/json.", 415)
         if len(request.body) > MAX_REQUEST_BYTES:
-            raise RouteError("request_too_large", "路线请求超过 2 KiB 上限。", 413)
+            raise RouteError("request_too_large", "The route request exceeds the 2 KiB limit.", 413)
         try:
             body = json.loads(request.body)
             if not isinstance(body, dict) or set(body) != {"start", "end"}:
-                raise ValueError("仅接受 start 和 end 两个坐标字段。")
+                raise ValueError("Only start and end coordinate fields are accepted.")
             start, end = validate_coordinate(body["start"]), validate_coordinate(body["end"])
             if start == end:
-                raise ValueError("起点和终点不能相同。")
+                raise ValueError("The start and end points must differ.")
         except (ValueError, UnicodeDecodeError, OverflowError) as error:
             raise RouteError(
-                "invalid_route_input", "起终点必须为不同的有效 [经度,纬度] 坐标。", 400
+                "invalid_route_input",
+                "Start and end must be distinct valid [longitude, latitude] coordinates.",
+                400,
             ) from error
         route = walking_route(start, end, request_id)
         response = JsonResponse({**route, "request_id": request_id})

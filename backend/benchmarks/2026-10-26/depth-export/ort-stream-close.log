@@ -1,0 +1,9 @@
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+forward completed
+Fatal Python error: Aborted
+
+Thread 0x00002c64 (most recent call first):
+  File "E:\AI_map\backend\tools\depth_export_runtime.py", line 144 in close
+  File "<stdin>", line 16 in <module>
+
+Extension modules: numpy.core._multiarray_umath, numpy.core._multiarray_tests, numpy.linalg._umath_linalg, numpy.fft._pocketfft_internal, numpy.random._common, numpy.random.bit_generator, numpy.random._bounded_integers, numpy.random._mt19937, numpy.random.mtrand, numpy.random._philox, numpy.random._pcg64, numpy.random._sfc64, numpy.random._generator, torch._C, torch._C._dynamo.autograd_compiler, torch._C._dynamo.eval_frame, torch._C._dynamo.guards, torch._C._dynamo.utils, torch._C._fft, torch._C._linalg, torch._C._nested, torch._C._nn, torch._C._sparse, torch._C._special (total: 24)

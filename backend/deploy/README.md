@@ -1,82 +1,113 @@
-# PRS 摄像头部署
+# PRS camera deployment
 
-手机访问本机 GPU 的统一 MVP 使用独立 `/mvp/` HTTPS 中转，不替换本页的 `/prs/`
-服务；反向 SSH、访问认证及显式安装流程见 [手机 MVP](../PHONE-MVP.md)。
+Phone access uses a separate public guest `/mvp/` HTTPS relay and does not replace the `/prs/`
+service described here. The dedicated `prs-mvp-web.service` owns the two public Web pages on
+127.0.0.1:18766. A laptop-hosted GPU worker may connect through a distinct reverse SSH inference
+port, 127.0.0.1:18767; Web availability does not depend on that tunnel. Its service template,
+deployment boundary, and operator steps are documented in the [phone MVP guide](../PHONE-MVP.md).
 
-系统新增 [MCP AI 控制接口](../MCP.md)，生产模板地址 `/prs/mcp`。
-单独发布导航使用 `--profile navigation --source-root <Git快照> --git-commit <SHA>
---runtime <当前服务实际解释器目录>`，随后以该清单 `--activate`。
-该范围只更新地图/导航、共享语言、MCP控制和静态依赖，保留当前摄像头页面/流水线、
-推理/模型、HTTP路由、systemd/nginx/env和凭据。`scene-client.js` 随共享资源白名单提供，
-但不会发布场景页面入口或后端场景接口。无新增依赖；staging验证导航工具注册和模型字节一致。
-激活只切换current并重启prs-camera，检查监听与健康；不reload nginx、不迁移数据库。
-地图语音依赖精确白名单下的 `/assets/integration/` 资源。导航/outputs范围发布保留原
-`config/urls.py`，暂存前只读校验活动版本已有 `assets/<path:name>` 共享资源路由；旧单段路由
-会明确拒绝暂存，须先单独审核并升级共享资源路由，工具不会自动改写其它HTTP路由。
-full范围包含该资源路由及完整语音依赖；源码或发布清单更新不代表实际环境已经升级。
-`models/inference-plan.json` 与 `models/yolo26n.json` 在 Git 中保留原字节（`.gitattributes`
-显式 `-text`），因为部署要求它们与当前服务器逐字节一致。两份元数据沿用既有 CRLF；
-该设置不改变 JSON 内容、推理参数或线上文件，也不放宽 SHA/原字节检查。
+The [MCP control interface](../MCP.md) uses `/prs/mcp` in the production template. Voice assistance
+requires a complete release of Skills, runtime and browser recording assets. To retain the restricted
+public catalog:
 
-发布前明确安装更新后的 `requirements.txt` 依赖；staging 会校验依赖与 ASGI 导入，
-不会自动安装。服务模板必须使用 `--lifespan on` 和单 worker。
-新 AI 后端、资源和依赖文件进入同一发布 allowlist；实际激活状态以发布清单为准。
-设备输出发布显式使用 `--profile outputs --source-root <已审查快照> --runtime <独立解释器目录>`，
-配合 `--git-commit <SHA>` 记录来源。该配置覆盖震动/语音/导航 UI、MCP/控制连接及其依赖，
-保留服务器现有摄像头/推理流水线源码、模型清单和方案；两份模型元数据须与当前原字节一致。
-解释器位于 `/opt/prs-practice/runtimes/`，从旧环境复制后只在新环境安装精确的直接依赖，
-记录实际解析版本和 pip check；原 `/opt/prs-practice/runtime-venv` 保留不变。
-服务模板的解释器路径由暂存工具显式渲染，清单同时记录 Git 模板 SHA 和最终文件 SHA。
-激活前校验 current 和全部文件哈希，备份专用 service/nginx/env 后设置
-`PRS_MCP_PROFILE=outputs`，其余环境字段和凭据保持；只重启 prs-camera 并检查健康、reload nginx。
-当前源码的 `outputs` 目录暴露会话发现、七项输出工具及三项导航工具（共11项）；
-导航工具返回设备位置，部署前应核对这一接口变更。仍不注册通用 DOM 或数据库工具。
-输出发布清单包含地图/导航模块，以满足 `ai-control.js` 的静态依赖；源码更新不代表已部署。
-导航更新没有新增运行依赖，可复用已验证的 outputs 隔离解释器；从 Git 提交导出快照发布。
-不迁移数据库，不自动重试或回滚；旧 release/解释器/配置用于人工恢复。
+```powershell
+.\.venv\Scripts\python.exe -m tools.deploy_phone_live --stage --profile full --mcp-profile outputs --runtime <verified-existing-runtime-directory> --git-commit <source-base-SHA> --manifest <manifest-path>
+.\.venv\Scripts\python.exe -m tools.deploy_phone_live --activate --agent-env .env --manifest <manifest-path>
+```
 
-当前入口 https://47.239.50.129/prs/live/ 。`/prs/` 转到同一页面，仅 Echo 和最新 HF 视频路径。
-视频链路调优使用 `--profile live-tuning --runtime <当前服务实际解释器目录>` 暂存，
-再用对应清单 `--activate`。它只覆盖 camera/pipeline/client、PRS/HF transport 及对应测试，
-要求模型清单和推理计划与当前服务器逐字节相同；复制 current 后保留语音/振动、地图、
-MCP registry、systemd/nginx/env、GPU计算实现和运行依赖。激活只切换源码并重启 PRS。
-HF 与 PRS 的窗口和启动控制契约必须协调发布；先用 CPU health 确认 HF 新 SHA 已就绪，
-再激活 PRS，最后核对公网资产哈希。健康请求不替代真实 GPU 性能测量。
-`warmup_bytes=524288` 表示首次结果前一次同连接双向预热，额外流量为1MiB，
-额外耗时计入首帧；3秒控制截止、5秒worker空闲和55秒会话/冷等待预算分别保留。
-直接连接 HF 的工具通过 `receive_live_result` 确认控制；浏览器仅收到原检测结果。
-手动震动 UI 可显式使用 `--profile vibration --source-root <已审查的Git快照目录> --git-commit <SHA>`
-暂存。此配置只覆盖震动页面、样式、共享词典和Python资源白名单及对应文档/测试，
-要求快照的模型清单和推理计划与当前服务器逐字节一致。先从current复制新release，
-保留摄像头/推理、地图、ASGI及运行依赖，不删除旧路径、不覆盖systemd/nginx模板或token。
-激活时校验暂存哈希和current仍指向原release，再切换链接并仅重启prs-camera、检查健康；
-不reload nginx、不自动重试或回滚。发布清单记录Git SHA，原release保留供人工恢复。
-公开UI回归使用前端 `tools/check_vibration_browser.mjs`，其原生震动API是明确替身，
-不代表真实手机马达验证；实际震动仍需安卓手机前台手动测试。
-部署脚本 `tools/deploy_phone_live.py` 验证固定 SSH 主机指纹，从当前 release 创建新 release，
-删除明确列出的旧模式源码，覆盖本项目拥有的路由/页面/流式模块及地图前端，不改地图 API 及其他应用。
-`maps.html`、`maps-page.js`、`maps-client.js` 与共享 `i18n.js`、`translations.js` 统一发布，
-避免摄像头页面升级语言支持后地图页面仍停留旧版。地图语言沿用同源保存的偏好，
-切换语言只更新显示，不重新定位或请求 ORS，ORS 返回的英文原指令保持原样。
-先验证实际COCO合格的 `models/inference-plan.json`，再校验上传SHA、Django配置和迁移状态，
-最后切换current、重启单独prs-camera服务和reload nginx。PRS与HF必须发布同一个计划，
-客户端会逐帧检查计算精度/后端与会话声明一致。
-不会自动回滚、重试或调用 GPU。旧 release、配置备份和已保存版本用于人工恢复。
+`--agent-env` transfers only explicitly configured allowlisted `PRS_AGENT_*`, `PRS_ASR_MODEL`,
+`DASHSCOPE_*` and `VLM_MODEL` fields, never local Django/database/HF/ORS fields. File hashes record
+actual released content, including uncommitted files; Git SHA is only a baseline. This path preserves
+HF/ORS credentials and the public outputs catalog without adding public database/DOM tools. It
+restarts only prs-camera, checks health and retains backups for manual recovery. Legacy small UI
+overlays require an explicit pre-agent source snapshot and cannot publish assistant pages.
+
+Standalone navigation releases use `--profile navigation --source-root <Git-snapshot> --git-commit <SHA>
+--runtime <verified-active-runtime>`, followed by `--activate` with the same manifest. They update only
+map/navigation, shared language, MCP control and static dependencies, preserving camera/pipeline,
+inference/models, HTTP routes, systemd/nginx/environment and credentials. The shared asset allowlist
+includes `scene-client.js` without publishing scene UI/backend endpoints. No dependencies are added;
+staging verifies navigation registration and unchanged model bytes. Activation switches current,
+restarts prs-camera and checks listeners/health without nginx reload or database migration.
+
+Map speech requires precisely allowlisted `/assets/integration/` files. Navigation/outputs profiles
+preserve `config/urls.py`; staging checks that the active release already has `assets/<path:name>`.
+An older single-segment route rejects staging and requires a separately reviewed route upgrade;
+the tool does not rewrite unrelated HTTP routes. Full releases include that route and all speech
+dependencies. Updating source/manifests does not establish that the live environment was upgraded.
+`models/inference-plan.json` and `models/yolo26n.json` retain original bytes in Git via `.gitattributes`
+`-text`, including their existing CRLF. Deployment requires byte equality; this does not change JSON,
+inference parameters or server files, or relax hash checks.
+
+Explicitly install updated `requirements.txt` before releasing. Staging verifies dependencies and
+ASGI imports without installing automatically. Service templates require `--lifespan on` and one
+worker. Backend control code, assets and dependencies enter the same allowlist; the manifest records
+actual activation.
+
+Device output releases explicitly use `--profile outputs --source-root <reviewed-snapshot>
+--runtime <isolated-runtime-directory> --git-commit <SHA>`. They cover vibration/speech/navigation UI,
+MCP/control connections and dependencies while preserving camera/inference source, model metadata
+and plan. Both model metadata files must match active bytes. Runtimes under `/opt/prs-practice/runtimes/`
+are copied from the old environment before installing exact direct dependencies in the new copy;
+record resolved versions and pip check, preserving `/opt/prs-practice/runtime-venv`. Staging explicitly
+renders the service interpreter and records both Git template and rendered hashes. Before activation,
+verify current and every file hash, back up dedicated service/nginx/environment files, and set
+`PRS_MCP_PROFILE=outputs` while preserving other fields/credentials. Restart only prs-camera, verify
+health and reload nginx for this output deployment path.
+
+The outputs catalog contains session discovery, seven output tools and three navigation tools
+(11 total). Navigation tools return device location; review that contract before deploying. Generic
+DOM/database tools remain unregistered. Output manifests include map/navigation dependencies required
+by `ai-control.js`; source changes alone do not mean deployment. Navigation adds no runtime dependencies
+and can reuse a verified outputs runtime with an exported Git snapshot. No database migration,
+automatic retry or rollback occurs; retain old releases/runtimes/configuration for manual recovery.
+
+The public entry is [the camera page](https://47.239.50.129/prs/live/); `/prs/` reaches the same page,
+with Echo and the current HF video path. Video tuning uses `--profile live-tuning --runtime <active-runtime>`
+and subsequent activation of that manifest. It overlays only camera/pipeline/client, PRS/HF transport
+and their tests. Model metadata/plan must equal active bytes. Copying current preserves speech/vibration,
+maps, MCP registry, systemd/nginx/environment, GPU computation and dependencies. Activation switches
+source and restarts PRS only. Coordinate HF/PRS window/startup contracts: verify the new HF SHA with
+CPU health, activate PRS, then verify public asset hashes. Health is not GPU performance measurement.
+`warmup_bytes=524288` is one bidirectional same-connection warmup before the first result, adding 1 MiB
+and counting its duration in first-frame latency. Preserve the 3-second control deadline, 5-second
+worker idle limit and 55-second session/cold-wait budget. Direct HF tools acknowledge controls with
+`receive_live_result`; browsers receive original detection results only.
+
+Manual vibration releases use `--profile vibration --source-root <reviewed-Git-snapshot> --git-commit <SHA>`.
+They overlay only vibration UI/styles, shared translations, Python asset allowlist and related docs/tests,
+requiring identical model metadata/plan bytes. Copy current into a new release, preserving camera/inference,
+maps, ASGI and dependencies; do not delete old paths or overwrite systemd/nginx templates/tokens. Verify
+staged hashes and unchanged current, switch the link, restart prs-camera and check health without nginx
+reload, retries or rollback. Record Git SHA and retain the original release. Browser regression uses
+`tools/check_vibration_browser.mjs` with an explicit vibration double; physical motor validation still
+requires foreground manual testing on an Android phone.
+
+`tools/deploy_phone_live.py` validates a pinned SSH host fingerprint, copies current into a new release,
+removes explicitly listed retired source and overlays project-owned routes/pages/stream modules and
+map frontend without changing the map API or other applications. Publish `maps.html`, `maps-page.js`,
+`maps-client.js`, `i18n.js` and `translations.js` together so camera/maps language support stays aligned.
+Map language shares the same-origin saved preference; changing it alters display only, without new
+location/ORS requests, and preserves ORS English instructions. Verify the actual COCO-qualified
+`models/inference-plan.json`, uploaded hashes, Django configuration and migration status before switching
+current, restarting prs-camera and reloading nginx on the applicable full-deployment path. PRS and HF
+must share one plan; clients verify precision/backend against session declarations for every frame.
+No automatic rollback, retry or GPU invocation occurs. Retain old releases, backups and versions.
 
 ```powershell
 .\.venv\Scripts\python.exe -m tools.deploy_phone_live --stage --manifest benchmarks/2026-10-05/maps-i18n-deployment.json
 .\.venv\Scripts\python.exe -m tools.deploy_phone_live --activate --manifest benchmarks/2026-10-05/maps-i18n-deployment.json
 ```
 
-发布前在前端运行 `node --test tests/*.test.mjs`；浏览器回归命令和模拟边界见
-[前端说明](../../frontend/README.md)。发布后检查公网地图源码哈希，并用该工具的
-`--live-route` 模式执行一次明确标记的 NUS 示例真实路线请求。任何失败保留诊断，
-不自动重试、回滚或切换服务。
+Run frontend `node --test tests/*.test.mjs` before deployment; see the [frontend guide](../../frontend/README.md)
+for browser commands and doubles. After deployment verify public map source hashes and run the tool's
+`--live-route` mode for one explicitly identified NUS example route. Preserve diagnostics on failure,
+without automatically retrying, rolling back or switching providers.
 
-本地 `server_info.txt` 与 `.env.hf` 是被 Git 排除的私有凭据。服务器 token 只写入 root0600
-`/etc/prs-camera/app.env`。systemd 使用独立 runtime-venv、单 worker、MemoryMax256MiB、CPUQuota20%、
-TasksMax32；WebSocket 队列5、帧1MiB、无压缩。Nginx 视频 WS 读超时65秒、MCP70秒，其他 PRS 路径30秒，
-关闭上游重试及缓冲，清除 Cookie/Authorization/Forwarded；公网 admin 返回404。
-
-HF 源码发布和旧接口删除见 [ZEROGPU.md](../ZEROGPU.md)，当前测试及历史长尾见
-[PHONE-LIVE.md](../PHONE-LIVE.md)。
+Local `server_info.txt` and `.env.hf` are Git-excluded credentials. Server tokens are written only to
+root0600 `/etc/prs-camera/app.env`. systemd uses a separate runtime, one worker, MemoryMax256MiB,
+CPUQuota20% and TasksMax32; WebSocket queue 5, frames 1 MiB, compression disabled. Nginx read timeouts
+are 65 seconds for video WS, 70 seconds for MCP and 30 seconds for other PRS paths. Disable upstream
+retry/buffering, strip Cookie/Authorization/Forwarded and return 404 for public admin. HF publishing
+and retired-interface removal are in [ZEROGPU.md](../ZEROGPU.md); phone tests and historical tails are
+in [PHONE-LIVE.md](../PHONE-LIVE.md).

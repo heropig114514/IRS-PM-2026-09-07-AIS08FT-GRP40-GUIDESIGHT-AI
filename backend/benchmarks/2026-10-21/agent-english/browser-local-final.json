@@ -1,0 +1,1287 @@
+{
+  "complete": true,
+  "scope": "Real Qwen/ORS/MCP/UI; synthetic GPS; no camera capture",
+  "turns": [
+    {
+      "input": "你能做什么？",
+      "elapsed_ms": 3553,
+      "url": "http://127.0.0.1:8766/live/",
+      "reply": "Assistant\nSupported operations: start navigation, plan a route, find places, stop navigation, check map or navigation status, get current location, open the map page, open or close the camera, change camera or processing mode, check camera status, describe a camera scene, test the camera connection, open the camera page, speak text, stop speech, check speech status or voices, request or stop vibration, check vibration support, and change the interface language. State the action and any required details.",
+      "activity": "Recognized operations: List supported operations",
+      "tools": [],
+      "diagnostic": [
+        "\n            Only camera permission is requested. Images are transmitted in memory without recording or storage.\n          "
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 4,
+        "request_id": "390f2a39-991d-4e9a-a562-02d264b3c6af",
+        "route": "system",
+        "intents": [
+          "assistant.help"
+        ],
+        "labels": [
+          {
+            "zh": "查看支持的操作",
+            "en": "List supported operations"
+          }
+        ],
+        "skills": [],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "为什么天空是蓝色的？",
+      "elapsed_ms": 2898,
+      "url": "http://127.0.0.1:8766/live/",
+      "reply": "Assistant\nThis request is outside the enabled capabilities. No system action was taken. Ask \"What can you do?\" to list supported operations.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilities",
+      "tools": [],
+      "diagnostic": [
+        "\n            Only camera permission is requested. Images are transmitted in memory without recording or storage.\n          "
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 10,
+        "request_id": "5ed374e7-ffed-4985-b7c9-e2558f4685cb",
+        "route": "general",
+        "intents": [],
+        "labels": [],
+        "skills": [],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "帮我打开微信并给朋友发消息",
+      "elapsed_ms": 2391,
+      "url": "http://127.0.0.1:8766/live/",
+      "reply": "Assistant\nThis request is outside the enabled capabilities. No system action was taken. Ask \"What can you do?\" to list supported operations.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilities",
+      "tools": [],
+      "diagnostic": [
+        "\n            Only camera permission is requested. Images are transmitted in memory without recording or storage.\n          "
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 16,
+        "request_id": "3ef5be88-05ac-4c2c-a4af-a2cc46e0f41d",
+        "route": "unsupported",
+        "intents": [],
+        "labels": [],
+        "skills": [],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "停止",
+      "elapsed_ms": 2919,
+      "url": "http://127.0.0.1:8766/live/",
+      "reply": "Assistant\nPlease specify the feature you want to use, such as navigation, camera, speech, or vibration; up to 3 per request.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarification",
+      "tools": [],
+      "diagnostic": [
+        "\n            Only camera permission is requested. Images are transmitted in memory without recording or storage.\n          "
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 22,
+        "request_id": "77fbfc5b-34cd-4488-b43a-6f4e98f7faff",
+        "route": "clarify",
+        "intents": [],
+        "labels": [],
+        "skills": [],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "嗯，帮我开启导航。",
+      "elapsed_ms": 28488,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nPlease tell me where you would like to go.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device location",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 30
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 33
+        },
+        {
+          "name": "ui_snapshot",
+          "arguments": {},
+          "seq": 36
+        },
+        {
+          "name": "ui_navigate",
+          "arguments": {
+            "page": "maps"
+          },
+          "seq": 39
+        },
+        {
+          "name": "maps_status",
+          "arguments": {},
+          "seq": 42
+        },
+        {
+          "name": "maps_locate",
+          "arguments": {},
+          "seq": 45
+        }
+      ],
+      "diagnostic": [
+        "Select a destination on the map, then plan the walking route."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 28,
+        "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+        "route": "system",
+        "intents": [
+          "navigation.start"
+        ],
+        "labels": [
+          {
+            "zh": "启动导航",
+            "en": "Start navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "Sheng Siong 超市，先列出可选门店。",
+      "elapsed_ms": 18261,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nThese are unconfirmed search candidates, including possible sound-alike or related places. Names are shown exactly as returned. Reply with a number, or provide another name/address if none fits:\n1. Sheng Siong, Teck Whye, Singapore\n2. Sheng Siong, Tanglin Halt, Singapore\n3. Sheng Siong, Potong Pasir, Singapore\n4. Sheng Siong, Clementi West, Singapore\n5. Sheng Siong, Tampines North, Singapore",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destination",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 55
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 58
+        },
+        {
+          "name": "places_search",
+          "arguments": {
+            "text": "Sheng Siong",
+            "original_text": "Sheng Siong 超市",
+            "focus": [
+              103.7766,
+              1.2971
+            ],
+            "country": "SGP"
+          },
+          "seq": 61
+        }
+      ],
+      "diagnostic": [
+        "Select a destination on the map, then plan the walking route."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 53,
+        "request_id": "76c4de5d-d11a-42ad-aad0-093f61fe84f5",
+        "route": "system",
+        "intents": [
+          "navigation.start"
+        ],
+        "labels": [
+          {
+            "zh": "启动导航",
+            "en": "Start navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "第四个",
+      "elapsed_ms": 27464,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nNavigation started to Sheng Siong (Clementi West). The current state is navigating, with about 2,555 m remaining.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigation",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 70
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 73
+        },
+        {
+          "name": "maps_plan",
+          "arguments": {
+            "destination": [
+              103.763798,
+              1.30236
+            ]
+          },
+          "seq": 76
+        },
+        {
+          "name": "navigation_start",
+          "arguments": {},
+          "seq": 79
+        }
+      ],
+      "diagnostic": [
+        "ORS walking route verified. Request ID: 8f093aa8c62c. Map tile status is shown below the map."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 68,
+        "request_id": "f41670be-7924-4714-b09f-5c704bcb99bb",
+        "route": "system",
+        "intents": [
+          "navigation.start"
+        ],
+        "labels": [
+          {
+            "zh": "启动导航",
+            "en": "Start navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "还有多远？",
+      "elapsed_ms": 20332,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nAbout 2,555 m remain, with an estimated 1,840 seconds left.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigation",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 89
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 92
+        },
+        {
+          "name": "navigation_status",
+          "arguments": {},
+          "seq": 95
+        }
+      ],
+      "diagnostic": [
+        "ORS walking route verified. Request ID: 8f093aa8c62c. Map tile status is shown below the map."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 87,
+        "request_id": "a3ebf625-040d-4a3f-9592-c0d5d0e60da3",
+        "route": "system",
+        "intents": [
+          "navigation.status"
+        ],
+        "labels": [
+          {
+            "zh": "查询地图或导航状态",
+            "en": "Check map or navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "停止导航",
+      "elapsed_ms": 21331,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nNavigation stopped.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigation",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 105
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 108
+        },
+        {
+          "name": "navigation_stop",
+          "arguments": {},
+          "seq": 111
+        }
+      ],
+      "diagnostic": [
+        "ORS walking route verified. Request ID: 8f093aa8c62c. Map tile status is shown below the map."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 103,
+        "request_id": "b5fcd0a8-64cd-42df-9c59-6b0c45c940c1",
+        "route": "system",
+        "intents": [
+          "navigation.stop"
+        ],
+        "labels": [
+          {
+            "zh": "停止导航",
+            "en": "Stop navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "导航到一个商场，我读音不准，听起来像‘克莱门提摩尔’，请按读音找候选给我确认。",
+      "elapsed_ms": 22351,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nSearch returned the following candidates for confirmation (including possible phonetic or related matches); names are shown as returned by the service. Review them and reply with a number. If none match, provide a name or address:\n1. Bridge inside Clement MRT Station that connects to Clementi Mall, Singapore\n2. LogisHub @ Clementi, Toh Tuck, Singapore\n3. Clementi Road, National University of Singapore, Singapore\n4. Clementi Road, Clementi Woods, Singapore\n5. Clementi Road, Clementi Woods, Singapore",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destination",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 121
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 124
+        },
+        {
+          "name": "places_search",
+          "arguments": {
+            "text": "克莱门提摩尔",
+            "original_text": "克莱门提摩尔",
+            "focus": [
+              103.7766,
+              1.2971
+            ],
+            "country": "SGP",
+            "pronunciation_queries": [
+              "Clementi Mall",
+              "Clementi More"
+            ]
+          },
+          "seq": 127
+        }
+      ],
+      "diagnostic": [
+        "ORS walking route verified. Request ID: 8f093aa8c62c. Map tile status is shown below the map."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 119,
+        "request_id": "4c358fdc-6447-43e6-9fc9-c9f23fe1c515",
+        "route": "system",
+        "intents": [
+          "navigation.start"
+        ],
+        "labels": [
+          {
+            "zh": "启动导航",
+            "en": "Start navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "是 The Clementi Mall，使用刚才返回的商场坐标规划并开始导航。",
+      "elapsed_ms": 17734,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nThe search results did not contain a mall candidate named \"The Clementi Mall\". The current list is:\n1. Bridge inside Clement MRT Station that connects to Clementi Mall, Singapore\n2. LogisHub @ Clementi, Toh Tuck, Singapore\n3. Clementi Road, National University of Singapore, Singapore\n4. Clementi Road, Clementi Woods, Singapore\n5. Clementi Road, Clementi Woods, Singapore\n\nReply with a number to select a candidate, or provide a more precise name/address to search again.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflow",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 136
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 139
+        }
+      ],
+      "diagnostic": [
+        "ORS walking route verified. Request ID: 8f093aa8c62c. Map tile status is shown below the map."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 134,
+        "request_id": "c9bc9c97-4eab-48d8-b230-184f8eb5aba8",
+        "route": "system",
+        "intents": [
+          "navigation.start"
+        ],
+        "labels": [
+          {
+            "zh": "启动导航",
+            "en": "Start navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "第一个",
+      "elapsed_ms": 25921,
+      "url": "http://127.0.0.1:8766/maps/",
+      "reply": "Assistant\nNavigation started to Bridge inside Clement MRT Station that connects to Clementi Mall. The current state is navigating, with about 3,264 m remaining.",
+      "activity": "Recognized operations: List supported operationsOutside enabled capabilitiesOutside enabled capabilitiesOperation needs clarificationRecognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigation",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 149
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 152
+        },
+        {
+          "name": "maps_plan",
+          "arguments": {
+            "destination": [
+              103.765684,
+              1.314109
+            ]
+          },
+          "seq": 155
+        },
+        {
+          "name": "navigation_start",
+          "arguments": {},
+          "seq": 158
+        }
+      ],
+      "diagnostic": [
+        "ORS walking route verified. Request ID: f29ac4aebfd0. Map tile status is shown below the map."
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 147,
+        "request_id": "c1c29e2d-bd51-4789-b8e4-3d7a631c8d60",
+        "route": "system",
+        "intents": [
+          "navigation.start"
+        ],
+        "labels": [
+          {
+            "zh": "启动导航",
+            "en": "Start navigation"
+          }
+        ],
+        "skills": [
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "停止导航，然后关闭摄像头",
+      "elapsed_ms": 42274,
+      "url": "http://127.0.0.1:8766/live/",
+      "reply": "Assistant\nNavigation stopped; the camera is currently off.",
+      "activity": "Recognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Stop navigation / Close cameraDiscovering system toolsLoading workflowLoading workflowStopping navigationOpening pageChecking camera",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 168
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "navigation"
+          },
+          "seq": 171
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "camera"
+          },
+          "seq": 174
+        },
+        {
+          "name": "navigation_stop",
+          "arguments": {},
+          "seq": 177
+        },
+        {
+          "name": "ui_navigate",
+          "arguments": {
+            "page": "camera"
+          },
+          "seq": 180
+        },
+        {
+          "name": "camera_status",
+          "arguments": {},
+          "seq": 183
+        }
+      ],
+      "diagnostic": [
+        "\n            Only camera permission is requested. Images are transmitted in memory without recording or storage.\n          "
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 166,
+        "request_id": "fefb7373-7267-40f0-af27-3a38a9d25a6b",
+        "route": "system",
+        "intents": [
+          "camera.stop",
+          "navigation.stop"
+        ],
+        "labels": [
+          {
+            "zh": "停止导航",
+            "en": "Stop navigation"
+          },
+          {
+            "zh": "关闭摄像头",
+            "en": "Close camera"
+          }
+        ],
+        "skills": [
+          "camera",
+          "navigation"
+        ],
+        "unknown_policy": "reject"
+      }
+    },
+    {
+      "input": "界面换成英文",
+      "elapsed_ms": 20263,
+      "url": "http://127.0.0.1:8766/live/",
+      "reply": "Assistant\nInterface language has been switched to English.",
+      "activity": "Recognized operations: Start navigationDiscovering system toolsLoading workflowInspecting pageOpening pageInspecting mapGetting device locationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Check map or navigationDiscovering system toolsLoading workflowChecking navigationRecognized operations: Stop navigationDiscovering system toolsLoading workflowStopping navigationRecognized operations: Start navigationDiscovering system toolsLoading workflowSearching destinationRecognized operations: Start navigationDiscovering system toolsLoading workflowRecognized operations: Start navigationDiscovering system toolsLoading workflowPlanning walking routeStarting navigationRecognized operations: Stop navigation / Close cameraDiscovering system toolsLoading workflowLoading workflowStopping navigationOpening pageChecking cameraRecognized operations: Change interface languageDiscovering system toolsLoading workflowUsing page control",
+      "tools": [
+        {
+          "name": "discover_tools",
+          "arguments": {},
+          "seq": 193
+        },
+        {
+          "name": "read_skill",
+          "arguments": {
+            "name": "outputs"
+          },
+          "seq": 196
+        },
+        {
+          "name": "ui_action",
+          "arguments": {
+            "action": "select",
+            "selector": "#language",
+            "value": "en"
+          },
+          "seq": 199
+        }
+      ],
+      "diagnostic": [
+        "\n            Only camera permission is requested. Images are transmitted in memory without recording or storage.\n          "
+      ],
+      "intent": {
+        "type": "intent",
+        "seq": 191,
+        "request_id": "eecbb49d-a125-4f31-94a2-1f61ce0df0eb",
+        "route": "system",
+        "intents": [
+          "interface.language"
+        ],
+        "labels": [
+          {
+            "zh": "切换界面语言",
+            "en": "Change interface language"
+          }
+        ],
+        "skills": [
+          "outputs"
+        ],
+        "unknown_policy": "reject"
+      }
+    }
+  ],
+  "checks": [
+    "non_action_route_system",
+    "non_action_route_general",
+    "non_action_route_unsupported",
+    "non_action_route_clarify",
+    "missing_slot_hits_navigation_then_clarifies",
+    "followup_inherits_navigation",
+    "selected_store_real_route_navigation",
+    "status_and_stop_do_not_restart",
+    "phonetic_candidates_require_confirmation",
+    "mall_name_does_not_confirm_adjacent_bridge",
+    "explicitly_accepted_provider_bridge_real_navigation",
+    "combined_request_loads_mapped_skills",
+    "output_skill_changes_existing_language_control"
+  ],
+  "toolEvents": [],
+  "intents": [
+    {
+      "type": "intent",
+      "seq": 4,
+      "request_id": "390f2a39-991d-4e9a-a562-02d264b3c6af",
+      "route": "system",
+      "intents": [
+        "assistant.help"
+      ],
+      "labels": [
+        {
+          "zh": "查看支持的操作",
+          "en": "List supported operations"
+        }
+      ],
+      "skills": [],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 10,
+      "request_id": "5ed374e7-ffed-4985-b7c9-e2558f4685cb",
+      "route": "general",
+      "intents": [],
+      "labels": [],
+      "skills": [],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 16,
+      "request_id": "3ef5be88-05ac-4c2c-a4af-a2cc46e0f41d",
+      "route": "unsupported",
+      "intents": [],
+      "labels": [],
+      "skills": [],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 22,
+      "request_id": "77fbfc5b-34cd-4488-b43a-6f4e98f7faff",
+      "route": "clarify",
+      "intents": [],
+      "labels": [],
+      "skills": [],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 28,
+      "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+      "route": "system",
+      "intents": [
+        "navigation.start"
+      ],
+      "labels": [
+        {
+          "zh": "启动导航",
+          "en": "Start navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 53,
+      "request_id": "76c4de5d-d11a-42ad-aad0-093f61fe84f5",
+      "route": "system",
+      "intents": [
+        "navigation.start"
+      ],
+      "labels": [
+        {
+          "zh": "启动导航",
+          "en": "Start navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 68,
+      "request_id": "f41670be-7924-4714-b09f-5c704bcb99bb",
+      "route": "system",
+      "intents": [
+        "navigation.start"
+      ],
+      "labels": [
+        {
+          "zh": "启动导航",
+          "en": "Start navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 87,
+      "request_id": "a3ebf625-040d-4a3f-9592-c0d5d0e60da3",
+      "route": "system",
+      "intents": [
+        "navigation.status"
+      ],
+      "labels": [
+        {
+          "zh": "查询地图或导航状态",
+          "en": "Check map or navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 103,
+      "request_id": "b5fcd0a8-64cd-42df-9c59-6b0c45c940c1",
+      "route": "system",
+      "intents": [
+        "navigation.stop"
+      ],
+      "labels": [
+        {
+          "zh": "停止导航",
+          "en": "Stop navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 119,
+      "request_id": "4c358fdc-6447-43e6-9fc9-c9f23fe1c515",
+      "route": "system",
+      "intents": [
+        "navigation.start"
+      ],
+      "labels": [
+        {
+          "zh": "启动导航",
+          "en": "Start navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 134,
+      "request_id": "c9bc9c97-4eab-48d8-b230-184f8eb5aba8",
+      "route": "system",
+      "intents": [
+        "navigation.start"
+      ],
+      "labels": [
+        {
+          "zh": "启动导航",
+          "en": "Start navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 147,
+      "request_id": "c1c29e2d-bd51-4789-b8e4-3d7a631c8d60",
+      "route": "system",
+      "intents": [
+        "navigation.start"
+      ],
+      "labels": [
+        {
+          "zh": "启动导航",
+          "en": "Start navigation"
+        }
+      ],
+      "skills": [
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 166,
+      "request_id": "fefb7373-7267-40f0-af27-3a38a9d25a6b",
+      "route": "system",
+      "intents": [
+        "camera.stop",
+        "navigation.stop"
+      ],
+      "labels": [
+        {
+          "zh": "停止导航",
+          "en": "Stop navigation"
+        },
+        {
+          "zh": "关闭摄像头",
+          "en": "Close camera"
+        }
+      ],
+      "skills": [
+        "camera",
+        "navigation"
+      ],
+      "unknown_policy": "reject"
+    },
+    {
+      "type": "intent",
+      "seq": 191,
+      "request_id": "eecbb49d-a125-4f31-94a2-1f61ce0df0eb",
+      "route": "system",
+      "intents": [
+        "interface.language"
+      ],
+      "labels": [
+        {
+          "zh": "切换界面语言",
+          "en": "Change interface language"
+        }
+      ],
+      "skills": [
+        "outputs"
+      ],
+      "unknown_policy": "reject"
+    }
+  ],
+  "results": [
+    {
+      "type": "tool_result",
+      "seq": 31,
+      "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 34,
+      "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 37,
+      "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+      "name": "ui_snapshot",
+      "result": {}
+    },
+    {
+      "type": "tool_result",
+      "seq": 40,
+      "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+      "name": "ui_navigate",
+      "result": {}
+    },
+    {
+      "type": "tool_result",
+      "seq": 43,
+      "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+      "name": "maps_status",
+      "result": {
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 46,
+      "request_id": "7ed8633d-c7ee-45db-a214-4bd5a4356b53",
+      "name": "maps_locate",
+      "result": {
+        "accepted": true,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 56,
+      "request_id": "76c4de5d-d11a-42ad-aad0-093f61fe84f5",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 59,
+      "request_id": "76c4de5d-d11a-42ad-aad0-093f61fe84f5",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 62,
+      "request_id": "76c4de5d-d11a-42ad-aad0-093f61fe84f5",
+      "name": "places_search",
+      "result": {
+        "requires_confirmation": true,
+        "candidates_count": 5
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 71,
+      "request_id": "f41670be-7924-4714-b09f-5c704bcb99bb",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 74,
+      "request_id": "f41670be-7924-4714-b09f-5c704bcb99bb",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 77,
+      "request_id": "f41670be-7924-4714-b09f-5c704bcb99bb",
+      "name": "maps_plan",
+      "result": {
+        "accepted": true,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 80,
+      "request_id": "f41670be-7924-4714-b09f-5c704bcb99bb",
+      "name": "navigation_start",
+      "result": {
+        "accepted": true,
+        "reason": null,
+        "state": "navigating",
+        "active": true,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 90,
+      "request_id": "a3ebf625-040d-4a3f-9592-c0d5d0e60da3",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 93,
+      "request_id": "a3ebf625-040d-4a3f-9592-c0d5d0e60da3",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 96,
+      "request_id": "a3ebf625-040d-4a3f-9592-c0d5d0e60da3",
+      "name": "navigation_status",
+      "result": {
+        "reason": null,
+        "state": "navigating",
+        "active": true,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 106,
+      "request_id": "b5fcd0a8-64cd-42df-9c59-6b0c45c940c1",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 109,
+      "request_id": "b5fcd0a8-64cd-42df-9c59-6b0c45c940c1",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 112,
+      "request_id": "b5fcd0a8-64cd-42df-9c59-6b0c45c940c1",
+      "name": "navigation_stop",
+      "result": {
+        "accepted": true,
+        "reason": "mcp",
+        "state": "stopped",
+        "active": false,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 122,
+      "request_id": "4c358fdc-6447-43e6-9fc9-c9f23fe1c515",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 125,
+      "request_id": "4c358fdc-6447-43e6-9fc9-c9f23fe1c515",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 128,
+      "request_id": "4c358fdc-6447-43e6-9fc9-c9f23fe1c515",
+      "name": "places_search",
+      "result": {
+        "requires_confirmation": true,
+        "candidates_count": 10
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 137,
+      "request_id": "c9bc9c97-4eab-48d8-b230-184f8eb5aba8",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 140,
+      "request_id": "c9bc9c97-4eab-48d8-b230-184f8eb5aba8",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 150,
+      "request_id": "c1c29e2d-bd51-4789-b8e4-3d7a631c8d60",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 153,
+      "request_id": "c1c29e2d-bd51-4789-b8e4-3d7a631c8d60",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 156,
+      "request_id": "c1c29e2d-bd51-4789-b8e4-3d7a631c8d60",
+      "name": "maps_plan",
+      "result": {
+        "accepted": true,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 159,
+      "request_id": "c1c29e2d-bd51-4789-b8e4-3d7a631c8d60",
+      "name": "navigation_start",
+      "result": {
+        "accepted": true,
+        "reason": null,
+        "state": "navigating",
+        "active": true,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 169,
+      "request_id": "fefb7373-7267-40f0-af27-3a38a9d25a6b",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 172,
+      "request_id": "fefb7373-7267-40f0-af27-3a38a9d25a6b",
+      "name": "read_skill",
+      "result": {
+        "skill": "navigation",
+        "tools_count": 12
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 175,
+      "request_id": "fefb7373-7267-40f0-af27-3a38a9d25a6b",
+      "name": "read_skill",
+      "result": {
+        "skill": "camera",
+        "tools_count": 6
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 178,
+      "request_id": "fefb7373-7267-40f0-af27-3a38a9d25a6b",
+      "name": "navigation_stop",
+      "result": {
+        "accepted": true,
+        "reason": "mcp",
+        "state": "stopped",
+        "active": false,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 184,
+      "request_id": "fefb7373-7267-40f0-af27-3a38a9d25a6b",
+      "name": "camera_status",
+      "result": {
+        "state": "stopped",
+        "active": false,
+        "frames_received": 0,
+        "available": true
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 194,
+      "request_id": "eecbb49d-a125-4f31-94a2-1f61ce0df0eb",
+      "name": "discover_tools",
+      "result": {
+        "tools_count": 24
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 197,
+      "request_id": "eecbb49d-a125-4f31-94a2-1f61ce0df0eb",
+      "name": "read_skill",
+      "result": {
+        "skill": "outputs",
+        "tools_count": 10
+      }
+    },
+    {
+      "type": "tool_result",
+      "seq": 200,
+      "request_id": "eecbb49d-a125-4f31-94a2-1f61ce0df0eb",
+      "name": "ui_action",
+      "result": {}
+    }
+  ],
+  "routes": [
+    {
+      "status": 200
+    },
+    {
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "translation_note": "Chinese assistant replies are English translations for repository consistency. Chinese user utterances and zh intent labels remain as bilingual test data; timings, routes, tool events, checks, and outcomes are unchanged."
+}

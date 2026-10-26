@@ -1,0 +1,4 @@
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "eager_before"}
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "model_tests\\samples\\bus.jpg", "backend": "onnx_cuda"}

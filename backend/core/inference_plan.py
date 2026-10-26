@@ -21,6 +21,9 @@ def validate_plan(plan, manifest):
     Constraints: this validates evidence metadata, not the external experiment itself or HF GPU;
     unimplemented backends/compile modes fail explicitly, with no alternative execution chosen.
     """
+    # "threshold" is the DEFAULT class threshold (core.detector.CONFIDENCE_THRESHOLD). Per-class
+    # overrides (core.detector.CLASS_CONF, traffic light 0.12) are runtime postprocessing only and
+    # not part of the AP-validated plan, so the plan JSON stays at 0.25.
     expected = {"schema_version": 1, "model": "yolo26n", "classes": 80, "edge": 640,
                 "batch": 1, "threshold": 0.25, "jpeg_quality": 80,
                 "source_sha256": manifest["source_sha256"]}

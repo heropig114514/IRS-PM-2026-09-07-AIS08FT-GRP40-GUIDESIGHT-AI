@@ -66,7 +66,10 @@ NAVIGATION_SHARED_ASSETS = {
 LOCAL_DISABLED = {
     "code": "local_only_external_disabled",
     "feature": "disabled",
-    "detail": "纯本地 MVP 已禁用外部推理、场景描述和在线导航服务。",
+    "detail": (
+        "The local-only MVP disables external inference, scene description, "
+        "and online navigation services."
+    ),
 }
 
 
@@ -93,17 +96,23 @@ def read_health(url):
     request = urllib.request.Request(url, method="GET")
     with opener.open(request, timeout=2) as response:
         if response.geturl() != url:
-            raise IntegrationError("local_status_invalid", "本地推理健康检查发生重定向。")
+            raise IntegrationError(
+                "local_status_invalid", "The local inference health check was redirected."
+            )
         raw = response.read(65537)
     if len(raw) > 65536:
-        raise IntegrationError("local_status_invalid", "本地推理健康响应过大。")
+        raise IntegrationError(
+            "local_status_invalid", "The local inference health response is too large."
+        )
     body = json.loads(raw)
     if (
         not isinstance(body, dict)
         or body.get("provider") != "local"
         or any(type(body.get(key)) is not bool for key in ("loaded", "busy", "ready"))
     ):
-        raise IntegrationError("local_status_invalid", "本地推理健康响应无效。")
+        raise IntegrationError(
+            "local_status_invalid", "The local inference health response is invalid."
+        )
     return body
 
 
@@ -194,7 +203,9 @@ class LocalGateway:
             return await send({"type": "websocket.close", "code": 1008})
         await send({"type": "websocket.accept"})
         if not self.admission.acquire(blocking=False):
-            return await self.finish(send, None, IntegrationError("local_busy", "本地推理忙。"))
+            return await self.finish(
+                send, None, IntegrationError("local_busy", "Local inference is busy.")
+            )
         session, reader, provider, error = GatewaySession(), None, None, None
         try:
             reader = asyncio.create_task(self.read_browser(session, receive))
@@ -285,7 +296,11 @@ class LocalGateway:
                 packet = message.get("bytes")
                 timestamp, _ = unpack_request(packet, session.received, session.previous_timestamp)
                 if session.received - session.delivered >= MAX_INFLIGHT:
-                    raise IntegrationError("local_capacity", "超过允许的在途帧数量。", 400)
+                    raise IntegrationError(
+                        "local_capacity",
+                        "The permitted number of in-flight frames was exceeded.",
+                        400,
+                    )
                 session.input_times[session.received] = timestamp
                 session.incoming.put_nowait(packet)
                 session.received += 1
@@ -323,7 +338,8 @@ class LocalGateway:
                 hello = json.loads(await asyncio.wait_for(peer.recv(), 10))
                 if hello.get("kind") == "error":
                     raise IntegrationError(
-                        hello.get("code", "local_unavailable"), "本地推理进程拒绝会话，请检查状态。"
+                        hello.get("code", "local_unavailable"),
+                        "The local inference process rejected the session; check its status.",
                     )
                 session.contract = validate_contract(hello)
                 if not session.disconnected:
@@ -349,7 +365,9 @@ class LocalGateway:
         except Exception as caught:
             logger.error("Local gateway worker transport failed type=%s", type(caught).__name__)
             raise IntegrationError(
-                "local_worker_unavailable", "无法连接本地推理进程或推理连接已中断。"
+                "local_worker_unavailable",
+                "Could not connect to the local inference process "
+                "or the inference connection was interrupted.",
             ) from None
 
     async def forward(self, session, peer):
@@ -393,7 +411,9 @@ class LocalGateway:
                         session.worker_received = counts[1]
                         session.forwarded = max(session.forwarded, counts[1])
                         return
-                    raise IntegrationError("local_result_invalid", "本地推理结束计数无效。")
+                    raise IntegrationError(
+                        "local_result_invalid", "The local inference completion count is invalid."
+                    )
                 if terminal.get("kind") == "error":
                     code, detail = terminal.get("code"), terminal.get("detail")
                     if (
@@ -403,12 +423,17 @@ class LocalGateway:
                         and (len(detail) <= 500)
                     ):
                         raise IntegrationError(code, detail)
-                raise IntegrationError("local_result_invalid", "本地推理结束消息无效。")
+                raise IntegrationError(
+                    "local_result_invalid", "The local inference completion message is invalid."
+                )
             index = session.worker_verified
             metadata, _ = unpack_result(packet, index)
             timestamp = session.input_times.get(index)
             if timestamp is None or index >= session.submitted:
-                raise IntegrationError("local_result_invalid", "本地推理返回未发送帧的结果。")
+                raise IntegrationError(
+                    "local_result_invalid",
+                    "Local inference returned a result for a frame that was not sent.",
+                )
             validate_result(metadata, session.contract, index, timestamp)
             session.input_times.pop(index)
             session.worker_verified += 1
@@ -438,7 +463,10 @@ class LocalGateway:
             safe = (
                 error
                 if isinstance(error, IntegrationError)
-                else IntegrationError("local_gateway_failed", "本地中台会话失败，请检查服务日志。")
+                else IntegrationError(
+                    "local_gateway_failed",
+                    "The local gateway session failed; check the service logs.",
+                )
             )
             message = {
                 "kind": "error",
@@ -593,6 +621,9 @@ class IntegrationApplication:
                     "ready": False,
                     "loaded": False,
                     "code": code,
-                    "detail": "本地推理进程不可用，请检查独立推理服务。",
+                    "detail": (
+                        "The local inference process is unavailable; "
+                        "check the separate inference service."
+                    ),
                 },
             )

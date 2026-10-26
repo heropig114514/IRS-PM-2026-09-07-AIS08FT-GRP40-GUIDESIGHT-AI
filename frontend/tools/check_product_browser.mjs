@@ -1,8 +1,8 @@
-/* Responsibilities: Verify the released assist surface and isolated diagnostic page through Chrome.
- * Implementation: Trusted public HTTPS with bounded private credentials, native fake camera and TTS;
+/* Responsibilities: Verify the released public guest assist surface and diagnostic page through Chrome.
+ * Implementation: Trusted public HTTPS, native fake camera and TTS;
  * rear constraints, permission results, route and GPS use explicit fixtures; model frames are genuine.
  * Related Modules: integration/assist-product.html, product-ui.js, assist-mvp.js, speech-activation.js;
- * check_phone_relay_browser.mjs provides the existing credential and evidence privacy helpers.
+ * check_phone_relay_browser.mjs provides shared evidence privacy helpers.
  * Declaration Index: validateArguments; verifyInitial; verifyProductSurface; verifyCameraRequest;
  * verifyCameraDisplay; installProbe; installProbe.supportedConstraints;
  * installProbe.observedSpeak; installProbe.checkedVideo; installProbe.getCurrentPosition;
@@ -13,7 +13,7 @@
  * installCameraBoundary.supportedConstraints; installCameraBoundary.resolvePermission;
  * installCameraBoundary.rejectPermission; runCameraBoundaries; runBoundaries; main.
  * Variable Index: ORIGIN/PREFIX — approved relay; ROUTE/POINT — explicit synthetic fixtures;
- * report — body-free evidence; credentials — browser-only BasicAuth, never serialized.
+ * report — body-free evidence without login credentials, pixels or positions.
  * Constraints: No device/route/model changes, physical camera/GPS, synthesized speech start/end, retries,
  * installation, TLS bypass, actual audibility claim, service control or commits.
  */
@@ -21,7 +21,7 @@ import {createRequire} from "node:module";
 import {mkdir, stat, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
-import {readAccess, requireNew, requireGate, safeFailure, verifySpeechActivation} from "./check_phone_relay_browser.mjs";
+import {requireNew, requireGate, safeFailure, verifySpeechActivation} from "./check_phone_relay_browser.mjs";
 
 const ORIGIN = "https://47.239.50.129", PREFIX = "/mvp/";
 const POINT = {longitude: 103.7766, latitude: 1.2971, accuracy: 5};
@@ -34,20 +34,21 @@ const ROUTE = {provider: "openrouteservice", profile: "foot-walking", request_id
     {type: 10, instruction: "Arrive (synthetic)", distance_m: 0, duration_s: 0, way_points: [2, 2]},
   ]};
 
-/* Functionality: Pin private authentication to the approved product URL before file access.
- * Inputs: CLI arguments/runtime environment. Outputs: normalized file paths and public URL.
- * Logic: exact origin/path, new JSON artifact and one explicit boundary mode. Constraints: no URL secrets. */
+/* Functionality: Pin the public guest product URL and output artifact before browser work.
+ * Inputs: CLI URL/report arguments, optional boundary mode, and runtime environment.
+ * Outputs: normalized artifact paths and public URL. Logic: exact origin/path and one explicit boundary mode.
+ * Constraints: no credential-file input, URL secrets, local target or TLS override. */
 export function validateArguments(argv, environment) {
-  const [url, privateEnv, output, ...extra] = argv;
+  const [url, output, ...extra] = argv;
   const boundaries = extra.length === 1 && extra[0] === "--boundaries";
   const cameraBoundaries = extra.length === 1 && extra[0] === "--camera-boundaries";
-  requireGate(Boolean(url && privateEnv && output && (!extra.length || boundaries || cameraBoundaries) && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
+  requireGate(Boolean(url && output && (!extra.length || boundaries || cameraBoundaries) && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
   let address; try { address = new URL(url); } catch { requireGate(false, "INVALID_PRODUCT_URL"); }
   requireGate(address.origin === ORIGIN && address.pathname === `${PREFIX}maps/` &&
     !address.username && !address.password && !address.search && !address.hash, "INVALID_PRODUCT_URL");
   const report = resolve(output);
-  requireGate(report.endsWith(".json") && report !== resolve(privateEnv), "INVALID_REPORT_PATH");
-  return {url, boundaries, cameraBoundaries, privateEnv: resolve(privateEnv), output: report, screenshot: report.slice(0, -5) + ".png",
+  requireGate(report.endsWith(".json"), "INVALID_REPORT_PATH");
+  return {url, boundaries, cameraBoundaries, output: report, screenshot: report.slice(0, -5) + ".png",
     desktopScreenshot: report.slice(0, -5) + "-desktop.png", diagnosticScreenshot: report.slice(0, -5) + "-diagnostic.png",
     runtime: resolve(environment.PRS_PLAYWRIGHT_PATH),
     fakeCameraFile: environment.PRS_FAKE_CAMERA_VIDEO ? resolve(environment.PRS_FAKE_CAMERA_VIDEO) : null};
@@ -67,15 +68,16 @@ export function verifyInitial(value) {
   return value;
 }
 
-/* Functionality: Reject diagnostic controls and inaccessible mobile layout; permit the explicit NUS fill action.
+/* Functionality: Require product press-to-talk and reject exposed diagnostics or bad layout.
  * Inputs: visible-surface evidence. Outputs: same validated evidence. Logic: named and sized controls.
- * Constraints: hidden compatibility bindings are permitted but must stay outside the visible surface. */
+ * Constraints: hidden compatibility bindings are permitted; diagnostic links stay off the product surface. */
 export function verifyProductSurface(value) {
   requireGate(value.horizontal_overflow <= 1 && value.duplicate_ids.length === 0, "PRODUCT_LAYOUT_INVALID");
   requireGate(value.unnamed_controls.length === 0, "PRODUCT_CONTROL_LABEL_MISSING");
   requireGate(value.small_touch_controls.length === 0, "PRODUCT_TOUCH_TARGET_TOO_SMALL");
   requireGate(value.visible_test_controls.length === 0 && value.visible_test_text.length === 0, "PRODUCT_DIAGNOSTICS_EXPOSED");
-  requireGate(value.diagnostic_link === `${PREFIX}maps/test`, "PRODUCT_DIAGNOSTIC_LINK_MISSING");
+  requireGate(["按住说话", "Hold to speak"].includes(value.voice_hold_label), "PRODUCT_HOLD_CONTROL_MISSING");
+  requireGate(value.diagnostic_link === null, "PRODUCT_DIAGNOSTIC_LINK_EXPOSED");
   return value;
 }
 
@@ -88,12 +90,12 @@ export function verifyCameraRequest(value) {
   return value[0];
 }
 
-/* Functionality: Require both original preview and actual decoded result on the product surface.
+/* Functionality: Require a hidden camera capture source and actual decoded detection result.
  * Inputs: rendered media snapshot and model frame count. Outputs: same validated snapshot.
- * Logic: visibility plus native dimensions and playing stream. Constraints: does not claim detections
- * exist in the fake scene or validate a box's physical accuracy. */
+ * Logic: the source must be playing with native dimensions while the annotated result is visible.
+ * Constraints: does not claim detections exist in the fake scene or validate box accuracy. */
 export function verifyCameraDisplay(value) {
-  requireGate(value.preview_visible && value.preview_playing && value.preview_width > 0 && value.preview_height > 0 &&
+  requireGate(value.preview_hidden && value.preview_playing && value.preview_width > 0 && value.preview_height > 0 &&
     value.result_visible && value.result_decoded && value.result_width > 0 && value.result_height > 0 &&
     value.result_blob && value.frames > 0, "PRODUCT_CAMERA_DISPLAY_INVALID");
   return value;
@@ -199,7 +201,8 @@ function surfaceEvidence() {
   const name = node => node.getAttribute("aria-label") || node.getAttribute("aria-labelledby") ||
     [...node.labels ?? []].map(label => label.textContent).join("").trim() || (node.tagName === "BUTTON" ? node.textContent.trim() : "");
   const text = document.body.innerText;
-  const diagnostic = [...document.querySelectorAll("a[href]")].find(node => new URL(node.href).pathname.endsWith("/maps/test"));
+  const diagnostic = [...document.querySelectorAll("a[href]")].find(node => visible(node) &&
+    new URL(node.href).pathname.endsWith("/maps/test"));
   return {width: innerWidth, horizontal_overflow: document.documentElement.scrollWidth - innerWidth,
     duplicate_ids: [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))],
     unnamed_controls: controls.filter(node => !name(node)).map(node => node.id || node.tagName),
@@ -208,8 +211,12 @@ function surfaceEvidence() {
     visible_test_controls: ["speech-play", "speech-text", "speech-voice", "speech-volume", "speech-rate",
       "navigation-speech-voice", "navigation-speech-language", "navigation-voices-refresh", "assist-source",
       "assist-video-file", "assist-video-start", "assist-devices-authorize", "assist-devices-refresh", "assist-device",
-      "ping"].filter(id => visible(document.getElementById(id))),
-    visible_test_text: ["连续视频测试", "原生语音输出", "语音选择", "往返延迟", "FPS", "PRF2", "CUDA", "请求编号"].filter(word => text.includes(word)),
+      "ping", "example"].filter(id => visible(document.getElementById(id))),
+    visible_test_text: ["连续视频测试", "原生语音输出", "语音选择", "往返延迟", "FPS", "PRF2", "CUDA", "请求编号",
+      "填入 NUS 示例", "Fill NUS example", "手动输入坐标", "Enter coordinates manually", "实时画面", "Live camera",
+      "尚未开始导航", "Navigation not started", "暂无可靠导航进度", "No reliable navigation progress",
+      "等待转向指令", "Waiting for turn guidance", "Find a route to start navigation."].filter(word => text.includes(word)),
+    voice_hold_label: document.getElementById("agent-record")?.textContent.trim() || null,
     diagnostic_link: diagnostic ? new URL(diagnostic.href).pathname : null};
 }
 
@@ -239,8 +246,8 @@ async function waitVoice(page, family) {
   return page.evaluate(initialEvidence);
 }
 
-/* Functionality: Run product and diagnostic acceptance against the existing authenticated service.
- * Inputs: pinned URL/private access/new evidence paths. Outputs: JSON and product screenshot.
+/* Functionality: Run product and diagnostic acceptance against the public guest service.
+ * Inputs: pinned URL/new evidence paths. Outputs: JSON and product screenshot.
  * Logic: product layout/defaults, interface language, real-click TTS, original nav and real GPU, cleanup,
  * then isolated diagnostic UI. Constraints: route/GPS fixtures remain explicitly identified throughout. */
 export async function run(options) {
@@ -255,12 +262,11 @@ export async function run(options) {
     actual_iphone_verified: false, actual_gps_verified: false, actual_ors_verified: false, physical_audibility_verified: false};
   let browser, context, page;
   try {
-    const credentials = await readAccess(options.privateEnv);
     const {chromium} = createRequire(import.meta.url)(options.runtime);
     if (options.fakeCameraFile) requireGate(options.fakeCameraFile.endsWith(".y4m") && (await stat(options.fakeCameraFile)).isFile(), "INVALID_FAKE_CAMERA_FILE");
     browser = await chromium.launch({channel: "chrome", headless: true, args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
       ...(options.fakeCameraFile ? [`--use-file-for-fake-video-capture=${options.fakeCameraFile}`] : [])]});
-    context = await browser.newContext({httpCredentials: credentials, viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true, locale: "zh-CN"});
+    context = await browser.newContext({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.addInitScript(installProbe, POINT);
     await context.route(`${ORIGIN}${PREFIX}maps/route/`, route => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(ROUTE)}));
     page = await context.newPage();
@@ -268,6 +274,8 @@ export async function run(options) {
     report.phase = "product_startup";
     const response = await page.goto(options.url, {waitUntil: "domcontentloaded", timeout: 30000});
     requireGate(response.status() === 200, "PRODUCT_HTTP_FAILED");
+    requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
+      "PRODUCT_MICROPHONE_POLICY_MISSING");
     report.checks.identity = await page.evaluate(observe);
     requireGate(Object.values(report.checks.identity).every(Boolean), "PRODUCT_CORE_IDENTITY_INVALID");
     await waitVoice(page, "zh"); report.checks.initial = verifyInitial(await page.evaluate(initialEvidence));
@@ -296,7 +304,9 @@ export async function run(options) {
     report.checks.camera_display = verifyCameraDisplay(await page.evaluate(() => {
       const preview = document.getElementById("preview"), result = document.getElementById("echo");
       const visible = node => node.getClientRects().length > 0 && getComputedStyle(node).visibility !== "hidden";
-      return {preview_visible: visible(preview), preview_playing: !preview.paused && !!preview.srcObject,
+      const captureStyle = getComputedStyle(preview);
+      const previewHidden = preview.hidden || captureStyle.opacity === "0" || preview.clientWidth <= 1 || preview.clientHeight <= 1;
+      return {preview_hidden: previewHidden, preview_playing: !preview.paused && !!preview.srcObject,
         preview_width: preview.videoWidth, preview_height: preview.videoHeight, result_visible: visible(result),
         result_decoded: result.complete, result_width: result.naturalWidth, result_height: result.naturalHeight,
         result_blob: result.src.startsWith("blob:"), frames: window.__productEvents.frames.length};
@@ -419,7 +429,7 @@ function installCameraBoundary() {
 }
 
 /* Functionality: Verify single-click acquisition, pending cancellation and actionable failures.
- * Inputs: approved public product URL/private browser authentication/new report.
+ * Inputs: approved public product URL and new report.
  * Outputs: body-free browser evidence. Logic: declared permission fixtures exercise original controllers.
  * Constraints: no actual camera/GPS/route/model, stream playback, implicit retry or service control. */
 export async function runCameraBoundaries(options) {
@@ -431,15 +441,18 @@ export async function runCameraBoundaries(options) {
     model_verified: false, physical_audibility_verified: false};
   let browser, context, page; let modelConnections = 0;
   try {
-    const credentials = await readAccess(options.privateEnv), {chromium} = createRequire(import.meta.url)(options.runtime);
+    const {chromium} = createRequire(import.meta.url)(options.runtime);
     browser = await chromium.launch({channel: "chrome", headless: true});
-    context = await browser.newContext({httpCredentials: credentials, viewport: {width: 390, height: 844},
+    context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.addInitScript({content: `(${installProbe.toString()})(${JSON.stringify(POINT)});(${installCameraBoundary.toString()})();`});
     page = await context.newPage(); page.on("pageerror", error => report.failures.push(safeFailure(error, report.phase)));
     page.on("websocket", socket => { if (new URL(socket.url()).pathname.endsWith("/ws/live/detect/")) modelConnections++; });
     const response = await page.goto(options.url, {waitUntil: "domcontentloaded", timeout: 30000});
-    requireGate(response.status() === 200, "PRODUCT_HTTP_FAILED"); await page.evaluate(observe); await waitVoice(page, "zh");
+    requireGate(response.status() === 200, "PRODUCT_HTTP_FAILED");
+    requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
+      "PRODUCT_MICROPHONE_POLICY_MISSING");
+    await page.evaluate(observe); await waitVoice(page, "zh");
     report.checks.initial = verifyInitial(await page.evaluate(initialEvidence));
     report.phase = "double_click_permission_pending";
     await page.locator("#product-camera-start").dblclick();
@@ -493,8 +506,8 @@ export async function runCameraBoundaries(options) {
   return report;
 }
 
-/* Functionality: Test delayed voice lists, invalid fields and visibility without repeating inference.
- * Inputs: pinned product/private access/new report paths. Outputs: boundary JSON and ready-map screenshots.
+/* Functionality: Test delayed voice lists, incomplete route selection and visibility without repeating inference.
+ * Inputs: pinned public product/new report paths. Outputs: boundary JSON and ready-map screenshots.
  * Logic: explicit inventory/route/GPS/visibility fixtures surround unchanged controllers and native TTS.
  * Constraints: no camera acquisition, actual GPS/ORS, GPU session, native speech-event simulation or retry. */
 export async function runBoundaries(options) {
@@ -508,15 +521,18 @@ export async function runBoundaries(options) {
     actual_iphone_verified: false, actual_gps_verified: false, actual_ors_verified: false, physical_audibility_verified: false};
   let browser, context, page;
   try {
-    const credentials = await readAccess(options.privateEnv), {chromium} = createRequire(import.meta.url)(options.runtime);
+    const {chromium} = createRequire(import.meta.url)(options.runtime);
     browser = await chromium.launch({channel: "chrome", headless: true});
-    context = await browser.newContext({httpCredentials: credentials, viewport: {width: 390, height: 844},
+    context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.addInitScript(installProbe, POINT); await context.addInitScript(installDelayedVoices);
     await context.route(`${ORIGIN}${PREFIX}maps/route/`, route => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(ROUTE)}));
     page = await context.newPage(); page.on("pageerror", error => report.failures.push(safeFailure(error, report.phase)));
     const response = await page.goto(options.url, {waitUntil: "domcontentloaded", timeout: 30000});
-    requireGate(response.status() === 200, "PRODUCT_HTTP_FAILED"); await page.evaluate(observe);
+    requireGate(response.status() === 200, "PRODUCT_HTTP_FAILED");
+    requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
+      "PRODUCT_MICROPHONE_POLICY_MISSING");
+    await page.evaluate(observe);
     report.phase = "delayed_native_inventory";
     const held = await page.evaluate(initialEvidence);
     requireGate(!held.voice.id && held.speech_calls === 0 && held.camera_calls === 0 && held.gps_one_shots === 0 && held.gps_watches === 0,
@@ -540,28 +556,25 @@ export async function runBoundaries(options) {
       automatic_speech_calls: await page.evaluate(() => window.__productProbe.speech.length)};
     requireGate(report.checks.cached_page.automatic_speech_calls === 0, "CACHED_PAGE_AUTOMATIC_SPEECH");
     await page.selectOption("#language", "zh-CN"); await waitVoice(page, "zh");
-    report.phase = "invalid_coordinate_form";
-    requireGate(await page.locator(".product-coordinates").evaluate(node => !node.open), "COORDINATES_NOT_INITIALLY_COLLAPSED");
+    report.phase = "incomplete_route_selection";
     await page.click("#plan");
-    report.checks.invalid_form = await page.evaluate(() => ({details_open: document.querySelector(".product-coordinates").open,
-      invalid_field_focused: document.activeElement?.matches(".product-coordinates input:invalid") === true,
+    report.checks.incomplete_route = await page.evaluate(() => ({
+      user_coordinate_fields_hidden: [...document.querySelectorAll("#route-form input")].every(input => input.closest("[hidden]")),
+      route_message_present: document.getElementById("product-route-message").textContent.length > 0,
       route_absent: !window.__productControllers.navigation.describe().route,
       speech_calls: window.__productProbe.speech.length, camera_calls: window.__productProbe.media.length}));
-    requireGate(report.checks.invalid_form.details_open && report.checks.invalid_form.invalid_field_focused &&
-      report.checks.invalid_form.route_absent && report.checks.invalid_form.speech_calls === 0 && report.checks.invalid_form.camera_calls === 0,
-      "INVALID_FORM_NOT_ACCESSIBLE");
-    report.phase = "first_real_click";
-    await page.click("#assist-speech-start");
-    await page.waitForFunction(() => window.__productControllers.glue.speechActivation.describe().ready, null, {timeout: 15000});
-    report.checks.activation = verifySpeechActivation(await page.evaluate(() => ({activation: window.__productControllers.glue.speechActivation.describe(),
-      calls: window.__productProbe.speech, native: window.__productEvents.native})));
-    report.checks.activation.source = "product_activate_voice_click";
-    await page.waitForFunction(() => window.__productControllers.speechOutput.current === null, null, {timeout: 15000});
+    requireGate(report.checks.incomplete_route.user_coordinate_fields_hidden && report.checks.incomplete_route.route_message_present &&
+      report.checks.incomplete_route.route_absent && report.checks.incomplete_route.speech_calls === 0 && report.checks.incomplete_route.camera_calls === 0,
+      "INCOMPLETE_ROUTE_SELECTION_NOT_HANDLED");
     report.phase = "visibility_cleanup";
     await page.click("#locate"); await page.waitForFunction(() => document.getElementById("start-latitude").value !== "");
     await page.locator("#map").click({position: {x: 160, y: 180}}); await page.click("#plan");
     await page.waitForFunction(() => !document.getElementById("navigation-start").disabled);
     await page.click("#navigation-start"); await page.waitForFunction(() => window.__productControllers.navigation.active);
+    await page.waitForFunction(() => window.__productControllers.glue.speechActivation.describe().ready, null, {timeout: 15000});
+    report.checks.activation = verifySpeechActivation(await page.evaluate(() => ({activation: window.__productControllers.glue.speechActivation.describe(),
+      calls: window.__productProbe.speech, native: window.__productEvents.native})));
+    report.checks.activation.source = "product_navigation_start";
     await page.evaluate(setSyntheticVisibility, true);
     report.checks.hidden = await page.evaluate(() => ({navigation_stopped: !window.__productControllers.navigation.active,
       gps_released: window.__productProbe.watches.every(item => !item.active && item.timer === null),

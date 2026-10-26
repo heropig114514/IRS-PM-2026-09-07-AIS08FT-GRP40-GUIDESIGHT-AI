@@ -64,7 +64,9 @@ def read_token():
     token = os.environ.get("HF_INFERENCE_TOKEN", "")
     if not token.startswith("hf_") or len(token) > 4096 or any(c.isspace() for c in token):
         raise DetectionError(
-            "hf_not_configured", "服务端需要配置有效的 HF token 才能开启视频会话。", 503
+            "hf_not_configured",
+            "A valid server-side HF token is required to start a video session.",
+            503,
         )
     return token
 
@@ -241,7 +243,7 @@ class HFLiveRelay:
                 {
                     "type": "websocket.send",
                     "text": json.dumps(
-                        {"kind": "error", "code": "hf_busy", "detail": "ZeroGPU 忙。"}
+                        {"kind": "error", "code": "hf_busy", "detail": "ZeroGPU is busy."}
                     ),
                 }
             )
@@ -291,7 +293,9 @@ class HFLiveRelay:
                         detail = (
                             error.detail
                             if isinstance(error, DetectionError)
-                            else ("视频会话失败，请检查服务端日志后重新开始。")
+                            else (
+                                "The video session failed; check server logs before starting again."
+                            )
                         )
                         await send(
                             {
@@ -385,14 +389,18 @@ class HFLiveRelay:
         )
         if not decision["allowed"]:
             reason = decision.get("reason")
-            detail = "ZeroGPU 免费配额不足，请等待配额恢复。"
+            detail = "ZeroGPU free quota is insufficient; wait for it to reset."
             if reason == "insufficient_free_seconds":
-                detail = (f"ZeroGPU 免费额度不足：本次需{LIVE_GPU_QUOTA_SECONDS:g}秒额度，"
-                          f"当前剩余{decision['free_gpu_seconds']:.2f}秒。请等待额度恢复。")
+                detail = (
+                    f"ZeroGPU free quota is insufficient: this request needs "
+                    f"{LIVE_GPU_QUOTA_SECONDS:g} seconds, "
+                    f"with {decision['free_gpu_seconds']:.2f} seconds remaining. "
+                    "Wait for quota to reset."
+                )
             elif reason == "free_run_limit_exhausted":
-                detail = "ZeroGPU 今日免费调用次数已用尽，请等待额度恢复。"
+                detail = "Today's free ZeroGPU calls are exhausted; wait for quota to reset."
             elif reason == "unknown_free_quota":
-                detail = "无法确认 ZeroGPU 免费额度，请检查服务端配置。"
+                detail = "Could not confirm ZeroGPU free quota; check the server configuration."
             raise DetectionError("hf_quota_exceeded", detail, 503)
         contract = self.contract_reader()
         session.phase = "upstream_connect"
