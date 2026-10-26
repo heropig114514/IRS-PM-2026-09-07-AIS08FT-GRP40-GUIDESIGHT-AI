@@ -3,7 +3,7 @@ Implementation: One structured Qwen classification, strict schema/mapping valida
 unmatched policy; general answers receive no MCP client or tools. No keyword or place-name table.
 Related Modules: skills owns trusted bundle paths; runtime enforces mapped skills.
 Declaration Index: IntentDecision; IntentDecision.skills; IntentDecision.labels; load_catalog;
-dialogue; classify; static_reply; general_answer.
+dialogue; reply_language_instruction; classify; static_reply; general_answer.
 Variable Index: None; policy is loaded from agent_skills/intents.json on each turn.
 """
 
@@ -102,10 +102,30 @@ def dialogue(turns, text, prompt=None):
     return messages
 
 
+def reply_language_instruction(language):
+    """Functionality: Give response-generation models an explicit, bounded language policy.
+    Inputs: Validated current-turn language code, either en or zh; Outputs: English system
+    instruction with a required response language. Logic: Treat the router's current-turn result
+    as authoritative and exclude stale dialogue and interface locale.
+    Constraints: Supports English or Simplified Chinese; the router resolves short follow-ups.
+    """
+    if language not in {"en", "zh"}:
+        raise ValueError("Unsupported response language")
+    name = "English" if language == "en" else "Simplified Chinese"
+    return (
+        f"Required response language for this turn: {name} ({language}). The intent router "
+        "selected this language from the current user message. Respond only in the required "
+        "language for all user-facing prose, including questions and failure explanations. "
+        "Do not switch languages based on older user turns, assistant messages, tool output, "
+        "or page/device locale. The router resolves short answers to its pending request."
+    )
+
+
 async def classify(text, turns):
     """Functionality: Classify one request before any MCP discovery or skill execution.
     Inputs: text, prior turns and trusted catalog; Outputs: IntentDecision or explicit error.
-    Logic: Force one route_intent structured response; validate enum, multiplicity and routes.
+    Logic: Force one route_intent structured response; the current message controls its language
+    estimate; validate enum, multiplicity and routes.
     Constraints: No retry, action invocation, guessed skill, or general-mode switch on failure.
     """
     config = load_catalog()
@@ -178,14 +198,16 @@ def static_reply(decision):
                      'Ask "What can you do?" to list supported operations.')
 
 
-async def general_answer(text, turns):
+async def general_answer(text, turns, language):
     """Functionality: Answer an explicitly routed general question without system tools.
-    Inputs: current text and dialogue only; Outputs: nonempty assistant text or AgentError.
-    Logic: Separate trusted prompt, no MCP creation/schema; reject unsolicited tool requests.
+    Inputs: current text, dialogue and validated language estimate; Outputs: nonempty assistant
+    text or AgentError. Logic: Separate trusted prompt, explicit reply-language policy, no MCP
+    creation/schema; reject unsolicited tool requests.
     Constraints: One call, no live-state claims, no fallback on provider or router failure.
     """
     message = await completion(dialogue(
-        turns, text, (skills.ROOT / "general_assistant.md").read_text(encoding="utf-8"),
+        turns, text, (skills.ROOT / "general_assistant.md").read_text(encoding="utf-8")
+        + "\n\n" + reply_language_instruction(language),
     ))
     if message.get("tool_calls") or not isinstance(message.get("content"), str) or not message[
         "content"

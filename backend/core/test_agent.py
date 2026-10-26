@@ -6,6 +6,7 @@ AgentTests.test_mcp_schema_binding; AgentTests.test_runtime_uses_evidence_and_me
 AgentTests.test_tool_failure_stops_without_retry;
 AgentTests.test_failure_fallback_after_model_error;
 AgentTests.test_route_error_is_explained;
+AgentTests.test_english_failure_explanation_ignores_chinese_history;
 AgentTests.test_tool_error_normalization; AgentTests.test_localized_failure_fallback;
 AgentTests.test_empty_failure_explanation_uses_fallback;
 AgentTests.test_declined_action_blocks_batched_mutations; AgentTests.test_cancel_and_deduplicate;
@@ -255,6 +256,52 @@ class AgentTests(SimpleTestCase):
         self.assertNotIn('"code":"not_found"', tool_result)
         self.assertEqual(conversation.events[-2]["type"], "reply")
         self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+    async def test_english_failure_explanation_ignores_chinese_history(self):
+        """Functionality: Keep a failed action explanation aligned with the current English turn.
+        Inputs: Chinese history, an English navigation request and a failed navigation tool.
+        Outputs: Language policy in the model context and one bounded failure response. Logic:
+        Exercise real MCP dispatch with synthetic classifier/provider and relay boundaries.
+        Constraints: Verifies prompt wiring, not live provider language quality or public routing.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["navigation.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        conversation.turns = [[
+            {"role": "user", "content": "带我去附近的超市。"},
+            {"role": "assistant", "content": "正在查找附近的超市。"},
+        ]]
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "navigation"}),
+            tool_message("maps_status"),
+            {"role": "assistant", "content": "The maps page is not ready."},
+        ])) as model:
+            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "page": "maps", "navigation": {"route": None}, "destination": None,
+            })) as browser:
+                await conversation.run(
+                    "request", "I want to go to the nearest supermarket now.", None,
+                )
+        self.assertEqual(model.await_count, 4)
+        self.assertEqual(browser.await_count, 1)
+        final_system_messages = [
+            item["content"] for item in model.await_args_list[3].args[0]
+            if item.get("role") == "system"
+        ]
+        self.assertTrue(any("Required response language for this turn: English (en)" in item
+                            and "Respond only in the required language" in item
+                            for item in final_system_messages))
+        self.assertTrue(any("tool output" in item and "page/device locale" in item
+                            for item in final_system_messages))
+        self.assertEqual(
+            next(event["language"] for event in conversation.events if event["type"] == "intent"),
+            "en",
+        )
+        self.assertEqual(
+            [event["name"] for event in conversation.events if event["type"] == "tool_start"],
+            ["discover_tools", "read_skill", "maps_status"],
+        )
 
     async def test_failure_fallback_after_model_error(self):
         """Functionality: Keep failed-action explanations available when the model is unavailable.

@@ -27,7 +27,7 @@ from functools import partial
 
 from mcp.client import Client
 
-from .intents import classify, general_answer, static_reply
+from .intents import classify, general_answer, reply_language_instruction, static_reply
 from .provider import AgentError, completion, transcribe
 from .selection import selected_index
 from .skills import fingerprint, instructions, tool_policy
@@ -589,8 +589,9 @@ class Conversation:
     async def execute(self, text, request_id):
         """Functionality: Route requests before bounded, skill-mapped MCP execution.
         Inputs: text, request ID, complete prior turns; Outputs: reply and one saved turn.
-        Logic: Classify against the trusted intent catalog; ambiguous/unmatched/help requests
-        use an explicit non-action route. System requests discover MCP schemas, then load only
+        Logic: Classify against the trusted intent catalog and carry its language estimate into
+        response generation; ambiguous/unmatched/help requests use an explicit non-action route.
+        System requests discover MCP schemas, then load only
         mapped skills before actions;
         intersect declared tools with the real registry, completed prerequisites and remaining
         per-turn limits before sequential invocation; result-count constraints can end actions
@@ -613,17 +614,19 @@ class Conversation:
         self.emit(
             "intent", request_id=request_id, route=decision.route,
             intents=list(decision.ids), labels=decision.labels,
-            skills=sorted(target_skills), unknown_policy=decision.catalog["unknown_policy"],
+            skills=sorted(target_skills), language=decision.language,
+            unknown_policy=decision.catalog["unknown_policy"],
         )
         logger.info(
-            "Agent intent routed id=%s route=%s intents=%s skills=%s unknown_policy=%s",
-            request_id, decision.route, ",".join(decision.ids), ",".join(sorted(target_skills)),
+            "Agent intent routed id=%s route=%s language=%s intents=%s skills=%s unknown_policy=%s",
+            request_id, decision.route, decision.language, ",".join(decision.ids),
+            ",".join(sorted(target_skills)),
             decision.catalog["unknown_policy"],
         )
         reply = static_reply(decision)
         if decision.route == "general" and reply is None:
             async with asyncio.timeout(40):
-                reply = await general_answer(text, self.turns)
+                reply = await general_answer(text, self.turns, decision.language)
         if reply is not None:
             turn.append({"role": "assistant", "content": reply})
             self.turns.append(turn)
@@ -661,6 +664,7 @@ class Conversation:
                     + json.dumps(sorted(target_skills))
                     + ". Load every mapped skill before actions. Complete only the user's "
                     "requested operations; route selection does not authorize unrelated actions."
+                    "\n" + reply_language_instruction(decision.language)
                 )}, *history, *turn]
                 if self.selection:
                     selected = self.selection.get("index")
@@ -689,8 +693,9 @@ class Conversation:
                             "Explain the recorded failure or missing prerequisite without claiming "
                             "success; ask for input only when it is actually missing. "
                             "Do not expose "
-                            "raw error payloads, automatically choose, retry or promise "
-                                "background work. Reply in the user's language."
+                                "raw error payloads, automatically choose, retry or promise "
+                                "background work. "
+                                + reply_language_instruction(decision.language)
                             ),
                         }
                     )

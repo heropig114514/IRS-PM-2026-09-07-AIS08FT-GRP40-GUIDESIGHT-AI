@@ -1,5 +1,6 @@
 """Responsibilities: Evaluate catalog routing against real Qwen with explicit synthetic cases.
-Implementation: Bounded independent requests; persist expected/observed decisions and failures.
+Implementation: Bounded independent requests; persist expected/observed decisions and failures,
+plus one isolated general-answer probe with an explicit response-language estimate.
 Related Modules: core.agent.intents/provider/skills; fixture JSON supplied by the operator.
 Declaration Index: main; main.evaluate.
 Variable Index: None; CLI paths, concurrency semaphore and evidence belong to main.
@@ -22,7 +23,7 @@ from core.agent.skills import fingerprint
 async def main():
     """Functionality: Run an explicit paid-service classification evaluation without MCP.
     Inputs: --cases/--output paths, --live-qwen consent and Django environment configuration.
-    Outputs: JSON report, terminal counts, nonzero status on failed expectations.
+    Outputs: JSON report, terminal counts, nonzero status on failed expectations or general probe.
     Logic: At most three concurrent independent cases, one attempt each, exact expected IDs.
     Constraints: Synthetic dialogue only; no GPS/action/hardware proof or confidence calibration.
     """
@@ -58,7 +59,7 @@ async def main():
     general = {"input": "What is a triangle?", "policy": "explicit isolated general-mode probe"}
     try:
         async with asyncio.timeout(40):
-            general["reply"] = await general_answer(general["input"], [])
+            general["reply"] = await general_answer(general["input"], [], "en")
         general["passed"] = bool(general["reply"].strip())
     except Exception as error:
         general.update(passed=False, error_type=type(error).__name__)

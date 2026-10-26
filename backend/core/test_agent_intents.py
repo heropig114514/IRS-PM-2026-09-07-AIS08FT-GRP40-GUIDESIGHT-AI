@@ -3,6 +3,7 @@ Implementation: Real catalog/classifier/runtime/MCP with explicit Qwen/browser b
 Related Modules: core.agent.intents/runtime; test_agent.tool_message.
 Declaration Index: IntentTests; IntentTests.test_catalog_validation;
 IntentTests.test_classification_contract; IntentTests.test_invalid_decisions;
+IntentTests.test_reply_language_policy;
 IntentTests.test_non_action_routes; IntentTests.test_general_policy;
 IntentTests.test_general_cannot_request_tools; IntentTests.test_router_failure_no_fallback;
 IntentTests.test_unmapped_skill_blocked; IntentTests.test_multi_skill_loading;
@@ -80,6 +81,31 @@ class IntentTests(SimpleTestCase):
             "intent_ids"]["items"]["enum"]
         self.assertEqual(set(enums), {item["id"] for item in decision.catalog["intents"]})
 
+    async def test_reply_language_policy(self):
+        """Functionality: Prioritize a current English request over Chinese dialogue history.
+        Inputs: Earlier Chinese turns and a current English route request; Outputs: router and
+        response-generation language contracts. Logic: Inspect trusted prompts and the returned
+        decision without claiming model classification accuracy. Constraints: No live Qwen call.
+        """
+        history = [[{"role": "user", "content": "开启导航"},
+                    {"role": "assistant", "content": "你想去哪里？"}]]
+        reply = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["navigation.start"], "language": "en",
+        })
+        with patch("core.agent.intents.completion", AsyncMock(return_value=reply)) as model:
+            decision = await intents.classify("I want to go to the nearest supermarket now.", history)
+        classifier_prompt = model.await_args.args[0][0]["content"]
+        self.assertIn("current user message", classifier_prompt)
+        self.assertIn("page locale, device locale", classifier_prompt)
+        self.assertEqual(decision.language, "en")
+        response_policy = intents.reply_language_instruction(decision.language)
+        self.assertIn("Required response language for this turn: English (en)", response_policy)
+        self.assertIn("Respond only in the required language", response_policy)
+        self.assertIn("older user turns", response_policy)
+        self.assertIn("page/device locale", response_policy)
+        with self.assertRaises(ValueError):
+            intents.reply_language_instruction("fr")
+
     async def test_invalid_decisions(self):
         """Functionality: Prevent malformed or fabricated route results from admitting actions.
         Inputs: invalid classifier messages; Outputs: one explicit error per case, no retries.
@@ -151,6 +177,8 @@ class IntentTests(SimpleTestCase):
                 self.assertEqual(model.await_count, 2 if route == "general" else 1)
                 if route == "general":
                     self.assertEqual(len(model.await_args.args), 1)
+                    prompt = model.await_args.args[0][0]["content"]
+                    self.assertIn("Required response language for this turn: English (en)", prompt)
 
     async def test_general_cannot_request_tools(self):
         """Functionality: Reject an unsolicited general-mode action without executing it.
@@ -161,7 +189,7 @@ class IntentTests(SimpleTestCase):
             return_value=tool_message("camera_start")
         )):
             with self.assertRaises(AgentError) as result:
-                await intents.general_answer("question", [])
+                await intents.general_answer("question", [], "en")
         self.assertEqual(result.exception.code, "invalid_general_answer")
 
     async def test_router_failure_no_fallback(self):
