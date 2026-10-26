@@ -8,6 +8,7 @@ execution_config/precision/backend — explicit execution identity, original FP3
 roi — optional extra centre-top traffic-light pass (sequential batch-1 replays of the same Graph).
 depth_estimator — optional independent metric model; depth_ms includes inference/fusion.
 depth_predict_ms/depth_fusion_ms/decode_boxes_ms — nested host durations, not CUDA events.
+depth_backend — actual selected depth execution, distinct from the detection backend identity.
 object_tracker — instance-owned BoT-SORT/history; tracking_ms covers association/history only.
 risk_config — immutable TTC/rule profile; risk_ms — separate stateless scalar scoring timer.
 distance_strategy/performance/performance_epoch — owned strategy and per-epoch frame statistics.
@@ -196,6 +197,7 @@ class ResidentDetector:
             metadata.update(roi=True, roi_ms=roi_ms)
         if depth_estimator is not None:
             metadata.update(depth_model=depth_estimator.model_name, depth_units="m",
+                            depth_backend=getattr(depth_estimator, "backend", "torch"),
                             decode_boxes_ms=(decoded_at - inferred_at) * 1000,
                             depth_predict_ms=self.distance_strategy.depth_predict_ms,
                             depth_fusion_ms=((fused_at - tracked_at) * 1000

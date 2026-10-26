@@ -1,66 +1,14 @@
-"""Responsibilities: Explicit device-resident FP32 depth export experiment runtimes.
-Implementation: Validate fixed artifacts and owned Torch outputs; explicit runtime completion rules.
-Related Modules: tools.benchmark_depth_export; realtime.depth; tools.depth_graph_probe.
-Declaration Index: file_hash; validate_manifest; validate_input; OrtDepthForward;
-OrtDepthForward.__init__; OrtDepthForward.__call__; OrtDepthForward.close; TrtDepthForward;
-TrtDepthForward.__init__; TrtDepthForward.__call__.
-Variable Index: None. Sessions, engines, streams and buffers belong to individual runner instances.
+"""Responsibilities: Run explicit ONNX CUDA depth diagnostics outside the native service.
+Implementation: ORT-owned compute streams, producer/output synchronization and owned Torch outputs.
+Related Modules: realtime.depth_runtime; tools.benchmark_depth_export.
+Declaration Index: OrtDepthForward; OrtDepthForward.__init__; OrtDepthForward.__call__;
+OrtDepthForward.close.
+Variable Index: None. Session lifetime is explicit and serial.
 """
 
-import hashlib
 from pathlib import Path
 
-
-def file_hash(path):
-    """Functionality: Bind an artifact to its complete bytes.
-    Inputs: local file path. Outputs: SHA256 hex digest. Logic: hash a bounded byte stream.
-    Constraints: missing or unreadable files fail; filenames alone are never model identities.
-    """
-    with Path(path).open("rb") as source:
-        return hashlib.file_digest(source, "sha256").hexdigest()
-
-
-def validate_manifest(manifest, directory, weights, runtime_identity):
-    """Functionality: Reject stale checkpoints, graphs, SDK code or GPU/runtime bindings.
-    Inputs: parsed manifest, artifact directory, current weights and observed identity dictionary.
-    Outputs: None on success. Logic: compare provenance and hash each declared binary before load.
-    Constraints: no rebuild, download or fallback; manifests are trusted local configuration.
-    """
-    if (manifest.get("schema") != 1 or manifest.get("precision") != "FP32"
-            or manifest.get("tf32") is not False
-            or manifest.get("weights_sha256") != file_hash(weights)
-            or manifest.get("identity") != runtime_identity):
-        raise ValueError("Depth artifact identity changed; explicitly export and build again")
-    entries = manifest.get("artifacts", [])
-    if not entries:
-        raise ValueError("Depth manifest has no artifacts")
-    root = Path(directory).resolve()
-    for entry in entries:
-        shape = entry["input_shape"]
-        if (len(shape) != 4 or shape[:2] != [1, 3]
-                or any(type(value) is not int or value <= 0 or value % 32 for value in shape[2:])
-                or entry["output_shape"] != [1, 1, shape[2] // 4, shape[3] // 4]):
-            raise ValueError("Depth manifest has an unsupported tensor contract")
-        for kind in ("onnx", "engine"):
-            if kind not in entry:
-                continue
-            path = (root / entry[kind]).resolve()
-            if path.parent != root or file_hash(path) != entry[kind + "_sha256"]:
-                raise ValueError("Depth artifact path or digest mismatch")
-
-
-def validate_input(image, shape, device):
-    """Functionality: Reject incompatible input before binding device pointers.
-    Inputs: Torch image tensor, fixed BCHW shape and captured CUDA device. Outputs: None or error.
-    Logic: require contiguous float32, original shape and identical device.
-    Constraints: no conversion, resize, automatic stream migration or CPU fallback.
-    """
-    import torch
-
-    if (not isinstance(image, torch.Tensor) or tuple(image.shape) != tuple(shape)
-            or image.dtype != torch.float32 or image.device != device
-            or device.type != "cuda" or not image.is_contiguous()):
-        raise ValueError("Depth runtime requires its fixed contiguous CUDA FP32 tensor")
+from realtime.depth_runtime import validate_input
 
 
 class OrtDepthForward:
@@ -138,59 +86,3 @@ class OrtDepthForward:
         """
         if self.session is not None:
             self.session = None
-
-
-class TrtDepthForward:
-    """Functionality: Run a verified fixed-shape TensorRT engine on Torch's current stream.
-    Logic: use named TensorRT 10 bindings and independently owned output tensors.
-    Constraints: one context per serial runner; no compilation, precision change or fallback.
-    """
-
-    def __init__(self, path, entry, example):
-        """Functionality: Deserialize an explicitly selected engine and validate its I/O.
-        Inputs: checked engine path, manifest entry and CUDA example. Outputs: execution context.
-        Logic: retain runtime/engine lifetimes; check names, float32 types and exact static shapes.
-        Constraints: manifest provenance must be checked by the caller before deserialization.
-        """
-        import tensorrt as trt
-        import torch
-
-        validate_input(example, entry["input_shape"], example.device)
-        self.device, self.shape = example.device, tuple(example.shape)
-        self.stream = torch.cuda.current_stream(self.device)
-        self.logger = trt.Logger(trt.Logger.WARNING)
-        self.runtime = trt.Runtime(self.logger)
-        self.engine = self.runtime.deserialize_cuda_engine(Path(path).read_bytes())
-        if self.engine is None:
-            raise RuntimeError("TensorRT engine deserialization failed")
-        if self.engine.num_io_tensors != 2:
-            raise ValueError("TensorRT engine I/O count changed")
-        for name, shape, mode in (("images", entry["input_shape"], trt.TensorIOMode.INPUT),
-                                  ("depth", entry["output_shape"], trt.TensorIOMode.OUTPUT)):
-            if (self.engine.get_tensor_mode(name) != mode
-                    or list(self.engine.get_tensor_shape(name)) != shape
-                    or self.engine.get_tensor_dtype(name) != trt.float32
-                    or self.engine.get_tensor_location(name) != trt.TensorLocation.DEVICE):
-                raise ValueError("TensorRT engine I/O contract changed")
-        self.context = self.engine.create_execution_context()
-        if self.context is None:
-            raise RuntimeError("TensorRT execution context creation failed")
-        self.output_shape = tuple(entry["output_shape"])
-
-    def __call__(self, image, *args, **kwargs):
-        """Functionality: Submit TensorRT forward and return independently owned raw depth.
-        Inputs: fixed input tensor and no inference options. Outputs: CUDA FP32 depth tensor.
-        Logic: bind device addresses then enqueue once on the captured Torch stream.
-        Constraints: caller manages input lifetime and synchronization; all binding failures raise.
-        """
-        import torch
-
-        validate_input(image, self.shape, self.device)
-        if args or kwargs or torch.cuda.current_stream(self.device) != self.stream:
-            raise ValueError("TensorRT depth stream or inference options changed")
-        output = torch.empty(self.output_shape, device=self.device, dtype=torch.float32)
-        if (not self.context.set_tensor_address("images", image.data_ptr())
-                or not self.context.set_tensor_address("depth", output.data_ptr())
-                or not self.context.execute_async_v3(self.stream.cuda_stream)):
-            raise RuntimeError("TensorRT binding or forward submission failed")
-        return output

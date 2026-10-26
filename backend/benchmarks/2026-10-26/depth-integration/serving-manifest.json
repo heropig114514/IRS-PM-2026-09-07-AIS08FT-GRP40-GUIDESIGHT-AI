@@ -1,0 +1,207 @@
+{
+  "schema": 1,
+  "weights_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+  "precision": "FP32",
+  "tf32": false,
+  "identity": {
+    "python": "3.12.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "cudnn": 91002,
+    "ultralytics": "8.4.171",
+    "onnx": "1.17.0",
+    "onnxruntime": "1.23.2",
+    "tensorrt": "10.13.3.9",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "compute_capability": [
+      8,
+      6
+    ],
+    "total_memory": 6441926656,
+    "depth_head_sha256": "6b118882874ee2550b2c5c819a712774e1c729faf9fdc5ae6f068996c9893d02",
+    "depth_predictor_sha256": "f0f5c1dbf588579be44ec2ebb4692e576a83aa281d2d13845f818c85830b8397"
+  },
+  "artifacts": [
+    {
+      "input_shape": [
+        1,
+        3,
+        768,
+        576
+      ],
+      "output_shape": [
+        1,
+        1,
+        192,
+        144
+      ],
+      "onnx": "depth-1x3x768x576.onnx",
+      "onnx_sha256": "57c97b832599763338c084b13bd7a6aba0dd7f1c497656a20ab0e62fdc0bd8fd",
+      "export_ms": 3392.538400000376,
+      "opset": 17,
+      "native_head_export": false,
+      "cal_a": [
+        1.0
+      ],
+      "cal_b": [
+        -0.19384765625
+      ],
+      "engine": "depth-1x3x768x576.engine",
+      "engine_sha256": "c114e48ac7e989aea7c6371ca37737e7d0d161799f61c7868a4b1dee1530fa3b",
+      "build_ms": 65196.305500000104,
+      "builder": {
+        "strongly_typed": true,
+        "tf32": false,
+        "workspace_bytes": 1073741824,
+        "max_aux_streams": 0,
+        "fp16": false,
+        "int8": false
+      }
+    },
+    {
+      "input_shape": [
+        1,
+        3,
+        768,
+        608
+      ],
+      "output_shape": [
+        1,
+        1,
+        192,
+        152
+      ],
+      "onnx": "depth-1x3x768x608.onnx",
+      "onnx_sha256": "6133393f4317d2075dd67b4eef6f1ee01d31a6bf72b97275b0de38b3d5b77363",
+      "export_ms": 3080.051299999923,
+      "opset": 17,
+      "native_head_export": false,
+      "cal_a": [
+        1.0
+      ],
+      "cal_b": [
+        -0.19384765625
+      ],
+      "engine": "depth-1x3x768x608.engine",
+      "engine_sha256": "6326f1b5c60d77d2c5b5dad6b065c26da1dece126b9e55d7d2ed3f11c39136de",
+      "build_ms": 62341.14360000013,
+      "builder": {
+        "strongly_typed": true,
+        "tf32": false,
+        "workspace_bytes": 1073741824,
+        "max_aux_streams": 0,
+        "fp16": false,
+        "int8": false
+      }
+    },
+    {
+      "input_shape": [
+        1,
+        3,
+        576,
+        768
+      ],
+      "output_shape": [
+        1,
+        1,
+        144,
+        192
+      ],
+      "onnx": "depth-1x3x576x768.onnx",
+      "onnx_sha256": "ae5f1a7e739b1851847c2063f6cfc660200e1040eba9ccf4ea275ecb2e2ed139",
+      "export_ms": 3052.5601000003917,
+      "opset": 17,
+      "native_head_export": false,
+      "cal_a": [
+        1.0
+      ],
+      "cal_b": [
+        -0.19384765625
+      ],
+      "engine": "depth-1x3x576x768.engine",
+      "engine_sha256": "00718839c0bcac2cf2edd590fd0e6c6eba61c12c30f5c0f469e3b03a3e984c3d",
+      "build_ms": 61396.524799999956,
+      "builder": {
+        "strongly_typed": true,
+        "tf32": false,
+        "workspace_bytes": 1073741824,
+        "max_aux_streams": 0,
+        "fp16": false,
+        "int8": false
+      }
+    },
+    {
+      "input_shape": [
+        1,
+        3,
+        608,
+        768
+      ],
+      "output_shape": [
+        1,
+        1,
+        152,
+        192
+      ],
+      "onnx": "depth-1x3x608x768.onnx",
+      "onnx_sha256": "6e8a4eb3ff76675e226b144b831aafb75bf1228631012441ae2916d992c0dbc9",
+      "export_ms": 3013.130799999999,
+      "opset": 17,
+      "native_head_export": false,
+      "cal_a": [
+        1.0
+      ],
+      "cal_b": [
+        -0.19384765625
+      ],
+      "engine": "depth-1x3x608x768.engine",
+      "engine_sha256": "e023e9c884e9f224bbef03c661000c5e59f276dbf239ebf0d109509f0371b94e",
+      "build_ms": 58308.813099999956,
+      "builder": {
+        "strongly_typed": true,
+        "tf32": false,
+        "workspace_bytes": 1073741824,
+        "max_aux_streams": 0,
+        "fp16": false,
+        "int8": false
+      }
+    },
+    {
+      "input_shape": [
+        1,
+        3,
+        448,
+        768
+      ],
+      "output_shape": [
+        1,
+        1,
+        112,
+        192
+      ],
+      "onnx": "depth-1x3x448x768.onnx",
+      "onnx_sha256": "b95a9dba60979cad8b66ec0a3e12d77e0885e2cc53b70b34d9b0a2f3a0ea1682",
+      "export_ms": 3703.105300000061,
+      "opset": 17,
+      "native_head_export": false,
+      "cal_a": [
+        1.0
+      ],
+      "cal_b": [
+        -0.19384765625
+      ],
+      "engine": "depth-1x3x448x768.engine",
+      "engine_sha256": "1894d81ab52b2f62f9d53385727d85f747f8e04d5e189e0456c0d5f3a89a43d1",
+      "build_ms": 67077.08529999945,
+      "builder": {
+        "strongly_typed": true,
+        "tf32": false,
+        "workspace_bytes": 1073741824,
+        "max_aux_streams": 0,
+        "fp16": false,
+        "int8": false
+      }
+    }
+  ]
+}

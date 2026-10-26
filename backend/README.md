@@ -3,8 +3,9 @@
 Resident GPU experiments and native service contracts are documented in [RESIDENT.md](RESIDENT.md);
 current optimization workflow and evidence are in [INFERENCE_OPTIMIZATION_PLAN.md](INFERENCE_OPTIMIZATION_PLAN.md).
 The explicit resident entry adds `/ws/detect/resident/` alongside Echo/HF/local PRF2 modes.
-Depth ONNX/TensorRT forward experiments, artifact validation and final-weight re-export are in
-[DEPTH-EXPORT.md](DEPTH-EXPORT.md). They require explicit selection and do not change service defaults.
+Native TensorRT depth inference, quantified forward/full-frame comparisons, artifact validation
+and final-weight re-export are in [DEPTH-EXPORT.md](DEPTH-EXPORT.md). Select the backend and verified
+manifest explicitly at startup; an unconfigured service uses Torch.
 
 Scheme E is an isolated shared-YOLO object camera-z experiment. See
 [object_distance/README.md](object_distance/README.md) for local data preparation, Windows training,

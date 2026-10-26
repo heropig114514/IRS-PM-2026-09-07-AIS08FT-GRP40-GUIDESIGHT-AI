@@ -2,6 +2,16 @@
 
 入口 `config.resident_asgi:application` 在 ASGI startup 加载一次 GPU 模型；视频连接通过 `/ws/detect/resident/` 直接进入进程内工作线程，省去 HF 分配和 worker 回环 HTTP 交接。原入口 `config.asgi:application` 保持现有行为。
 
+## Native depth backend
+
+Set `PRS_DEPTH_BACKEND=tensorrt` and `PRS_DEPTH_ENGINE_MANIFEST` before startup to use the
+verified FP32 depth engine pool in this resident entry. The same selection is available in PRF2.
+See [Depth deployment](DEPTH-EXPORT.md) for dependencies, artifact provenance, supported tensor
+shapes and measured gains. A missing/stale engine or unsupported shape fails explicitly; Torch
+remains the unconfigured backend. Session and frame metadata expose `depth_backend` separately
+from detection's execution identity. Shape coverage and truth-based accuracy require independent
+validation on the deployment inputs.
+
 ## 结构与优化工作入口
 
 | 目录／文件 | 职责 | 推理优化关注点 |

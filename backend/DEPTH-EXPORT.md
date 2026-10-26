@@ -4,8 +4,9 @@
 
 `tools.benchmark_depth_export` exports the current YOLO26 depth checkpoint and compares its
 device-resident forward pass using PyTorch eager, the existing PyTorch CUDA Graph probe, ONNX
-Runtime CUDA and TensorRT. `tools.depth_export_runtime` contains explicit serial experiment
-adapters. Default resident/PRF2 services do not import these adapters.
+Runtime CUDA and TensorRT. `realtime.depth_runtime` provides the verified TensorRT implementation
+used by native resident/PRF2 inference and the benchmark. `tools.depth_export_runtime` retains
+ONNX Runtime as an experiment. Backend selection is explicit; an unconfigured service uses Torch.
 
 The workflow preserves depth `imgsz=768`, batch 1, FP32, disabled TF32, the released checkpoint's
 calibration buffers, and SDK preprocessing/postprocessing. It uses the existing max640/JPEG80
@@ -119,6 +120,81 @@ Model binaries, serialized engines and local environments remain ignored; report
 versioned. Follow [the optimization plan](INFERENCE_OPTIMIZATION_PLAN.md) for service-level and
 ground-truth validation requirements.
 
+## Native inference configuration
+
+Install `requirements-inference-tensorrt.txt` into the selected GPU service environment, with the
+native CUDA Torch wheel appropriate to that machine. Serving needs TensorRT but does not need
+ONNX, ONNX Runtime or the source ONNX files. Export/build remains a separate operation. The local
+linked export environment can also be explicitly selected as the worker interpreter; this is not
+validation of the launcher's default `.venv-inference` environment. The standard launcher checks
+the TensorRT package pin when this backend is selected.
+
+Before starting the GPU process, set both variables (paths are relative to `backend` unless
+absolute):
+
+```powershell
+$env:PRS_DEPTH_BACKEND = 'tensorrt'
+$env:PRS_DEPTH_ENGINE_MANIFEST = 'models/experiments/depth-serving-fp32/manifest.json'
+# Standard two-environment launcher; the GPU environment must contain the optional dependency.
+.\.venv\Scripts\python.exe -B -m tools.run_local_mvp --check
+.\.venv\Scripts\python.exe -B -m tools.run_local_mvp
+```
+
+For an explicit Torch deployment, set `PRS_DEPTH_BACKEND=torch` and remove
+`PRS_DEPTH_ENGINE_MANIFEST`. Unknown backends, a missing TensorRT manifest or a stray Torch
+manifest fail configuration validation. PRF2 freezes the configuration at startup. Its handshake,
+health response and frame metadata expose `depth_backend`; health also lists loaded engine tensor
+shapes. Detection's existing `backend` field still describes detection, not the separate depth model.
+
+`DepthEstimator` uses `AcceleratedDepthPredictor` to replace only the depth forward call. Image
+preparation, letterbox removal, calibration, depth alignment, distance fusion, tracking and risk
+rules retain their native implementation. The prebuilt engines do not run the native Torch depth
+warmup; the first actual engine execution is included in first-frame latency. FP32, depth edge
+768 and batch 1 remain mandatory. HF paths retain their independently configured Torch behavior.
+
+Activation verifies checkpoint and engine hashes, native SDK sources, runtime/GPU identity and
+build policy before deserialization. A pool loads all declared shapes once, shares the TensorRT
+runtime/logger and supports at most eight fixed shapes. The provisioned local bundle supports
+`[1,3,768,576]`, `[1,3,768,608]`, `[1,3,576,768]`, `[1,3,608,768]` and `[1,3,448,768]`.
+These are SDK-preprocessed tensor shapes, not raw JPEG dimensions. An unsupported aspect ratio
+fails with `depth_input_shape`; there is no request-time build, square resize or Torch fallback.
+Use only trusted manifests/engines. A shape-count cap does not establish a total VRAM budget.
+For another deployment, export/build all required representative input shapes into one fresh
+artifact directory and select that directory's manifest. The local bundle path is an example,
+not a remotely downloadable engine or an automatic artifact discovery location.
+
+## Whole-pipeline validation
+
+`tools.benchmark_depth_integration` exercises the actual native service detector on every original
+video frame with source timestamps. Run Torch-before, TensorRT and Torch-after in separate
+processes. Use a new output directory for each run and an ignored depth-cache directory for the
+reference's complete FP32 maps:
+
+```powershell
+$video = 'model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-raw.mp4'
+$cache = 'models/experiments/depth-integration-cache/new-reference'
+.\.venv\depth-export\Scripts\python.exe -B -m tools.benchmark_depth_integration `
+  --video $video --backend torch --depth-cache $cache --output benchmarks/new-before
+.\.venv\depth-export\Scripts\python.exe -B -m tools.benchmark_depth_integration `
+  --video $video --backend tensorrt --depth-cache $cache --reference benchmarks/new-before `
+  --manifest models/experiments/depth-serving-fp32/manifest.json --output benchmarks/new-tensorrt
+.\.venv\depth-export\Scripts\python.exe -B -m tools.benchmark_depth_integration `
+  --video $video --backend torch --depth-cache $cache --reference benchmarks/new-before `
+  --output benchmarks/new-after
+```
+
+The report binds input, checkpoint, parameters and implementation hashes, separates first-frame
+and steady timing, and retains every sample. Complete map comparison and disk I/O occur outside
+prediction timing. Object numeric differences are reported separately from structural/discrete
+decision differences; JPEG differences remain visible. `completed` means all frames were processed,
+not that outputs are bitwise identical or truth-based quality is accepted. Processing rate derived
+from mean offline frame latency is not camera FPS or browser end-to-end throughput.
+
+The [integration summary](benchmarks/2026-10-26/depth-integration/summary.json) links complete video
+controls, service probes and numerical differences. Read it together with the
+[forward summary](benchmarks/2026-10-26/depth-export/summary.json): forward gains exclude all other
+pipeline stages, and small FP32 output deviations can alter rendered text near a rounding boundary.
+
 ## Final weights and deployment
 
 When final fine-tuned weights arrive, preserve the old checkpoint and artifacts, verify the new
@@ -126,11 +202,12 @@ checkpoint SHA256, choose a new artifact directory, and rerun export, build and 
 validation on the target GPU. Calibration is exported from the actual head, never assumed to be
 identity. A changed checkpoint or environment invalidates old engine bindings.
 
-Before default deployment, use the team's fixed depth/distance truth data and evaluation protocol,
-then validate the actual video service, variable input-shape policy, output ownership, resource
-budget and sustained concurrency. This workflow does not authorize default backend selection,
-precision reduction, reduced depth frequency or a looser accuracy criterion. Shape changes require
-explicitly prepared artifacts; there is no dynamic build or eager fallback in a request.
+Native service integration is available through the explicit configuration above. General rollout
+still requires the team's fixed depth/distance truth data and evaluation protocol, target shape
+coverage, resource budget and sustained concurrency validation. Local numerical/decision agreement
+does not establish distance accuracy or safety. Precision reduction, reduced depth frequency and
+looser accuracy criteria are separate experiments. Shape changes require explicitly prepared
+artifacts; there is no dynamic build or eager fallback in a request.
 
 ## Implementation references
 

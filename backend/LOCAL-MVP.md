@@ -46,6 +46,12 @@ The first tool uses real Chrome, MCP, and Chinese speech. GPS/ORS use explicit f
 
 ## Default Offline Mode
 
+Native depth can explicitly select the verified FP32 TensorRT implementation through
+`PRS_DEPTH_BACKEND` and `PRS_DEPTH_ENGINE_MANIFEST`; see [Depth deployment](DEPTH-EXPORT.md).
+Prepare the optional GPU dependency and exact input-shape artifacts before startup. The handshake,
+health response and result metadata identify depth separately from detection. Missing/stale engines
+or unsupported shapes fail explicitly. An unconfigured service continues to use native Torch.
+
 The default algorithm remains dual-model mode A. See [distance modes](DISTANCE-MODES.md) for environment variables, startup, and output compatibility when explicitly selecting geometric mode B or low-frequency depth mode C. The dual-model requirements below apply to default A; B does not require depth weights.
 
 This stage integrates the camera/local video, algorithm results, browser alerts, and navigation examples on one computer. The integration layer adapts protocols, processes, and session lifecycle without changing detection/depth models, tracking association, distance/motion estimates, TTC, or risk rules. HF, ORS, and DashScope are not part of this local inference loop. See [ZeroGPU](ZEROGPU.md) for public-cloud mode configuration and the [operations guide](deploy/README.md) for deployment.

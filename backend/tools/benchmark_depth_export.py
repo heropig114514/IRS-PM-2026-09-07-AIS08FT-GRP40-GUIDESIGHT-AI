@@ -18,12 +18,12 @@ from pathlib import Path
 
 import numpy as np
 
-from tools.depth_export_runtime import (
-    OrtDepthForward,
+from realtime.depth_runtime import (
     TrtDepthForward,
     file_hash,
     validate_manifest,
 )
+from tools.depth_export_runtime import OrtDepthForward
 
 
 def write_json(path, value):

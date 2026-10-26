@@ -12,6 +12,7 @@ Variable Index: logger — safe lifecycle diagnostics; runtime — one process-l
 executor — single native worker thread; load_error — explicit initialization failure latch;
 detector/hashes/active_session/frame_size — worker-owned resident/state/provenance;
 distance_config — startup-selected A/B/C profile; B has no depth dependency or hash;
+depth_config — startup-frozen Torch/TensorRT selection; no inference-time backend switching;
 incoming/received/delivered/inflight — bounded session accounting and uncancellable GPU work.
 session_seconds/stopping — frozen explicit session policy and cancellation-safe continuous wait.
 """
@@ -44,15 +45,16 @@ from integration.protocol import (
     validate_result,
     web_origins,
 )
+from realtime.depth_config import read_depth_backend
 from realtime.distance_config import read_distance_config
 from realtime.protocol import pack_result, unpack_result
 
 logger = logging.getLogger(__name__)
 
 
-def load_detector(distance_config=None):
+def load_detector(distance_config=None, depth_config=None):
     """Functionality: Load the existing native FP32 complete pipeline and record actual assets.
-    Inputs: fixed model files, optional startup-frozen profile. Outputs: detector and fingerprints.
+    Inputs: fixed model files, frozen distance/depth backend profiles. Outputs: detector and hashes.
     Logic: preflight selected local files/CUDA; A uses original constructors/default rules;
     B does not open/hash/initialize depth weights; C wraps the same depth fusion with tracking.
     Constraints: lazy imports, no download/CPU fallback/implicit detection parameter changes;
@@ -60,6 +62,7 @@ def load_detector(distance_config=None):
     """
     weights, depth_weights = ROOT / "models/yolo26n.pt", ROOT / "models/yolo26n-depth.pt"
     distance_config = read_distance_config() if distance_config is None else distance_config
+    depth_config = read_depth_backend(ROOT) if depth_config is None else depth_config
     needs_depth = distance_config.distance_mode != "geometry"
     if not weights.is_file() or (needs_depth and not depth_weights.is_file()):
         raise IntegrationError(
@@ -87,7 +90,9 @@ def load_detector(distance_config=None):
             "local_model_invalid",
             "The detection weights do not match the model-manifest fingerprint.",
         )
-    depth = DepthEstimator(depth_weights, manifest["build"]["ultralytics"]) if needs_depth else None
+    depth = (DepthEstimator(depth_weights, manifest["build"]["ultralytics"],
+                            backend=depth_config.backend, engine_manifest=depth_config.manifest)
+             if needs_depth else None)
     return ResidentDetector(weights, manifest_path, depth_estimator=depth,
                             distance_config=distance_config), hashes
 
@@ -109,10 +114,12 @@ class InferenceRuntime:
         self.detector = self.load_error = self.last_inference = self.active_session = None
         self.hashes, self.frame_size, self.busy = {}, None, False
         self.distance_config = read_distance_config()
+        self.depth_config = read_depth_backend(ROOT)
         self.session_seconds = local_session_seconds()
         if factory is load_detector:
             # Freeze configuration before hello; lazy model loading must use that same identity.
-            self.factory = partial(factory, distance_config=self.distance_config)
+            self.factory = partial(factory, distance_config=self.distance_config,
+                                   depth_config=self.depth_config)
 
     def contract(self, session_id):
         """Functionality: Declare identity without initializing GPU state.
@@ -120,10 +127,13 @@ class InferenceRuntime:
         Logic: lightweight validated manifest and actual resident flag.
         Constraints: loaded false does not imply GPU, depth accuracy or runtime readiness.
         """
-        return model_contract(session_id, self.manifest_reader(), self.detector is not None,
+        contract = model_contract(session_id, self.manifest_reader(), self.detector is not None,
                               distance_mode=self.distance_config.distance_mode,
                               depth_interval=self.distance_config.depth_interval,
                               session_seconds=self.session_seconds)
+        contract["depth_backend"] = (self.depth_config.backend
+                                     if self.distance_config.distance_mode != "geometry" else None)
+        return contract
 
     def status(self):
         """Functionality: Report process admission, resident state and observed inference only.
@@ -155,6 +165,11 @@ class InferenceRuntime:
                 "depth": {
                     "present": (ROOT / "models/yolo26n-depth.pt").is_file(),
                     "sha256": self.hashes.get("depth_sha256"),
+                    "backend": (self.depth_config.backend
+                                if self.distance_config.distance_mode != "geometry" else None),
+                    "engine_shapes": (self.detector.depth_estimator.forward.shapes
+                                      if loaded and self.depth_config.backend == "tensorrt"
+                                      and self.detector.depth_estimator is not None else []),
                 },
             },
             "distance_mode": self.distance_config.distance_mode,

@@ -1,0 +1,14 @@
+[10/26/2026-12:03:49] [TRT] [W] WARNING The logger passed into createInferRuntime differs from one already registered for an existing builder, runtime, or refitter. So the current new logger is ignored, and TensorRT will use the existing one which is returned by nvinfer1::getLogger() instead.
+[10/26/2026-12:03:49] [TRT] [W] WARNING The logger passed into createInferRuntime differs from one already registered for an existing builder, runtime, or refitter. So the current new logger is ignored, and TensorRT will use the existing one which is returned by nvinfer1::getLogger() instead.
+[10/26/2026-12:03:49] [TRT] [W] WARNING The logger passed into createInferRuntime differs from one already registered for an existing builder, runtime, or refitter. So the current new logger is ignored, and TensorRT will use the existing one which is returned by nvinfer1::getLogger() instead.
+[10/26/2026-12:03:50] [TRT] [W] WARNING The logger passed into createInferRuntime differs from one already registered for an existing builder, runtime, or refitter. So the current new logger is ignored, and TensorRT will use the existing one which is returned by nvinfer1::getLogger() instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+[10/26/2026-12:03:51] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+BoT-SORT unavailable until explicit reset type=ValueError
+[10/26/2026-12:03:51] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+Depth engine shape unavailable shape=(1, 3, 768, 768)
+Depth result rejected
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+{"status": "completed", "shapes": [[1, 3, 768, 576], [1, 3, 768, 608], [1, 3, 576, 768], [1, 3, 608, 768], [1, 3, 448, 768]], "frames": [{"sample": "model_tests/samples/bus.jpg", "backend": "tensorrt", "count": 5, "server_ms": 874.6573999997054}, {"sample": "models/experiments/depth-integration-inputs/mot17-first.png", "backend": "tensorrt", "count": 13, "server_ms": 33.44760000072711}], "weights": {"detection_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef", "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"}, "unsupported_shape_rejected": true, "valid_input_after_rejection": true, "native_depth_forward_calls": 0}

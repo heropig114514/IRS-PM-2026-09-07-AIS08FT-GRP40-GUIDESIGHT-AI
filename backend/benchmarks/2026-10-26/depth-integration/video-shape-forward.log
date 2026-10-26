@@ -1,0 +1,12 @@
+WARNING 'half' is deprecated and will be removed in the future. Use 'quantize' instead.
+{"phase": "export", "shape": [1, 3, 448, 768]}
+E:\AI_map\backend\tools\benchmark_depth_export.py:137: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter will be the default. To switch now, set dynamo=True in torch.onnx.export. This new exporter supports features like exporting LLMs with DynamicCache. We encourage you to try it and share feedback to help improve the experience. Learn more about the new export logic: https://pytorch.org/docs/stable/onnx_dynamo.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html.
+  torch.onnx.export(model, tensor, str(path), dynamo=False, opset_version=17,
+{"phase": "build", "shape": [1, 3, 448, 768]}
+{"phase": "benchmark", "input": "models\\experiments\\depth-integration-inputs\\mot17-first.png", "backend": "eager_before"}
+{"phase": "benchmark", "input": "models\\experiments\\depth-integration-inputs\\mot17-first.png", "backend": "torch_graph"}
+{"phase": "benchmark", "input": "models\\experiments\\depth-integration-inputs\\mot17-first.png", "backend": "onnx_cuda"}
+Skip loading CUDA and cuDNN DLLs since torch is imported.
+{"phase": "benchmark", "input": "models\\experiments\\depth-integration-inputs\\mot17-first.png", "backend": "tensorrt"}
+[10/26/2026-11:59:23] [TRT] [W] Using default stream in enqueueV3() may lead to performance issues due to additional calls to cudaStreamSynchronize() by TensorRT to ensure correct synchronization. Please use non-default stream instead.
+{"phase": "benchmark", "input": "models\\experiments\\depth-integration-inputs\\mot17-first.png", "backend": "eager_after"}

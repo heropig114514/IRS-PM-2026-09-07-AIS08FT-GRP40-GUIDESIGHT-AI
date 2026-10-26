@@ -1,0 +1,6 @@
+# Responsibilities: Preserve the exact manifest bytes identified by the runtime reports.
+# Implementation: Disable text normalization only for the copied serving manifest.
+# Related Modules: serving-manifest.json; summary.json; realtime.depth_runtime.
+# Declaration Index: None.
+# Variable Index: None.
+serving-manifest.json -text whitespace=cr-at-eol

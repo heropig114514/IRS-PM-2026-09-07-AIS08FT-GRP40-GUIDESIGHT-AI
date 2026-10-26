@@ -32,7 +32,8 @@ The executable workflow, artifact contract and final-weight handoff are document
 6. Retain explicit experimental adapters and re-export instructions for future fine-tuned weights.
    Bind engines to source/ONNX hashes, shape, precision, SDK/runtime and GPU identity. New weights
    require new export/build/validation; local consistency does not establish quality or deployment
-   acceptance. Keep default services unchanged until the required quality evidence is available.
+   acceptance. Apply explicit native service selection through the integration work below;
+   retain truth-based quality requirements for general deployment.
 
 Export dependencies live in an isolated environment below the ignored local `.venv/` directory;
 the existing native Torch/Ultralytics installation is reused read-only. Model binaries and engines
@@ -40,6 +41,21 @@ remain under ignored `models/experiments/`; reproducibility manifests and report
 Implementation references: [Ultralytics depth contract](https://docs.ultralytics.com/tasks/depth),
 [ONNX Runtime CUDA I/O binding and TF32](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html),
 [TensorRT installation](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/install-pip.html).
+
+### Apply validated acceleration to native inference
+
+1. Keep the verified FP32 forward reports as the baseline; quantify forward and full-frame
+   latency separately. Preserve all samples, source order, model parameters and quality limitations.
+2. Move the reusable TensorRT implementation into the native inference package. Add an explicit
+   startup backend/manifest selection, verified prebuilt shape dispatch, owned outputs and visible
+   backend identity. Retain portable Torch configuration; never build or fall back inside a request.
+3. Preserve the official SDK image preparation and depth alignment. Prepare missing artifacts for
+   the existing local-video inputs, then compare complete original videos against Torch controls,
+   including numerical depth/distance differences and derived tracking/risk outputs.
+4. Exercise the actual local service, lifecycle and reconnect contracts. Enable the verified local
+   configuration, record the full-frame effect, complete required checks, and commit source,
+   configuration documentation and structured reports together. Ground-truth accuracy and final
+   fine-tuned weights remain separate, explicitly unverified evidence.
 
 | 顺序 | 工作 | 产出与准入条件 |
 | --- | --- | --- |

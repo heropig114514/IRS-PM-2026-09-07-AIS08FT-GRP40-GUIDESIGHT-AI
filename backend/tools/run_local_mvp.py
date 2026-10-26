@@ -91,9 +91,14 @@ def inference_settings():
 def inspect_environment(python, packages, *, cuda=False):
     """Functionality: Verify Python/direct pins and optionally actual CUDA availability.
     Inputs: isolated interpreter, package map and CUDA flag. Outputs: safe runtime metadata.
-    Logic: Run a bounded metadata probe; only import Torch after all pins match.
+    Logic: check explicit TensorRT pins when selected, then probe native packages/CUDA once.
     Constraints: no pip/install, model loading, downloads, secret reads or version substitution.
     """
+    if cuda:
+        from realtime.depth_config import read_depth_backend
+
+        if read_depth_backend(ROOT).backend == "tensorrt":
+            packages = {**packages, "tensorrt-cu12": "10.13.3.9"}
     probe = """
 import importlib.metadata as metadata
 import json

@@ -133,7 +133,7 @@ class DepthTests(SimpleTestCase):
         resident.tensor = np.empty((1, 3, 640, 640), dtype=np.float32)
         resident.execution_config, resident.precision, resident.backend = {}, "FP32", "test CUDA"
         resident.manifest = {"names": ["person"] * 80, "source_sha256": "a" * 64}
-        depth = MagicMock(model_name="yolo26n-depth")
+        depth = MagicMock(model_name="yolo26n-depth", backend="torch")
         depth.predict.return_value = np.full((80, 120), 2.4, dtype=np.float32)
         resident.depth_estimator = depth
         with patch("realtime.detector.GraphRunner", return_value=runner) as factory:

@@ -1,0 +1,56 @@
+{
+  "status": "completed",
+  "shapes": [
+    [
+      1,
+      3,
+      768,
+      576
+    ],
+    [
+      1,
+      3,
+      768,
+      608
+    ],
+    [
+      1,
+      3,
+      576,
+      768
+    ],
+    [
+      1,
+      3,
+      608,
+      768
+    ],
+    [
+      1,
+      3,
+      448,
+      768
+    ]
+  ],
+  "frames": [
+    {
+      "sample": "model_tests/samples/bus.jpg",
+      "backend": "tensorrt",
+      "count": 5,
+      "server_ms": 874.6573999997054
+    },
+    {
+      "sample": "models/experiments/depth-integration-inputs/mot17-first.png",
+      "backend": "tensorrt",
+      "count": 13,
+      "server_ms": 33.44760000072711
+    }
+  ],
+  "weights": {
+    "detection_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+  },
+  "unsupported_shape_rejected": true,
+  "valid_input_after_rejection": true,
+  "native_depth_forward_calls": 0
+}

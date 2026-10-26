@@ -1,11 +1,12 @@
 """Responsibilities: Guard experimental depth artifact provenance and measurement honesty.
 Implementation: CPU-only manifest tampering, tensor contract and numerical-report regression tests.
-Related Modules: tools.depth_export_runtime; tools.benchmark_depth_export.
+Related Modules: realtime.depth_runtime; tools.depth_export_runtime; tools.benchmark_depth_export.
 Declaration Index: DepthArtifactTests; DepthArtifactTests.setUp; DepthArtifactTests.validate;
 DepthArtifactTests.test_identity_changes_require_reexport;
 DepthArtifactTests.test_binary_and_path_changes_are_rejected;
 DepthArtifactTests.test_quarter_resolution_and_static_batch_are_required;
 DepthArtifactTests.test_progress_preserves_reader_and_final_snapshot;
+DepthArtifactTests.test_serving_validates_engines_without_export_dependencies;
 DepthNumericalTests; DepthNumericalTests.test_errors_do_not_claim_quality_acceptance;
 DepthNumericalTests.test_nonfinite_and_shape_mismatch_remain_visible;
 DepthNumericalTests.test_slow_samples_are_not_trimmed;
@@ -22,7 +23,7 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-from tools.depth_export_runtime import file_hash, validate_manifest
+from realtime.depth_runtime import file_hash, validate_manifest
 
 
 class DepthArtifactTests(SimpleTestCase):
@@ -84,6 +85,30 @@ class DepthArtifactTests(SimpleTestCase):
                            ("tf32", True), ("identity", {"gpu": "other"}), ("schema", 2)):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 self.validate({**self.manifest, key: value})
+
+    def test_serving_validates_engines_without_export_dependencies(self):
+        """Functionality: Permit engine-only deployment without weakening weights/runtime checks.
+        Inputs: manifest, inert engine and serving identity. Outputs: guard assertions.
+        Logic: omit the ONNX file, retain export metadata, reject changed engine policy or bytes.
+        Constraints: does not deserialize test bytes or claim actual engine compatibility.
+        """
+        manifest = copy.deepcopy(self.manifest)
+        manifest["identity"]["onnx"] = "export-only-version"
+        engine = self.root / "depth.engine"
+        engine.write_bytes(b"explicit engine identity")
+        entry = manifest["artifacts"][0]
+        entry.update(engine=engine.name, engine_sha256=file_hash(engine), builder={
+            "strongly_typed": True, "tf32": False, "workspace_bytes": 1 << 30,
+            "max_aux_streams": 0, "fp16": False, "int8": False})
+        (self.root / "depth.onnx").unlink()
+        validate_manifest(manifest, self.root, self.weights, self.identity, engine_only=True)
+        entry["builder"]["tf32"] = True
+        with self.assertRaises(ValueError):
+            validate_manifest(manifest, self.root, self.weights, self.identity, engine_only=True)
+        entry["builder"]["tf32"] = False
+        engine.write_bytes(b"unrelated engine")
+        with self.assertRaises(ValueError):
+            validate_manifest(manifest, self.root, self.weights, self.identity, engine_only=True)
 
     def test_binary_and_path_changes_are_rejected(self):
         """Functionality: Reject binary tampering and paths escaping the artifact directory.
@@ -172,7 +197,7 @@ class DepthNumericalTests(SimpleTestCase):
         """
         import torch
 
-        from tools.depth_export_runtime import validate_input
+        from realtime.depth_runtime import validate_input
 
         tensor = torch.zeros(1, 3, 32, 32)
         for shape in ((1, 3, 32, 32), (1, 3, 64, 32)):

@@ -27,16 +27,19 @@ logger = logging.getLogger("core.resident.services")
 def build_detector(root, mode):
     """Functionality: Load the unchanged FP32 native CUDA pipeline from verified local assets.
     Inputs: backend root and explicit detection/depth/full workload. Outputs: ResidentDetector.
-    Logic: optional depth and default tracking/risk; no production FP16-plan substitution.
-    Constraints: no download, alternate provider, retry, depth Graph probe or CPU fallback.
+    Logic: explicit native depth backend and default tracking/risk; no FP16-plan substitution.
+    Constraints: no downloads, implicit providers, retries, Graph probes or CPU fallback.
     """
     from realtime.depth import DepthEstimator
+    from realtime.depth_config import read_depth_backend
     from realtime.detector import ResidentDetector
     from realtime.tracking import DEFAULT_TRACKING_CONFIG
 
     manifest_path = root / "models/yolo26n.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    depth = (DepthEstimator(root / "models/yolo26n-depth.pt", manifest["build"]["ultralytics"])
+    depth_config = read_depth_backend(root)
+    depth = (DepthEstimator(root / "models/yolo26n-depth.pt", manifest["build"]["ultralytics"],
+                            backend=depth_config.backend, engine_manifest=depth_config.manifest)
              if mode != "detection" else None)
     return ResidentDetector(root / "models/yolo26n.pt", manifest_path, config={},
                             depth_estimator=depth,
@@ -188,6 +191,8 @@ class ResidentService:
         return {"kind": "session", "protocol": "resident-v1", "mode": self.mode,
                 "model": "yolo26n", "precision": self.detector.precision,
                 "output_precision": "FP32", "backend": self.detector.backend,
+                "depth_backend": getattr(getattr(self.detector, "depth_estimator", None),
+                                         "backend", None),
                 "source_sha256": self.detector.manifest["source_sha256"],
                 "names": self.detector.manifest["names"], "classes": 80,
                 "confidence_threshold": 0.25, "max_edge": 640, "jpeg_quality": 0.8,

@@ -1,0 +1,650 @@
+{
+  "scope": "Native FP32 TensorRT depth integration; no INT8/FP16 quantization or truth-based accuracy acceptance",
+  "hardware": "NVIDIA GeForce RTX 3060 Laptop GPU, 6 GiB",
+  "precision": "FP32; TF32 disabled",
+  "quality_accepted": false,
+  "applied": {
+    "native_module": "realtime/depth_runtime.py",
+    "sdk_adapter": "realtime/depth_predictor.py",
+    "configuration": "PRS_DEPTH_BACKEND=tensorrt; PRS_DEPTH_ENGINE_MANIFEST=selected local manifest",
+    "portable_default": "torch",
+    "runtime_dependencies": "requirements-inference-tensorrt.txt",
+    "local_enabled": true,
+    "session_policy": "55 seconds; original PRF2 protocol",
+    "unsupported_shape": "explicit depth_input_shape error; no fallback or implicit resize"
+  },
+  "full_video": [
+    {
+      "video": "mot07",
+      "frames": 500,
+      "reports": {
+        "before": "mot07-before/report.json",
+        "tensorrt": "mot07-tensorrt/report.json",
+        "after": "mot07-after/report.json"
+      },
+      "video_sha256": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+      "steady": {
+        "before": {
+          "wall_ms": {
+            "count": 499,
+            "mean_ms": 52.888656112208665,
+            "min_ms": 43.19419999956153,
+            "max_ms": 72.37270000041462,
+            "p50_ms": 52.258200000323995,
+            "p95_ms": 61.1545799995838,
+            "p99_ms": 66.6226120004103
+          },
+          "server_ms": {
+            "count": 499,
+            "mean_ms": 52.7953398797639,
+            "min_ms": 43.11580000012327,
+            "max_ms": 72.28020000002289,
+            "p50_ms": 52.16389999986859,
+            "p95_ms": 61.04994000006627,
+            "p99_ms": 66.53353599940601
+          },
+          "depth_predict_ms": {
+            "count": 499,
+            "mean_ms": 18.837456112238446,
+            "min_ms": 15.410200000587793,
+            "max_ms": 29.109300000527583,
+            "p50_ms": 17.937999999958265,
+            "p95_ms": 24.308680000012828,
+            "p99_ms": 28.098732000016753
+          }
+        },
+        "tensorrt": {
+          "wall_ms": {
+            "count": 499,
+            "mean_ms": 46.72398016032685,
+            "min_ms": 34.795600000506965,
+            "max_ms": 68.21709999985615,
+            "p50_ms": 47.17860000073415,
+            "p95_ms": 55.731270000069344,
+            "p99_ms": 60.74679000015749
+          },
+          "server_ms": {
+            "count": 499,
+            "mean_ms": 46.6309639278444,
+            "min_ms": 34.70870000001014,
+            "max_ms": 68.11569999990752,
+            "p50_ms": 47.08920000030048,
+            "p95_ms": 55.645860000277025,
+            "p99_ms": 60.643940000154544
+          },
+          "depth_predict_ms": {
+            "count": 499,
+            "mean_ms": 11.59389939873686,
+            "min_ms": 7.656900000256428,
+            "max_ms": 19.540499999493477,
+            "p50_ms": 11.854699999275908,
+            "p95_ms": 15.196259999811446,
+            "p99_ms": 17.1787560001394
+          }
+        },
+        "after": {
+          "wall_ms": {
+            "count": 499,
+            "mean_ms": 50.57774328658027,
+            "min_ms": 38.52649999953428,
+            "max_ms": 64.6922000005361,
+            "p50_ms": 50.265800000488525,
+            "p95_ms": 59.67448999954286,
+            "p99_ms": 63.14193800037174
+          },
+          "server_ms": {
+            "count": 499,
+            "mean_ms": 50.49227595189036,
+            "min_ms": 38.4435999994821,
+            "max_ms": 64.60679999963759,
+            "p50_ms": 50.18899999959103,
+            "p95_ms": 59.590409999418625,
+            "p99_ms": 63.06116799994925
+          },
+          "depth_predict_ms": {
+            "count": 499,
+            "mean_ms": 18.140240280578194,
+            "min_ms": 14.945699999771023,
+            "max_ms": 29.856000000108907,
+            "p50_ms": 17.364199999974517,
+            "p95_ms": 24.03935000011188,
+            "p99_ms": 27.946159999974043
+          }
+        }
+      },
+      "performance": {
+        "server_ms": {
+          "candidate_mean_ms": 46.6309639278444,
+          "mean_latency_reduction_pct": {
+            "before": 11.67598497511002,
+            "after": 7.6473320943683865
+          },
+          "p50_latency_reduction_pct": {
+            "before": 9.72837536990312,
+            "after": 6.176253759421013
+          },
+          "p95_latency_reduction_pct": {
+            "before": 8.851900591193672,
+            "after": 6.619437589337085
+          }
+        },
+        "depth_predict_ms": {
+          "candidate_mean_ms": 11.59389939873686,
+          "mean_latency_reduction_pct": {
+            "before": 38.45294539954119,
+            "after": 36.087398957169036
+          },
+          "p50_latency_reduction_pct": {
+            "before": 33.91292229176335,
+            "after": 31.729074767087994
+          },
+          "p95_latency_reduction_pct": {
+            "before": 37.48628062155812,
+            "after": 36.78589479440701
+          }
+        }
+      },
+      "load_ms": {
+        "before": 895.4329999996844,
+        "tensorrt": 2507.772300000397,
+        "after": 887.6172999998744
+      },
+      "first_frame_wall_ms": {
+        "before": 5288.917399999264,
+        "tensorrt": 1149.808799999846,
+        "after": 3850.337199999558
+      },
+      "offline_processing_rate_fps": {
+        "before": 18.941065675065257,
+        "tensorrt": 21.444978095399772,
+        "after": 19.805009402879993
+      },
+      "controls_all_outputs_exact": true,
+      "comparison": {
+        "depth_exact_frames": 0,
+        "depth_max_abs_m": 0.00012969970703125,
+        "depth_nonfinite_reference": 0,
+        "depth_nonfinite_candidate": 0,
+        "raw_detection_changed_frames": 0,
+        "structural_or_decision_changed_frames": 0,
+        "jpeg_changed_frame_indices": [
+          61,
+          142
+        ],
+        "numeric_max_abs": {
+          "distance_m": 6.103515625e-05,
+          "smoothed_distance_m": 3.0517578125e-05,
+          "relative_speed_mps": 0.00021457672119140625,
+          "ttc_sec": 0.028474375738611002
+        }
+      }
+    },
+    {
+      "video": "mot10",
+      "frames": 654,
+      "reports": {
+        "before": "mot10-before/report.json",
+        "tensorrt": "mot10-tensorrt/report.json",
+        "after": "mot10-after/report.json"
+      },
+      "video_sha256": "0780ec0d648cfbca71a92cf0e45811e591b0f014307e3291a5f970112d855d01",
+      "steady": {
+        "before": {
+          "wall_ms": {
+            "count": 653,
+            "mean_ms": 51.8785024502248,
+            "min_ms": 37.15879999981553,
+            "max_ms": 254.13029999981518,
+            "p50_ms": 49.874199999976554,
+            "p95_ms": 64.13115999985166,
+            "p99_ms": 74.75474799946824
+          },
+          "server_ms": {
+            "count": 653,
+            "mean_ms": 51.78887013780737,
+            "min_ms": 37.070999999741616,
+            "max_ms": 254.0337999998883,
+            "p50_ms": 49.77529999996477,
+            "p95_ms": 64.04278000027261,
+            "p99_ms": 74.65495600012218
+          },
+          "depth_predict_ms": {
+            "count": 653,
+            "mean_ms": 20.57646493109302,
+            "min_ms": 15.141500000027008,
+            "max_ms": 218.45940000002884,
+            "p50_ms": 18.3630000001358,
+            "p95_ms": 27.97069999978703,
+            "p99_ms": 33.27317600007518
+          }
+        },
+        "tensorrt": {
+          "wall_ms": {
+            "count": 653,
+            "mean_ms": 45.03896493110114,
+            "min_ms": 29.858900000363064,
+            "max_ms": 58.796799999981886,
+            "p50_ms": 45.82209999989573,
+            "p95_ms": 52.71186000009038,
+            "p99_ms": 55.71932800023205
+          },
+          "server_ms": {
+            "count": 653,
+            "mean_ms": 44.949987595711136,
+            "min_ms": 29.777199999443837,
+            "max_ms": 58.703499999865016,
+            "p50_ms": 45.73270000037155,
+            "p95_ms": 52.6097199996002,
+            "p99_ms": 55.63265999990108
+          },
+          "depth_predict_ms": {
+            "count": 653,
+            "mean_ms": 12.624590045938938,
+            "min_ms": 7.5051000003441,
+            "max_ms": 17.44220000000496,
+            "p50_ms": 13.123100000484555,
+            "p95_ms": 15.12693999993644,
+            "p99_ms": 16.14004000020941
+          }
+        },
+        "after": {
+          "wall_ms": {
+            "count": 653,
+            "mean_ms": 49.97265620213748,
+            "min_ms": 38.28780000003462,
+            "max_ms": 70.52230000044801,
+            "p50_ms": 49.83059999995021,
+            "p95_ms": 57.3233999999502,
+            "p99_ms": 63.144696000017575
+          },
+          "server_ms": {
+            "count": 653,
+            "mean_ms": 49.88458269523319,
+            "min_ms": 38.203700000849494,
+            "max_ms": 70.43259999954898,
+            "p50_ms": 49.73299999983283,
+            "p95_ms": 57.23393999978725,
+            "p99_ms": 63.05513199989946
+          },
+          "depth_predict_ms": {
+            "count": 653,
+            "mean_ms": 19.126511944855693,
+            "min_ms": 15.305299999454292,
+            "max_ms": 31.84199999941484,
+            "p50_ms": 18.514099999265454,
+            "p95_ms": 23.74526000039623,
+            "p99_ms": 29.460300000173447
+          }
+        }
+      },
+      "performance": {
+        "server_ms": {
+          "candidate_mean_ms": 44.949987595711136,
+          "mean_latency_reduction_pct": {
+            "before": 13.205313272713504,
+            "after": 9.892024414977396
+          },
+          "p50_latency_reduction_pct": {
+            "before": 8.121698914112185,
+            "after": 8.043552569671498
+          },
+          "p95_latency_reduction_pct": {
+            "before": 17.852223155559056,
+            "after": 8.079506670699654
+          }
+        },
+        "depth_predict_ms": {
+          "candidate_mean_ms": 12.624590045938938,
+          "mean_latency_reduction_pct": {
+            "before": 38.645486053039335,
+            "after": 33.994289798697594
+          },
+          "p50_latency_reduction_pct": {
+            "before": 28.535097748801896,
+            "after": 29.118347632316922
+          },
+          "p95_latency_reduction_pct": {
+            "before": 45.91862198639427,
+            "after": 36.29490685853083
+          }
+        }
+      },
+      "load_ms": {
+        "before": 863.3504999997967,
+        "tensorrt": 1960.049500000423,
+        "after": 986.3405000005514
+      },
+      "first_frame_wall_ms": {
+        "before": 4156.559600000037,
+        "tensorrt": 851.6555999995035,
+        "after": 3730.2366999992955
+      },
+      "offline_processing_rate_fps": {
+        "before": 19.309168115447477,
+        "tensorrt": 22.24694718481778,
+        "after": 20.04627373770848
+      },
+      "controls_all_outputs_exact": true,
+      "comparison": {
+        "depth_exact_frames": 0,
+        "depth_max_abs_m": 0.000133514404296875,
+        "depth_nonfinite_reference": 0,
+        "depth_nonfinite_candidate": 0,
+        "raw_detection_changed_frames": 0,
+        "structural_or_decision_changed_frames": 0,
+        "jpeg_changed_frame_indices": [],
+        "numeric_max_abs": {
+          "distance_m": 9.1552734375e-05,
+          "smoothed_distance_m": 3.0517578125e-05,
+          "relative_speed_mps": 0.00020423567438854207,
+          "ttc_sec": 0.0462333129974013
+        }
+      }
+    }
+  ],
+  "video_protocol": {
+    "full_source_frames_per_backend": 1154,
+    "total_all_three_passes": 3462,
+    "source_timestamps": true,
+    "sample_skipping": false,
+    "input_max_edge": 640,
+    "jpeg_quality": 80,
+    "depth_edge": 768,
+    "batch": 1,
+    "distance_mode": "depth",
+    "controls": "Separate Torch-before, TensorRT and Torch-after processes; all samples retained, first separate",
+    "outside_timed_region": "Full aligned depth transfer/hash/comparison and disk I/O",
+    "rate_limit": "Offline processing rate is not browser throughput or camera FPS",
+    "memory_limit": "Torch peak reserved counters exclude TensorRT-owned allocations; no total VRAM reduction claimed"
+  },
+  "jpeg_difference_analysis": {
+    "source": "core/detector.py speed formatting +.2f",
+    "zero_based_frames": [
+      {
+        "video": "mot07",
+        "index": 61,
+        "object_index": 8,
+        "field": "relative_speed_mps",
+        "before": 1.8449886188387534,
+        "candidate": 1.8450232892100615,
+        "labels": [
+          "+1.84",
+          "+1.85"
+        ]
+      },
+      {
+        "video": "mot07",
+        "index": 142,
+        "object_index": 11,
+        "field": "relative_speed_mps",
+        "before": -1.764974964631574,
+        "candidate": -1.7650115393303574,
+        "labels": [
+          "-1.76",
+          "-1.77"
+        ]
+      }
+    ],
+    "conclusion": "Numerical speed differences cross the existing text rounding boundary; JPEG equality is false and is not waived. No discrete motion/risk decision changed."
+  },
+  "prior_forward": {
+    "report": "../depth-export/summary.json",
+    "accepted_reports": [
+      "forward-verified-default.json",
+      "forward-verified-dedicated.json"
+    ],
+    "fixtures": 5,
+    "trt_p50_wall_ms_range": [
+      6.96379999999408,
+      7.416449999936958
+    ],
+    "latency_reduction_vs_eager_before_pct_range": [
+      51.543493380273105,
+      56.953063959609
+    ],
+    "latency_reduction_vs_graph_pct_range": [
+      14.022142363794732,
+      23.20509922202697
+    ]
+  },
+  "widescreen_forward": {
+    "report": "video-shape-forward.json",
+    "shape": [
+      1,
+      3,
+      448,
+      768
+    ],
+    "sample_count": 30,
+    "first_call_separate": true,
+    "steady_wall_ms": {
+      "eager_before": {
+        "count": 30,
+        "mean": 14.445060000070953,
+        "p50": 14.358699999775126,
+        "p95": 15.972250000459098,
+        "max": 16.127599999890663
+      },
+      "torch_graph": {
+        "count": 30,
+        "mean": 6.37466666673087,
+        "p50": 6.34330000002592,
+        "p95": 6.663339999977325,
+        "max": 6.75390000014886
+      },
+      "onnx_cuda": {
+        "count": 30,
+        "mean": 8.763123333422604,
+        "p50": 8.744400000068708,
+        "p95": 9.291360000361237,
+        "max": 9.516099999927974
+      },
+      "tensorrt": {
+        "count": 30,
+        "mean": 6.286719999964892,
+        "p50": 5.813050000142539,
+        "p95": 8.93067000042719,
+        "max": 12.198999999782245
+      },
+      "eager_after": {
+        "count": 30,
+        "mean": 15.771926666729996,
+        "p50": 15.20715000015116,
+        "p95": 18.930210000098665,
+        "max": 20.65000000038708
+      }
+    },
+    "p50_latency_reduction_pct": {
+      "eager_before": 59.515485383540444,
+      "eager_after": 61.7742311998977,
+      "torch_graph": 8.359213656633202
+    },
+    "limitation": "TensorRT median improves versus Graph on this shape, but its p95 and maximum are higher. No uniform tail-latency superiority claimed."
+  },
+  "real_websocket": {
+    "reports": {
+      "torch": "service-torch.json",
+      "tensorrt": "service-tensorrt.json"
+    },
+    "scope": "Real localhost PRF2 static bus, serial 31-frame session plus independent 1-frame reconnect; no physical camera/browser timing claim",
+    "sessions": {
+      "torch": [
+        {
+          "first_frame_ms": 8445.45139999991,
+          "steady_median_ms": 52.320899999813264,
+          "steady_max_ms": 56.85460000040621,
+          "end": {
+            "kind": "ended",
+            "frames": 31,
+            "received": 31,
+            "forwarded": 31,
+            "worker_received": 31,
+            "worker_verified": 31,
+            "delivered": 31
+          }
+        },
+        {
+          "first_frame_ms": 46.748899999329296,
+          "steady_median_ms": null,
+          "steady_max_ms": null,
+          "end": {
+            "kind": "ended",
+            "frames": 1,
+            "received": 1,
+            "forwarded": 1,
+            "worker_received": 1,
+            "worker_verified": 1,
+            "delivered": 1
+          }
+        }
+      ],
+      "tensorrt": [
+        {
+          "first_frame_ms": 6570.6791999991765,
+          "steady_median_ms": 41.42115000013291,
+          "steady_max_ms": 47.58549999951356,
+          "end": {
+            "kind": "ended",
+            "frames": 31,
+            "received": 31,
+            "forwarded": 31,
+            "worker_received": 31,
+            "worker_verified": 31,
+            "delivered": 31
+          }
+        },
+        {
+          "first_frame_ms": 38.5935000003883,
+          "steady_median_ms": null,
+          "steady_max_ms": null,
+          "end": {
+            "kind": "ended",
+            "frames": 1,
+            "received": 1,
+            "forwarded": 1,
+            "worker_received": 1,
+            "worker_verified": 1,
+            "delivered": 1
+          }
+        }
+      ]
+    },
+    "cold_start_caution": "Different process/library/OS cache state; first frame reported, not a stable startup speedup estimate",
+    "steady_median_latency_reduction_pct": 20.83249714687487,
+    "final_health": {
+      "mode": "local",
+      "external_services": "disabled",
+      "status": "ok",
+      "provider": "local",
+      "loaded": true,
+      "ready": true,
+      "busy": false,
+      "accept_available": true,
+      "last_inference": {
+        "session_id": "3c02bad72fd9482cab044ede3d2a2b65",
+        "index": 0,
+        "completed_at_unix_s": 1792988280.5625205,
+        "capture_time_s": 6363.3138352,
+        "server_ms": 32.24620000037248
+      },
+      "error_code": null,
+      "models": {
+        "detection": {
+          "present": true,
+          "expected_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+          "verified_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+        },
+        "depth": {
+          "present": true,
+          "sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+          "backend": "tensorrt",
+          "engine_shapes": [
+            [
+              1,
+              3,
+              768,
+              576
+            ],
+            [
+              1,
+              3,
+              768,
+              608
+            ],
+            [
+              1,
+              3,
+              576,
+              768
+            ],
+            [
+              1,
+              3,
+              608,
+              768
+            ],
+            [
+              1,
+              3,
+              448,
+              768
+            ]
+          ]
+        }
+      },
+      "distance_mode": "depth",
+      "session_seconds": 55,
+      "depth_interval": 3,
+      "capabilities": {
+        "detection": true,
+        "depth": true,
+        "tracking": true,
+        "risk": true
+      }
+    }
+  },
+  "artifact": {
+    "provenance": "serving-manifest.json",
+    "sha256": "0d1dac8c2ab3079a171cf762854e4f255955b781e778af3b41d2be6e2603c0f7",
+    "weights_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+    "binary_location": "Ignored models/experiments/depth-serving-fp32; engines are target-bound and not committed"
+  },
+  "initial_native_smoke": {
+    "report": "native-smoke.json",
+    "scope": "Actual depth backend, zero native depth forward calls, unsupported shape rejection and valid-input recovery",
+    "limitation": "That initial harness changed geometry without a tracker reset, triggering explicit tracker unavailability; not used as tracking acceptance. Complete fixed-geometry videos and new PRF2 sessions provide tracking evidence."
+  },
+  "checks": {
+    "manage_py_check": "passed; check.log",
+    "makemigrations_check_dry_run": "passed; migrations.log",
+    "manage_py_test": {
+      "total": 504,
+      "skipped": 8,
+      "result": "passed",
+      "report": "tests-verified.log",
+      "initial_failure": "tests.log: existing mocks omitted new backend identity and factory argument; fixtures corrected without production changes"
+    },
+    "ruff": "passed; ruff-verified.log",
+    "frontend_tests": {
+      "passed": 370,
+      "report": "frontend-tests.log"
+    },
+    "comments_and_declaration_indices": "manually reviewed",
+    "external_services": "not exercised"
+  },
+  "unverified": [
+    "No ground-truth distance/depth data or approved numerical acceptance threshold; no accuracy/safety acceptance.",
+    "Final fine-tuned weights require fresh export, build and validation.",
+    "Five provisioned shapes only; arbitrary camera aspect ratios may be rejected.",
+    "Long-duration resource use, target-server GPU performance and real camera/browser concurrency not established by these serial tests.",
+    "Default split-environment launcher not validated here; local Web uses native combined environment and GPU uses the explicitly linked TensorRT environment."
+  ],
+  "source_hash_scope": "Reports bind the exact working-tree bytes executed. Git text normalization can change CRLF to LF on checkout; engine binary digests and the copied serving manifest remain exact.",
+  "post_measurement_source_cleanup": {
+    "file": "realtime/depth_runtime.py",
+    "change": "Remove trailing blank line flagged by git diff --check; Python AST unchanged",
+    "measured_sha256": "58e5806b52ecbd3e830d49e207ee931e856d2948f0e167068a2a9ac6c12f995b",
+    "after_whitespace_cleanup_sha256": "7d8cb754e1c1e1ac0acbf4ad67871c0e3c805e7fdc0c7a48b485e78fe0c7ec19",
+    "ast_identical": true
+  }
+}

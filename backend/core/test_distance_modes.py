@@ -61,7 +61,7 @@ def resident(config):
     instance.tensor = np.empty((1, 3, 640, 640), dtype=np.float32)
     instance.manifest = {"names": ["person"] * 80, "source_sha256": "a" * 64}
     instance.precision, instance.backend = "FP32", "PyTorch resident CUDA"
-    instance.depth_estimator = MagicMock(model_name="yolo26n-depth")
+    instance.depth_estimator = MagicMock(model_name="yolo26n-depth", backend="torch")
     instance.depth_estimator.predict.return_value = np.full((80, 120), 3.8, dtype=np.float32)
     instance.distance_strategy = DistanceStrategy(config)
     instance.object_tracker = MagicMock(epoch=0)
@@ -94,7 +94,8 @@ class DistanceModeTests(SimpleTestCase):
             runtime = services.InferenceRuntime(factory=loader)
             try:
                 runtime.factory()
-                loader.assert_called_once_with(distance_config=config)
+                loader.assert_called_once_with(distance_config=config,
+                                               depth_config=runtime.depth_config)
                 reader.assert_called_once()
             finally:
                 runtime.executor.shutdown()

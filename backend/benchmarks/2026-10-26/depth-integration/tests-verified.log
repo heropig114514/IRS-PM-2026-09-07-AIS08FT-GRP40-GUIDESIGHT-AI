@@ -1,0 +1,959 @@
+Creating test database for alias 'default'...
+
+.....2026-10-26 12:16:41,016 ERROR django.request Service Unavailable: /api/health/
+..2026-10-26 12:16:41,018 WARNING django.request Method Not Allowed: /api/health/
+..2026-10-26 12:16:41,033 INFO core.agent.runtime Agent turn started id=one session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:41,036 INFO core.agent.runtime Agent intent routed id=one route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:41,094 INFO core.agent.runtime Agent turn ended id=one elapsed_ms=61
+..2026-10-26 12:16:41,100 INFO core.agent.places Place search response status=200
+2026-10-26 12:16:41,100 INFO core.agent.places Place search parsed candidates=1 excluded_country=1 scope=SGP
+.2026-10-26 12:16:41,105 INFO core.agent.places Place search response status=200
+2026-10-26 12:16:41,105 INFO core.agent.places Place search parsed candidates=1 excluded_country=0 scope=CHN
+.2026-10-26 12:16:41,110 INFO core.agent.places Place search response status=200
+...2026-10-26 12:16:41,293 INFO core.agent.provider Qwen response kind=agent model=qwen-plus status=200 elapsed_ms=0
+2026-10-26 12:16:41,293 INFO core.agent.provider Qwen response kind=agent model=qwen-plus status=401 elapsed_ms=0
+.2026-10-26 12:16:41,302 INFO core.agent.runtime Agent turn started id=request-1 session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:41,306 INFO core.agent.runtime Agent intent routed id=request-1 route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:41,487 INFO core.agent.runtime Agent tool started id=request-1 name=discover_tools step=1
+2026-10-26 12:16:41,504 INFO core.agent.runtime Agent catalog discovered id=request-1 tools=24
+2026-10-26 12:16:41,504 INFO core.agent.runtime Agent tool finished id=request-1 name=discover_tools
+2026-10-26 12:16:41,506 INFO core.agent.runtime Agent tool started id=request-1 name=read_skill step=2
+2026-10-26 12:16:41,516 INFO core.agent.runtime Agent skill loaded id=request-1 skill=navigation available=12 missing=0
+2026-10-26 12:16:41,516 INFO core.agent.runtime Agent tool finished id=request-1 name=read_skill
+2026-10-26 12:16:41,520 INFO core.agent.runtime Agent tool started id=request-1 name=maps_status step=3
+2026-10-26 12:16:41,521 INFO core.agent.runtime Agent tool finished id=request-1 name=maps_status
+2026-10-26 12:16:41,526 INFO core.agent.runtime Agent turn ended id=request-1 elapsed_ms=234
+2026-10-26 12:16:41,531 INFO core.agent.runtime Agent turn started id=request-2 session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:41,535 INFO core.agent.runtime Agent intent routed id=request-2 route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:41,565 INFO core.agent.runtime Agent tool started id=request-2 name=discover_tools step=1
+2026-10-26 12:16:41,582 INFO core.agent.runtime Agent catalog discovered id=request-2 tools=24
+2026-10-26 12:16:41,582 INFO core.agent.runtime Agent tool finished id=request-2 name=discover_tools
+2026-10-26 12:16:41,588 INFO core.agent.runtime Agent tool started id=request-2 name=read_skill step=2
+2026-10-26 12:16:41,596 INFO core.agent.runtime Agent skill loaded id=request-2 skill=navigation available=12 missing=0
+2026-10-26 12:16:41,597 INFO core.agent.runtime Agent tool finished id=request-2 name=read_skill
+2026-10-26 12:16:41,600 INFO core.agent.runtime Agent turn ended id=request-2 elapsed_ms=78
+...2026-10-26 12:16:41,660 INFO core.agent.transport Agent connected session=owned-tab
+2026-10-26 12:16:41,660 INFO core.agent.transport Agent disconnected session=owned-tab
+.2026-10-26 12:16:41,663 WARNING core.agent.transport Agent socket rejected exception_type=ValueError
+..2026-10-26 12:16:41,671 INFO core.agent.runtime Agent turn started id=request session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:41,675 INFO core.agent.runtime Agent intent routed id=request route=system intents=camera.start skills=camera unknown_policy=reject
+2026-10-26 12:16:41,704 INFO core.agent.runtime Agent tool started id=request name=discover_tools step=1
+2026-10-26 12:16:41,721 INFO core.agent.runtime Agent catalog discovered id=request tools=24
+2026-10-26 12:16:41,721 INFO core.agent.runtime Agent tool finished id=request name=discover_tools
+2026-10-26 12:16:41,724 INFO core.agent.runtime Agent tool started id=request name=read_skill step=2
+2026-10-26 12:16:41,732 INFO core.agent.runtime Agent skill loaded id=request skill=camera available=6 missing=0
+2026-10-26 12:16:41,732 INFO core.agent.runtime Agent tool finished id=request name=read_skill
+2026-10-26 12:16:41,737 INFO core.agent.runtime Agent tool started id=request name=camera_start step=3
+Tool 'camera_start' raised an unexpected exception
+Traceback (most recent call last):
+  File "E:\AI_map\backend\.venv\Lib\site-packages\mcp\server\mcpserver\tools\base.py", line 179, in run
+    result = await self.fn_metadata.call_fn(self.fn, self.is_async, validated, pass_directly)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\.venv\Lib\site-packages\mcp\server\mcpserver\utilities\func_metadata.py", line 163, in call_fn
+    return await fn(**kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\core\agent\tools.py", line 259, in camera_start
+    result = await self.browser("camera_start", {"processing": processing})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\core\agent\tools.py", line 113, in browser
+    return await ai_mcp.browser_call(self.session_id, action, arguments, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\unittest\mock.py", line 2291, in _execute_mock_call
+    raise effect
+TimeoutError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\AI_map\backend\.venv\Lib\site-packages\mcp\server\mcpserver\server.py", line 442, in _handle_call_tool
+    return await self.call_tool(params.name, params.arguments or {}, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\.venv\Lib\site-packages\mcp\server\mcpserver\server.py", line 548, in call_tool
+    return await self._tool_manager.call_tool(name, arguments, context, convert_result=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\.venv\Lib\site-packages\mcp\server\mcpserver\tools\tool_manager.py", line 87, in call_tool
+    return await tool.run(arguments, context, convert_result=convert_result)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\.venv\Lib\site-packages\mcp\server\mcpserver\tools\base.py", line 213, in run
+    raise UnexpectedToolError(f"Error executing tool {self.name}") from exc
+mcp.server.mcpserver.exceptions.UnexpectedToolError: Error executing tool camera_start
+2026-10-26 12:16:41,742 WARNING core.agent.runtime Agent MCP failed id=request name=camera_start
+2026-10-26 12:16:41,742 WARNING core.agent.runtime Agent turn failed id=request code=tool_failed
+2026-10-26 12:16:41,742 INFO core.agent.runtime Agent turn ended id=request elapsed_ms=78
+...2026-10-26 12:16:41,748 INFO core.agent.poi POI response operation=list status=403
+.2026-10-26 12:16:41,752 INFO core.agent.poi POI response operation=list status=200
+2026-10-26 12:16:41,752 INFO core.agent.poi POI catalog parsed count=2
+.2026-10-26 12:16:41,754 INFO core.agent.poi POI response operation=pois status=200
+2026-10-26 12:16:41,754 INFO core.agent.poi POI search parsed count=1 radius_m=2000 category_count=1
+2026-10-26 12:16:41,757 INFO core.agent.poi POI response operation=pois status=200
+2026-10-26 12:16:41,757 INFO core.agent.poi POI search parsed count=0 radius_m=2000 category_count=1
+..2026-10-26 12:16:41,810 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:41,814 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:41,843 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:41,860 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:41,860 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:41,865 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:41,875 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:41,875 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:41,876 INFO core.agent.runtime Agent tool started id=test name=places_search step=3
+2026-10-26 12:16:41,879 INFO core.agent.runtime Agent awaiting input id=test tool=places_search result_count=0
+2026-10-26 12:16:41,879 INFO core.agent.runtime Agent tool finished id=test name=places_search
+2026-10-26 12:16:41,882 WARNING core.agent.runtime Agent turn failed id=test code=invalid_tool_call
+2026-10-26 12:16:41,882 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=78
+2026-10-26 12:16:41,890 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:41,893 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:41,926 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:41,950 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:41,950 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:41,954 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:41,965 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:41,965 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:41,969 INFO core.agent.runtime Agent tool started id=test name=places_search step=3
+2026-10-26 12:16:41,970 INFO core.agent.runtime Agent awaiting input id=test tool=places_search result_count=0
+2026-10-26 12:16:41,971 INFO core.agent.runtime Agent tool finished id=test name=places_search
+2026-10-26 12:16:41,974 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=94
+2026-10-26 12:16:41,981 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:41,985 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,020 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,043 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,043 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,046 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:42,058 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:42,058 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,060 INFO core.agent.runtime Agent tool started id=test name=places_search step=3
+2026-10-26 12:16:42,063 INFO core.agent.runtime Agent awaiting input id=test tool=places_search result_count=2
+2026-10-26 12:16:42,063 INFO core.agent.runtime Agent tool finished id=test name=places_search
+2026-10-26 12:16:42,063 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=94
+2026-10-26 12:16:42,070 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,074 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,110 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,130 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,130 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,132 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:42,143 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:42,143 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,149 INFO core.agent.runtime Agent tool started id=test name=places_search step=3
+2026-10-26 12:16:42,150 INFO core.agent.runtime Agent awaiting input id=test tool=places_search result_count=2
+2026-10-26 12:16:42,150 INFO core.agent.runtime Agent tool finished id=test name=places_search
+2026-10-26 12:16:42,150 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=77
+.2026-10-26 12:16:42,160 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,165 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,198 WARNING core.agent.runtime Agent turn failed id=test code=invalid_tool_call
+2026-10-26 12:16:42,198 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=47
+2026-10-26 12:16:42,204 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,209 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,241 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,260 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,260 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,263 WARNING core.agent.runtime Agent turn failed id=test code=invalid_tool_call
+2026-10-26 12:16:42,263 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=61
+2026-10-26 12:16:42,270 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,271 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,304 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,321 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,321 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,321 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:42,332 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:42,332 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,336 WARNING core.agent.runtime Agent turn failed id=test code=invalid_tool_call
+2026-10-26 12:16:42,336 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=77
+2026-10-26 12:16:42,342 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,343 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,371 WARNING core.agent.runtime Agent turn failed id=test code=discovery_required
+2026-10-26 12:16:42,371 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=32
+..2026-10-26 12:16:42,426 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,430 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,458 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,474 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,474 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,476 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:42,486 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:42,486 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,487 INFO core.agent.runtime Agent tool started id=test name=places_search step=3
+2026-10-26 12:16:42,490 INFO core.agent.runtime Agent tool finished id=test name=places_search
+2026-10-26 12:16:42,493 WARNING core.agent.runtime Agent turn failed id=test code=invalid_tool_call
+2026-10-26 12:16:42,493 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=78
+.2026-10-26 12:16:42,500 INFO core.agent.runtime Agent turn started id=test session=owned-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,504 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,532 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,548 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,548 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,550 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:42,560 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:42,560 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,563 INFO core.agent.runtime Agent tool started id=test name=places_categories step=3
+2026-10-26 12:16:42,565 INFO core.agent.runtime Agent tool finished id=test name=places_categories
+2026-10-26 12:16:42,565 INFO core.agent.runtime Agent tool started id=test name=maps_status step=4
+2026-10-26 12:16:42,569 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,571 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=78
+.....2026-10-26 12:16:42,613 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,613 INFO core.agent.runtime Agent intent routed id=test route=general intents= skills= unknown_policy=general
+2026-10-26 12:16:42,614 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=15
+2026-10-26 12:16:42,620 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,621 INFO core.agent.runtime Agent intent routed id=test route=unsupported intents= skills= unknown_policy=general
+2026-10-26 12:16:42,621 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=0
+..2026-10-26 12:16:42,654 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,658 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.status skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,686 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,702 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,702 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,704 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:42,713 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:42,714 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,715 INFO core.agent.runtime Agent tool started id=test name=maps_status step=3
+2026-10-26 12:16:42,715 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,720 INFO core.agent.runtime Agent tool started id=test name=maps_status step=4
+2026-10-26 12:16:42,721 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,721 INFO core.agent.runtime Agent tool started id=test name=maps_status step=5
+2026-10-26 12:16:42,724 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,726 INFO core.agent.runtime Agent tool started id=test name=maps_status step=6
+2026-10-26 12:16:42,726 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,729 INFO core.agent.runtime Agent tool started id=test name=maps_status step=7
+2026-10-26 12:16:42,730 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,732 INFO core.agent.runtime Agent tool started id=test name=maps_status step=8
+2026-10-26 12:16:42,732 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,735 INFO core.agent.runtime Agent tool started id=test name=maps_status step=9
+2026-10-26 12:16:42,736 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,737 INFO core.agent.runtime Agent tool started id=test name=maps_status step=10
+2026-10-26 12:16:42,737 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,742 INFO core.agent.runtime Agent tool started id=test name=maps_status step=11
+2026-10-26 12:16:42,742 INFO core.agent.runtime Agent tool finished id=test name=maps_status
+2026-10-26 12:16:42,743 WARNING core.agent.runtime Agent turn failed id=test code=model_step_limit
+2026-10-26 12:16:42,743 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=94
+.2026-10-26 12:16:42,750 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,753 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.stop,camera.stop skills=camera,navigation unknown_policy=reject
+2026-10-26 12:16:42,781 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,797 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,797 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,800 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:42,809 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:42,809 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,810 INFO core.agent.runtime Agent tool started id=test name=read_skill step=3
+2026-10-26 12:16:42,819 INFO core.agent.runtime Agent skill loaded id=test skill=camera available=6 missing=0
+2026-10-26 12:16:42,820 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:42,821 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=78
+.2026-10-26 12:16:42,831 INFO core.agent.runtime Agent turn started id=test session=test-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,832 INFO core.agent.runtime Agent intent routed id=test route=unsupported intents= skills= unknown_policy=reject
+2026-10-26 12:16:42,832 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=14
+2026-10-26 12:16:42,842 INFO core.agent.runtime Agent turn started id=test session=test-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,843 INFO core.agent.runtime Agent intent routed id=test route=general intents= skills= unknown_policy=reject
+2026-10-26 12:16:42,843 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=0
+2026-10-26 12:16:42,850 INFO core.agent.runtime Agent turn started id=test session=test-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,854 INFO core.agent.runtime Agent intent routed id=test route=clarify intents=camera.stop,navigation.stop skills= unknown_policy=reject
+2026-10-26 12:16:42,854 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=0
+2026-10-26 12:16:42,860 INFO core.agent.runtime Agent turn started id=test session=test-tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,863 INFO core.agent.runtime Agent intent routed id=test route=system intents=assistant.help skills= unknown_policy=reject
+2026-10-26 12:16:42,863 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=15
+.2026-10-26 12:16:42,871 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,874 WARNING core.agent.runtime Agent turn failed id=test code=provider_test_failure
+2026-10-26 12:16:42,874 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=0
+.2026-10-26 12:16:42,882 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:42,885 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:42,913 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:42,930 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:42,930 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:42,932 WARNING core.agent.runtime Agent turn failed id=test code=invalid_tool_call
+2026-10-26 12:16:42,932 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=46
+.2026-10-26 12:16:42,935 INFO core.ai_bridge browser connected session=test-tab
+2026-10-26 12:16:42,935 INFO core.ai_bridge browser command sent session=test-tab id=fca74e31e4904f1486e56df8e8ae11d9 action=snapshot
+2026-10-26 12:16:42,935 INFO core.ai_bridge browser command sent session=test-tab id=df00d800850a412f8a39e01e471684fa action=click
+2026-10-26 12:16:42,936 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+.2026-10-26 12:16:42,936 INFO core.ai_bridge browser connected session=test-tab
+2026-10-26 12:16:42,936 INFO core.ai_bridge browser command sent session=test-tab id=7007298a013c41709da81d9f786f22a5 action=click
+2026-10-26 12:16:42,936 INFO core.ai_bridge browser disconnected session=test-tab pending=1
+.2026-10-26 12:16:42,940 ERROR core.ai_bridge browser protocol failed session=new
+Traceback (most recent call last):
+  File "E:\AI_map\backend\core\ai_bridge.py", line 146, in socket
+    raise ValueError("First message must be hello")
+ValueError: First message must be hello
+.2026-10-26 12:16:42,943 INFO core.ai_bridge browser connected session=test-tab
+2026-10-26 12:16:42,943 INFO core.ai_bridge browser connected session=test-tab
+2026-10-26 12:16:42,998 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+2026-10-26 12:16:42,998 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+.2026-10-26 12:16:43,000 INFO core.ai_bridge browser connected session=test-tab
+2026-10-26 12:16:43,000 INFO core.ai_bridge browser command sent session=test-tab id=f1118b5b38bf4a57aa00f34187e3cff6 action=click
+2026-10-26 12:16:43,058 ERROR core.ai_bridge browser command timeout session=test-tab id=f1118b5b38bf4a57aa00f34187e3cff6 action=click
+2026-10-26 12:16:43,119 INFO core.ai_bridge browser disconnected session=test-tab pending=0
+.2026-10-26 12:16:43,124 INFO core.ai_mcp MCP database operation start operation=status
+2026-10-26 12:16:43,124 INFO core.ai_mcp MCP database operation complete operation=status
+2026-10-26 12:16:43,131 INFO core.ai_mcp MCP API request method=GET path=/api/health/
+.2026-10-26 12:16:43,158 ERROR core.ai_mcp MCP browser action failed session=missing action=navigation_status error_type=ValueError
+2026-10-26 12:16:43,160 ERROR core.ai_mcp MCP browser action failed session=missing action=navigation_start error_type=ValueError
+2026-10-26 12:16:43,160 ERROR core.ai_mcp MCP browser action failed session=missing action=navigation_stop error_type=ValueError
+..2026-10-26 12:16:43,197 ERROR core.ai_mcp MCP browser action failed session=missing action=speech_status error_type=ValueError
+.2026-10-26 12:16:43,208 ERROR core.ai_mcp MCP browser action failed session=missing action=snapshot error_type=ValueError
+2026-10-26 12:16:43,210 INFO core.ai_mcp MCP database operation start operation=write
+2026-10-26 12:16:43,210 ERROR core.ai_mcp MCP database operation failed operation=write error_type=ValueError
+..2026-10-26 12:16:43,242 ERROR core.ai_mcp MCP browser action failed session=missing action=vibration_test error_type=ValueError
+...........................Object depth unavailable objects=1 total=2
+...Depth model missing or invalid local weight path
+Depth model load failed type=ValueError
+Depth model load failed type=ValueError
+.Depth result rejected
+Depth result rejected
+Depth inference failed type=RuntimeError
+Depth GPU activation failed type=RuntimeError
+........Depth engine shape unavailable shape=(1, 3, 768, 768)
+............Object depth unavailable objects=1 total=3
+Object depth unavailable objects=1 total=3
+Object depth unavailable objects=1 total=3
+Object depth unavailable objects=1 total=3
+......usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: Input must be an existing image or image directory
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: Input directory contains no supported images
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --interval must be a finite number >= 0
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --interval must be a finite number >= 0
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --question must be 1..200 characters
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --question must be 1..200 characters
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: argument --language: invalid choice: 'fr-FR' (choose from en-US, zh-CN)
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --output must be a new directory that does not exist yet
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: Input must be an existing image or image directory
+.2026-10-26 12:16:45,000 INFO core.vlm VLM request started id=661050af0693 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,000 INFO core.vlm VLM response received id=661050af0693 status=200
+2026-10-26 12:16:45,000 INFO core.vlm VLM request completed id=661050af0693 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,004 INFO core.vlm VLM request started id=0fbc12cc78d4 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,004 INFO core.vlm VLM response received id=0fbc12cc78d4 status=200
+2026-10-26 12:16:45,004 INFO core.vlm VLM request completed id=0fbc12cc78d4 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,007 INFO core.vlm VLM request started id=23243e65fd6f model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,008 INFO core.vlm VLM response received id=23243e65fd6f status=200
+2026-10-26 12:16:45,008 INFO core.vlm VLM request completed id=23243e65fd6f elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,011 INFO core.vlm VLM request started id=c683f133fa55 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,011 INFO core.vlm VLM response received id=c683f133fa55 status=200
+2026-10-26 12:16:45,011 INFO core.vlm VLM request completed id=c683f133fa55 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,013 INFO core.vlm VLM request started id=297846a34efd model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,013 INFO core.vlm VLM response received id=297846a34efd status=200
+2026-10-26 12:16:45,013 INFO core.vlm VLM request completed id=297846a34efd elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-26 12:16:45,036 INFO core.vlm VLM request started id=fd88494024b1 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,036 INFO core.vlm VLM response received id=fd88494024b1 status=200
+2026-10-26 12:16:45,036 INFO core.vlm VLM request completed id=fd88494024b1 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,158 INFO core.vlm VLM request started id=b7ec2006f4ff model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,158 INFO core.vlm VLM response received id=b7ec2006f4ff status=500
+.2026-10-26 12:16:45,181 INFO core.vlm VLM request started id=dc93f9b1b43b model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,182 INFO core.vlm VLM response received id=dc93f9b1b43b status=200
+2026-10-26 12:16:45,182 INFO core.vlm VLM request completed id=dc93f9b1b43b elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,185 INFO core.vlm VLM request started id=b65febc824f6 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,185 INFO core.vlm VLM response received id=b65febc824f6 status=200
+2026-10-26 12:16:45,185 INFO core.vlm VLM request completed id=b65febc824f6 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,186 INFO core.vlm VLM request started id=8e6f6b6f9ebe model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,189 INFO core.vlm VLM response received id=8e6f6b6f9ebe status=200
+2026-10-26 12:16:45,189 INFO core.vlm VLM request completed id=8e6f6b6f9ebe elapsed_ms=16 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,194 INFO core.vlm VLM request started id=fa7b03f493f6 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,194 INFO core.vlm VLM response received id=fa7b03f493f6 status=200
+2026-10-26 12:16:45,194 INFO core.vlm VLM request completed id=fa7b03f493f6 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,196 INFO core.vlm VLM request started id=bb935d12bd85 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,197 INFO core.vlm VLM response received id=bb935d12bd85 status=200
+2026-10-26 12:16:45,197 INFO core.vlm VLM request completed id=bb935d12bd85 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:45,197 INFO core.vlm VLM request started id=0a9be22323f3 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,198 INFO core.vlm VLM response received id=0a9be22323f3 status=200
+2026-10-26 12:16:45,198 INFO core.vlm VLM request completed id=0a9be22323f3 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-26 12:16:45,238 INFO core.vlm VLM request started id=958a40247173 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,239 INFO core.vlm VLM response received id=958a40247173 status=200
+2026-10-26 12:16:45,239 INFO core.vlm VLM request completed id=958a40247173 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+usage: python -m tools.describe_image [-h] [--question QUESTION]
+                                      [--language {en-US,zh-CN}]
+                                      [--output OUTPUT] [--interval INTERVAL]
+                                      source
+python -m tools.describe_image: error: --output must be a new directory that does not exist yet
+.2026-10-26 12:16:45,293 INFO core.vlm VLM request started id=892400b7171b model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,293 INFO core.vlm VLM response received id=892400b7171b status=401
+2026-10-26 12:16:45,325 INFO core.vlm VLM request started id=ed0986440702 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,325 INFO core.vlm VLM response received id=ed0986440702 status=429
+2026-10-26 12:16:45,354 INFO core.vlm VLM request started id=fd00304c54c3 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,355 INFO core.vlm VLM response received id=fd00304c54c3 status=500
+2026-10-26 12:16:45,358 INFO core.vlm VLM request started id=d34a48c7f73f model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,358 INFO core.vlm VLM response received id=d34a48c7f73f status=500
+2026-10-26 12:16:45,361 INFO core.vlm VLM request started id=ddff0d6da74b model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,361 INFO core.vlm VLM response received id=ddff0d6da74b status=500
+.2026-10-26 12:16:45,459 INFO core.vlm VLM request started id=d83ea2f98f64 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:45,460 INFO core.vlm VLM response received id=d83ea2f98f64 status=200
+2026-10-26 12:16:45,460 INFO core.vlm VLM request completed id=d83ea2f98f64 elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.ss....................................2026-10-26 12:16:45,771 WARNING django.request Not Found: /vision/config/
+2026-10-26 12:16:45,772 WARNING django.request Not Found: /vision/frame/
+2026-10-26 12:16:45,772 WARNING django.request Not Found: /vision/hf/config/
+2026-10-26 12:16:45,772 WARNING django.request Not Found: /vision/hf/frame/
+2026-10-26 12:16:45,773 WARNING django.request Not Found: /assets/detection-client.js
+2026-10-26 12:16:45,773 WARNING django.request Not Found: /assets/detection-sample.jpg
+..2026-10-26 12:16:45,778 WARNING django.request Not Found: /assets/README.md
+2026-10-26 12:16:45,778 WARNING django.request Not Found: /assets/.env
+.2026-10-26 12:16:45,780 INFO core.echo echo admitted connection=c9f3bf2d5fb6 active=1
+2026-10-26 12:16:45,780 INFO core.echo echo released connection=c9f3bf2d5fb6 frames=1 bytes=131072 seconds=0.00 active=0
+.2026-10-26 12:16:45,782 INFO core.echo echo admitted connection=f1fed9215851 active=1
+2026-10-26 12:16:45,782 INFO core.echo echo admitted connection=6b44047879b2 active=2
+2026-10-26 12:16:45,782 INFO core.echo echo admitted connection=314e659dfb2c active=3
+2026-10-26 12:16:45,782 INFO core.echo echo admitted connection=00b7d79d2ab0 active=4
+2026-10-26 12:16:45,782 WARNING core.echo echo rejected reason=capacity active=4
+2026-10-26 12:16:45,782 INFO core.echo echo released connection=f1fed9215851 frames=0 bytes=0 seconds=0.00 active=3
+2026-10-26 12:16:45,782 INFO core.echo echo released connection=6b44047879b2 frames=0 bytes=0 seconds=0.00 active=2
+2026-10-26 12:16:45,782 INFO core.echo echo released connection=314e659dfb2c frames=0 bytes=0 seconds=0.00 active=1
+2026-10-26 12:16:45,782 INFO core.echo echo released connection=00b7d79d2ab0 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-26 12:16:45,784 INFO core.echo echo admitted connection=e800d636a732 active=1
+2026-10-26 12:16:45,784 WARNING core.echo echo invalid frame connection=e800d636a732 size=0
+2026-10-26 12:16:45,784 INFO core.echo echo released connection=e800d636a732 frames=0 bytes=0 seconds=0.00 active=0
+2026-10-26 12:16:45,784 INFO core.echo echo admitted connection=ffb92c4b0692 active=1
+2026-10-26 12:16:45,784 WARNING core.echo echo invalid frame connection=ffb92c4b0692 size=1048577
+2026-10-26 12:16:45,784 INFO core.echo echo released connection=ffb92c4b0692 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-26 12:16:45,786 INFO core.echo echo admitted connection=364d1ba799b5 active=1
+2026-10-26 12:16:45,786 WARNING core.echo echo invalid control connection=364d1ba799b5
+2026-10-26 12:16:45,786 INFO core.echo echo released connection=364d1ba799b5 frames=0 bytes=0 seconds=0.00 active=0
+2026-10-26 12:16:45,786 INFO core.echo echo admitted connection=e781aab4b0a0 active=1
+2026-10-26 12:16:45,787 WARNING core.echo echo invalid control connection=e781aab4b0a0
+2026-10-26 12:16:45,787 INFO core.echo echo released connection=e781aab4b0a0 frames=0 bytes=0 seconds=0.00 active=0
+2026-10-26 12:16:45,787 INFO core.echo echo admitted connection=b1d810613967 active=1
+2026-10-26 12:16:45,787 WARNING core.echo echo invalid control connection=b1d810613967
+2026-10-26 12:16:45,787 INFO core.echo echo released connection=b1d810613967 frames=0 bytes=0 seconds=0.00 active=0
+.2026-10-26 12:16:45,788 WARNING core.echo echo rejected reason=origin_or_host
+2026-10-26 12:16:45,788 WARNING core.echo echo rejected reason=origin_or_host
+.2026-10-26 12:16:45,790 INFO core.echo echo admitted connection=5d46b7b635c1 active=1
+2026-10-26 12:16:45,790 INFO core.echo echo released connection=5d46b7b635c1 frames=0 bytes=0 seconds=0.00 active=0
+............2026-10-26 12:16:45,840 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+..2026-10-26 12:16:45,842 WARNING core.hf_services ZeroGPU service rejected reason=quota_exceeded requested_seconds=None remaining_seconds=None
+2026-10-26 12:16:45,842 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=DetectionError
+2026-10-26 12:16:45,842 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+2026-10-26 12:16:45,843 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=ValueError
+2026-10-26 12:16:45,843 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+2026-10-26 12:16:45,844 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=ValueError
+2026-10-26 12:16:45,845 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+2026-10-26 12:16:45,847 WARNING core.hf_services ZeroGPU allocation transport failed method=GET phase=body type=ValueError
+2026-10-26 12:16:45,847 INFO core.hf_services ZeroGPU allocation transport ended method=GET phase=body elapsed_ms=0.0
+Found 504 test(s).
+System check identified no issues (0 silenced).
+.2026-10-26 12:16:45,911 INFO core.hf_video_relay HF live admitted id=bdab7e9e9db5 GPU_not_requested=true
+2026-10-26 12:16:45,912 INFO core.hf_video_relay HF live quota id=bdab7e9e9db5 allowed=False reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-26 12:16:45,913 ERROR core.hf_video_relay HF live failed id=bdab7e9e9db5 phase=quota received=0 forwarded=0 delivered=0 type=DetectionError
+2026-10-26 12:16:45,913 INFO core.hf_video_relay HF live released id=bdab7e9e9db5 received=0 forwarded=0 delivered=0 send_max_ms=0.0 worker_frames=None
+2026-10-26 12:16:46,119 INFO core.hf_video_relay HF live admitted id=c701846fab16 GPU_not_requested=true
+2026-10-26 12:16:46,119 INFO core.hf_video_relay HF live quota id=c701846fab16 allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-26 12:16:46,121 INFO core.hf_video_relay HF live released id=c701846fab16 received=0 forwarded=0 delivered=0 send_max_ms=0.0 worker_frames=None
+.2026-10-26 12:16:46,558 WARNING core.hf_video_relay HF live rejected origin_or_host_or_query
+2026-10-26 12:16:46,561 WARNING core.hf_video_relay HF live rejected origin_or_host_or_query
+2026-10-26 12:16:46,562 INFO core.hf_video_relay HF live admitted id=62dec73f728c GPU_not_requested=true
+2026-10-26 12:16:46,564 INFO core.hf_video_relay HF live quota id=62dec73f728c allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-26 12:16:46,567 ERROR core.hf_video_relay HF live failed id=62dec73f728c phase=first_input received=0 forwarded=0 delivered=0 type=ValueError
+2026-10-26 12:16:46,567 INFO core.hf_video_relay HF live released id=62dec73f728c received=0 forwarded=0 delivered=0 send_max_ms=0.0 worker_frames=None
+.2026-10-26 12:16:46,996 INFO core.hf_video_relay HF live admitted id=4107948ece6c GPU_not_requested=true
+2026-10-26 12:16:46,997 INFO core.hf_video_relay HF live quota id=4107948ece6c allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-26 12:16:47,001 INFO core.hf_video_relay HF live allocation requested id=4107948ece6c max_seconds=60 session_seconds=55
+2026-10-26 12:16:47,009 INFO core.hf_video_relay HF live delivery id=4107948ece6c frames=1 receive_ms=6.8 send_ms=0.1 send_max_ms=0.1 server_ms=None graph_setup_ms=None upstream_ms=7.4 prs_queue_ms=0.06 hf_queue_ms=2.0942000001014094 hf_local_cycle_ms=1.0910000000876607
+2026-10-26 12:16:47,086 INFO core.hf_video_relay HF live released id=4107948ece6c received=6 forwarded=6 delivered=6 send_max_ms=0.1 worker_frames=6
+.2026-10-26 12:16:47,525 INFO core.hf_video_relay HF live quota id=7a486613da44 allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-26 12:16:47,525 INFO core.hf_video_relay HF live allocation requested id=7a486613da44 max_seconds=60 session_seconds=55
+2026-10-26 12:16:47,552 INFO core.hf_video_relay HF live delivery id=7a486613da44 frames=1 receive_ms=0.3 send_ms=25.9 send_max_ms=25.9 server_ms=None graph_setup_ms=None upstream_ms=0.4 prs_queue_ms=1.02 hf_queue_ms=None hf_local_cycle_ms=None
+.2026-10-26 12:16:47,559 INFO core.hf_video_relay HF live admitted id=2f7ca3ff0a61 GPU_not_requested=true
+2026-10-26 12:16:47,559 INFO core.hf_video_relay HF live quota id=2f7ca3ff0a61 allowed=True reason=None required_seconds=None free_seconds=None free_runs=None
+2026-10-26 12:16:47,562 INFO core.hf_video_relay HF live allocation requested id=2f7ca3ff0a61 max_seconds=60 session_seconds=55
+ZeroGPU live worker failed frames=0 type=RuntimeError
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_worker.py", line 157, in run_worker
+    detector = factory(*arguments, **options)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\core\test_hf_live.py", line 343, in broken
+    raise RuntimeError("Synthetic allocated failure")
+RuntimeError: Synthetic allocated failure
+2026-10-26 12:16:47,588 ERROR core.hf_video_relay HF live failed id=2f7ca3ff0a61 phase=streaming received=1 forwarded=1 delivered=0 type=RuntimeError
+2026-10-26 12:16:47,588 INFO core.hf_video_relay HF live released id=2f7ca3ff0a61 received=1 forwarded=1 delivered=0 send_max_ms=0.0 worker_frames=None
+.Object depth unavailable objects=4 total=6
+Object depth unavailable objects=4 total=6
+Object depth unavailable objects=4 total=6
+Object depth unavailable objects=4 total=6
+Starting A / predicted: 2 images
+Finished A / predicted: complete
+Starting B / predicted: 2 images
+Finished B / predicted: complete
+Starting C / predicted: 2 images
+Finished C / predicted: failed
+Starting E / predicted: 2 images
+Finished E / predicted: complete
+c gt 1 2
+.................Label raster probe rejected unsupported input
+Label raster probe rejected unsupported input
+Label raster probe rejected oversized entry
+.......2026-10-26 12:16:49,330 ERROR django.request Service Unavailable: /maps/config/
+.2026-10-26 12:16:49,335 WARNING django.request Not Found: /live/assets/integration/maps-navigation-speech.js
+2026-10-26 12:16:49,335 WARNING django.request Not Found: /live/assets/integration/maps-navigation-bridge.js
+2026-10-26 12:16:49,340 WARNING django.request Not Found: /live/assets/integration/maps-navigation-speech.css
+2026-10-26 12:16:49,340 WARNING django.request Not Found: /live/assets/integration/navigation-speech.js
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /live/assets/integration/events.js
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /live/assets/integration/catalog.js
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /assets/integration/unknown.js
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /assets/integration/../../backend/.env
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /assets/integration/../navigation.js
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /assets/integration/navigation-sample.json
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /assets/integration/video-mvp.js
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /assets/../.env
+2026-10-26 12:16:49,344 WARNING django.request Not Found: /assets/README.md
+..2026-10-26 12:16:49,356 WARNING core.maps Route request failed id=d92a3a013bd3 code=origin_rejected status=403
+2026-10-26 12:16:49,356 WARNING django.request Forbidden: /maps/route/
+2026-10-26 12:16:49,356 WARNING core.maps Route request failed id=4ace01b1028f code=origin_rejected status=403
+2026-10-26 12:16:49,356 WARNING django.request Forbidden: /maps/route/
+2026-10-26 12:16:49,356 WARNING core.maps Route request failed id=494e8e69b9c0 code=invalid_route_input status=400
+2026-10-26 12:16:49,356 WARNING django.request Bad Request: /maps/route/
+2026-10-26 12:16:49,356 WARNING core.maps Route request failed id=97bca8faaf2b code=invalid_route_input status=400
+2026-10-26 12:16:49,356 WARNING django.request Bad Request: /maps/route/
+2026-10-26 12:16:49,356 WARNING core.maps Route request failed id=604ce058eb5a code=invalid_route_input status=400
+2026-10-26 12:16:49,356 WARNING django.request Bad Request: /maps/route/
+2026-10-26 12:16:49,356 WARNING core.maps Route request failed id=0697d90c8d99 code=invalid_route_input status=400
+2026-10-26 12:16:49,356 WARNING django.request Bad Request: /maps/route/
+2026-10-26 12:16:49,356 WARNING core.maps Route request failed id=fa07fe7c97e1 code=invalid_route_input status=400
+2026-10-26 12:16:49,360 WARNING django.request Bad Request: /maps/route/
+2026-10-26 12:16:49,360 WARNING core.maps Route request failed id=15ed7d9e4c46 code=invalid_route_input status=400
+2026-10-26 12:16:49,360 WARNING django.request Bad Request: /maps/route/
+2026-10-26 12:16:49,360 WARNING core.maps Route request failed id=0bcccb03ebe8 code=invalid_route_input status=400
+2026-10-26 12:16:49,360 WARNING django.request Bad Request: /maps/route/
+2026-10-26 12:16:49,360 WARNING core.maps Route request failed id=895299a67393 code=request_too_large status=413
+2026-10-26 12:16:49,360 WARNING django.request Request Entity Too Large: /maps/route/
+2026-10-26 12:16:49,360 WARNING core.maps Route request failed id=139a76145808 code=invalid_content_type status=415
+2026-10-26 12:16:49,360 WARNING django.request Unsupported Media Type: /maps/route/
+2026-10-26 12:16:49,360 WARNING django.request Method Not Allowed (GET): /maps/route/
+.2026-10-26 12:16:49,360 WARNING core.maps Route request failed id=50b7bf0a0f27 code=ors_timeout status=504
+2026-10-26 12:16:49,360 ERROR django.request Gateway Timeout: /maps/route/
+..2026-10-26 12:16:49,360 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,360 INFO core.services ORS response received id=test status=403
+2026-10-26 12:16:49,360 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,360 INFO core.services ORS response received id=test status=429
+2026-10-26 12:16:49,360 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,360 INFO core.services ORS response received id=test status=400
+2026-10-26 12:16:49,360 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,360 INFO core.services ORS response received id=test status=500
+2026-10-26 12:16:49,360 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,360 INFO core.services ORS response received id=test status=302
+....2026-10-26 12:16:49,375 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,375 INFO core.services ORS response received id=test status=200
+2026-10-26 12:16:49,375 INFO core.services ORS request completed id=test elapsed_ms=0 points=2 steps=2
+.2026-10-26 12:16:49,380 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,380 INFO core.services ORS request started id=test profile=foot-walking
+2026-10-26 12:16:49,380 INFO core.services ORS response received id=test status=200
+.....................2026-10-26 12:16:57,198 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:57,202 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:57,247 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:57,268 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:57,268 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:57,270 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:57,282 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:57,283 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:57,286 INFO core.agent.runtime Agent tool started id=test name=places_search step=3
+2026-10-26 12:16:57,288 INFO core.agent.runtime Agent awaiting input id=test tool=places_search result_count=1
+2026-10-26 12:16:57,288 INFO core.agent.runtime Agent tool finished id=test name=places_search
+2026-10-26 12:16:57,289 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=92
+.2026-10-26 12:16:57,291 INFO core.agent.place_resolution Phonetic query duplicates omitted count=1
+2026-10-26 12:16:57,291 INFO core.agent.place_resolution Phonetic hypothesis search started index=1 total=2
+2026-10-26 12:16:57,291 INFO core.agent.place_resolution Phonetic place resolution queries=2 candidates=0 confirmation_required=true
+2026-10-26 12:16:57,292 INFO core.agent.place_resolution Phonetic query duplicates omitted count=1
+2026-10-26 12:16:57,292 INFO core.agent.place_resolution Phonetic place resolution queries=1 candidates=0 confirmation_required=true
+.2026-10-26 12:16:57,294 INFO core.agent.place_resolution Phonetic hypothesis search started index=1 total=1
+2026-10-26 12:16:57,294 INFO core.agent.place_resolution Phonetic place resolution queries=2 candidates=0 confirmation_required=true
+...2026-10-26 12:16:57,312 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:57,316 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:57,358 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:57,384 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:57,384 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:57,388 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:57,402 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:57,403 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:57,407 WARNING core.agent.runtime Agent turn failed id=test code=invalid_tool_call
+2026-10-26 12:16:57,407 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=109
+2026-10-26 12:16:57,416 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:57,421 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:57,488 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:57,516 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:57,516 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:57,521 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:57,536 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:57,536 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:57,541 WARNING core.agent.runtime Agent turn failed id=test code=candidate_mismatch
+2026-10-26 12:16:57,541 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=125
+2026-10-26 12:16:57,551 INFO core.agent.runtime Agent turn started id=test session=tab skills=b1f278171443421564ed40f8c8e278e7772b36fa134b3a9e1e3f4e2937647468
+2026-10-26 12:16:57,555 INFO core.agent.runtime Agent intent routed id=test route=system intents=navigation.start skills=navigation unknown_policy=reject
+2026-10-26 12:16:57,600 INFO core.agent.runtime Agent tool started id=test name=discover_tools step=1
+2026-10-26 12:16:57,628 INFO core.agent.runtime Agent catalog discovered id=test tools=24
+2026-10-26 12:16:57,628 INFO core.agent.runtime Agent tool finished id=test name=discover_tools
+2026-10-26 12:16:57,631 INFO core.agent.runtime Agent tool started id=test name=read_skill step=2
+2026-10-26 12:16:57,645 INFO core.agent.runtime Agent skill loaded id=test skill=navigation available=12 missing=0
+2026-10-26 12:16:57,645 INFO core.agent.runtime Agent tool finished id=test name=read_skill
+2026-10-26 12:16:57,648 INFO core.agent.runtime Agent tool started id=test name=maps_plan step=3
+2026-10-26 12:16:57,651 INFO core.agent.runtime Agent tool finished id=test name=maps_plan
+2026-10-26 12:16:57,656 INFO core.agent.runtime Agent turn ended id=test elapsed_ms=109
+.2026-10-26 12:16:57,659 INFO core.agent.place_resolution Phonetic hypothesis search started index=1 total=2
+2026-10-26 12:16:57,659 WARNING core.agent.place_resolution Phonetic hypothesis search failed index=1 code=geocoder_http_error
+....2026-10-26 12:16:57,668 INFO core.agent.place_resolution Phonetic hypothesis search started index=1 total=2
+2026-10-26 12:16:57,668 INFO core.agent.place_resolution Phonetic hypothesis search started index=2 total=2
+2026-10-26 12:16:57,669 INFO core.agent.place_resolution Phonetic place resolution queries=3 candidates=1 confirmation_required=true
+..2026-10-26 12:16:57,673 INFO core.resident.services Resident ready mode=detection load_ms=0.9
+2026-10-26 12:16:57,674 INFO core.resident.asgi Resident admitted id=eb7cec6c4195 mode=detection
+2026-10-26 12:16:57,674 INFO core.resident.services Resident session state reset mode=detection
+2026-10-26 12:16:57,676 ERROR core.resident.asgi Resident released id=eb7cec6c4195 received=0 delivered=0 failure=ValueError
+2026-10-26 12:16:57,676 INFO core.resident.asgi Resident admitted id=70d1369f1960 mode=detection
+2026-10-26 12:16:57,676 INFO core.resident.services Resident session state reset mode=detection
+2026-10-26 12:16:57,678 ERROR core.resident.asgi Resident released id=70d1369f1960 received=0 delivered=0 failure=ValueError
+2026-10-26 12:16:57,679 INFO core.resident.asgi Resident admitted id=0f8f7af8bcd8 mode=detection
+2026-10-26 12:16:57,679 INFO core.resident.services Resident session state reset mode=detection
+2026-10-26 12:16:57,680 ERROR core.resident.asgi Resident released id=0f8f7af8bcd8 received=12 delivered=0 failure=ValueError
+2026-10-26 12:16:57,682 INFO core.resident.services Resident stopped
+.2026-10-26 12:16:57,687 INFO core.resident.services Resident ready mode=detection load_ms=1.0
+2026-10-26 12:16:57,687 INFO core.resident.asgi Resident admitted id=91f8fe7ecc6b mode=detection
+2026-10-26 12:16:57,688 INFO core.resident.services Resident session state reset mode=detection
+2026-10-26 12:16:57,723 INFO core.resident.asgi Resident released id=91f8fe7ecc6b received=1 delivered=0 failure=none
+2026-10-26 12:16:57,724 INFO core.resident.services Resident stopped
+.2026-10-26 12:16:57,730 ERROR core.resident.asgi Resident startup failed type=RuntimeError
+2026-10-26 12:16:57,731 INFO core.resident.services Resident stopped
+2026-10-26 12:16:57,733 INFO core.resident.services Resident ready mode=detection load_ms=2.2
+2026-10-26 12:16:57,734 INFO core.resident.services Resident session state reset mode=detection
+2026-10-26 12:16:57,735 ERROR core.resident.services Resident inference failed id=2f17fed4ee90 type=DetectionError
+2026-10-26 12:16:57,735 ERROR core.resident.services Resident inference failed id=2f17fed4ee90 type=RuntimeError
+2026-10-26 12:16:57,736 INFO core.resident.services Resident stopped
+.2026-10-26 12:16:57,741 INFO core.resident.services Resident ready mode=detection load_ms=0.9
+2026-10-26 12:16:57,741 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-26 12:16:57,742 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-26 12:16:57,742 WARNING core.resident.asgi Resident rejected origin_or_host_or_query
+2026-10-26 12:16:57,742 INFO core.resident.asgi Resident admitted id=248279227c3e mode=detection
+2026-10-26 12:16:57,742 INFO core.resident.services Resident session state reset mode=detection
+2026-10-26 12:16:57,743 INFO core.resident.asgi Resident released id=248279227c3e received=0 delivered=0 failure=none
+2026-10-26 12:16:57,744 INFO core.resident.services Resident stopped
+.2026-10-26 12:16:57,748 INFO core.resident.services Resident ready mode=detection load_ms=0.9
+2026-10-26 12:16:57,749 INFO core.resident.services Resident stopped
+.2026-10-26 12:16:57,754 INFO core.resident.services Resident ready mode=full load_ms=1.0
+2026-10-26 12:16:57,754 INFO core.resident.services Resident session state reset mode=full
+2026-10-26 12:16:57,755 INFO core.resident.services Resident session state reset mode=full
+2026-10-26 12:16:57,756 INFO core.resident.services Resident stopped
+.2026-10-26 12:16:57,760 INFO core.resident.services Resident ready mode=detection load_ms=0.8
+2026-10-26 12:16:57,761 INFO core.resident.asgi Resident admitted id=09b45a2914de mode=detection
+2026-10-26 12:16:57,761 INFO core.resident.services Resident session state reset mode=detection
+2026-10-26 12:16:57,765 INFO core.resident.asgi Resident released id=09b45a2914de received=12 delivered=12 failure=none
+2026-10-26 12:16:57,766 INFO core.resident.services Resident stopped
+..2026-10-26 12:16:57,772 ERROR core.resident.graph_probe Experimental graph pipeline failed type=DetectionError
+2026-10-26 12:16:57,772 ERROR core.resident.graph_probe Experimental graph pipeline failed type=ValueError
+.2026-10-26 12:16:57,773 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=500.000
+.2026-10-26 12:16:57,775 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=0.020
+.2026-10-26 12:16:57,778 INFO core.resident.services Resident ready mode=full load_ms=0.7
+2026-10-26 12:16:57,778 INFO core.resident.services Resident session state reset mode=full
+2026-10-26 12:16:57,779 INFO core.resident.graph_probe Experimental depth graph captured count=1 prepare_ms=0.023
+2026-10-26 12:16:57,779 INFO core.resident.services Resident session state reset mode=full
+2026-10-26 12:16:57,779 ERROR core.resident.graph_probe Experimental graph pipeline failed type=ValueError
+2026-10-26 12:16:57,779 ERROR core.resident.services Resident inference failed id=4f50a131d5aa type=ValueError
+2026-10-26 12:16:57,780 INFO core.resident.services Resident stopped
+c 1 13
+.........2026-10-26 12:16:58,121 INFO core.vlm VLM request started id=568665c205b7 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,121 INFO core.vlm VLM response received id=568665c205b7 status=500
+.2026-10-26 12:16:58,129 INFO core.vlm VLM request started id=85477ac18c9c model=qwen3-vl-plus objects=1
+2026-10-26 12:16:58,129 INFO core.vlm VLM response received id=85477ac18c9c status=200
+2026-10-26 12:16:58,129 INFO core.vlm VLM request completed id=85477ac18c9c elapsed_ms=0 input_tokens=321 output_tokens=18 objects=1
+2026-10-26 12:16:58,132 INFO core.vlm VLM request started id=fixed model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,132 INFO core.vlm VLM response received id=fixed status=200
+2026-10-26 12:16:58,132 INFO core.vlm VLM request completed id=fixed elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-26 12:16:58,135 INFO core.vlm VLM request started id=e4434bd93d7e model=qwen3-vl-plus objects=1
+2026-10-26 12:16:58,135 INFO core.vlm VLM response received id=e4434bd93d7e status=200
+2026-10-26 12:16:58,135 INFO core.vlm VLM request completed id=e4434bd93d7e elapsed_ms=0 input_tokens=321 output_tokens=18 objects=1
+.2026-10-26 12:16:58,139 ERROR django.request Service Unavailable: /scene/config/
+2026-10-26 12:16:58,140 WARNING django.request Method Not Allowed (POST): /scene/config/
+.2026-10-26 12:16:58,144 WARNING core.scene Scene request failed id=16216f851659 code=origin_rejected status=403
+2026-10-26 12:16:58,144 WARNING django.request Forbidden: /scene/describe/
+2026-10-26 12:16:58,146 WARNING core.scene Scene request failed id=565939311661 code=origin_rejected status=403
+2026-10-26 12:16:58,146 WARNING django.request Forbidden: /scene/describe/
+2026-10-26 12:16:58,148 WARNING core.scene Scene request failed id=5002271b06a3 code=invalid_content_type status=415
+2026-10-26 12:16:58,148 WARNING django.request Unsupported Media Type: /scene/describe/
+2026-10-26 12:16:58,150 WARNING django.request Method Not Allowed (GET): /scene/describe/
+2026-10-26 12:16:58,152 WARNING core.scene Scene request failed id=f5a8aa841c40 code=request_too_large status=413
+2026-10-26 12:16:58,153 WARNING django.request Request Entity Too Large: /scene/describe/
+2026-10-26 12:16:58,154 WARNING core.scene Scene request failed id=e72842a05dbb code=invalid_scene_input status=400
+2026-10-26 12:16:58,155 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,156 WARNING core.scene Scene request failed id=208a14fc17d8 code=invalid_scene_input status=400
+2026-10-26 12:16:58,157 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,164 WARNING core.scene Scene request failed id=902532bca735 code=invalid_image status=400
+2026-10-26 12:16:58,164 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,166 WARNING core.scene Scene request failed id=b23baadb9e00 code=invalid_image status=400
+2026-10-26 12:16:58,166 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,168 WARNING core.scene Scene request failed id=12ea662e466d code=invalid_image status=400
+2026-10-26 12:16:58,168 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,169 WARNING core.scene Scene request failed id=2ce6782b5a61 code=invalid_image status=400
+2026-10-26 12:16:58,170 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,172 WARNING core.scene Scene request failed id=79010278ea02 code=invalid_image status=400
+2026-10-26 12:16:58,172 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,173 WARNING core.scene Scene request failed id=17814d92f4a1 code=invalid_image status=400
+2026-10-26 12:16:58,174 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,182 WARNING core.scene Scene request failed id=bab463112f87 code=invalid_image status=400
+2026-10-26 12:16:58,182 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,184 WARNING core.scene Scene request failed id=8e3e6f0efc28 code=invalid_scene_input status=400
+2026-10-26 12:16:58,185 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,186 WARNING core.scene Scene request failed id=ff798a2868d9 code=invalid_scene_input status=400
+2026-10-26 12:16:58,187 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,188 WARNING core.scene Scene request failed id=e09a6bb61bc6 code=invalid_scene_input status=400
+2026-10-26 12:16:58,189 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,190 WARNING core.scene Scene request failed id=8a85f9b057fa code=invalid_scene_input status=400
+2026-10-26 12:16:58,190 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,192 WARNING core.scene Scene request failed id=6a28ed5e6415 code=invalid_scene_input status=400
+2026-10-26 12:16:58,193 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,194 WARNING core.scene Scene request failed id=35319399c5a7 code=invalid_scene_input status=400
+2026-10-26 12:16:58,194 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,196 WARNING core.scene Scene request failed id=928ceab0fb73 code=invalid_scene_input status=400
+2026-10-26 12:16:58,196 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,198 WARNING core.scene Scene request failed id=1a15ccc3d9d2 code=invalid_scene_input status=400
+2026-10-26 12:16:58,198 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,200 WARNING core.scene Scene request failed id=f38dd35143af code=invalid_scene_input status=400
+2026-10-26 12:16:58,200 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,202 WARNING core.scene Scene request failed id=7374413da117 code=invalid_scene_input status=400
+2026-10-26 12:16:58,202 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,204 WARNING core.scene Scene request failed id=c4829a8ecac0 code=invalid_scene_input status=400
+2026-10-26 12:16:58,204 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,206 WARNING core.scene Scene request failed id=5f1d519a0195 code=invalid_scene_input status=400
+2026-10-26 12:16:58,206 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,208 WARNING core.scene Scene request failed id=fb622c947f03 code=invalid_scene_input status=400
+2026-10-26 12:16:58,208 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,210 WARNING core.scene Scene request failed id=22c25b67bb1c code=invalid_scene_input status=400
+2026-10-26 12:16:58,210 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,212 WARNING core.scene Scene request failed id=373fc885ea8a code=invalid_scene_input status=400
+2026-10-26 12:16:58,213 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,215 WARNING core.scene Scene request failed id=40f046873312 code=invalid_scene_input status=400
+2026-10-26 12:16:58,215 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,216 WARNING core.scene Scene request failed id=cc5e453703aa code=invalid_scene_input status=400
+2026-10-26 12:16:58,217 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,218 WARNING core.scene Scene request failed id=25532be1e33e code=invalid_scene_input status=400
+2026-10-26 12:16:58,218 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,220 WARNING core.scene Scene request failed id=0f0a2cf6af04 code=invalid_scene_input status=400
+2026-10-26 12:16:58,220 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,221 WARNING core.scene Scene request failed id=dc7cbd468998 code=invalid_scene_input status=400
+2026-10-26 12:16:58,222 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,224 WARNING core.scene Scene request failed id=2d47b1b0f1e0 code=invalid_scene_input status=400
+2026-10-26 12:16:58,224 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,226 WARNING core.scene Scene request failed id=4103e2b368a5 code=invalid_scene_input status=400
+2026-10-26 12:16:58,226 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,228 WARNING core.scene Scene request failed id=7f89d616b07b code=invalid_scene_input status=400
+2026-10-26 12:16:58,228 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,229 WARNING core.scene Scene request failed id=dff9833e2445 code=invalid_scene_input status=400
+2026-10-26 12:16:58,231 WARNING django.request Bad Request: /scene/describe/
+2026-10-26 12:16:58,232 WARNING core.scene Scene request failed id=16dfa3c71bda code=invalid_scene_input status=400
+2026-10-26 12:16:58,233 WARNING django.request Bad Request: /scene/describe/
+.2026-10-26 12:16:58,255 INFO core.vlm VLM request started id=5b8537e09c9d model=qwen3-vl-plus objects=50
+2026-10-26 12:16:58,256 INFO core.vlm VLM response received id=5b8537e09c9d status=200
+2026-10-26 12:16:58,256 INFO core.vlm VLM request completed id=5b8537e09c9d elapsed_ms=0 input_tokens=321 output_tokens=18 objects=50
+.2026-10-26 12:16:58,417 INFO core.vlm VLM request started id=5540b7e1ba9c model=qwen3-vl-plus objects=1
+2026-10-26 12:16:58,417 INFO core.vlm VLM response received id=5540b7e1ba9c status=200
+2026-10-26 12:16:58,417 INFO core.vlm VLM request completed id=5540b7e1ba9c elapsed_ms=0 input_tokens=321 output_tokens=18 objects=1
+2026-10-26 12:16:58,423 INFO core.vlm VLM request started id=daa8d64d265e model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,423 INFO core.vlm VLM response received id=daa8d64d265e status=401
+2026-10-26 12:16:58,424 WARNING core.scene Scene request failed id=daa8d64d265e code=vlm_authentication_failed status=502
+2026-10-26 12:16:58,425 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-26 12:16:58,428 INFO core.vlm VLM request started id=38857c913a5b model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,428 INFO core.vlm VLM response received id=38857c913a5b status=403
+2026-10-26 12:16:58,429 WARNING core.scene Scene request failed id=38857c913a5b code=vlm_authentication_failed status=502
+2026-10-26 12:16:58,430 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-26 12:16:58,433 INFO core.vlm VLM request started id=851265e8d9be model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,433 INFO core.vlm VLM response received id=851265e8d9be status=429
+2026-10-26 12:16:58,434 WARNING core.scene Scene request failed id=851265e8d9be code=vlm_quota_exceeded status=503
+2026-10-26 12:16:58,435 ERROR django.request Service Unavailable: /scene/describe/
+2026-10-26 12:16:58,438 INFO core.vlm VLM request started id=14af244b3d39 model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,439 INFO core.vlm VLM response received id=14af244b3d39 status=500
+2026-10-26 12:16:58,439 WARNING core.scene Scene request failed id=14af244b3d39 code=vlm_upstream_error status=502
+2026-10-26 12:16:58,441 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-26 12:16:58,444 INFO core.vlm VLM request started id=e379e56d332c model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,444 INFO core.vlm VLM response received id=e379e56d332c status=302
+2026-10-26 12:16:58,445 WARNING core.scene Scene request failed id=e379e56d332c code=vlm_upstream_error status=502
+2026-10-26 12:16:58,446 ERROR django.request Bad Gateway: /scene/describe/
+2026-10-26 12:16:58,449 WARNING core.scene Scene request failed id=53f3a422fab4 code=vlm_not_configured status=503
+2026-10-26 12:16:58,450 ERROR django.request Service Unavailable: /scene/describe/
+....2026-10-26 12:16:58,468 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,468 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,468 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,468 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,469 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,469 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,469 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,469 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,469 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,469 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,469 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,469 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,470 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,470 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,470 INFO core.vlm VLM request completed id=rid elapsed_ms=16 input_tokens=321 output_tokens=18 objects=0
+2026-10-26 12:16:58,470 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,470 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,470 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=321 output_tokens=18 objects=0
+.2026-10-26 12:16:58,474 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,474 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,475 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,475 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,476 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,476 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,477 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,477 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,478 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,478 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,479 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,479 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,479 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,480 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,480 INFO core.vlm VLM request completed id=rid elapsed_ms=0 input_tokens=None output_tokens=None objects=0
+.2026-10-26 12:16:58,482 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,482 INFO core.vlm VLM response received id=rid status=500
+.2026-10-26 12:16:58,484 INFO core.vlm VLM request started id=rid model=qwen-vl-test objects=0
+2026-10-26 12:16:58,484 INFO core.vlm VLM response received id=rid status=200
+2026-10-26 12:16:58,485 INFO core.vlm VLM request completed id=rid elapsed_ms=15 input_tokens=321 output_tokens=18 objects=0
+.2026-10-26 12:16:58,488 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,491 INFO core.vlm VLM request started id=rid model=qwen3-vl-plus objects=0
+2026-10-26 12:16:58,491 WARNING core.vlm VLM transport failed id=rid exception_type=ConnectionResetError
+.....Overlap experiment failed type=DetectionError
+Overlap experiment failed type=DetectionError
+Overlap experiment failed type=DetectionError
+Overlap experiment failed type=DetectionError
+....Overlap experiment failed type=ValueError
+Overlap experiment failed type=ValueError
+.....ssssss........................ZeroGPU live protocol rejected received=12
+...ZeroGPU live protocol rejected received=0
+...ZeroGPU live protocol rejected received=1
+ZeroGPU live protocol rejected received=1
+ZeroGPU live transport failed type=TimeoutError
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_transport.py", line 254, in write_results
+    await session.warmup_acknowledged.wait()
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\asyncio\locks.py", line 212, in wait
+    await fut
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_transport.py", line 177, in socket
+    task.result()
+  File "E:\AI_map\backend\zerogpu\live_transport.py", line 252, in write_results
+    async with asyncio.timeout(WARMUP_SECONDS):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\asyncio\timeouts.py", line 115, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+.ZeroGPU live worker failed frames=0 type=RuntimeError
+Traceback (most recent call last):
+  File "E:\AI_map\backend\zerogpu\live_worker.py", line 157, in run_worker
+    detector = factory(*arguments, **options)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\AI_map\backend\core\test_zerogpu_live.py", line 253, in broken
+    raise RuntimeError("Synthetic allocated detector failure")
+RuntimeError: Synthetic allocated detector failure
+..............Assist template unavailable type=OSError
+Assist template unavailable type=ValueError
+...........Local model load failed type=RuntimeError code=local_model_load_failed
+.....Local worker failed session=None code=local_busy type=IntegrationError
+.Local worker failed session=2de2896becc346fe919425eb5f308e1d code=local_inference_failed type=ValueError
+.Local worker failed session=5e9ae53b622c4917a751fcb2f7e80938 code=frame_geometry_changed type=IntegrationError
+Local worker failed session=76d13feabfea4206bfce03f2cce3dcda code=invalid_timestamp type=IntegrationError
+Local worker failed session=98628d8ed1eb44d69d231ef6c78daabe code=invalid_sequence type=IntegrationError
+...Local worker failed session=a9bb787c5d9e448f92f3537fa871481a code=local_capacity type=IntegrationError
+........Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+....Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=relay_peer_rejected
+Mobile relay rejected protocol=http reason=relay_peer_rejected
+.Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=not_found
+Mobile relay rejected protocol=http reason=method_not_allowed
+Mobile relay rejected protocol=http reason=method_not_allowed
+Mobile relay rejected protocol=http reason=method_not_allowed
+Mobile relay rejected protocol=http reason=method_not_allowed
+Mobile relay rejected protocol=http reason=method_not_allowed
+.Mobile relay rejected protocol=websocket reason=not_found
+Mobile relay rejected protocol=websocket reason=not_found
+Mobile relay rejected protocol=websocket reason=not_found
+Mobile relay rejected protocol=websocket reason=not_found
+Mobile relay rejected protocol=websocket reason=not_found
+Mobile relay rejected protocol=websocket reason=not_found
+Mobile relay rejected protocol=websocket reason=origin_rejected
+Mobile relay rejected protocol=websocket reason=origin_rejected
+Mobile relay rejected protocol=websocket reason=origin_rejected
+Mobile relay rejected protocol=websocket reason=not_found
+.2026-10-26 12:17:03,024 WARNING django.request Not Found: /assets/unknown.js
+Mobile relay rejected protocol=http reason=not_found
+2026-10-26 12:17:03,029 WARNING django.request Not Found: /assets/%2e%2e/.env
+....Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+Mobile relay rejected protocol=http reason=origin_rejected
+...........Local depth test failed frames=1 code=depth_inference_failed
+..Local test aborted code=ValueError
+......................Object depth unavailable objects=1 total=1
+.BoT-SORT unavailable until explicit reset type=RuntimeError
+...BoT-SORT unavailable until explicit reset type=ValueError
+.......Track class changed id=7; distance history restarted
+....................Object depth unavailable objects=4 total=10
+Object depth unavailable objects=4 total=10
+Object depth unavailable objects=4 total=10
+Object depth unavailable objects=4 total=10
+...Object depth unavailable objects=1 total=3
+Object depth unavailable objects=1 total=3
+.................Relay failure code=forward_cancel_failed
+...Relay failure code=local_connect_failed
+...Relay failure code=forward_request_failed
+.Relay failure code=ssh_disconnected
+.................
+----------------------------------------------------------------------
+Ran 504 tests in 25.972s
+
+OK (skipped=8)
+Destroying test database for alias 'default'...
