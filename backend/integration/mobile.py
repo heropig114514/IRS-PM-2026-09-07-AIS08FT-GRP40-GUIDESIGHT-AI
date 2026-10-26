@@ -188,7 +188,7 @@ class MobileApplication:
     def public_path(self, path, kind):
         """Functionality: Resolve exact allowed public endpoint methods.
         Inputs: already stripped decoded path and protocol. Outputs: permitted method set or None.
-        Logic: four exact browser WS paths and fixed HTTP routes; the anonymous diagnostic echo
+        Logic: five exact browser WS paths and fixed HTTP routes; the anonymous diagnostic echo
         path retains the original handler's bounds; asset serving retains assist's exact allowlist.
         Constraints: prefixed/double-prefixed paths, traversal, empty segments and backslashes
         rejected;

@@ -141,6 +141,8 @@ test("speech activation needs a real matching backend audio start from the first
   rejectsCode(() => verifySpeechActivation({...evidence, calls: [{user_gesture_active: false}]}), "SPEECH_ACTIVATION_NOT_GESTURE");
   rejectsCode(() => verifySpeechActivation({...evidence, audio: [{phase: "submitted", request_id: 7}]}), "SPEECH_ACTIVATION_NO_AUDIO_START");
   rejectsCode(() => verifySpeechActivation({...evidence, audio: [{phase: "start", request_id: 8}]}), "SPEECH_ACTIVATION_NO_AUDIO_START");
+  rejectsCode(() => verifySpeechActivation({activation: evidence.activation, calls: evidence.calls,
+    native: [{phase: "start", request_id: 7}]}), "SPEECH_ACTIVATION_NO_AUDIO_START");
 });
 
 test("wire time, 55second contract, insecure WSS, metadata identity and reset failures are rejected", () => {

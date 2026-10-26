@@ -1,6 +1,6 @@
-/* Responsibilities: Verify isolated startup gating through explicit synthetic driver lifecycles.
- * Implementation: Controllable native-style events and deadlines exercise ownership/reentrancy;
- * no browser permissions, GPS, native synthesis or physical audio are used or claimed.
+/* Responsibilities: Verify isolated startup gating through explicit synthetic backend-stream lifecycles.
+ * Implementation: Controllable PCM-style events and deadlines exercise ownership/reentrancy;
+ * no browser permissions, GPS, provider synthesis or physical audio are used or claimed.
  * Related Modules: ../integration/speech-activation.js; existing shared-driver/manager contracts.
  * Declaration Index: fixture; fixture.speech.subscribe; fixture.speech.emit;
  * fixture.speech.describe; fixture.speech.voiceList; fixture.speech.speak;
@@ -10,7 +10,7 @@
  * testUnrelatedError; testWatchdog; testCancelFailure; testStopIsolation; testReadinessRetention;
  * testReentrantEnd; testSynchronousError; testGateBeforeCancel; testDisposal; testObserverStop.
  * Variable Index: None. Fixture utterance bodies stay in test memory only.
- * Constraints: Synthetic start events test logic; they are never native/audio acceptance evidence.
+ * Constraints: Synthetic start events test logic; they are never real PCM/audio acceptance evidence.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -23,11 +23,11 @@ import {SpeechActivation} from "../integration/speech-activation.js";
 function fixture(options = {}) {
   const state = {time: 0, sequence: 0, timerSequence: 0, timers: new Map(), changes: [],
     calls: [], cancellations: [], pauses: [], resumes: [], gesture: false,
-    voiceId: "zh-local", language: "zh-CN", paused: false, reason: null, ...options};
+    voiceId: "Cherry", language: "zh-CN", paused: false, reason: null, ...options};
   const speech = {
-    current: null, last: null, listeners: new Set(), enabled: true, visible: true, activated: true,
+    current: null, last: null, listeners: new Set(), enabled: true, visible: true, activated: true, backendOnly: true,
     supported: true, synchronous: null, cancelFailure: false, rate: {value: "2"}, volume: {value: "0.8"},
-    voices: [{id: "zh-local", language: "zh-CN", local_service: true}],
+    voices: [{id: "Cherry", language: "multi", languages: ["zh-CN", "en-US"], service: "backend"}],
     /* Functionality: Observe fixture events. Inputs: Callback. Outputs: Detacher.
      * Logic: Ordered set preserves manager-before-activation ordering. Constraints: No replay. */
     subscribe(callback) { this.listeners.add(callback); return () => this.listeners.delete(callback); },
@@ -38,13 +38,13 @@ function fixture(options = {}) {
       for (const callback of [...this.listeners]) callback({...event});
     },
     /* Functionality: Read driver metadata. Inputs: Fixture state. Outputs: Current contract.
-     * Logic: Busy and native startup differ. Constraints: No spoken text in metadata. */
+     * Logic: Busy and PCM startup differ. Constraints: No spoken text in metadata. */
     describe() { return {supported: this.supported, enabled: this.enabled, visible: this.visible,
       user_activated: this.activated, active_request: Boolean(this.current),
       engine_speaking: this.current?.started === true, engine_pending: Boolean(this.current && !this.current.started),
       engine_paused: false, last_request: this.last && {...this.last}}; },
     /* Functionality: Expose explicit voices. Inputs: Fixture inventory. Outputs: Copied entries.
-     * Logic: Local metadata is independently mutable. Constraints: No voice fallback. */
+     * Logic: Backend metadata is independently mutable. Constraints: No local synthesis or voice fallback. */
     voiceList() { return {accepted: true, voices: this.voices.map(voice => ({...voice}))}; },
     /* Functionality: Submit an explicit request. Inputs: Text/options. Outputs: Driver acknowledgement.
      * Logic: Record caller-stack gesture state and optionally dispatch synchronous lifecycle events.
@@ -52,14 +52,14 @@ function fixture(options = {}) {
     speak(text, settings) {
       assert.equal(this.current, null, "fixture rejects overlapping speech");
       const id = ++state.sequence, voice = this.voices.find(item => item.id === settings.voice_id);
-      this.current = {id, started: false}; this.last = {id, ...settings, local_service: voice?.local_service === true};
+      this.current = {id, started: false}; this.last = {id, ...settings, service: voice?.service};
       state.calls.push({id, text, settings: {...settings}, gesture: state.gesture}); this.emit("submitted", id);
       if (this.synchronous === "start" || this.synchronous === "end") this.start();
       if (this.synchronous === "end") this.end();
-      if (this.synchronous === "error") { this.current = null; this.emit("error", id, "native_error"); }
+      if (this.synchronous === "error") { this.current = null; this.emit("error", id, "tts_upstream_error"); }
       return {accepted: true, last_request: {...this.last}};
     },
-    /* Functionality: Start the current request. Inputs: None. Outputs: Synthetic native-style event.
+    /* Functionality: Start the current request. Inputs: None. Outputs: Synthetic PCM-start event.
      * Logic: Update state before notification. Constraints: Not physical output evidence. */
     start() { this.current.started = true; this.emit("start", this.current.id); },
     /* Functionality: Complete current output. Inputs: None. Outputs: Synthetic terminal event.
@@ -115,34 +115,34 @@ test("construction gates speech silently and preserves unrelated manager errors"
 });
 
 /* Functionality: Verify trusted-stack calibration and real-start readiness. Inputs: Explicit selected voice.
- * Outputs: Assertions. Logic: Inspect synchronous call timing and native-style start. Constraints: Synthetic engine only. */
-test("activate submits synchronously with exact local voice and unchanged settings", function testSynchronousGesture() {
+ * Outputs: Assertions. Logic: Inspect synchronous call timing and PCM-style start. Constraints: Synthetic driver only. */
+test("activate submits synchronously with exact backend voice and unchanged settings", function testSynchronousGesture() {
   const f = fixture(); f.state.gesture = true; const result = f.activation.activate(); f.state.gesture = false;
   assert.equal(result.accepted, true); assert.equal(result.state, "queued"); assert.equal(result.ready, false);
   assert.deepEqual(f.state.calls[0], {id: 1, text: "语音提醒已开启。", gesture: true,
-    settings: {language: "zh-CN", voice_id: "zh-local", rate: 2, volume: 0.8}});
+    settings: {language: "zh-CN", voice_id: "Cherry", rate: 2, volume: 0.8}});
   assert.equal(f.state.paused, true); f.speech.start();
   assert.equal(f.activation.describe().ready, true); assert.equal(f.activation.describe().request_id, 1);
   assert.deepEqual(f.state.resumes, ["activation_required"]); assert.equal(f.state.timers.size, 0);
 });
 
-/* Functionality: Verify explicit English selection. Inputs: English local voice and user controls.
+/* Functionality: Verify explicit English selection. Inputs: English backend voice and user controls.
  * Outputs: Assertions. Logic: No language/rate substitution. Constraints: No automatic inventory choice. */
 test("English calibration preserves the selected voice and user rate", function testEnglish() {
-  const f = fixture({language: "en-US", voiceId: "en-local"});
-  f.speech.voices = [{id: "en-local", language: "en-GB", local_service: true}]; f.speech.rate.value = "1.5";
+  const f = fixture({language: "en-US"}); f.speech.rate.value = "1.5";
   assert.equal(f.activation.activate().accepted, true);
   assert.equal(f.state.calls[0].text, "Voice alerts are enabled."); assert.equal(f.state.calls[0].settings.rate, 1.5);
 });
 
-/* Functionality: Reject missing/unsafe prerequisites. Inputs: Explicit invalid cases.
+/* Functionality: Reject missing/non-backend voice and unsafe prerequisites. Inputs: Explicit invalid cases.
  * Outputs: Assertions. Logic: All attempts remain gated without speaking/cancelling. Constraints: No implicit fallback. */
-test("missing local voice, remote/mismatched voice, disabled, hidden and busy fail explicitly", function testPrerequisites() {
+test("missing/non-backend/mismatched voice, disabled, hidden and busy fail explicitly", function testPrerequisites() {
   for (const [mutate, reason] of [
-    [f => { f.state.voiceId = ""; }, "explicit_local_voice_required"],
-    [f => { f.speech.voices[0].local_service = false; }, "local_voice_required"],
-    [f => { f.speech.voices[0].language = "en-US"; }, "voice_language_mismatch"],
-    [f => { f.speech.voices.push({...f.speech.voices[0]}); }, "local_voice_unavailable"],
+    [f => { f.state.voiceId = ""; }, "backend_voice_unavailable"],
+    [f => { f.speech.backendOnly = false; }, "backend_voice_unavailable"],
+    [f => { f.speech.voices[0].service = "native"; }, "backend_voice_unavailable"],
+    [f => { f.speech.voices[0].languages = ["en-US"]; }, "backend_voice_unavailable"],
+    [f => { f.speech.voices.push({...f.speech.voices[0]}); }, "backend_voice_unavailable"],
     [f => { f.speech.enabled = false; }, "disabled"],
     [f => { f.speech.supported = false; }, "unsupported"],
     [f => { f.speech.visible = false; }, "page_hidden"],
@@ -156,13 +156,13 @@ test("missing local voice, remote/mismatched voice, disabled, hidden and busy fa
   }
 });
 
-/* Functionality: Accept only correctly selected manual starts. Inputs: Foreign driver requests.
- * Outputs: Assertions. Logic: Manual ownership remains separate. Constraints: Manual outputs are never cancelled. */
-test("matching manual native start unlocks without adopting or cancelling it", function testManualStart() {
+/* Functionality: Accept only correctly selected backend starts. Inputs: Foreign driver requests.
+ * Outputs: Assertions. Logic: Request ownership remains separate. Constraints: Foreign outputs are never cancelled. */
+test("matching manual backend stream unlocks without adopting or cancelling it", function testManualStart() {
   const f = fixture();
   f.speech.speak("manual", {voice_id: "other", language: "zh-CN", rate: 2, volume: 1}); f.speech.start();
   assert.equal(f.activation.describe().ready, false); f.speech.end();
-  f.speech.speak("manual", {voice_id: "zh-local", language: "zh-CN", rate: 2, volume: 1}); f.speech.start();
+  f.speech.speak("manual", {voice_id: "Cherry", language: "zh-CN", rate: 2, volume: 1}); f.speech.start();
   assert.equal(f.activation.describe().ready, true); assert.equal(f.activation.describe().request_id, 2);
   assert.equal(f.activation.describe().owned_request_id, null); f.activation.stop();
   assert.equal(f.speech.current.id, 2); assert.deepEqual(f.state.cancellations, []);
@@ -170,10 +170,10 @@ test("matching manual native start unlocks without adopting or cancelling it", f
 
 /* Functionality: Preserve unrelated output faults. Inputs: Preexisting manager error.
  * Outputs: Assertions. Logic: Readiness and manager recovery remain independent. Constraints: No broad resume. */
-test("observed native start never clears an unrelated manager failure", function testUnrelatedError() {
-  const f = fixture({paused: true, reason: "native_error"}); f.activation.activate(); f.speech.start();
-  assert.equal(f.activation.describe().ready, true); assert.equal(f.state.reason, "native_error");
-  assert.deepEqual(f.state.resumes, []); f.activation.activate(); assert.equal(f.state.reason, "native_error");
+test("observed backend start never clears an unrelated manager failure", function testUnrelatedError() {
+  const f = fixture({paused: true, reason: "tts_upstream_error"}); f.activation.activate(); f.speech.start();
+  assert.equal(f.activation.describe().ready, true); assert.equal(f.state.reason, "tts_upstream_error");
+  assert.deepEqual(f.state.resumes, []); f.activation.activate(); assert.equal(f.state.reason, "tts_upstream_error");
 });
 
 /* Functionality: Bound unstarted owned calibration. Inputs: Explicit clock advancement.
@@ -226,7 +226,7 @@ test("synchronous end reentrancy preserves calibration evidence and newer automa
     speech.subscribe(event => {
       if (event.phase === "end" && event.request_id === 1) {
         speech.synchronous = null;
-        speech.speak("automatic", {voice_id: "zh-local", language: "zh-CN", rate: 2, volume: 0.8});
+        speech.speak("automatic", {voice_id: "Cherry", language: "zh-CN", rate: 2, volume: 0.8});
       }
     });
   }});
@@ -236,12 +236,12 @@ test("synchronous end reentrancy preserves calibration evidence and newer automa
   f.activation.stop(); assert.equal(f.speech.current.id, 2); assert.deepEqual(f.state.cancellations, []);
 });
 
-/* Functionality: Distinguish synchronous native failure from submission acceptance.
- * Inputs: Synthetic error inside speak. Outputs: Assertions. Logic: No timer or ready on failed native path.
+/* Functionality: Distinguish synchronous provider failure from submission acceptance.
+ * Inputs: Synthetic error inside speak. Outputs: Assertions. Logic: No timer or ready on failed backend path.
  * Constraints: Accepted driver acknowledgement alone never grants readiness. */
-test("synchronous native error remains failed without watchdog or readiness", function testSynchronousError() {
+test("synchronous provider error remains failed without watchdog or readiness", function testSynchronousError() {
   const f = fixture(); f.speech.synchronous = "error"; const result = f.activation.activate();
-  assert.equal(result.accepted, false); assert.equal(result.ready, false); assert.equal(result.reason, "native_error");
+  assert.equal(result.accepted, false); assert.equal(result.ready, false); assert.equal(result.reason, "tts_upstream_error");
   assert.equal(f.state.timers.size, 0); assert.equal(f.state.paused, true);
 });
 

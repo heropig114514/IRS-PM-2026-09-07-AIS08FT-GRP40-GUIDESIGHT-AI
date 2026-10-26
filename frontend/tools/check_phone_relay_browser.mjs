@@ -126,7 +126,7 @@ export function verifySpeechActivation(evidence) {
   requireGate(evidence.activation?.ready === true && Number.isSafeInteger(id) && id > 0,
     "SPEECH_ACTIVATION_NOT_READY");
   requireGate(evidence.calls?.[0]?.user_gesture_active === true, "SPEECH_ACTIVATION_NOT_GESTURE");
-  const audio = evidence.audio ?? evidence.native ?? [];
+  const audio = evidence.audio ?? [];
   requireGate(audio.filter(event => event.phase === "start" && event.request_id === id).length === 1,
     "SPEECH_ACTIVATION_NO_AUDIO_START");
   return {audio_start_verified: true, request_id: id, user_gesture_active: true,

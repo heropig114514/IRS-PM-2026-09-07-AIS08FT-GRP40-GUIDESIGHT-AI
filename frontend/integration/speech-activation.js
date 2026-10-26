@@ -1,5 +1,5 @@
 /* Responsibilities: Require user-activated audio output before automatic assist speech.
- * Implementation: Explicit bilingual calibration through the shared driver; observed first PCM
+ * Implementation: Explicit bilingual calibration through the shared backend TTS driver; observed first PCM
  * playback unlocks the gate. One owned queued calibration has a bounded watchdog.
  * Related Modules: assist-mvp.js/assist-guidance.js; ../speech-output.js; integration tests.
  * Declaration Index: SpeechActivation; SpeechActivation.constructor; SpeechActivation.describe;
@@ -7,7 +7,7 @@
  * SpeechActivation.selection; SpeechActivation.failure; SpeechActivation.clearWatchdog;
  * SpeechActivation.activate; SpeechActivation.onDriver; SpeechActivation.cancelOwned;
  * SpeechActivation.stop; SpeechActivation.dispose.
- * Variable Index: CALIBRATION is fixed zh-CN/en-US text, never a generated risk instruction;
+ * Variable Index: CALIBRATION is fixed zh-CN/en-US text, never a generated risk instruction; Cherry is the only accepted voice;
  * owned/generation/ignoreThrough isolate calibration IDs, late callbacks and old timers;
  * ready/firstStartedId retain the first matching driver start, never physical audibility;
  * state/reason expose recovery needs; timeoutMs only bounds initial queued calibration.
@@ -79,28 +79,19 @@ export class SpeechActivation {
   }
 
   /* Functionality: Validate the explicit backend voice and unchanged user output settings.
-   * Inputs: Config getter and shared speech controls. Outputs: Options or fixed failure reason.
-   * Logic: Backend mode accepts only Cherry; legacy mode retains its exact native local-voice match.
-   * Constraints: no enablement, language fallback, voice replacement or volume/rate adjustment. */
+   * Inputs: Config getter and shared speech controls. Outputs: Backend options or fixed failure reason.
+   * Logic: Require the server-advertised Cherry voice to support the selected calibration language.
+   * Constraints: Native synthesis is not accepted; no enablement, language fallback, voice replacement
+   * or volume/rate adjustment occurs. */
   selection() {
     try {
       const {voiceId, language} = this.config() || {};
       if (!Object.hasOwn(CALIBRATION, language)) return {reason: "invalid_language"};
-      if (this.speech.backendOnly) {
-        if (voiceId !== "Cherry") return {reason: "backend_voice_unavailable"};
-        const rate = Number(this.speech.rate?.value), volume = Number(this.speech.volume?.value);
-        if (!Number.isFinite(rate) || rate < 0.5 || rate > 2 || !Number.isFinite(volume) || volume < 0 || volume > 1)
-          return {reason: "invalid_parameters"};
-        return {voiceId, language, rate, volume};
-      }
-      if (typeof voiceId !== "string" || !voiceId) return {reason: "explicit_local_voice_required"};
+      if (!this.speech.backendOnly || voiceId !== "Cherry") return {reason: "backend_voice_unavailable"};
       const inventory = this.speech.voiceList();
       const voices = inventory.voices?.filter(voice => voice.id === voiceId) || [];
-      if (!inventory.accepted || voices.length !== 1) return {reason: "local_voice_unavailable"};
-      if (voices[0].local_service !== true) return {reason: "local_voice_required"};
-      if (typeof voices[0].language !== "string" ||
-          voices[0].language.split("-")[0].toLowerCase() !== language.split("-")[0].toLowerCase())
-        return {reason: "voice_language_mismatch"};
+      if (!inventory.accepted || voices.length !== 1 || voices[0].service !== "backend" ||
+          !voices[0].languages?.includes(language)) return {reason: "backend_voice_unavailable"};
       const rate = Number(this.speech.rate?.value), volume = Number(this.speech.volume?.value);
       if (!Number.isFinite(rate) || rate < 0.5 || rate > 2 || !Number.isFinite(volume) || volume < 0 || volume > 1)
         return {reason: "invalid_parameters"};
@@ -146,7 +137,7 @@ export class SpeechActivation {
       return this.failure("busy");
     this.gate();
     const pending = {id: null, generation: ++this.generation, started: false, cancelFailed: false};
-    this.owned = pending; this.state = "queued"; this.reason = "awaiting_native_start"; this.publish();
+    this.owned = pending; this.state = "queued"; this.reason = "awaiting_audio_start"; this.publish();
     if (this.owned !== pending || pending.generation !== this.generation)
       return {...this.describe(), accepted: false, reason: "activation_cancelled"};
     let result;
@@ -180,7 +171,7 @@ export class SpeechActivation {
 
   /* Functionality: Consume actual shared-driver starts and calibration terminal events.
    * Inputs: Body-free driver event. Outputs: Readiness, owner cleanup or retained failure.
-   * Logic: matching selected backend/manual starts also unlock; stopped/old IDs cannot reopen the gate.
+   * Logic: only the selected backend PCM stream can unlock; stopped/old IDs cannot reopen the gate.
    * Constraints: submission alone never unlocks, foreign requests are never cancelled or adopted. */
   onDriver(event) {
     if (this.disposed || this.cancelling || event.channel !== "speech" ||
@@ -191,7 +182,7 @@ export class SpeechActivation {
       const selection = this.selection(), status = this.speech.describe(), last = status.last_request;
       if (selection.reason || status.active_request !== true || last?.id !== event.request_id ||
           last.voice_id !== selection.voiceId || last.language !== selection.language ||
-          (this.speech.backendOnly ? last.service !== "backend" : last.local_service !== true)) return;
+          last.service !== "backend") return;
       if (own?.id === event.request_id) own.started = true;
       this.clearWatchdog(); this.firstStartedId ??= event.request_id;
       this.ready = true; this.state = "ready"; this.reason = null;
@@ -207,7 +198,7 @@ export class SpeechActivation {
     if (event.phase === "end" && own.started) {
       this.state = "ready"; this.reason = null; this.publish();
     } else this.failure(event.reason || (event.phase === "cancel" ? "calibration_cancelled" :
-      event.phase === "end" ? "native_ended_before_start" : "native_error"), "error");
+      event.phase === "end" ? "audio_ended_before_start" : "speech_error"), "error");
   }
 
   /* Functionality: Cancel only the exact calibration request once for this explicit action/deadline.

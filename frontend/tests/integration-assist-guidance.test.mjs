@@ -59,7 +59,7 @@ class Clock {
   }
 }
 
-/* Functionality: Model one shared speech driver with independent native events.
+/* Functionality: Model one shared backend speech driver with independent PCM events.
  * Logic: Preserve request IDs, explicit voice and manual ownership; cancellation can remain uncertain.
  * Constraints: No synthesis, permission grant, actual engine or audible output. */
 class Speech {
@@ -69,7 +69,7 @@ class Speech {
     Object.assign(this, {clock, current: null, lastRequest: null, sequence: 0, listeners: new Set(), requests: [],
       attempts: [], enabled: true, cancelFailure: false, refusal: null, synchronous: null,
       rate: {value: "2"}, volume: {value: "1"},
-      voices: [{id: "local-zh", language: "zh-CN", local_service: true}]});
+      backendOnly: true, voices: [{id: "Cherry", language: "multi", languages: ["zh-CN", "en-US"], service: "backend"}]});
   }
   /* Functionality: Subscribe. Inputs: Listener. Outputs: Unsubscribe.
    * Logic: Local set. Constraints: No implicit replay. */
@@ -94,14 +94,14 @@ class Speech {
     assert.equal(this.current, null);
     if (this.refusal) return {accepted: false, reason: this.refusal};
     const id = ++this.sequence;
-    this.current = {id, text, options, started: false}; this.lastRequest = {id, ...options};
+    this.current = {id, text, options, started: false}; this.lastRequest = {id, ...options, service: "backend"};
     this.requests.push(this.current); this.emit("submitted");
     if (this.synchronous) this.start();
     if (this.synchronous === "end") this.end();
     if (this.synchronous === "error") this.error();
     return {accepted: true, last_request: {id}};
   }
-  /* Functionality: Start current utterance. Inputs: Current. Outputs: Native-style event.
+  /* Functionality: Start current utterance. Inputs: Current. Outputs: PCM-start event.
    * Logic: Mark before dispatch. Constraints: Not audible proof. */
   start() { this.current.started = true; this.emit("start"); }
   /* Functionality: Complete current utterance. Inputs: Current. Outputs: End event.
@@ -186,7 +186,7 @@ function fixture(enable = true) {
   const clock = new Clock(), speech = new Speech(clock), vibration = new Vibration(clock), events = [];
   const manager = new AssistGuidanceManager({speech, vibration, now: clock.now, epochNow: clock.epochNow,
     setTimer: clock.setTimer, clearTimer: clock.clearTimer});
-  manager.subscribe(event => events.push(event)); manager.configure({voiceId: "local-zh", language: "zh-CN"});
+  manager.subscribe(event => events.push(event)); manager.configure({voiceId: "Cherry", language: "zh-CN"});
   if (enable) { manager.setRiskEnabled(true); manager.setNavigationEnabled(true); }
   let frame = 0;
   return {clock, speech, vibration, manager, events,
@@ -229,7 +229,8 @@ test("live assistant replies queue in order and long text is spoken without trun
   while (f.manager.describe().queued_assistant_replies) {
     const request = f.speech.current;
     assert.ok(request, "the next queued assistant part should own the speech driver");
-    assert.equal(request.options.voice_id, "local-zh");
+    assert.equal(request.options.voice_id, "Cherry");
+    assert.equal(request.options.language, "auto");
     parts.push(request.text); f.speech.start(); f.speech.end();
   }
   assert.ok(parts.slice(0, -1).every(part => [...part].length <= MAX_TEXT_LENGTH));
@@ -397,12 +398,18 @@ test("manual cancellation pauses speech without silently replaying either source
   f.manager.resume("speech"); assert.equal(f.manager.active.speech.kind, "risk"); f.manager.dispose();
 });
 
-// Functionality: Enforce explicit local voice; Inputs: Missing/remote/wrong language; Outputs: No speech; Logic: Native identity validation; Constraints: No replacement.
-test("unavailable remote and wrong-language voices cannot be substituted", function testVoice() {
-  for (const voices of [[], [{id: "local-zh", language: "zh-CN", local_service: false}], [{id: "local-zh", language: "en-US", local_service: true}]]) {
+// Functionality: Enforce the backend-only assist voice; Inputs: Missing/non-backend/wrong-language inventory; Outputs: No speech; Logic: Exact backend identity; Constraints: No local fallback.
+test("missing and invalid backend voices cannot trigger local speech", function testVoice() {
+  for (const voices of [[],
+    [{id: "Cherry", language: "multi", languages: ["zh-CN", "en-US"], service: "native"}],
+    [{id: "Cherry", language: "multi", languages: ["en-US"], service: "backend"}]]) {
     const f = fixture(); f.speech.voices = voices; f.navigation(); f.risk();
     assert.equal(f.speech.requests.length, 0); assert.equal(f.manager.paused.speech, true); f.manager.dispose();
   }
+  const disabledBackend = fixture(); disabledBackend.speech.backendOnly = false;
+  disabledBackend.navigation(); disabledBackend.risk();
+  assert.equal(disabledBackend.speech.requests.length, 0); assert.equal(disabledBackend.manager.paused.speech, true);
+  disabledBackend.manager.dispose();
 });
 
 // Functionality: Isolate tracker identities; Inputs: Same track after epoch reset; Outputs: Immediate new alert; Logic: History reset; Constraints: No algorithm mutation.

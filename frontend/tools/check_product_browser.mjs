@@ -541,10 +541,11 @@ export async function runCameraBoundaries(options) {
   return report;
 }
 
-/* Functionality: Test delayed voice lists, incomplete route selection and visibility without repeating inference.
- * Inputs: pinned public product/new report paths. Outputs: boundary JSON and ready-map screenshots.
- * Logic: explicit inventory/route/GPS/visibility fixtures surround unchanged controllers and native TTS.
- * Constraints: no camera acquisition, actual GPS/ORS, GPU session, native speech-event simulation or retry. */
+/* Functionality: Test backend voice inventory, product activation, diagnostic bilingual TTS and page boundaries.
+ * Inputs: pinned public product/new report paths. Outputs: boundary JSON and product ready-map screenshots.
+ * Logic: exercise real backend PCM on the product activation and diagnostic pages; explicit route/GPS/visibility
+ * fixtures surround their existing controllers. Constraints: no camera acquisition, actual GPS/ORS, GPU session,
+ * fabricated speech lifecycle or retry. */
 export async function runBoundaries(options) {
   for (const path of [options.output, options.screenshot, options.desktopScreenshot]) await requireNew(path);
   await mkdir(dirname(options.output), {recursive: true});
@@ -621,6 +622,14 @@ export async function runBoundaries(options) {
       gps_released: window.__productProbe.watches.every(item => !item.active),
       speech_released: window.__productControllers.speechOutput.current === null}));
     requireGate(Object.values(report.checks.returned).every(Boolean), "VISIBILITY_AUTOMATIC_RESTART");
+    report.phase = "diagnostic_page_bilingual_tts";
+    const diagnosticUrl = new URL("test", options.url);
+    const diagnostic = await page.goto(diagnosticUrl.href, {waitUntil: "domcontentloaded", timeout: 30000});
+    requireGate(diagnostic.status() === 200, "DIAGNOSTIC_HTTP_FAILED");
+    await page.evaluate(observe);
+    requireGate(await page.locator("#speech-play").isVisible() && await page.locator("#speech-enabled").isVisible(),
+      "DIAGNOSTIC_TTS_CONTROLS_MISSING");
+    report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page);
     requireGate(report.failures.length === 0, "BROWSER_PAGE_ERRORS"); report.complete = true; report.phase = "complete";
   } catch (error) { report.failures.push(safeFailure(error, report.phase)); }
   finally {

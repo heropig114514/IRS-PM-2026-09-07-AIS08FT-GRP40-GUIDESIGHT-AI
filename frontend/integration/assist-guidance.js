@@ -146,8 +146,8 @@ export class AssistGuidanceManager {
   }
 
   /* Functionality: Store the shared voice ID and language selection. Inputs: voiceId/language.
-   * Outputs: State. Logic: Unified entries use the fixed backend voice; standalone callers retain
-   * explicit native identity. Constraints: Does not enable, resume or replace a voice. */
+   * Outputs: State. Logic: The unified assist pages require the server-provided Cherry voice.
+   * Constraints: Does not enable, resume or replace a voice; local browser synthesis is not an assist-page path. */
   configure({voiceId, language}) { this.voiceId = voiceId; this.language = languageOf(language); return this.describe(); }
 
   /* Functionality: Queue one live assistant reply for prioritized automatic speech.
@@ -386,10 +386,11 @@ export class AssistGuidanceManager {
     }
   }
 
-  /* Functionality: Submit one backend or standalone risk, navigation or assistant utterance.
+  /* Functionality: Submit one backend risk, navigation or assistant utterance.
    * Inputs: Frozen descriptor/text.
    * Outputs: Request ownership or diagnosed pause/suppression. Logic: Protect all foreign speech.
-   * Constraints: No default voice, automatic enablement, retry or scene/manual preemption. */
+   * Constraints: Backend Cherry is mandatory; no local voice, automatic enablement, retry or
+   * scene/manual preemption is permitted. */
   submitSpeech(descriptor, text) {
     const status = this.speech?.describe();
     if (this.paused.speech) return this.suppress("speech", "channel_paused", descriptor);
@@ -399,14 +400,13 @@ export class AssistGuidanceManager {
       return this.suppress("speech", "foreign_speech_busy", descriptor);
     if (typeof this.voiceId !== "string" || !this.voiceId) return this.suppress("speech", "speech_voice_unavailable", descriptor);
     const inventory = this.speech.voiceList(), voices = inventory.voices?.filter(voice => voice.id === this.voiceId) || [];
-    const voice = voices[0], backendVoice = voice?.service === "backend" && this.speech.backendOnly;
-    const languageMatches = voice?.language === "multi" ||
-      typeof voice?.language === "string" && voice.language.split("-")[0].toLowerCase() === this.language.split("-")[0].toLowerCase();
-    if (!inventory.accepted || voices.length !== 1 || !(backendVoice || voice.local_service === true) || !languageMatches)
-      return this.pause("speech", backendVoice ? "backend_voice_unavailable" : "local_voice_unavailable", descriptor);
+    const voice = voices[0];
+    if (!this.speech.backendOnly || !inventory.accepted || voices.length !== 1 || voice?.service !== "backend" ||
+        voice.id !== "Cherry" || !voice.languages?.includes(this.language))
+      return this.pause("speech", "backend_voice_unavailable", descriptor);
     this.pendingSubmission = {...descriptor, channel: "speech", started: false, requestId: null};
     let result;
-    const language = descriptor.kind === "assistant" && this.speech.backendOnly ? "auto" : this.language;
+    const language = descriptor.kind === "assistant" ? "auto" : this.language;
     try { result = this.speech.speak(text, {language, voice_id: this.voiceId,
       rate: Number(this.speech.rate?.value ?? 2), volume: Number(this.speech.volume?.value ?? 1)}); }
     catch { result = {accepted: false, reason: "speak_failed"}; }
