@@ -6,6 +6,7 @@
  * vibration.js, speech-output.js, navigation-ui.js, agent-device.js, agent-client.js.
  * Declaration Index: selectorFor — exact CSS paths; visible — rendered state;
  * uniqueElement — unambiguous selection; snapshot — live DOM description;
+ * navigatePage — route or embedded-panel navigation;
  * waitForState — bounded observation; performVibration — shared structured vibration calls;
  * performSpeech — shared speech state/voices/speak/stop interface;
  * performNavigation — shared walking navigation start/stop/status;
@@ -63,15 +64,25 @@ export function uniqueElement(doc, selector) {
 
 /* Functionality: Describe current UI controls, values, status and visible page text.
  * Inputs: Browser document. Outputs: JSON-compatible snapshot with explicit truncation flags.
- * Logic: Read live values/options/bounds; exclude assistant dialogue/controls/status to avoid
- * recursively feeding its own conversation back as independent page evidence.
+ * Logic: Read live values/options/bounds and page surface capabilities; exclude assistant
+ * dialogue/controls/status to avoid recursively feeding its own conversation back as evidence.
  * Constraints: Limit controls to 500 and text to 30000 characters; does not capture media pixels. */
 export function snapshot(doc = document) {
+  const embeddedCameraPanel = doc.querySelector("#assist-camera-panel");
+  const cameraVideo = doc.querySelector("#preview");
   const panelText = doc.querySelector("#agent-panel")?.innerText;
   const text = panelText ? doc.body.innerText.replace(panelText, "") : doc.body.innerText;
   const controls = [...doc.querySelectorAll(CONTROL_SELECTOR)].filter(element => !element.closest("#agent-panel"));
   return {
     url: doc.location.href, title: doc.title, language: doc.documentElement.lang,
+    surface: doc.documentElement.dataset.assist === "true" ?
+      `assist-${doc.documentElement.dataset.assistView || "unknown"}` : "standard",
+    capabilities: {
+      camera_panel: Boolean(doc.querySelector("#assist-camera-panel, #preview")),
+      camera_panel_visible: embeddedCameraPanel ? !embeddedCameraPanel.hidden :
+        Boolean(cameraVideo && !cameraVideo.hidden),
+      maps_panel: Boolean(doc.querySelector("#navigation-panel, #maps-form")),
+    },
     text: text.slice(0, 30000), text_truncated: text.length > 30000,
     controls_truncated: controls.length > 500,
     controls: controls.slice(0, 500).map(element => {
@@ -95,6 +106,25 @@ export function snapshot(doc = document) {
       selector: selectorFor(element), text: element.innerText, visible: visible(element),
     })),
   };
+}
+
+/* Functionality: Resolve one semantic page request against the current application surface.
+ * Inputs: page alias, browser document and configured application base URL.
+ * Outputs: Same-page focus result or an explicit destination URL.
+ * Logic: The unified assist surface focuses its embedded camera panel; standard PRS pages keep
+ * their established camera/maps routes. A hidden or missing embedded panel is reported directly.
+ * Constraints: Does not start camera/GPS work, reveal hidden panels, or change route allowlists. */
+export function navigatePage(page, doc, base) {
+  if (!["camera", "maps"].includes(page)) throw new Error("Unknown page destination");
+  if (page === "camera" && doc.documentElement.dataset.assist === "true") {
+    const panel = doc.querySelector("#assist-camera-panel");
+    if (!panel) return {same_page: true, available: false, reason: "page_unavailable"};
+    if (panel.hidden) return {same_page: true, available: false, reason: "camera_panel_hidden"};
+    panel.scrollIntoView({block: "start"});
+    return {same_page: true, available: true, page: "camera", section: "#assist-camera-panel"};
+  }
+  const destination = {camera: "live/", maps: "maps/"}[page];
+  return {same_page: false, available: true, navigating_to: new URL(destination, base).href};
 }
 
 /* Functionality: Observe an asynchronous application's DOM completion without reissuing work.
@@ -273,7 +303,8 @@ export function connectControl(win = window, doc = document) {
 
   /* Functionality: Dispatch correlated commands and acknowledge their exact result.
    * Inputs: WebSocket event. Outputs: Result message or diagnostic browser event.
-   * Logic: Navigation sends acknowledgement then schedules page replacement; other actions run once.
+   * Logic: Navigation either focuses an embedded panel or acknowledges and schedules page
+   * replacement; other actions run once.
    * Constraints: Errors preserve id; no command contents or entered values are logged. */
   async function onMessage(event) {
     let command;
@@ -291,11 +322,10 @@ export function connectControl(win = window, doc = document) {
         return;
       }
       if (command.action === "navigate") {
-        const destination = {camera: "live/", maps: "maps/"}[command.arguments.page];
-        if (!destination) throw new Error("Unknown page destination");
-        const target = new URL(destination, base).href;
-        send({type: "result", id: command.id, ok: true, result: {navigating_to: target}});
-        setTimeout(() => win.location.assign(target), 0);
+        const navigation = navigatePage(command.arguments.page, doc, base);
+        send({type: "result", id: command.id, ok: true, result: navigation});
+        if (!navigation.same_page && navigation.available)
+          setTimeout(() => win.location.assign(navigation.navigating_to), 0);
       } else {
         const result = await performAction(command.action, command.arguments, doc);
         send({type: "result", id: command.id, ok: true, result});

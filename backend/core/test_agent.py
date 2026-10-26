@@ -3,7 +3,12 @@ Implementation: Real in-process MCP; mock only Qwen/browser/network boundaries e
 Related Modules: core.agent.*, frontend/tools/check_agent_browser.mjs.
 Declaration Index: AgentTests; AgentTests.setUp; AgentTests.test_skill_catalog_and_paths;
 AgentTests.test_mcp_schema_binding; AgentTests.test_runtime_uses_evidence_and_memory;
-AgentTests.test_tool_failure_stops_without_retry; AgentTests.test_cancel_and_deduplicate;
+AgentTests.test_tool_failure_stops_without_retry;
+AgentTests.test_failure_fallback_after_model_error;
+AgentTests.test_route_error_is_explained;
+AgentTests.test_tool_error_normalization; AgentTests.test_localized_failure_fallback;
+AgentTests.test_empty_failure_explanation_uses_fallback;
+AgentTests.test_declined_action_blocks_batched_mutations; AgentTests.test_cancel_and_deduplicate;
 AgentTests.test_input_validation; AgentTests.test_audio_validation;
 AgentTests.test_provider_contract; AgentTests.test_provider_contract.handler;
 AgentTests.test_geocoder_contract; AgentTests.test_start_observes_actual_state;
@@ -23,6 +28,7 @@ import tempfile
 import uuid
 import wave
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import httpx2
@@ -32,7 +38,13 @@ from mcp.client import Client
 
 from core.agent.places import search_context, search_places
 from core.agent.provider import AgentError, completion, transcribe
-from core.agent.runtime import Conversation, conversations
+from core.agent.runtime import (
+    Conversation,
+    conversations,
+    failure_reply,
+    tool_exception,
+    tool_failure,
+)
 from core.agent.skills import catalog, fingerprint, instructions, read_skill
 from core.agent.tools import BrowserTools, create_server
 from core.agent.transport import agent_socket, handle_message
@@ -185,25 +197,186 @@ class AgentTests(SimpleTestCase):
 
     async def test_tool_failure_stops_without_retry(self):
         """Functionality: Preserve unknown completion on transport failure.
-        Inputs: one scripted mutation and failing browser; Outputs: terminal error, no replay.
-        Logic: Real MCP error stops runtime; Constraints: fake transport failure only.
+        Inputs: one scripted mutation and failing browser; Outputs: localized explanation,
+        no replay.
+        Logic: Real MCP error becomes bounded evidence for one final model response.
+        Constraints: fake transport failure only; no provider quality claim.
         """
         self.router.return_value = tool_message("route_intent", {
-            "route": "system", "intent_ids": ["camera.start"], "language": "zh",
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
         })
         conversation = Conversation("owned-tab", "token")
         with patch(
             "core.agent.runtime.completion", AsyncMock(side_effect=[
                 tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
                 tool_message("camera_start"),
+                {"role": "assistant", "content":
+                 "I couldn't confirm the camera started; its state is unknown."},
             ])
         ) as model:
             with patch("core.ai_mcp.browser_call", AsyncMock(side_effect=TimeoutError)) as browser:
-                await conversation.run("request", "开启摄像头", None)
-        self.assertEqual(model.await_count, 3)
+                await conversation.run("request", "Start my camera", None)
+        self.assertEqual(model.await_count, 4)
         self.assertEqual(browser.await_count, 1)
-        self.assertTrue(any(event.get("code") == "tool_failed" for event in conversation.events))
+        results = [event["result"] for event in conversation.events
+                   if event["type"] == "tool_result"]
+        self.assertEqual(results[-1]["completion"], "unknown")
+        self.assertEqual(results[-1]["reason"], "operation_failed")
+        replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
+        self.assertEqual(replies, ["I couldn't confirm the camera started; its state is unknown."])
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
         self.assertEqual(len(conversation.turns), 1)
+
+    async def test_route_error_is_explained(self):
+        """Functionality: Replace a raw route error with localized, bounded evidence.
+        Inputs: Camera navigation request and MCP tool raising the public not_found code.
+        Outputs: Model explanation receives route_unavailable, never the JSON error body.
+        Logic: Run actual in-process MCP encoding and inspect the next completion context.
+        Constraints: Synthetic relay failure; does not exercise the remote proxy.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            tool_message("ui_navigate", {"page": "camera"}),
+            {"role": "assistant", "content": "The camera page is unavailable in this app."},
+        ])) as model:
+            with patch("core.ai_mcp.browser_call", AsyncMock(
+                side_effect=ValueError('{"code":"not_found"}')
+            )):
+                await conversation.run("request", "Open my camera", None)
+        messages = model.await_args_list[3].args[0]
+        tool_result = next(message["content"] for message in reversed(messages)
+                           if message.get("role") == "tool")
+        self.assertIn('"reason": "operation_failed"', tool_result)
+        self.assertIn('"completion": "unknown"', tool_result)
+        self.assertNotIn('"code":"not_found"', tool_result)
+        self.assertEqual(conversation.events[-2]["type"], "reply")
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+    async def test_failure_fallback_after_model_error(self):
+        """Functionality: Keep failed-action explanations available when the model is unavailable.
+        Inputs: Tool failure followed by a failed final completion.
+        Outputs: Static localized reply and one mutation dispatch.
+        Logic: Exercise the runtime's emergency rendering branch after failure evidence is saved.
+        Constraints: Synthetic provider/transport errors; no model-quality claim.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            tool_message("camera_start"), RuntimeError("provider unavailable"),
+        ])):
+            with patch("core.ai_mcp.browser_call", AsyncMock(side_effect=TimeoutError)) as browser:
+                await conversation.run("request", "Start my camera", None)
+        browser.assert_awaited_once()
+        replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
+        self.assertEqual(len(replies), 1)
+        self.assertIn("final state is unknown", replies[0])
+        self.assertIn("I did not retry it", replies[0])
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+    def test_tool_error_normalization(self):
+        """Functionality: Map explicit MCP error codes while withholding raw payloads.
+        Inputs: Small synthetic CallToolResult content objects.
+        Outputs: Route-unavailable failure with a known failed completion.
+        Logic: Exercise the production normalizer without an SDK that wraps exception text.
+        Constraints: Does not establish browser or public-relay error wording.
+        """
+        result = SimpleNamespace(content=[SimpleNamespace(text='{"code":"not_found"}')])
+        normalized = tool_failure("ui_navigate", result)
+        self.assertEqual(normalized, {
+            "outcome": "failed", "tool": "ui_navigate", "reason": "route_unavailable",
+            "completion": "failed",
+        })
+        read_error = SimpleNamespace(content=[SimpleNamespace(text="internal error")])
+        self.assertEqual(tool_failure("camera_status", read_error)["completion"], "not_started")
+        timeout = tool_exception("camera_start", TimeoutError("sensitive detail"))
+        self.assertEqual(timeout, {
+            "outcome": "failed", "tool": "camera_start", "reason": "operation_timeout",
+            "completion": "unknown",
+        })
+        self.assertEqual(
+            tool_exception("camera_status", RuntimeError("sensitive detail"))["completion"],
+            "not_started",
+        )
+
+    def test_localized_failure_fallback(self):
+        """Functionality: Keep the emergency tool-failure explanation concise and localized.
+        Inputs: Normalized missing-camera outcome; Outputs: safe English and Chinese replies.
+        Logic: Check cause, action boundary, and absence of raw tool payload.
+        Constraints: Static rendering does not measure model language quality.
+        """
+        failure = {
+            "tool": "camera_start", "reason": "camera_not_found", "completion": "failed",
+        }
+        english = failure_reply(failure, "en")
+        chinese = failure_reply(failure, "zh")
+        self.assertIn("No matching camera", english)
+        self.assertIn("没有找到符合条件的摄像头", chinese)
+        self.assertNotIn("{\"code\"", english)
+
+    async def test_empty_failure_explanation_uses_fallback(self):
+        """Functionality: Replace an empty model response after a failure with localized guidance.
+        Inputs: Camera request, failed camera tool, and blank final completion.
+        Outputs: A nonempty safe explanation without additional browser dispatch.
+        Logic: Exercise the normal failure-evidence and final-reply path.
+        Constraints: Synthetic provider/transport state; no real camera permission is requested.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            tool_message("camera_start"), {"role": "assistant", "content": ""},
+        ])):
+            with patch("core.ai_mcp.browser_call", AsyncMock(side_effect=TimeoutError)) as browser:
+                await conversation.run("request", "Start my camera", None)
+        browser.assert_awaited_once()
+        replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
+        self.assertEqual(len(replies), 1)
+        self.assertTrue(replies[0].strip())
+        self.assertIn("final state is unknown", replies[0])
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+    async def test_declined_action_blocks_batched_mutations(self):
+        """Functionality: Stop every later action in a model batch after a negative outcome.
+        Inputs: Camera start/stop tool batch and an explicit browser refusal.
+        Outputs: One browser call plus a not_executed result for the batched stop.
+        Logic: Preserve MCP call/result pairing while ending the action phase immediately.
+        Constraints: Synthetic page state; no physical camera is requested.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        batch = tool_message("camera_start")
+        batch["tool_calls"].append({
+            "id": uuid.uuid4().hex, "type": "function",
+            "function": {"name": "camera_stop", "arguments": "{}"},
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            batch, {"role": "assistant", "content": "The browser could not find a camera."},
+        ])) as model:
+            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "available": True, "accepted": False, "reason": "camera_not_found",
+                "state": "stopped",
+            })) as browser:
+                await conversation.run("request", "Start my camera", None)
+        browser.assert_awaited_once()
+        self.assertEqual(browser.await_args.args[1], "camera_start")
+        final_context = model.await_args_list[3].args[0]
+        paired_results = [message for message in final_context if message.get("role") == "tool"]
+        self.assertEqual(json.loads(paired_results[-1]["content"]), {
+            "outcome": "not_executed", "reason": "previous_action_failed",
+        })
+        self.assertEqual(conversation.events[-2]["type"], "reply")
 
     async def test_cancel_and_deduplicate(self):
         """Functionality: Prevent duplicate/overlapping tasks and cancel future scheduling.

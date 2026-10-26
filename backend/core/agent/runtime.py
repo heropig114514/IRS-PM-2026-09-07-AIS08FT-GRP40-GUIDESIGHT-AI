@@ -7,15 +7,20 @@ no automatic retries; tasks survive page handoffs until completion/cancellation/
 Related Modules: transport, provider, intents, selection, skills, tools; frontend/agent-client.js.
 Declaration Index: Conversation; Conversation.emit; Conversation.subscribe; Conversation.submit;
 Conversation.run; Conversation.execute; Conversation.cancel; Conversation.clear;
-Conversation.task_finished;
+Conversation.task_finished; append_failure_results; tool_exception; tool_failure;
+observed_failure; failure_reply; reason_code;
 prune; public_error; history_context; selection_reply.
-Variable Index: logger; conversations — bounded process-local registry; MAX_TURNS/MAX_CALLS/
-MAX_TOOLS/TURN_SECONDS/TTL_SECONDS/MAX_CONVERSATIONS — explicit memory/execution limits.
+Variable Index: logger; conversations — bounded process-local registry;
+REASON_CODES/REASON_ALIASES — accepted failure categories and browser aliases;
+ACTION_LABELS/REASON_LABELS — localized safe failure presentation;
+READ_ONLY_TOOLS — calls that cannot dispatch mutations;
+MAX_TURNS/MAX_CALLS/MAX_TOOLS/TURN_SECONDS/TTL_SECONDS/MAX_CONVERSATIONS — explicit limits.
 """
 
 import asyncio
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from functools import partial
@@ -32,6 +37,326 @@ logger = logging.getLogger(__name__)
 MAX_TURNS, MAX_CALLS, MAX_TOOLS = 8, 12, 30
 TURN_SECONDS, TTL_SECONDS, MAX_CONVERSATIONS = 180, 1800, 16
 conversations = {}
+REASON_CODES = {
+    "route_required", "permission_denied", "position_unavailable", "position_timeout",
+    "position_stale", "accuracy_insufficient", "off_route", "invalid_position",
+    "position_error", "watch_failed", "stop_failed", "page_hidden", "already_active",
+    "activation_required", "disabled", "unsupported", "busy", "map_not_ready",
+    "unknown_pattern", "voice_query_failed", "voice_unavailable", "voice_ambiguous",
+    "voice_language_mismatch", "local_voice_required", "invalid_text", "invalid_parameters",
+    "native_rejected", "native_error", "cancel_failed", "user_activation_required",
+    "camera_not_found",
+    "camera_permission_denied", "camera_security_denied", "camera_busy",
+    "camera_interrupted", "camera_constraint_unavailable", "camera_failed",
+    "camera_panel_hidden", "page_unavailable", "route_unavailable", "operation_timeout",
+    "operation_failed", "action_declined",
+}
+REASON_ALIASES = {
+    "not_found": "route_unavailable",
+    "NotFoundError": "camera_not_found",
+    "OverconstrainedError": "camera_constraint_unavailable",
+    "NotAllowedError": "camera_permission_denied",
+    "SecurityError": "camera_security_denied",
+    "NotReadableError": "camera_busy",
+    "AbortError": "camera_interrupted",
+}
+READ_ONLY_TOOLS = {
+    "discover_tools", "read_skill", "ui_snapshot", "ui_sessions", "system_status",
+    "system_routes", "maps_status", "navigation_status", "agent_navigation_status", "camera_status",
+    "speech_status", "speech_voices", "vibration_status", "places_categories",
+    "places_search", "places_nearby", "database_schema", "database_query",
+}
+ACTION_LABELS = {
+    "camera_start": ("the camera", "摄像头"),
+    "camera_status": ("the camera status", "摄像头状态"),
+    "camera_stop": ("the camera", "摄像头"),
+    "ui_navigate": ("the requested page", "请求的页面"),
+    "maps_locate": ("the device location", "设备位置"),
+    "maps_plan": ("the route", "路线"),
+    "navigation_start": ("walking navigation", "步行导航"),
+    "navigation_stop": ("walking navigation", "步行导航"),
+    "speech_speak": ("speech output", "语音播报"),
+    "vibration_test": ("the vibration request", "震动请求"),
+}
+REASON_LABELS = {
+    "camera_not_found": (
+        "No matching camera was found on this device.",
+        "此设备上没有找到符合条件的摄像头。",
+    ),
+    "camera_failed": (
+        "The browser could not start the camera for an unspecified reason.",
+        "浏览器无法启动摄像头，但没有提供具体原因。",
+    ),
+    "camera_constraint_unavailable": (
+        "The requested camera selection is unavailable.",
+        "请求的摄像头选项不可用。",
+    ),
+    "camera_permission_denied": (
+        "The browser denied camera permission.",
+        "浏览器拒绝了摄像头权限。",
+    ),
+    "camera_security_denied": (
+        "The browser security context does not allow camera access.",
+        "当前浏览器安全环境不允许访问摄像头。",
+    ),
+    "camera_busy": (
+        "The camera could not be read; it may be unavailable or in use.",
+        "无法读取摄像头；设备可能不可用或正在被占用。",
+    ),
+    "camera_interrupted": (
+        "The camera operation was interrupted.", "摄像头操作被中断。",
+    ),
+    "camera_panel_hidden": (
+        "The camera panel is hidden by the current page selection.",
+        "当前页面选择隐藏了摄像头区域。",
+    ),
+    "page_unavailable": (
+        "This page does not provide the requested control.", "当前页面没有提供所请求的功能。",
+    ),
+    "route_unavailable": (
+        "The requested page or route is not available in this app.",
+        "此应用中没有提供请求的页面或路由。",
+    ),
+    "route_required": (
+        "A route must be planned before navigation can start.", "需要先规划路线才能开始导航。",
+    ),
+    "permission_denied": (
+        "The browser denied the required device permission.", "浏览器拒绝了所需的设备权限。",
+    ),
+    "position_unavailable": (
+        "The device did not provide a location.", "设备没有提供位置信息。",
+    ),
+    "position_timeout": ("The location request timed out.", "获取位置超时。"),
+    "position_stale": (
+        "No fresh location fix arrived before the navigation deadline.",
+        "导航等待期间没有收到新的有效位置。",
+    ),
+    "accuracy_insufficient": (
+        "The current location accuracy is too low for reliable guidance.",
+        "当前位置精度不足，无法提供可靠导航。",
+    ),
+    "off_route": (
+        "The current location is outside the planned route tolerance.",
+        "当前位置偏离规划路线范围。",
+    ),
+    "invalid_position": (
+        "The device returned invalid location data.", "设备返回的位置数据无效。",
+    ),
+    "position_error": (
+        "The browser could not obtain a device location.", "浏览器无法获取设备位置。",
+    ),
+    "watch_failed": (
+        "The browser could not start continuous location updates.", "浏览器无法启动持续定位。",
+    ),
+    "stop_failed": (
+        "The application could not confirm that navigation stopped.", "应用无法确认导航已停止。",
+    ),
+    "page_hidden": ("The page is not in the foreground.", "页面当前不在前台。"),
+    "activation_required": (
+        "This output requires a direct user activation in the page.",
+        "此输出需要用户直接在页面中操作以启用。",
+    ),
+    "already_active": (
+        "The requested operation is already active.", "所请求的操作已经处于运行状态。",
+    ),
+    "disabled": (
+        "The required output is disabled in the current page settings.",
+        "当前页面设置中未启用所需输出。",
+    ),
+    "unsupported": (
+        "This browser does not support the requested operation.", "当前浏览器不支持所请求的操作。",
+    ),
+    "busy": ("Another operation is already in progress.", "另一个操作仍在进行中。"),
+    "map_not_ready": (
+        "The map is not ready to accept this request.", "地图尚未准备好，无法接受此请求。",
+    ),
+    "unknown_pattern": (
+        "The requested vibration pattern is not supported.", "不支持所请求的震动模式。",
+    ),
+    "voice_query_failed": (
+        "The browser could not read its available voice list.", "浏览器无法读取可用语音列表。",
+    ),
+    "voice_unavailable": ("The selected voice is not available.", "所选语音不可用。"),
+    "voice_ambiguous": ("The selected voice identifier is not unique.", "所选语音标识不唯一。"),
+    "voice_language_mismatch": (
+        "The selected voice does not match the requested language.", "所选语音与请求的语言不匹配。",
+    ),
+    "local_voice_required": (
+        "A local voice must be selected on this page.", "此页面需要明确选择本地语音。",
+    ),
+    "invalid_text": (
+        "The speech text is empty or exceeds its length limit.", "朗读文本为空或超过长度限制。",
+    ),
+    "invalid_parameters": (
+        "The speech settings are outside their supported ranges.", "语音设置超出支持范围。",
+    ),
+    "native_rejected": (
+        "The browser rejected the native output request.", "浏览器拒绝了原生输出请求。",
+    ),
+    "native_error": (
+        "The browser reported an error while requesting native output.",
+        "浏览器请求原生输出时报告错误。",
+    ),
+    "cancel_failed": (
+        "The browser could not confirm cancellation.", "浏览器无法确认已取消输出。",
+    ),
+    "operation_timeout": (
+        "The request timed out, so its final state could not be confirmed.",
+        "请求超时，因此无法确认最终状态。",
+    ),
+    "operation_failed": (
+        "The application reported a failure but did not identify its cause.",
+        "应用报告操作失败，但没有说明具体原因。",
+    ),
+    "action_declined": (
+        "The application did not accept the requested action.", "应用未接受所请求的操作。",
+    ),
+}
+
+
+def reason_code(value, default="operation_failed"):
+    """Functionality: Restrict failure categories to stable, user-safe reason codes.
+    Inputs: optional value returned by a semantic tool and a known default category.
+    Outputs: allowlisted reason code. Logic: map browser exception names then enforce the set.
+    Constraints: arbitrary provider text and raw exception messages never enter UI explanations.
+    """
+    candidate = REASON_ALIASES.get(value, value) if isinstance(value, str) else default
+    return candidate if candidate in REASON_CODES else default
+
+
+def tool_failure(name, result):
+    """Functionality: Normalize an MCP error without exposing its raw payload to the UI/model.
+    Inputs: tool name and official MCP CallToolResult. Outputs: bounded failure evidence.
+    Logic: recognize only explicit JSON error codes and timeout markers; unknown details remain
+    unknown. Constraints: never log or return provider exception strings or credentials; a
+    failed mutation remains unknown unless an explicit not_found code proves failure.
+    """
+    texts = [getattr(block, "text", "") for block in (getattr(result, "content", None) or [])]
+    raw = "\n".join(text for text in texts if isinstance(text, str))[:2000]
+    payload = None
+    try:
+        payload = json.loads(raw)
+    except (TypeError, ValueError):
+        pass
+    code = payload.get("code") if isinstance(payload, dict) else None
+    if code is None and re.search(r'"code"\s*:\s*"not_found"', raw):
+        code = "not_found"
+    if code == "not_found":
+        reason = "route_unavailable"
+    elif isinstance(code, str) and (code in REASON_CODES or code in REASON_ALIASES):
+        reason = reason_code(code)
+    elif "timeout" in raw.lower() or "timed out" in raw.lower():
+        reason = "operation_timeout"
+    else:
+        reason = "operation_failed"
+    completion = "failed" if reason == "route_unavailable" else (
+        "not_started" if name in READ_ONLY_TOOLS else "unknown"
+    )
+    return {
+        "outcome": "failed", "tool": name, "reason": reason,
+        "completion": completion,
+    }
+
+
+def tool_exception(name, error):
+    """Functionality: Normalize a raised MCP invocation failure at the dispatch boundary.
+    Inputs: tool name and caught exception. Outputs: bounded failure evidence.
+    Logic: classify timeouts separately and treat mutation completion as unknown; read-only calls
+    are known not to have dispatched an application mutation. Constraints: exception text and
+    provider details are never returned or logged.
+    """
+    reason = "operation_timeout" if isinstance(error, TimeoutError) else "operation_failed"
+    completion = "not_started" if name in READ_ONLY_TOOLS else "unknown"
+    return {"outcome": "failed", "tool": name, "reason": reason, "completion": completion}
+
+
+def append_failure_results(turn, calls, call_index, call_id, failure):
+    """Functionality: Pair a failed model tool batch with safe results for every call ID.
+    Inputs: current turn, assistant calls, failed index/ID, and normalized failure evidence.
+    Outputs: appended tool messages. Logic: preserve the actual failure and mark later batched
+    calls as not executed so the next model request remains protocol-valid.
+    Constraints: never dispatch pending calls or include their arguments in the result.
+    """
+    turn.append({
+        "role": "tool", "tool_call_id": call_id,
+        "content": json.dumps(failure, ensure_ascii=False),
+    })
+    for pending in calls[call_index + 1:]:
+        pending_id = pending.get("id") if isinstance(pending, dict) else None
+        if pending_id:
+            turn.append({
+                "role": "tool", "tool_call_id": pending_id,
+                "content": json.dumps({
+                    "outcome": "not_executed", "reason": "previous_action_failed",
+                }),
+            })
+
+
+def observed_failure(name, observed):
+    """Functionality: Detect explicit negative outcomes from structured semantic tools.
+    Inputs: tool name and structured result dictionary. Outputs: normalized failure or None.
+    Logic: unavailable, declined, and error/failed states stop subsequent actions and carry only
+    stable fields needed to explain the observation. Constraints: never infer failure from a
+    missing field, false verification flag, empty result list, or nested optional capability.
+    """
+    if not isinstance(observed, dict):
+        return None
+    if observed.get("available") is False:
+        outcome, completion = "unavailable", "not_started"
+        default_reason = "page_unavailable"
+    elif observed.get("accepted") is False:
+        outcome, completion = "declined", "not_accepted"
+        default_reason = "action_declined"
+    elif isinstance(observed.get("state"), str) and observed["state"] in {"error", "failed"}:
+        outcome, completion = "failed", "failed"
+        default_reason = "operation_failed"
+    else:
+        return None
+    failure = {
+        "outcome": outcome, "tool": name,
+        "reason": reason_code(observed.get("reason"), default_reason),
+        "completion": completion,
+    }
+    state = observed.get("state")
+    if isinstance(state, str) and state in {
+        "error", "failed", "idle", "ready", "locating", "navigating", "stopped",
+    }:
+        failure["state"] = state
+    if type(observed.get("active")) is bool:
+        failure["active"] = observed["active"]
+    if type(observed.get("frames_received")) is int:
+        failure["frames_received"] = observed["frames_received"]
+    return failure
+
+
+def failure_reply(failure, language):
+    """Functionality: Render a concise localized explanation if model completion is unavailable.
+    Inputs: normalized failure and validated user language code. Outputs: safe user-facing prose.
+    Logic: describe the affected operation, allowlisted cause, and whether completion is known.
+    Constraints: no raw JSON, invented cause, success claim, retry, or background promise.
+    """
+    language_index = 0 if language == "en" else 1
+    tool = failure.get("tool")
+    action = ACTION_LABELS.get(tool, ("the requested operation", "所请求的操作"))[language_index]
+    reason = reason_code(failure.get("reason"))
+    detail = REASON_LABELS.get(reason, REASON_LABELS["operation_failed"])[language_index]
+    completion = failure.get("completion")
+    if language_index == 0:
+        if completion == "unknown":
+            return (f"I couldn't confirm that {action} completed. {detail} Its final state is "
+                    "unknown, and I did not retry it; please check the current page status.")
+        if completion == "not_started":
+            return f"I couldn't check or start {action}. {detail} No action was started."
+        if completion == "not_accepted":
+            return f"The app did not accept {action}. {detail} No further actions were taken."
+        return f"I couldn't complete {action}. {detail} No further actions were taken."
+    if completion == "unknown":
+        return f"我无法确认{action}是否完成。{detail}最终状态未知，我没有重试；请检查当前页面状态。"
+    if completion == "not_started":
+        return f"我无法检查或启动{action}。{detail}本次没有启动操作。"
+    if completion == "not_accepted":
+        return f"应用没有接受{action}。{detail}我已停止后续操作。"
+    return f"{action}未能完成。{detail}我已停止后续操作。"
 
 
 def selection_reply(items, policy, language):
@@ -269,8 +594,8 @@ class Conversation:
         releases the guard; failed planning pauses actions. New searches replace pending choices.
         History omits only rediscovered metadata bodies, retaining actual execution evidence.
         Constraints: 12 total model calls (including classification)/30 tools/120000 context
-        characters; errors are explicit,
-        mutation transport errors end the turn rather than provoking an automatic replay.
+        characters; any failed or declined tool ends the action phase, is returned as bounded
+        evidence for a localized explanation, and cannot trigger subsequent mutations.
         """
         turn = [{"role": "user", "content": text}]
         self.emit("working", request_id=request_id, stage="routing")
@@ -319,6 +644,7 @@ class Conversation:
             allowed = {"discover_tools"}
             completed, requirements, limits, counts = set(), {}, {}, {}
             result_counts, pause_reason, selection_text = {}, None, None
+            failed_outcome = None
             used = 0
             for _ in range(MAX_CALLS - 1):
                 messages = [{"role": "system", "content": instructions() + (
@@ -351,9 +677,11 @@ class Conversation:
                             "content": (
                                 "The workflow executor has ended the action phase for this turn: "
                                 + json.dumps(pause_reason)
-                            + ". Report observations; further actions require user input. "
-                            "Follow the loaded skill to ask for the missing input or selection. "
-                            "Do not automatically choose, retry or promise "
+                                + ". Report observations; no more tools may run in this turn. "
+                            "Explain the recorded failure or missing prerequisite without claiming "
+                            "success; ask for input only when it is actually missing. "
+                            "Do not expose "
+                            "raw error payloads, automatically choose, retry or promise "
                                 "background work. Reply in the user's language."
                             ),
                         }
@@ -391,22 +719,43 @@ class Conversation:
                             target_skills - loaded
                         )
                     visible_schemas.append(schema)
-                async with asyncio.timeout(40):
-                    message = await completion(
-                        messages, visible_schemas,
-                        required_tool=required,
+                try:
+                    async with asyncio.timeout(40):
+                        message = await completion(
+                            messages, visible_schemas,
+                            required_tool=required if not pause_reason else None,
+                        )
+                except Exception:
+                    if failed_outcome is None:
+                        raise
+                    logger.warning(
+                        "Agent failure explanation fallback id=%s tool=%s",
+                        request_id, failed_outcome.get("tool"),
                     )
+                    reply = failure_reply(failed_outcome, decision.language)
+                    turn.append({"role": "assistant", "content": reply})
+                    self.turns.append(turn)
+                    self.emit("reply", request_id=request_id, text=reply)
+                    return
                 turn.append(message)
                 calls = message.get("tool_calls", [])
                 if not calls:
-                    if required:
+                    if required and not pause_reason:
                         raise AgentError(
                             "discovery_required", "模型未完成工具发现与技能加载，已停止。"
                         )
+                    if failed_outcome and not (message.get("content") or "").strip():
+                        message["content"] = failure_reply(failed_outcome, decision.language)
                     self.turns.append(turn)
                     self.emit("reply", request_id=request_id, text=message["content"])
                     return
-                for call in calls:
+                if failed_outcome is not None:
+                    reply = failure_reply(failed_outcome or pause_reason, decision.language)
+                    turn.append({"role": "assistant", "content": reply})
+                    self.turns.append(turn)
+                    self.emit("reply", request_id=request_id, text=reply)
+                    return
+                for call_index, call in enumerate(calls):
                     used += 1
                     if used > MAX_TOOLS:
                         raise AgentError("tool_limit", "本次操作步骤达到上限，请缩小请求范围。")
@@ -445,24 +794,72 @@ class Conversation:
                     if counts[name] >= limits.get(name, MAX_TOOLS):
                         permitted.discard(name)
                     logger.info("Agent tool started id=%s name=%s step=%d", request_id, name, used)
-                    async with asyncio.timeout(35):
-                        result = await client.call_tool(name, arguments)
-                    if result.is_error:
-                        logger.warning("Agent MCP failed id=%s name=%s", request_id, name)
-                        raise AgentError(
-                            "tool_failed", f"{name} 执行失败；请检查页面状态，未自动重试。"
+                    try:
+                        async with asyncio.timeout(35):
+                            result = await client.call_tool(name, arguments)
+                    except Exception as error:
+                        failed_outcome = tool_exception(name, error)
+                        pause_reason = failed_outcome
+                        permitted.clear()
+                        logger.warning(
+                            "Agent MCP invocation raised id=%s name=%s reason=%s type=%s",
+                            request_id, name, failed_outcome["reason"], type(error).__name__,
                         )
+                        append_failure_results(turn, calls, call_index, call_id, failed_outcome)
+                        self.emit(
+                            "tool_result", request_id=request_id, name=name,
+                            result={key: failed_outcome[key] for key in
+                                    ("outcome", "reason", "completion")},
+                        )
+                        break
+                    if result.is_error:
+                        failed_outcome = tool_failure(name, result)
+                        pause_reason = failed_outcome
+                        permitted.clear()
+                        logger.warning(
+                            "Agent MCP failed id=%s name=%s reason=%s",
+                            request_id, name, failed_outcome["reason"],
+                        )
+                        append_failure_results(turn, calls, call_index, call_id, failed_outcome)
+                        self.emit(
+                            "tool_result", request_id=request_id, name=name,
+                            result={key: failed_outcome[key] for key in
+                                    ("outcome", "reason", "completion")},
+                        )
+                        break
                     observed = result.structured_content
-                    if observed is None:
-                        raise AgentError("invalid_tool_result", "工具未返回结构化结果。")
-                    completed.add(name)
-                    if bound_selection:
+                    if not isinstance(observed, dict):
+                        failed_outcome = {
+                            "outcome": "failed", "tool": name, "reason": "operation_failed",
+                            "completion": "not_started" if name in READ_ONLY_TOOLS else "unknown",
+                        }
+                        pause_reason = failed_outcome
+                        permitted.clear()
+                        logger.warning(
+                            "Agent MCP returned invalid result id=%s name=%s",
+                            request_id, name,
+                        )
+                        append_failure_results(turn, calls, call_index, call_id, failed_outcome)
+                        self.emit(
+                            "tool_result", request_id=request_id, name=name,
+                            result={key: failed_outcome[key] for key in
+                                    ("outcome", "reason", "completion")},
+                        )
+                        break
+                    failure = observed_failure(name, observed)
+                    if failure:
+                        failed_outcome = failure
+                        pause_reason = failure
+                        permitted.clear()
+                    else:
+                        completed.add(name)
+                    if not failure and bound_selection:
                         if observed.get("accepted") is True:
                             self.selection = None
                         else:
                             pause_reason = {"tool": name, "selected_candidate_action_failed": True}
                             permitted.clear()
-                    if name == "discover_tools":
+                    if not failure and name == "discover_tools":
                         discovered = True
                         allowed.discard("discover_tools")
                         permitted.discard("discover_tools")
@@ -470,7 +867,7 @@ class Conversation:
                         logger.info(
                             "Agent catalog discovered id=%s tools=%d", request_id, len(names)
                         )
-                    elif name == "read_skill":
+                    elif not failure and name == "read_skill":
                         skill = arguments["name"]
                         policy = tool_policy(skill)
                         declared = set(policy["tools"])
@@ -491,7 +888,7 @@ class Conversation:
                             len(declared & names),
                             len(declared - names),
                         )
-                    if name in result_counts:
+                    if not failure and name in result_counts:
                         rule = result_counts[name]
                         if "selection" in rule:
                             self.selection = None
@@ -552,12 +949,30 @@ class Conversation:
                             summary[key + "_count"] = len(observed[key])
                     self.emit("tool_result", request_id=request_id, name=name, result=summary)
                     logger.info("Agent tool finished id=%s name=%s", request_id, name)
+                    if failure:
+                        for pending in calls[call_index + 1:]:
+                            pending_id = pending.get("id") if isinstance(pending, dict) else None
+                            if pending_id:
+                                turn.append({
+                                    "role": "tool", "tool_call_id": pending_id,
+                                    "content": json.dumps({
+                                        "outcome": "not_executed",
+                                        "reason": "previous_action_failed",
+                                    }),
+                                })
+                        break
                 if selection_text is not None:
                     turn.append({"role": "assistant", "content": selection_text})
                     self.turns.append(turn)
                     self.emit("reply", request_id=request_id, text=selection_text)
                     return
-            raise AgentError("model_step_limit", "本次处理达到步骤上限，请缩小请求范围。")
+            if failed_outcome is not None:
+                reply = failure_reply(failed_outcome, decision.language)
+                turn.append({"role": "assistant", "content": reply})
+                self.turns.append(turn)
+                self.emit("reply", request_id=request_id, text=reply)
+                return
+            raise AgentError("model_step_limit", "本次处理步骤达到上限，请缩小请求范围。")
 
     def cancel(self):
         """Functionality: Cancel future work. Inputs: active task; Outputs: cancellation request.

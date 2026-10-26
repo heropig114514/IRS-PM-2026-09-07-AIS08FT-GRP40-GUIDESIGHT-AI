@@ -3,15 +3,19 @@ name: camera
 description: Open/close the camera, select existing echo or HF detection mode, inspect frames and request scene descriptions.
 ---
 
-1. Inspect ui_snapshot. Camera tools require the camera page. Use ui_navigate(page="camera")
-   when needed; leaving maps stops navigation. The conversation survives this page change.
-   A request only to open the page ends after verifying the page; do not start capture.
-2. Inspect camera_status. For opening, call camera_start with no mode override to preserve
-   the UI choice. Explicit "object detection" requests may use processing="hf"; "echo"
-   requests may use processing="echo". Never silently allocate GPU for a generic open request.
+1. Inspect ui_snapshot. On an `assist-product` or `assist-test` surface, the camera is embedded
+   in the current page; use ui_navigate(page="camera") to focus its panel without changing the
+   route. On a standard PRS surface, use the same tool to navigate to the camera page. A request
+   only to show the page/panel ends after verifying it; do not start capture.
+2. For an explicit request to turn on/start the camera, inspect camera_status and call
+   camera_start with no mode override to preserve the UI choice. Explicit "object detection"
+   requests may use processing="hf"; "echo" requests may use processing="echo". Never silently
+   allocate GPU for a generic request.
 3. Verify with camera_status(wait_seconds=12). active means a live media track;
    frames_received proves decoded frames reached this page. A permission wait or first
-   frame wait is not success. Do not retry errors or replace the chosen camera/mode.
+   frame wait is not success. If the browser reports a missing camera, denied permission,
+   unavailable selection, or another failure, report that observed reason in the user's language.
+   Do not retry errors or replace the chosen camera/mode.
 4. To close, call camera_stop and verify inactive with camera_status. Do not navigate away
    as a substitute for a supported stop action. If already stopped, report that state.
 5. To change camera/mode while running, stop first, then start with the requested settings.

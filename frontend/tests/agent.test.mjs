@@ -8,7 +8,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {encodeWav, VoiceInput} from "../voice-input.js";
 import {AgentPanel} from "../agent-client.js";
-import {cameraState, observe, performDevice} from "../agent-device.js";
+import {cameraFailureReason, cameraState, observe, performDevice} from "../agent-device.js";
 
 // Functionality: Show routing decisions in the activity log before tool execution, once.
 // Inputs: explicit bilingual intent/replay events and a minimal DOM fixture; Outputs: labels.
@@ -63,7 +63,11 @@ test("camera pending permission is not active and errors remain explicit", () =>
   assert.equal(cameraState(app).state, "streaming");
   assert.equal(cameraState(app).frames_received, 3);
   app.message.dataset.kind = "error";
+  app.lastErrorType = "NotFoundError";
   assert.equal(cameraState(app).state, "error");
+  assert.equal(cameraState(app).reason, "camera_not_found");
+  assert.equal(cameraFailureReason("NotAllowedError"), "camera_permission_denied");
+  assert.equal(cameraFailureReason("UnknownError"), "camera_failed");
 });
 
 // Functionality: Refuse page-inapplicable tools and invalid observation budgets.

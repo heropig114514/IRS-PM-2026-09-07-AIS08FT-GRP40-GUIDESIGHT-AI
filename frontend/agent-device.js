@@ -1,11 +1,30 @@
 /* Responsibilities: Adapt existing map/camera controllers to conversational tools.
  * Implementation: Conditional imports and bounded read-only observation waits.
  * Related Modules: ai-control.js, camera.js, maps-page.js, navigation-ui.js.
- * Declaration Index: cameraState; observe; performDevice.
- * Variable Index: None; controller/status/deadline are call-local state. */
+ * Declaration Index: CAMERA_FAILURE_REASONS — stable browser error mappings; cameraFailureReason;
+ * cameraState; observe; performDevice.
+ * Variable Index: CAMERA_FAILURE_REASONS — user-safe semantic causes; controller/status/deadline
+ * are call-local state. */
+
+const CAMERA_FAILURE_REASONS = {
+  NotFoundError: "camera_not_found",
+  OverconstrainedError: "camera_constraint_unavailable",
+  NotAllowedError: "camera_permission_denied",
+  SecurityError: "camera_security_denied",
+  NotReadableError: "camera_busy",
+  AbortError: "camera_interrupted",
+};
+
+/* Functionality: Convert browser media error names into stable user-facing categories.
+ * Inputs: DOMException name or unknown value. Outputs: allowlisted semantic reason.
+ * Logic: Preserve known permission, device-selection, availability and interruption classes.
+ * Constraints: Unknown browser errors stay generic; messages and device identifiers are excluded. */
+export function cameraFailureReason(errorName) {
+  return CAMERA_FAILURE_REASONS[errorName] || "camera_failed";
+}
 
 /* Functionality: Describe camera resources. Inputs: CameraApp; Outputs: JSON state.
- * Logic: Separate live track, pending startup and decoded frames.
+ * Logic: Separate live track, pending startup and decoded frames; expose a stable failure reason.
  * Constraints: No device request; historical counters do not imply an active camera. */
 export function cameraState(app) {
   const active = Boolean(app.stream?.getVideoTracks().some(track => track.readyState === "live"));
@@ -13,7 +32,9 @@ export function cameraState(app) {
   return {available: true, active, processing: app.processing.value, phase: app.cameraPhase,
     state: app.message.dataset.kind === "error" ? "error" : app.mode === "camera" ?
       (frames > 0 && active ? "streaming" : "starting") : "stopped",
-    frames_received: frames, detail: app.message.textContent};
+    frames_received: frames,
+    reason: app.message.dataset.kind === "error" ? cameraFailureReason(app.lastErrorType) : null,
+    detail: app.message.dataset.kind === "error" ? null : app.message.textContent};
 }
 
 /* Functionality: Await startup observations. Inputs: read/pending functions and seconds.

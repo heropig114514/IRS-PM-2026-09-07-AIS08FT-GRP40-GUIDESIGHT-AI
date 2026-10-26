@@ -35,7 +35,8 @@ DESCRIPTIONS = {
                       "executing mapped workflows. Registration is not successful execution.",
     "read_skill": "Load one named workflow from the supplied skill catalog before operating.",
     "ui_snapshot": "Inspect the bound tab's current URL, controls, options and visible state.",
-    "ui_navigate": "Move this same tab to maps or camera; await its new control connection.",
+    "ui_navigate": "Focus the embedded camera panel on unified assist pages, or navigate this tab "
+                    "to maps/camera on standard pages and verify its resulting state.",
     "ui_action": "Operate an observed application control; no assistant UI or permissions bypass.",
     "maps_status": "Read current map origin/destination, configuration, busy and route state.",
     "maps_locate": "Obtain actual device GPS and set map origin; browser permission required.",
@@ -130,8 +131,9 @@ class BrowserTools:
         return await ai_mcp.ui_snapshot(self.session_id)
 
     async def ui_navigate(self, page: Literal["camera", "maps"]) -> dict[str, Any]:
-        """Functionality: Change page. Inputs: fixed page alias; Outputs: new snapshot.
-        Logic: Existing verified handoff; Constraints: leaving a page stops its device work.
+        """Functionality: Focus an embedded camera panel or change page. Inputs: fixed page alias.
+        Outputs: new snapshot or explicit unavailable result. Logic: Same-page focus skips handoff;
+        standard routes use the existing verified handoff. Constraints: leaving a page stops work.
         """
         return await ai_mcp.ui_navigate(self.session_id, page)
 
