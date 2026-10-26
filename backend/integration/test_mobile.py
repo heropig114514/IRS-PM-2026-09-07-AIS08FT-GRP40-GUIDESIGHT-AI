@@ -1,6 +1,7 @@
 """Responsibilities: Verify the explicit mobile relay without listeners, SSH, TLS or CUDA.
 Implementation: Real ASGI packets and assist/Django handlers exercise exact public admission,
-the guest assistant socket, canonical forwarding, mount-relative resources and localhost/MCP isolation.
+the guest assistant socket, canonical forwarding, mount-relative resources, and localhost/MCP
+isolation.
 Related Modules: integration.mobile/assist/asgi; core.maps/camera;
 frontend/integration/assist-mvp.js.
 Declaration Index: http_call; websocket_call; RecordingApplication; RecordingApplication.__init__;
@@ -454,8 +455,8 @@ class MobileTests(SimpleTestCase):
 
     async def test_real_assist_template(self):
         """Functionality: Verify actual combined HTML uses one mount-relative module graph.
-        Inputs: original assist renderer through the public wrapper. Outputs: nonce, product-only
-        same-origin microphone policy, SRI and URL assertions.
+        Inputs: original assist renderer through the public wrapper. Outputs: nonce, same-origin
+        microphone policy for both assistant views, SRI and URL assertions.
         Logic: resolve real script/link paths as the phone does; Constraints: no CDN/browser/TLS
         execution.
         """
@@ -473,9 +474,8 @@ class MobileTests(SimpleTestCase):
                 nonce = re.search(rb'<style nonce="([^"]+)"', body).group(1)
                 self.assertIn(b"'nonce-" + nonce + b"'", headers[b"content-security-policy"])
             self.assertEqual(body.count(b'integrity="sha256-'), 2)
-            microphone_policy = b"microphone=(self)" if view == "product" else b"microphone=()"
             self.assertEqual(headers[b"permissions-policy"],
-                             b"geolocation=(self), camera=(self), " + microphone_policy)
+                             b"geolocation=(self), camera=(self), microphone=(self)")
             scripts = re.findall(rb'<script[^>]+src="([^"]+)"', body)
             for script in scripts:
                 if not script.startswith(b"https://"):
