@@ -9,9 +9,10 @@ Declaration Index: mobile_origin; reject; MobileApplication; MobileApplication._
 MobileApplication.__call__; MobileApplication.public_path; MobileApplication.forward;
 MobileApplication.forward.public_send.
 Variable Index: MOUNT — fixed public /mvp prefix; HTTP_METHODS — exact public endpoint methods;
-WS_PATHS — exact control, assistant, and local-detection sockets; STRIPPED_HEADERS — proxy/relay
-headers never trusted downstream; logger — body-free admission diagnostics. Public origin is an
-explicit routing boundary, not user identity. No MCP/admin or general API route is exposed.
+WS_PATHS — exact control, assistant, local-detection, and echo sockets;
+STRIPPED_HEADERS — proxy/relay headers never trusted downstream; logger — body-free admission
+diagnostics. Public origin is an explicit routing boundary, not user identity. No MCP/admin or
+general API route is exposed.
 """
 
 import json
@@ -29,7 +30,9 @@ HTTP_METHODS = {
     "/maps/route/": frozenset({"POST"}),
     "/integration/status/": frozenset({"GET"}),
 }
-WS_PATHS = frozenset({"/ws/control/", "/ws/agent/", "/ws/detect/local/"})
+WS_PATHS = frozenset(
+    {"/ws/control/", "/ws/agent/", "/ws/detect/local/", "/ws/echo/"}
+)
 STRIPPED_HEADERS = frozenset(
     {
         b"host",
@@ -185,8 +188,8 @@ class MobileApplication:
     def public_path(self, path, kind):
         """Functionality: Resolve exact allowed public endpoint methods.
         Inputs: already stripped decoded path and protocol. Outputs: permitted method set or None.
-        Logic: three exact browser WS paths and fixed HTTP routes; asset serving retains assist's
-        exact allowlist.
+        Logic: four exact browser WS paths and fixed HTTP routes; the anonymous diagnostic echo
+        path retains the original handler's bounds; asset serving retains assist's exact allowlist.
         Constraints: prefixed/double-prefixed paths, traversal, empty segments and backslashes
         rejected;
         this layer never invents an asset filename or delegates unrelated software routes.

@@ -368,21 +368,22 @@ class MobileTests(SimpleTestCase):
             self.assertEqual((await http_call(app, path, method))[0]["status"], 405)
 
     async def test_public_websocket_admission(self):
-        """Functionality: Admit exact same-origin control, assistant, and local inference sockets.
-        Inputs: three explicitly allowed sockets and hostile/absent-origin/foreign-path variants.
+        """Functionality: Admit exact same-origin control, assistant, local inference, and echo
+        sockets.
+        Inputs: four explicitly allowed sockets and hostile/absent-origin/foreign-path variants.
         Outputs: preserved acceptance/normalized headers or 1008. Logic: original hub remains a
         singleton.
-        Constraints: no socket listener, native frame or extra control implementation.
+        Constraints: echo retains its original frame/connection bounds; no socket listener, native
+        frame or extra control implementation.
         """
         inner = RecordingApplication()
         app = MobileApplication(inner)
-        for path in ("/ws/control/", "/ws/agent/", "/ws/detect/local/"):
+        for path in ("/ws/control/", "/ws/agent/", "/ws/detect/local/", "/ws/echo/"):
             self.assertEqual((await websocket_call(app, path))["type"], "websocket.accept")
             self.assertEqual(inner.scopes[-1]["root_path"], MOUNT)
             self.assertEqual(inner.scopes[-1]["scheme"], "wss")
             self.assertEqual(dict(inner.scopes[-1]["headers"])[b"origin"], LOCAL.encode())
         for path in (
-            "/ws/echo/",
             "/ws/agent",
             "/ws/detect/hf/",
             "/ws/infer/",
@@ -401,7 +402,7 @@ class MobileTests(SimpleTestCase):
         self.assertEqual(
             (await websocket_call(app, "/ws/control/", query_string=b"token=fixture"))["code"], 1008
         )
-        self.assertEqual(len(inner.scopes), 3)
+        self.assertEqual(len(inner.scopes), 4)
 
     async def test_no_path_guessing_or_traversal(self):
         """Functionality: Enforce the one stripped-path contract without traversal or query aliases.
