@@ -83,7 +83,8 @@ The default seeded split does not require these metadata files.
 The converter itself never downloads images, labels, split metadata or weights.
 
 ```powershell
-cd D:\PRS-PracticeModule\PRS-PracticeModule\backend
+$repoRoot = (git rev-parse --show-toplevel).Trim()
+Set-Location (Join-Path $repoRoot 'backend')
 $py = '.\.venv\Scripts\python.exe'
 $env:YOLO_OFFLINE = '1'
 $env:YOLO_AUTOINSTALL = '0'
@@ -120,7 +121,8 @@ Dependencies already exist in `requirements-inference.txt`: Torch2.8.0, Torchvis
 Ultralytics8.4.171, NumPy and Pillow. No package upgrade or installation is performed implicitly.
 
 ```powershell
-cd D:\PRS-PracticeModule\PRS-PracticeModule\backend
+$repoRoot = (git rev-parse --show-toplevel).Trim()
+Set-Location (Join-Path $repoRoot 'backend')
 $py = '.\.venv\Scripts\python.exe'
 $env:YOLO_OFFLINE = '1'
 $env:YOLO_AUTOINSTALL = '0'

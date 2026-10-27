@@ -45,7 +45,8 @@ an absolute `.pth` link to this workspace's `.venv/Lib/site-packages`; recreate 
 the workspace. To reproduce on another Windows checkout with an existing `.venv`:
 
 ```powershell
-cd D:\PRS-PracticeModule\PRS-PracticeModule\backend
+$repoRoot = (git rev-parse --show-toplevel).Trim()
+Set-Location (Join-Path $repoRoot 'backend')
 New-Item -ItemType Directory -Force test-results | Out-Null
 & .\.venv\Scripts\python.exe -m pip freeze --all > test-results/evaluation-constraints.txt
 & .\.venv\Scripts\python.exe -m venv .venv-evaluation

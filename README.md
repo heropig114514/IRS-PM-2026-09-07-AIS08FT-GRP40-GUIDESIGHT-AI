@@ -1,8 +1,8 @@
-# PRS Practice Module
+# GUIDESIGHT AI
 
 ## SECTION 1 : PROJECT TITLE
 
-PRS Practice Module — Voice-Assisted Navigation and Perception
+GUIDESIGHT AI — Voice-Assisted Navigation and Perception
 
 ## SECTION 2 : EXECUTIVE SUMMARY / PAPER ABSTRACT
 
