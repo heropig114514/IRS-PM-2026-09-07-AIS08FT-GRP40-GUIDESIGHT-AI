@@ -1,5 +1,5 @@
-# Responsibilities: Track development source and explicitly selected test videos; keep course files, credentials, environments, and generated artifacts local.
-# Implementation: Use a root allowlist; explicitly include test videos and their source manifest while ignoring other model binaries, large datasets, and results.
+# Responsibilities: Track engineering source, submission indexes, and explicitly selected test videos; keep credentials, environments, course deliverables, and generated artifacts local.
+# Implementation: Use a root allowlist; include the submission directories and selected test videos while ignoring other model binaries, large datasets, and results.
 # Related Modules: backend/tools/deploy_space.py, backend/tools/prepare_kaggle.py,
 # backend/model_tests/README.md, README.md。
 # Declaration Index: None。
@@ -12,6 +12,10 @@
 !/.github/
 !/backend/
 !/frontend/
+!/ProjectReport/
+!/SystemCode/
+!/Video/
+!/Miscellaneous/
 
 **/__pycache__/
 *.py[cod]
