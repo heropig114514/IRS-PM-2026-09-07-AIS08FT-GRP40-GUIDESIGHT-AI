@@ -1,20 +1,31 @@
 """Responsibilities: Verify external dataset geometry, coverage, sequencing and failure isolation.
 Implementation: Independent numerical expectations, tiny official-Devkit fixtures and fake workers.
 Related Modules: model_tests.unified_evaluation; existing A/B/C/E modules are reused unchanged.
-Declaration Index: make_nuscenes; frame; UnifiedScoringTests;
-UnifiedScoringTests.test_class_mapping; UnifiedScoringTests.test_one_to_one_and_coverage;
-UnifiedScoringTests.test_errors_and_bins; UnifiedScoringTests.test_paired_intersection;
-UnifiedScoringTests.test_gt_identity; UnifiedScoringTests.test_invalid_and_empty;
-UnifiedScoringTests.test_sequence_boundaries; UnifiedScoringTests.test_cuda_timing_boundary;
-UnifiedScoringTests.test_memory_sampler; UnifiedScoringTests.test_e_checkpoint_required;
-UnifiedScoringTests.test_geometry_uses_calibration; UnifiedScoringTests.test_original_components;
-UnifiedDatasetTests; UnifiedDatasetTests.test_camera_transform;
-UnifiedDatasetTests.test_projection; UnifiedDatasetTests.test_prepare_and_integrity;
-UnifiedDatasetTests.test_missing_files; UnifiedDatasetTests.test_partial_method_failure;
-UnifiedDatasetTests.test_evaluate_temporal_pass.
-UnifiedDatasetTests.test_partial_method_failure.launch;
-UnifiedDatasetTests.test_evaluate_temporal_pass.reset;
-UnifiedDatasetTests.test_evaluate_temporal_pass.predict.
+Declaration Index:
+make_nuscenes — build a minimal official-format dataset fixture; frame — build frame metadata;
+UnifiedScoringTests — verify scoring and adapter contracts;
+UnifiedScoringTests.test_class_mapping — check class mapping;
+UnifiedScoringTests.test_one_to_one_and_coverage — check matching and coverage;
+UnifiedScoringTests.test_errors_and_bins — check error metrics and bins;
+UnifiedScoringTests.test_paired_intersection — check paired comparison eligibility;
+UnifiedScoringTests.test_gt_identity — check ground-truth identity;
+UnifiedScoringTests.test_invalid_and_empty — reject malformed and empty scoring inputs;
+UnifiedScoringTests.test_sequence_boundaries — check sequence segmentation;
+UnifiedScoringTests.test_cuda_timing_boundary — verify CUDA timing synchronization;
+UnifiedScoringTests.test_memory_sampler — verify bounded memory sampling;
+UnifiedScoringTests.test_e_checkpoint_required — require checkpoint-backed evaluation;
+UnifiedScoringTests.test_geometry_uses_calibration — use camera calibration for geometry;
+UnifiedScoringTests.test_original_components — guard adapter reuse and production defaults;
+UnifiedDatasetTests — verify source geometry, preparation and temporal integration;
+UnifiedDatasetTests.test_camera_transform — check camera-coordinate transforms;
+UnifiedDatasetTests.test_projection — check projection geometry;
+UnifiedDatasetTests.test_prepare_and_integrity — verify prepared dataset consistency;
+UnifiedDatasetTests.test_missing_files — reject incomplete source data;
+UnifiedDatasetTests.test_partial_method_failure — isolate method failures;
+UnifiedDatasetTests.test_partial_method_failure.launch — run one adapter behind the fixture;
+UnifiedDatasetTests.test_evaluate_temporal_pass — evaluate a fixed temporal fixture;
+UnifiedDatasetTests.test_evaluate_temporal_pass.reset — restore synthetic frame state;
+UnifiedDatasetTests.test_evaluate_temporal_pass.predict — return synthetic bounded predictions.
 Variable Index: HAS_DEVKIT/HAS_TORCH/HAS_PSUTIL — optional evaluation dependencies, not GPU claims.
 """
 
@@ -411,11 +422,12 @@ class UnifiedScoringTests(SimpleTestCase):
     def test_original_components(self):
         """Functionality: Guard independent adapters and existing production defaults.
         Inputs: module AST and production profile. Outputs: expected reuse/no training calls.
-        Logic: inspect called original APIs; compare source fingerprints before/after pure checks.
+        Logic: Read source as UTF-8, independent of host locale, and compare source fingerprints.
         Constraints: runtime manifests separately fingerprint actual original source and weights.
         """
         before = source_snapshot()
-        tree = ast.parse((ROOT / "model_tests/unified_evaluation/adapters.py").read_text())
+        source = (ROOT / "model_tests/unified_evaluation/adapters.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
         names = {
             node.func.id
             for node in ast.walk(tree)

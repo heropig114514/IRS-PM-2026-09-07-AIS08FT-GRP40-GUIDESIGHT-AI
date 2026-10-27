@@ -24,6 +24,7 @@ TTC values beyond the default 10-second evaluation horizon are **retained unchan
 | `class_weights` | truck/bus→18；car/motorcycle→15；bicycle/scooter→12 |
 | Medium weights from the same class table | person/animal/bird/cat/dog/horse/sheep/cow/elephant/bear/zebra/giraffe → 5 |
 | Low weights from the same class table | bench/chair/stop sign/fire hydrant/pole/sign → 1 |
+| Walk-model obstacles ([WALK-MODEL.md](WALK-MODEL.md)) | bollard/traffic_cone → 1；stairs → 3 |
 | `default_class_weight` | 5 for unlisted classes; class alone never triggers an alert |
 | `risk_level_thresholds` | medium ≥25; high ≥50; critical ≥75; other known scores are low |
 | `alert_priorities` | low/unknown → 0; medium → 2; high → 3; critical → 4; 1 is reserved for normal |

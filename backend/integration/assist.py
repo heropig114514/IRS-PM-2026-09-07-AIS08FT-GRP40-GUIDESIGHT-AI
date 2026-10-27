@@ -86,7 +86,7 @@ async def assist_response(send, status, body, content_type="application/json", *
     """Functionality: Return the combined entry's explicit maps/media permission boundary.
     Inputs: send/status/fixed body/MIME, HEAD/nonce, redirect and microphone-policy flag.
     Outputs: no-store HTTP messages. Logic: preserve Leaflet/OSM policy; permit same-origin mic
-    only on the product view that offers explicit press-to-talk input.
+    only on views that expose an explicit assistant recording control.
     Constraints: policy permits browser requests but does not request permission; redirect targets
     only /maps/ and no arbitrary connect target or private data is exposed.
     """
@@ -167,7 +167,7 @@ class AssistApplication:
         """Functionality: Serve a fixed product or diagnostic maps/perception page.
         Inputs: safe same-host GET/HEAD. Outputs: view HTML or explicit contract/method failure.
         Logic: exact sibling paths preserve existing relative APIs; render with one fresh nonce and
-        allow same-origin microphone use only for the formal page's explicit hold-to-talk control.
+        allow same-origin microphone use for both views' explicit assistant recording controls.
         Constraints: the permission policy does not request access; no source rewriting or concealed
         template faults.
         """
@@ -188,7 +188,7 @@ class AssistApplication:
             return await assist_response(send, 503, {"code": "assist_template_unavailable"})
         await assist_response(send, 200, body, "text/html; charset=utf-8",
                               head=scope.get("method") == "HEAD", nonce=nonce,
-                              allow_microphone=scope["path"] == "/maps/")
+                              allow_microphone=scope["path"] in {"/maps/", "/maps/test"})
 
     async def asset(self, scope, send):
         """Functionality: Serve only canonical modules belonging to the combined entry.

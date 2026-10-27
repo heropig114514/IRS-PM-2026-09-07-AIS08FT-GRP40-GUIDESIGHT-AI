@@ -1,14 +1,16 @@
-/* Responsibilities: Verify audio encoding, capture lifecycle, device evidence, intent activity
- * and page refusals.
+/* Responsibilities: Verify audio encoding, capture lifecycle, live-reply notification, device evidence,
+ * intent activity and page refusals.
  * Implementation: Node tests with explicit controller fixtures, no browser hardware.
- * Related Modules: voice-input.js, agent-device.js; check_agent_browser.mjs adds real UI.
+ * Related Modules: voice-input.js, agent-client.js, agent-device.js, integration/assist-mvp.js;
+ * check_agent_browser.mjs adds real UI.
  * Declaration Index: None (test callbacks are anonymous).
  * Variable Index: None; fixture state is local to each test. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import {encodeWav, VoiceInput} from "../voice-input.js";
 import {AgentPanel} from "../agent-client.js";
-import {cameraState, observe, performDevice} from "../agent-device.js";
+import {cameraFailureReason, cameraState, observe, performDevice,
+  productNavigationSpeechState} from "../agent-device.js";
 
 // Functionality: Show routing decisions in the activity log before tool execution, once.
 // Inputs: explicit bilingual intent/replay events and a minimal DOM fixture; Outputs: labels.
@@ -32,6 +34,88 @@ test("intent activity distinguishes mapped operations from rejected general ques
   document.documentElement.lang = "en";
   AgentPanel.prototype.receive.call(owner, {type: "intent", seq: 3, route: "general", unknown_policy: "general"});
   assert.equal(items[2].textContent, "General question");
+});
+
+// Functionality: Keep backend failure details out of assistant-authored dialogue.
+// Inputs: Ordered failure events, their untrusted detail field and the selected UI language.
+// Outputs: Empty dialogue plus a localized, non-conversational status notice.
+// Logic: Exercise the production receive path with a minimal panel owner.
+// Constraints: Presentation only; no service call or model output is involved.
+test("agent failures render as status and never as assistant messages", t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {configurable: true, value: {
+    documentElement: {lang: "zh-CN"},
+  }});
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else delete globalThis.document;
+  });
+
+  const dialogue = [], status = {textContent: ""};
+  const owner = {
+    seen: 0, busy: true, stage: "thinking", notice: null, root: {dataset: {}},
+    status,
+    append: (...entry) => dialogue.push(entry),
+    render() { this.status.textContent = this.notice || "Ready"; },
+  };
+  AgentPanel.prototype.receive.call(owner, {
+    type: "error", seq: 1, code: "agent_explanation_unavailable",
+    detail: "A fixed backend message must not be presented as the agent's reply.",
+  });
+  assert.deepEqual(dialogue, []);
+  assert.equal(status.textContent, "助手暂时无法生成故障说明，请稍后重试。");
+  assert.equal(status.textContent.includes("fixed backend message"), false);
+
+  document.documentElement.lang = "en-US";
+  AgentPanel.prototype.receive.call(owner, {
+    type: "error", seq: 2, code: "qwen_http_error",
+    detail: "A second fixed backend message must also stay out of dialogue.",
+  });
+  assert.deepEqual(dialogue, []);
+  assert.equal(status.textContent, "The assistant service is unavailable.");
+
+  document.documentElement.lang = "zh-CN";
+  AgentPanel.prototype.receive.call(owner, {
+    type: "rejected", seq: 3, code: "agent_capacity",
+    detail: "Untrusted backend text must not become dialogue or UI copy.",
+  });
+  assert.deepEqual(dialogue, []);
+  assert.equal(status.textContent, "语音助手会话已达到服务容量，请稍后刷新页面。");
+  document.documentElement.lang = "en-US";
+  AgentPanel.prototype.receive.call(owner, {
+    type: "rejected", seq: 4, code: "agent_capacity", detail: "Untrusted backend text.",
+  });
+  assert.equal(status.textContent, "The assistant session capacity is reached. Refresh the page later.");
+});
+
+/* Functionality: Notify the speech integration for live replies but never replayed history.
+ * Inputs: Ordered reply/ready events and an EventTarget fixture. Outputs: One body-bearing event per live reply.
+ * Logic: Observe the production receive method, including ready-event replay and sequence deduplication.
+ * Constraints: No WebSocket, provider request, speech engine or audible-output claim is involved. */
+test("agent reply notifications include live responses and exclude replayed history", t => {
+  const previous = new Map(["window", "CustomEvent"].map(name =>
+    [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+  class FixtureCustomEvent extends Event {
+    constructor(type, options = {}) { super(type); this.detail = options.detail; }
+  }
+  const target = new EventTarget(), replies = [];
+  target.addEventListener("prs-agent-reply", event => replies.push(event.detail?.text));
+  Object.defineProperty(globalThis, "window", {configurable: true, value: target});
+  Object.defineProperty(globalThis, "CustomEvent", {configurable: true, value: FixtureCustomEvent});
+  t.after(() => { for (const [name, descriptor] of previous) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else delete globalThis[name];
+  }});
+
+  const owner = {seen: 0, busy: false, stage: "ready", root: {dataset: {}}, append() {}, render() {},
+    receive(event, replayed = false) { AgentPanel.prototype.receive.call(this, event, replayed); }};
+  AgentPanel.prototype.receive.call(owner, {type: "reply", seq: 1, text: "刚收到的回答"});
+  AgentPanel.prototype.receive.call(owner, {type: "ready", busy: false, events: [
+    {type: "reply", seq: 2, text: "连接恢复时重放的历史回答"},
+  ]});
+  AgentPanel.prototype.receive.call(owner, {type: "reply", seq: 1, text: "重复的旧事件"});
+
+  assert.deepEqual(replies, ["刚收到的回答"]);
 });
 
 // Functionality: Verify WAV metadata/duration/resampling at native rates.
@@ -63,7 +147,11 @@ test("camera pending permission is not active and errors remain explicit", () =>
   assert.equal(cameraState(app).state, "streaming");
   assert.equal(cameraState(app).frames_received, 3);
   app.message.dataset.kind = "error";
+  app.lastErrorType = "NotFoundError";
   assert.equal(cameraState(app).state, "error");
+  assert.equal(cameraState(app).reason, "camera_not_found");
+  assert.equal(cameraFailureReason("NotAllowedError"), "camera_permission_denied");
+  assert.equal(cameraFailureReason("UnknownError"), "camera_failed");
 });
 
 // Functionality: Refuse page-inapplicable tools and invalid observation budgets.
@@ -75,6 +163,32 @@ test("semantic tools never construct controllers on the wrong page", async () =>
     assert.equal((await performDevice(action, {}, doc)).reason, "page_unavailable");
   await assert.rejects(observe(() => ({}), () => true, 13));
   assert.deepEqual(await observe(() => ({state: "ready"}), () => false, 1), {state: "ready"});
+});
+
+// Functionality: Preserve the unified product's navigation-output evidence in status snapshots.
+// Inputs: Detached guidance-manager fixture; Outputs: product navigation speech metadata.
+// Logic: Project only the live navigation channel state; Constraints: no speech body or audibility claim.
+test("product navigation speech status is mapped from its existing output owner", () => {
+  assert.deepEqual(productNavigationSpeechState({
+    navigation_enabled: true,
+    navigation_run_id: "navigation-4",
+    paused: {speech: true, vibration: false},
+    reasons: {speech: "risk_priority"},
+    active: {speech: {request_id: "speech-7", started: true, text: "must not escape"}},
+  }), {
+    available: true,
+    enabled: true,
+    paused: true,
+    reason: "risk_priority",
+    run_id: "navigation-4",
+    active_request_id: "speech-7",
+    active_started: true,
+    audio_output_verified: false,
+  });
+  assert.deepEqual(productNavigationSpeechState({}), {
+    available: true, enabled: false, paused: false, reason: null, run_id: null,
+    active_request_id: null, active_started: false, audio_output_verified: false,
+  });
 });
 
 // Functionality: Release microphone on transport loss without submitting or reconnecting.

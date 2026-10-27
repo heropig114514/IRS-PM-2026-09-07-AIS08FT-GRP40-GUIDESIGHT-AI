@@ -1,11 +1,32 @@
 /* Responsibilities: Adapt existing map/camera controllers to conversational tools.
- * Implementation: Conditional imports and bounded read-only observation waits.
- * Related Modules: ai-control.js, camera.js, maps-page.js, navigation-ui.js.
- * Declaration Index: cameraState; observe; performDevice.
- * Variable Index: None; controller/status/deadline are call-local state. */
+ * Implementation: Conditional imports, bounded read-only observation waits, product/standalone
+ * navigation-speech snapshots, and user-activation gating for camera starts.
+ * Related Modules: ai-control.js, camera.js, maps-page.js, navigation-ui.js,
+ * integration/assist-mvp.js, integration/maps-navigation-speech.js.
+ * Declaration Index: CAMERA_FAILURE_REASONS — stable browser error mappings; cameraFailureReason;
+ * cameraState; observe; productNavigationSpeechState; performDevice.
+ * Variable Index: CAMERA_FAILURE_REASONS — user-safe semantic causes; controller/status/deadline
+ * and productGuidance are call-local state. */
+
+const CAMERA_FAILURE_REASONS = {
+  NotFoundError: "camera_not_found",
+  OverconstrainedError: "camera_constraint_unavailable",
+  NotAllowedError: "camera_permission_denied",
+  SecurityError: "camera_security_denied",
+  NotReadableError: "camera_busy",
+  AbortError: "camera_interrupted",
+};
+
+/* Functionality: Convert browser media error names into stable user-facing categories.
+ * Inputs: DOMException name or unknown value. Outputs: allowlisted semantic reason.
+ * Logic: Preserve known permission, device-selection, availability and interruption classes.
+ * Constraints: Unknown browser errors stay generic; messages and device identifiers are excluded. */
+export function cameraFailureReason(errorName) {
+  return CAMERA_FAILURE_REASONS[errorName] || "camera_failed";
+}
 
 /* Functionality: Describe camera resources. Inputs: CameraApp; Outputs: JSON state.
- * Logic: Separate live track, pending startup and decoded frames.
+ * Logic: Separate live track, pending startup and decoded frames; expose a stable failure reason.
  * Constraints: No device request; historical counters do not imply an active camera. */
 export function cameraState(app) {
   const active = Boolean(app.stream?.getVideoTracks().some(track => track.readyState === "live"));
@@ -13,7 +34,9 @@ export function cameraState(app) {
   return {available: true, active, processing: app.processing.value, phase: app.cameraPhase,
     state: app.message.dataset.kind === "error" ? "error" : app.mode === "camera" ?
       (frames > 0 && active ? "streaming" : "starting") : "stopped",
-    frames_received: frames, detail: app.message.textContent};
+    frames_received: frames,
+    reason: app.message.dataset.kind === "error" ? cameraFailureReason(app.lastErrorType) : null,
+    detail: app.message.dataset.kind === "error" ? null : app.message.textContent};
 }
 
 /* Functionality: Await startup observations. Inputs: read/pending functions and seconds.
@@ -30,10 +53,31 @@ export async function observe(read, pending, seconds = 0) {
   return state;
 }
 
+/* Functionality: Project the unified product's output owner into the navigation-status contract.
+ * Inputs: Detached AssistGuidanceManager.describe() snapshot. Outputs: navigation_speech metadata.
+ * Logic: Map only current navigation-output ownership, enablement and pause state; null malformed
+ * optional fields rather than inferring a selection or playback result.
+ * Constraints: This is a software-state snapshot; it never reads spoken text or verifies audibility.
+ */
+export function productNavigationSpeechState(productGuidance) {
+  const activeSpeech = productGuidance?.active?.speech;
+  return {
+    available: true,
+    enabled: productGuidance?.navigation_enabled === true,
+    paused: productGuidance?.paused?.speech === true,
+    reason: typeof productGuidance?.reasons?.speech === "string" ? productGuidance.reasons.speech : null,
+    run_id: typeof productGuidance?.navigation_run_id === "string" ? productGuidance.navigation_run_id : null,
+    active_request_id: typeof activeSpeech?.request_id === "string" ? activeSpeech.request_id : null,
+    active_started: activeSpeech?.started === true,
+    audio_output_verified: false,
+  };
+}
+
 /* Functionality: Execute one semantic command via shared controllers.
  * Inputs: action/args/current document; Outputs: state, acknowledgement or error.
- * Logic: Page checks precede imports; start returns promptly, status observes startup and
- * the existing optional navigation speech adapter without creating sensors or enabling output.
+ * Logic: Page checks precede imports; product camera starts require a live local user activation,
+ * while the visible product button remains the native permission entry point. Status observes
+ * startup and optional navigation speech without creating sensors or enabling output.
  * Constraints: No provider fallback, permission bypass or processing parameter changes. */
 export async function performDevice(action, args = {}, doc = document) {
   if (action.startsWith("maps_") || action === "agent_navigation_status") {
@@ -41,13 +85,20 @@ export async function performDevice(action, args = {}, doc = document) {
     if (action === "agent_navigation_status") {
       const {navigation} = await import("./navigation-ui.js");
       let speech = null;
-      if (doc.querySelector("#maps-navigation-speech-panel")) {
+      if (doc.documentElement?.dataset.assist === "true") {
+        // The unified product already owns navigation speech through AssistGuidanceManager.
+        // Importing maps-navigation-speech.js here would request an asset that the isolated
+        // /mvp/ relay does not publish and would turn a status read into a false start failure.
+        const {guidanceManager, assistReady} = await import("./integration/assist-mvp.js");
+        await assistReady;
+        speech = productNavigationSpeechState(guidanceManager.describe());
+      } else if (doc.querySelector("#maps-navigation-speech-panel")) {
         const {navigationSpeech, mapsNavigationSpeechReady} = await import("./integration/maps-navigation-speech.js");
         await mapsNavigationSpeechReady;
-        speech = navigationSpeech;
+        speech = {available: true, ...navigationSpeech.describe()};
       }
       return observe(() => ({...navigation.describe(),
-        navigation_speech: speech ? {available: true, ...speech.describe()} : {available: false}}),
+        navigation_speech: speech || {available: false}}),
       state => state.state === "locating", args.wait_seconds ?? 0);
     }
     const {mapsControl} = await import("./maps-page.js");
@@ -62,6 +113,10 @@ export async function performDevice(action, args = {}, doc = document) {
     if (action === "camera_start") {
       if (doc.visibilityState === "hidden") return {accepted: false, reason: "page_hidden", ...cameraState(app)};
       if (app.mode !== "idle") return {accepted: false, reason: "already_active", ...cameraState(app)};
+      if (doc.documentElement.dataset.assistView === "product" &&
+          !globalThis.navigator?.userActivation?.isActive) {
+        return {accepted: false, reason: "user_activation_required", ...cameraState(app)};
+      }
       if (args.processing != null) {
         if (!["echo", "hf"].includes(args.processing)) throw new Error("Invalid processing mode");
         app.processing.value = args.processing;

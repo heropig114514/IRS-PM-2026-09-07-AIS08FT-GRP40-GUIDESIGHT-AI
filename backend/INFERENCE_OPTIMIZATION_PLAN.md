@@ -8,6 +8,23 @@
 
 ## 执行顺序
 
+### Optional walk model and native fusion optimization
+
+1. Merge the published optional 87-class model and verify its checkpoint/manifest identity.
+   Preserve the original `yolo26n` default, model-specific class/light rules and existing FP32
+   TensorRT depth selection. Bind startup, advertised identity and lazy loading to one model.
+2. Establish independent comparisons for each detection model on the same complete local videos.
+   Reuse the verified depth engine and original frames/timestamps, FP32, max640/JPEG80 and risk
+   parameters. Never compare different detection weights as an acceleration gain.
+3. Evaluate the existing explicit host ROI reduction with the native TensorRT pipeline: one depth
+   plane transfer can replace repeated per-object GPU reductions. Include transfer in fusion and
+   full-frame timing, retain the original GPU fusion, and check every aligned map/object/JPEG.
+   No detection thresholds, pedestrian-light rules, sampling, depth frequency or precision changes.
+4. Apply the candidate through explicit startup configuration only if same-model controls support
+   a gain and output consistency. Verify real PRF2 sessions for both model selections, then leave
+   the original detector selected locally. Record all samples and limitations in structured reports,
+   synchronize documentation/tests and complete the repository's delivery checks before pushing.
+
 ### Depth ONNX / TensorRT forward work
 
 The executable workflow, artifact contract and final-weight handoff are documented in

@@ -1,24 +1,40 @@
 /* Responsibilities: Verify the public guest diagnostic relay with real Chrome/ORS/local GPU transport.
  * Implementation: Strict TLS, native fake-video capture and explicit
  * synthetic NUS watch callbacks; verify default-on controls without startup acquisition/output,
- * then a genuine start-click/native-TTS activation before automatic guidance.
+ * then a genuine start-click/backend-PCM activation before automatic guidance.
  * Related Modules: integration/assist-mvp.js, camera.js, navigation-ui.js, ai-control.js, speech-output.js;
  * backend/integration/assist.py and the separately deployed /mvp/ reverse proxy.
- * Declaration Index: requireGate; validateArguments; requireNew; safeFailure;
- * classifyRequest; verifyModelEvidence; verifySpeechActivation; guardMedia;
- * guardMedia.checkedVideo; guardMedia.observedSpeak; installGPS;
- * installGPS.emit; installGPS.describe; installGPS.watchPosition; installGPS.clearWatch;
- * installGPS.getCurrentPosition; observe; observe.recordFrame; observe.recordGuidance;
- * observe.recordDriver; observe.recordNavigation; navigationEvidence; cleanupEvidence; waitNode;
- * monitorSocket; monitorSocket.received; monitorSocket.sent; selectSpeech; planNavigation;
- * startCamera; waitCameraFrames; waitCapacity; stopAll; syntheticSpeech; run; main.
+ * Declaration Index: requireGate — apply fixed acceptance failures; validateArguments — pin public target and outputs;
+ * requireNew — prohibit artifact overwrite; safeFailure — redact exceptions; classifyRequest — constrain resources;
+ * verifyModelEvidence — correlate genuine frames and model sockets; verifySpeechActivation — validate first PCM start;
+ * verifyTtsStreamEvidence — correlate server stream IDs with playback; guardMedia — wrap native media and WebSocket boundaries;
+ * guardMedia.checkedVideo — preserve native video while rejecting microphone access;
+ * guardMedia.observedWebSocket — observe trusted speech gestures;
+ * guardMedia.observedWebSocket.send — correlate synthesis UUIDs with playback IDs;
+ * installGPS — inject labeled synthetic sensor callbacks; installGPS.emit — deliver one owned fix;
+ * installGPS.describe — report fixture counters; installGPS.watchPosition — register one synthetic watch;
+ * installGPS.clearWatch — release that watch; installGPS.getCurrentPosition — reject unexpected one-shot GPS;
+ * observe — load canonical controllers and evidence listeners; observe.recordFrame — retain frame metadata;
+ * observe.recordGuidance — correlate owned guidance with request policy; observe.recordAudio — retain output lifecycle;
+ * observe.recordNavigation — retain navigation state; navigationEvidence — read controller state;
+ * cleanupEvidence — read released resources; waitNode — poll one bounded predicate;
+ * monitorSocket — observe approved public WebSocket metadata; monitorSocket.received — retain safe server events;
+ * monitorSocket.sent — retain PRF2 headers; selectSpeech — validate configured backend voice;
+ * planNavigation — exercise real public ORS; startCamera — select the configured fake scene source;
+ * waitCameraFrames — await verified model results; waitModelAlert — await a correlated real-model alert utterance;
+ * waitCapacity — verify drained sessions;
+ * stopAll — release browser resources; syntheticSpeech — exercise isolated risk speech;
+ * manualBilingualTts — test explicit Chinese and English backend playback;
+ * run — execute public relay acceptance; main — validate CLI and write the evidence report.
  * Variable Index: PHONE_ORIGIN/PREFIX — explicitly approved deployment target; NUS — synthetic GPS,
- * not a phone measurement; report — body-free evidence without credentials, pixels or positions.
+ * not a phone measurement; report — body-free evidence without credentials, pixels or positions;
+ * ttsSubmissions — request-ID correlation metadata without utterance text;
+ * PRS_FAKE_CAMERA_VIDEO — optional caller-supplied local Y4M scene fixture; requireModelAlert — explicit strict-mode flag.
  * Constraints: Chrome with a phone viewport is not Safari/iPhone validation. Never disable TLS,
  * start services, download fixtures, use a physical camera/microphone, mock ORS/models, retry or commit.
  */
 import {createRequire} from "node:module";
-import {access, mkdir, writeFile} from "node:fs/promises";
+import {access, mkdir, stat, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 
@@ -34,11 +50,14 @@ export function requireGate(condition, code) {
 
 /* Functionality: Validate the exact public HTTPS relay and new JSON report arguments.
  * Inputs: CLI URL/report pair and runtime environment. Outputs: normalized URL and report/runtime paths.
- * Logic: pin origin/mount; no userinfo/query/fragment, credential-file input or extra arguments.
- * Constraints: no implicit local target, alternate server, TLS bypass or browser installation. */
+ * Logic: pin origin/mount; no userinfo/query/fragment or credential-file input; accept only the documented
+ * optional model-alert flag.
+ * Constraints: no implicit local target, alternate server, TLS bypass or browser installation; an optional
+ * camera scene must be an existing caller-supplied Y4M file. */
 export function validateArguments(argv, environment) {
   const [url, output, ...extra] = argv;
-  requireGate(Boolean(url && output && !extra.length && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
+  requireGate(Boolean(url && output && extra.length <= 1 &&
+    (!extra.length || extra[0] === "--require-model-alert") && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
   let address;
   try { address = new URL(url); } catch { requireGate(false, "INVALID_PHONE_URL"); }
   requireGate(address.origin === PHONE_ORIGIN && address.pathname === `${PREFIX}maps/test` &&
@@ -46,7 +65,9 @@ export function validateArguments(argv, environment) {
   const report = resolve(output);
   requireGate(report.toLowerCase().endsWith(".json"), "INVALID_REPORT_PATH");
   return {url: address.href, output: report,
-    screenshot: report.slice(0, -5) + ".png", runtime: resolve(environment.PRS_PLAYWRIGHT_PATH)};
+    screenshot: report.slice(0, -5) + ".png", runtime: resolve(environment.PRS_PLAYWRIGHT_PATH),
+    fakeCameraFile: environment.PRS_FAKE_CAMERA_VIDEO ? resolve(environment.PRS_FAKE_CAMERA_VIDEO) : null,
+    requireModelAlert: extra[0] === "--require-model-alert"};
 }
 
 /* Functionality: Preserve existing evidence and private configuration.
@@ -83,7 +104,7 @@ export function classifyRequest(url, resourceType = null) {
 /* Functionality: Correlate real validated model frames with public WSS PRF2 capture headers.
  * Inputs: saved frames and actual model socket evidence. Outputs: per-session frame counts.
  * Logic: require two explicit sessions, >=3 frames each, original FP32/depth/tracker/risk identity.
- * Constraints: fake camera pixels test transport/pipeline only; no accuracy, real camera or risk-alert claim. */
+ * Constraints: fake camera pixels test transport/pipeline only; no physical camera or detection-accuracy claim. */
 export function verifyModelEvidence(frames, sockets) {
   requireGate(sockets.length === 2 && sockets.every(socket => socket.secure && socket.hellos.length === 1), "MODEL_SESSION_COUNT");
   requireGate(frames.every(frame => sockets.some(socket => socket.hellos[0].session_id === frame.session_id)), "FOREIGN_MODEL_FRAME");
@@ -117,19 +138,89 @@ export function verifyModelEvidence(frames, sockets) {
   return sessions;
 }
 
-/* Functionality: Verify the first original start-click activation through actual native TTS evidence.
- * Inputs: body-free activation/call/native lifecycle snapshot. Outputs: verified request ID.
- * Logic: require ready only after a real start, matching request identity and active user gesture.
- * Constraints: no manual test, queued-return, fabricated native start or physical-audibility claim. */
+/* Functionality: Verify first-click activation from an actual backend PCM playback start.
+ * Inputs: body-free activation/call/audio lifecycle snapshot. Outputs: verified request ID.
+ * Logic: require ready only after the real shared driver emits start for the owned request and the
+ * same gesture creates its TTS socket. Constraints: no manual bypass, fabricated start or audibility claim. */
 export function verifySpeechActivation(evidence) {
   const id = evidence.activation?.request_id;
   requireGate(evidence.activation?.ready === true && Number.isSafeInteger(id) && id > 0,
     "SPEECH_ACTIVATION_NOT_READY");
   requireGate(evidence.calls?.[0]?.user_gesture_active === true, "SPEECH_ACTIVATION_NOT_GESTURE");
-  requireGate(evidence.native?.filter(event => event.phase === "start" && event.request_id === id).length === 1,
-    "SPEECH_ACTIVATION_NO_NATIVE_START");
-  return {native_start_verified: true, request_id: id, user_gesture_active: true,
-    source: "original_navigation_start_click", physical_audibility_verified: false};
+  const audio = evidence.audio ?? [];
+  requireGate(audio.filter(event => event.phase === "start" && event.request_id === id).length === 1,
+    "SPEECH_ACTIVATION_NO_AUDIO_START");
+  return {audio_start_verified: true, request_id: id, user_gesture_active: true,
+    source: "original_user_gesture_backend_stream", physical_audibility_verified: false};
+}
+
+/* Functionality: Correlate real backend TTS streams with browser playback request identities.
+ * Inputs: Secure WebSocket observations, audio lifecycle events and submitted synthesis IDs.
+ * Outputs: Counts and fixed PCM format for completed, interrupted and pre-provider-canceled streams.
+ * Logic: Validate each playback against one submitted UUID and one matching 24 kHz mono PCM
+ * configuration; require completion after normal end and accept an incomplete provider stream only
+ * when the matching browser request has an explicit cancel event.
+ * Constraints: A browser start proves playback scheduling only, not physical speaker audibility. */
+export function verifyTtsStreamEvidence(sockets, audioEvents, submissions) {
+  const requestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  requireGate(sockets.length >= 4 && sockets.every(socket => socket.secure), "BACKEND_TTS_STREAM_INVALID");
+  const submittedByUuid = new Map(), submittedByAudioId = new Map();
+  for (const submission of submissions) {
+    requireGate(requestIdPattern.test(submission.request_id) && Number.isSafeInteger(submission.audio_request_id) &&
+      submission.audio_request_id > 0 && !submittedByUuid.has(submission.request_id) &&
+      !submittedByAudioId.has(submission.audio_request_id), "BACKEND_TTS_STREAM_INVALID");
+    submittedByUuid.set(submission.request_id, submission);
+    submittedByAudioId.set(submission.audio_request_id, submission);
+  }
+
+  const streams = new Map();
+  for (const socket of sockets) {
+    for (const event of socket.tts) {
+      requireGate(["audio_config", "complete", "error"].includes(event.type) &&
+        requestIdPattern.test(event.request_id) && submittedByUuid.has(event.request_id) &&
+        event.type !== "error", "BACKEND_TTS_STREAM_INVALID");
+      const stream = streams.get(event.request_id) ?? {configs: [], completions: []};
+      if (event.type === "audio_config") stream.configs.push(event);
+      if (event.type === "complete") stream.completions.push(event);
+      streams.set(event.request_id, stream);
+    }
+  }
+  const canceledIds = new Set(audioEvents.filter(event => event.phase === "cancel" &&
+    Number.isSafeInteger(event.request_id)).map(event => event.request_id));
+  const audioIdByUuid = new Map([...submittedByUuid].map(([id, submission]) => [id, submission.audio_request_id]));
+  let completedStreams = 0, interruptedStreams = 0;
+  for (const [id, stream] of streams) {
+    const validConfig = stream.configs.length === 1 && stream.configs[0].sample_rate === 24000 &&
+      stream.configs[0].format === "pcm_s16le_mono" && submittedByUuid.has(id);
+    const completed = stream.completions.length === 1 &&
+      Number.isSafeInteger(stream.completions[0].audio_bytes) && stream.completions[0].audio_bytes > 0;
+    const interrupted = stream.completions.length === 0 && canceledIds.has(audioIdByUuid.get(id));
+    requireGate(validConfig && (completed || interrupted), "BACKEND_TTS_STREAM_INVALID");
+    if (completed) completedStreams++;
+    else interruptedStreams++;
+  }
+
+  const started = audioEvents.filter(event => event.phase === "start");
+  const startedIds = new Set();
+  for (const event of started) {
+    requireGate(Number.isSafeInteger(event.request_id) && event.request_id > 0 &&
+      !startedIds.has(event.request_id), "BACKEND_TTS_STREAM_INVALID");
+    startedIds.add(event.request_id);
+    const submission = submittedByAudioId.get(event.request_id);
+    requireGate(submission && streams.has(submission.request_id) &&
+      (streams.get(submission.request_id).completions.length === 1 || canceledIds.has(event.request_id)),
+    "BACKEND_TTS_STREAM_INVALID");
+  }
+  for (const event of audioEvents.filter(item => item.phase === "end")) {
+    const submission = submittedByAudioId.get(event.request_id);
+    requireGate(submission && streams.get(submission.request_id)?.completions.length === 1,
+      "BACKEND_TTS_STREAM_INVALID");
+  }
+  requireGate(startedIds.size >= 4, "BACKEND_TTS_STREAM_INVALID");
+  return {secure_sockets: sockets.length, started_streams: startedIds.size,
+    completed_streams: completedStreams, interrupted_streams: interruptedStreams,
+    cancelled_before_provider_response: sockets.filter(socket => socket.tts.length === 0).length,
+    sample_rate: 24000, format: "pcm_s16le_mono", physical_audibility_verified: false};
 }
 
 /* Functionality: Observe native video tracks while preventing any microphone request before it occurs.
@@ -139,16 +230,45 @@ export function verifySpeechActivation(evidence) {
 function guardMedia() {
   const native = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
   window.__phoneMedia = {calls: [], tracks: []};
-  const nativeSpeak = window.speechSynthesis?.speak?.bind(window.speechSynthesis);
   window.__phoneSpeechCalls = [];
-  /* Functionality: Observe the real browser speak submission and transient activation without text.
-   * Inputs: original native utterance. Outputs: unchanged native call and safe gesture timestamp.
-   * Logic: delegate synchronously without simulated events; Constraints: never speak on its own. */
-  function observedSpeak(utterance) {
-    window.__phoneSpeechCalls.push({at: performance.now(), user_gesture_active: navigator.userActivation?.isActive === true});
-    return nativeSpeak(utterance);
+  const NativeWebSocket = window.WebSocket;
+  /* Functionality: Observe backend speech requests without retaining utterance bodies in reports.
+   * Inputs: same-origin socket URL and optional protocols. Outputs: original WebSocket instance.
+   * Logic: record the trusted gesture; keep command text transiently in memory until the lifecycle
+   * observer compares it with expected guidance, and retain UUID-to-playback-ID metadata for TTS checks.
+   * Constraints: never export request text. */
+  function observedWebSocket(url, protocols) {
+    const socket = protocols === undefined ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
+    const address = new URL(String(url), location.href);
+    if (address.pathname === "/mvp/ws/tts/") {
+      window.__phoneSpeechCalls.push({at: performance.now(), user_gesture_active: navigator.userActivation?.isActive === true,
+        secure: address.protocol === "wss:"});
+      const send = socket.send.bind(socket);
+      /* Functionality: Correlate one transmitted synthesis request without changing its payload.
+       * Inputs: Original WebSocket data. Outputs: Same data sent once.
+       * Logic: Retain only UUID, current playback ID, language and rate; text stays in the existing
+       * transient matcher for its policy comparison. Constraints: Never export utterance text. */
+      socket.send = data => {
+        if (typeof data === "string" && window.__phoneProbe) {
+          try {
+            const command = JSON.parse(data);
+            if (command.type === "synthesize") {
+              const audioRequestId = window.__phoneControllers?.driver.current?.id ?? null;
+              window.__phoneProbe.synthesisRequests.push({request_id: command.request_id,
+                text: command.text, language: command.language, rate: command.rate});
+              window.__phoneProbe.ttsSubmissions.push({request_id: command.request_id,
+                audio_request_id: audioRequestId, language: command.language, rate: command.rate});
+            }
+          } catch { window.__phoneProbe.synthesisRequests.push({invalid_command: true}); }
+        }
+        return send(data);
+      };
+    }
+    return socket;
   }
-  if (nativeSpeak) window.speechSynthesis.speak = observedSpeak;
+  observedWebSocket.prototype = NativeWebSocket.prototype;
+  Object.setPrototypeOf(observedWebSocket, NativeWebSocket);
+  window.WebSocket = observedWebSocket;
   if (!native) return;
   /* Functionality: Reject microphone acquisition and observe the unmodified native video request.
    * Inputs: production media constraints. Outputs: original native stream.
@@ -216,7 +336,7 @@ export function installGPS(point) {
 
 /* Functionality: Observe canonical production singletons using only the current /mvp/ module base.
  * Inputs: initialized relay page. Outputs: identity/security fields and in-memory safe observations.
- * Logic: original model events and native speech events are observed without changing controllers.
+ * Logic: original model events and backend audio events are observed without changing controllers.
  * Constraints: no absolute /assets alias, mock server/model, route installation or captured pixels. */
 async function observe() {
   const asset = new URL("../assets/", location.href);
@@ -228,7 +348,8 @@ async function observe() {
   const {navigationSpeechText} = await import(new URL("integration/navigation-speech.js", asset));
   const {videoAlertText} = await import(new URL("integration/video-alerts.js", asset));
   window.__phoneControllers = {glue, cameraApp, navigation, driver, ai};
-  window.__phoneProbe = {frames: [], sources: [], guidance: [], native: [], utterances: [], navigation: []};
+  window.__phoneProbe = {frames: [], sources: [], guidance: [], audio: [], utterances: [],
+    synthesisRequests: [], ttsSubmissions: [], navigation: []};
   /* Functionality: Observe validated camera frames and original source identity.
    * Inputs: production source event. Outputs: bounded public metadata.
    * Logic: select actual metadata fields only on genuine frame events; Constraints: no image retention. */
@@ -250,33 +371,36 @@ async function observe() {
     } else window.__phoneProbe.sources.push({type: event.type, session_id: event.sessionId ?? null,
       session_seconds: event.contract?.session_seconds, protocol_version: event.contract?.protocol_version});
   }
-  /* Functionality: Bind native speech starts to frozen original text policy without saving text.
-   * Inputs: manager lifecycle event. Outputs: ownership/rate/local-voice and provenance booleans.
-   * Logic: inspect the current original utterance only on genuine output_start.
-   * Constraints: explicitly generated synthetic-risk input never counts as a model result or warning. */
+  /* Functionality: Bind backend playback starts to original guidance and output policy.
+   * Inputs: manager lifecycle and transiently observed synthesis metadata. Outputs: ownership/rate/voice and provenance booleans.
+   * Logic: match only at genuine output_start using request identity and precomputed text-policy status.
+   * Constraints: synthetic risk remains separate from model-result evidence; request text is not exported. */
   function recordGuidance(event) {
     window.__phoneProbe.guidance.push({phase: event.phase, channel: event.channel, kind: event.kind,
       request_id: event.request_id, at: event.at, session_id: event.session_id, frame_index: event.frame_index});
     if (event.phase !== "output_start" || event.channel !== "speech") return;
-    const manager = glue.guidanceManager, active = manager.active.speech, last = driver.lastRequest, utterance = driver.current;
+    const manager = glue.guidanceManager, active = manager.active.speech, last = driver.lastRequest, request = driver.current;
     const owned = active?.requestId === event.request_id && last?.id === event.request_id;
+    const commandIndex = window.__phoneProbe.synthesisRequests.findIndex(item => item.request_id === request?.requestId);
+    const command = commandIndex < 0 ? null : window.__phoneProbe.synthesisRequests[commandIndex];
     const expected = !owned ? null : active?.kind === "risk" ? videoAlertText(active.box, last.language)
       : navigationSpeechText(active?.snapshot, last.language);
     window.__phoneProbe.utterances.push({kind: active?.kind, request_id: event.request_id,
       session_id: active?.source?.session_id ?? null, frame_index: active?.source?.frame_index ?? null,
       captured_at_ms: active?.source?.captured_at_ms ?? null, track_id: active?.box?.track_id ?? null,
       capture_to_start_ms: event.capture_to_start_ms ?? null, request_owned: owned,
-      text_matches_policy: Boolean(owned && utterance?.text && utterance.text === expected),
-      local_chinese_voice: Boolean(owned && last?.local_service === true && last?.language === "zh-CN" &&
-        utterance?.voice?.localService === true && /^zh(?:-|$)/i.test(utterance.voice.lang)),
-      configured_rate: last?.rate ?? null, engine_rate: utterance?.rate ?? null,
+      text_matches_policy: Boolean(owned && active?.kind !== "assistant" && command?.text && command.text === expected),
+      backend_voice: Boolean(owned && last?.service === "backend" && last?.voice_id === "Cherry" && command &&
+        command.language === last.language),
+      configured_rate: last?.rate ?? null, server_rate: command?.rate ?? null,
       synthetic_risk: active?.source?.session_id === "synthetic-phone-tts-only"});
+    if (commandIndex >= 0) window.__phoneProbe.synthesisRequests.splice(commandIndex, 1);
   }
-  /* Functionality: Preserve genuine native driver lifecycle without the speech body.
+  /* Functionality: Preserve genuine backend audio lifecycle without the speech body.
    * Inputs: driver event. Outputs: safe identity/phase/error class. Logic: field allowlist only.
-   * Constraints: never synthesize starts, ends or audible-output success. */
-  function recordDriver(event) {
-    window.__phoneProbe.native.push({phase: event.phase, request_id: event.request_id,
+   * Constraints: never fabricate audio starts, ends or audibility success. */
+  function recordAudio(event) {
+    window.__phoneProbe.audio.push({phase: event.phase, request_id: event.request_id,
       id: event.id, at: event.at, reason: event.reason, state: event.state});
   }
   /* Functionality: Record original navigation failures and timing before source-stop assertions.
@@ -287,7 +411,7 @@ async function observe() {
     window.__phoneProbe.navigation.push({state: value.state, reason: value.reason, active: value.active,
       at: performance.now(), source_timestamp: value.position?.timestamp ?? null});
   }
-  cameraApp.subscribe(recordFrame); glue.guidanceManager.subscribe(recordGuidance); driver.subscribe(recordDriver);
+  cameraApp.subscribe(recordFrame); glue.guidanceManager.subscribe(recordGuidance); driver.subscribe(recordAudio);
   document.addEventListener("prs-navigation-change", recordNavigation);
   return {secure_context: isSecureContext, media_devices: Boolean(navigator.mediaDevices?.getUserMedia),
     geolocation_api: Boolean(navigator.geolocation?.watchPosition),
@@ -320,7 +444,7 @@ function cleanupEvidence() {
     navigation_state: navigation.describe().state, navigation_reason: navigation.describe().reason,
     gps_fixture: window.__phoneGPS.describe(), gps_watch_cleared: navigation.watchId === null,
     gps_deadline_cleared: navigation.timer === null, guidance: glue.guidanceManager.describe(),
-    scheduler_cleared: glue.guidanceManager.schedulerTimer === null, native_utterance_cleared: driver.current === null,
+    scheduler_cleared: glue.guidanceManager.schedulerTimer === null, speech_request_cleared: driver.current === null,
     camera_socket_closed: !cameraApp.client?.socket || cameraApp.client.socket.readyState === 3,
     speech_activation: glue.speechActivation.describe()};
 }
@@ -336,22 +460,23 @@ async function waitNode(predicate, milliseconds, code) {
   }
 }
 
-/* Functionality: Observe real public WSS handshake/clock data without binary media or command bodies.
- * Inputs: Playwright socket and report. Outputs: public endpoint, hello/PRF2/control lifecycle.
- * Logic: permit only the mounted control and local inference paths; no authorization-header capture.
+/* Functionality: Observe real public WSS handshakes and inference clocks without media/command bodies.
+ * Inputs: Playwright socket and report. Outputs: public endpoint, lifecycle, inference and bounded TTS response metadata.
+ * Logic: permit exact mounted control, assistant, local-inference and synthesis paths; no authorization-header capture.
  * Constraints: read-only observation, never a replacement client or access-control workaround. */
 function monitorSocket(socket, report) {
   const address = new URL(socket.url());
   const item = {path: address.pathname, secure: address.protocol === "wss:", closed: false,
-    hellos: [], inputs: [], welcomes: [], pongs: 0};
+    hellos: [], inputs: [], welcomes: [], tts: [], pongs: 0};
   report.sockets.push(item);
   if (address.origin !== PHONE_ORIGIN.replace("https:", "wss:") ||
-      ![`${PREFIX}ws/control/`, `${PREFIX}ws/detect/local/`].includes(address.pathname))
+      ![`${PREFIX}ws/control/`, `${PREFIX}ws/agent/`, `${PREFIX}ws/detect/local/`, `${PREFIX}ws/tts/`].includes(address.pathname))
     report.failures.push({phase: report.phase, code: "UNEXPECTED_SOCKET", type: "GateError"});
   socket.on("close", () => { item.closed = true; });
-  /* Functionality: Read only fixed public handshake and control heartbeat fields.
-   * Inputs: received frame. Outputs: hello/welcome/pong evidence. Logic: ignore binary results.
-   * Constraints: no control command, result body or private header retention. */
+  /* Functionality: Read allowlisted handshake, heartbeat and TTS lifecycle metadata.
+   * Inputs: received frame. Outputs: model hello, control welcome/pong and body-free PCM events.
+   * Logic: Parse text control messages only; binary model results are ignored.
+   * Constraints: No utterance text, binary results, control command or private header retention. */
   function received(frame) {
     if (typeof frame.payload !== "string") return;
     let value; try { value = JSON.parse(frame.payload); } catch { return; }
@@ -362,6 +487,10 @@ function monitorSocket(socket, report) {
       max_edge: value.max_edge, jpeg_quality: value.jpeg_quality});
     if (value.type === "welcome") item.welcomes.push(value.session_id);
     if (value.type === "pong") item.pongs++;
+    if (address.pathname === `${PREFIX}ws/tts/`)
+      item.tts.push({type: value.type, request_id: value.request_id ?? null, code: value.code ?? null,
+        sample_rate: value.sample_rate ?? null,
+        format: value.format ?? null, audio_bytes: value.audio_bytes ?? null});
   }
   /* Functionality: Retain PRF2 wire header identity while discarding JPEG bytes immediately.
    * Inputs: original outbound frame. Outputs: index/capture seconds/length or safe protocol failure.
@@ -377,24 +506,17 @@ function monitorSocket(socket, report) {
   socket.on("framereceived", received); socket.on("framesent", sent);
 }
 
-/* Functionality: Verify default-on controls and explicitly choose an installed local Chinese voice.
+/* Functionality: Verify default-on controls and the fixed bilingual backend voice.
  * Inputs: real page voice controls. Outputs: exact 2x configuration without utterance text.
- * Logic: native inventory and actual user-control events. Constraints: no remote/default substitution. */
+ * Logic: check fixed server metadata and actual default settings. Constraints: metadata alone does not prove synthesis. */
 async function selectSpeech(page) {
   for (const id of ["speech-enabled", "navigation-speech-enabled", "assist-risk-enabled"])
     requireGate(await page.isChecked(`#${id}`) === true, "OUTPUT_NOT_DEFAULT_ON");
   const vibration = await page.locator("#vibration-enabled").evaluate(node => ({supported: !node.disabled, checked: node.checked}));
   requireGate(vibration.checked === vibration.supported, "VIBRATION_DEFAULT_MISMATCH");
-  requireGate(await page.inputValue("#navigation-speech-voice") === "", "VOICE_NOT_EXPLICIT");
-  await page.waitForFunction(() => speechSynthesis.getVoices().some(voice => voice.localService && /^zh(?:-|$)/i.test(voice.lang)),
-    null, {timeout: 10000});
-  await page.click("#navigation-voices-refresh");
-  const voice = await page.locator("#navigation-speech-voice option").evaluateAll(options =>
-    options.find(option => option.value && !option.disabled)?.value ?? null);
-  requireGate(Boolean(voice), "LOCAL_CHINESE_VOICE_REQUIRED");
-  await page.selectOption("#navigation-speech-voice", voice);
+  requireGate(await page.inputValue("#navigation-speech-voice") === "Cherry", "BACKEND_BILINGUAL_VOICE_MISSING");
   requireGate(Number(await page.inputValue("#speech-rate")) === 2, "SPEECH_RATE_CHANGED");
-  return {language: "zh-CN", rate: 2, explicit_local_voice: true, default_switches_on: true,
+  return {language: "zh-CN", rate: 2, backend_voice: "Cherry", backend_only: true, default_switches_on: true,
     vibration_supported: vibration.supported, vibration_default_on: vibration.checked, physical_audibility_verified: false};
 }
 
@@ -421,10 +543,11 @@ async function planNavigation(page, url) {
     position_source: "explicit_synthetic_watchPosition_NUS_Date_now", real_phone_gps_verified: false};
 }
 
-/* Functionality: Explicitly select the native Chrome fake-video device and use CameraApp.start.
- * Inputs: real page controls and optional camera-permission grant flag. Outputs: actual detection session.
- * Logic: native video-only permission inventory and exact fake device ID. Constraints: no physical camera. */
-async function startCamera(page, grantCamera = false) {
+/* Functionality: Select a Chrome fake-video source and start the actual CameraApp pipeline.
+ * Inputs: public page, optional permission grant, and whether a named Y4M file is the source.
+ * Outputs: one actual detection session. Logic: select the sole fake device or exact supplied-file device.
+ * Constraints: launch always enables Chrome's fake-device flag; no physical camera is accessible. */
+async function startCamera(page, grantCamera = false, fileFixture = false) {
   await page.selectOption("#assist-source", "camera");
   if (grantCamera) {
     await page.click("#assist-devices-authorize");
@@ -432,7 +555,8 @@ async function startCamera(page, grantCamera = false) {
       [...document.querySelectorAll("#assist-device option")].some(option => option.value));
     const device = await page.locator("#assist-device option").evaluateAll(options =>
       options.filter(option => option.value).map(option => ({id: option.value, fake: /fake/i.test(option.textContent)})));
-    requireGate(device.length > 0 && device.every(item => item.fake), "FAKE_VIDEO_DEVICE_REQUIRED");
+    requireGate(device.length > 0 && (device.every(item => item.fake) ||
+      fileFixture && device.length === 1), "FAKE_VIDEO_DEVICE_REQUIRED");
     await page.selectOption("#assist-device", device[0].id);
   }
   await page.click("#start");
@@ -449,6 +573,41 @@ async function waitCameraFrames(page, minimum = 3) {
       window.__phoneProbe.frames.filter(frame => frame.session_id === camera.sessionId).length >= count;
   }, minimum, {timeout: 70000});
   return page.evaluate(() => window.__phoneControllers.cameraApp.sessionId);
+}
+
+/* Functionality: Wait for one genuine risk-alert synthesis and completed backend playback.
+ * Inputs: Active real-model camera session and bounded browser page. Outputs: Matching alert identity and latency.
+ * Logic: Require a non-synthetic risk utterance linked by session/frame/track to a server-required alert,
+ * then require its original audio request to end before camera teardown.
+ * Constraints: No generated risk event, manual speech, threshold change or physical-audibility claim. */
+async function waitModelAlert(page, sessionId) {
+  await page.waitForFunction(id => {
+    const item = window.__phoneProbe.utterances.find(value => value.kind === "risk" &&
+      !value.synthetic_risk && value.session_id === id && Number.isFinite(value.capture_to_start_ms) &&
+      value.capture_to_start_ms >= 0 && value.capture_to_start_ms < 1000 &&
+      window.__phoneProbe.frames.some(frame => frame.session_id === id && frame.index === value.frame_index &&
+        frame.captured_at_ms === value.captured_at_ms && frame.alert_track_ids.includes(value.track_id)));
+    return Boolean(item);
+  }, sessionId, {timeout: 30000});
+  await page.waitForFunction(id => {
+    const item = window.__phoneProbe.utterances.find(value => value.kind === "risk" &&
+      !value.synthetic_risk && value.session_id === id && Number.isFinite(value.capture_to_start_ms) &&
+      value.capture_to_start_ms >= 0 && value.capture_to_start_ms < 1000 &&
+      window.__phoneProbe.frames.some(frame => frame.session_id === id && frame.index === value.frame_index &&
+        frame.captured_at_ms === value.captured_at_ms && frame.alert_track_ids.includes(value.track_id)));
+    return item && window.__phoneProbe.audio.some(event => event.phase === "end" &&
+      event.request_id === item.request_id);
+  }, sessionId, {timeout: 30000});
+  return page.evaluate(id => {
+    const item = window.__phoneProbe.utterances.find(value => value.kind === "risk" &&
+      !value.synthetic_risk && value.session_id === id && Number.isFinite(value.capture_to_start_ms) &&
+      value.capture_to_start_ms >= 0 && value.capture_to_start_ms < 1000 &&
+      window.__phoneProbe.frames.some(frame => frame.session_id === id && frame.index === value.frame_index &&
+        frame.captured_at_ms === value.captured_at_ms && frame.alert_track_ids.includes(value.track_id)));
+    return {model_alert: true, frame_index: item.frame_index, track_id: item.track_id,
+      capture_to_start_ms: item.capture_to_start_ms, backend_audio_ended: true,
+      physical_audibility_verified: false};
+  }, sessionId);
 }
 
 /* Functionality: Observe real worker drain before the next separately requested camera start.
@@ -486,8 +645,8 @@ async function stopAll(page) {
   return page.evaluate(cleanupEvidence);
 }
 
-/* Functionality: Test native risk speech only in an explicitly synthetic non-model partition.
- * Inputs: idle original page with opted-in speech. Outputs: genuine native TTS lifecycle metadata.
+/* Functionality: Test backend risk speech only in an explicitly synthetic non-model partition.
+ * Inputs: idle original page with opted-in speech. Outputs: genuine backend PCM lifecycle metadata.
  * Logic: generated risk is sent directly to the existing scheduler after actual model sessions end.
  * Constraints: never counted as a model frame, inferred risk, real camera alert or physical audibility. */
 async function syntheticSpeech(page) {
@@ -502,23 +661,60 @@ async function syntheticSpeech(page) {
   await page.waitForFunction(() => window.__phoneProbe.utterances.some(item => item.synthetic_risk), null, {timeout: 10000});
   await page.waitForFunction(() => {
     const utterance = window.__phoneProbe.utterances.find(item => item.synthetic_risk);
-    return window.__phoneProbe.native.some(event => event.phase === "end" &&
-      (event.request_id === utterance.request_id || event.id === utterance.request_id));
+    return window.__phoneProbe.audio.some(event => event.phase === "end" && event.request_id === utterance.request_id);
   }, null, {timeout: 15000});
   await page.evaluate(() => window.__phoneControllers.glue.guidanceManager.stopRisk("synthetic_test_complete"));
   return {source: "explicit_generated_scheduler_input", model_alert_verified: false,
-    physical_audibility_verified: false, native_chinese_tts_verified: true};
+    physical_audibility_verified: false, backend_tts_stream_verified: true};
+}
+
+/* Functionality: Exercise manual English and Chinese synthesis on the public diagnostic page.
+ * Inputs: page with enabled speech controls. Outputs: body-free request/playback evidence for both languages.
+ * Logic: use real user clicks, wait for actual backend PCM start/end, and compare request metadata only.
+ * Constraints: short fixed sample phrases; no text appears in report/logs and no audibility claim is made. */
+async function manualBilingualTts(page) {
+  const cases = [{language: "en-US", text: "Turn left at the next street."},
+    {language: "zh-CN", text: "前方路口左转。"}], results = [];
+  for (const item of cases) {
+    const previous = await page.evaluate(() => window.__phoneControllers.driver.lastRequest?.id ?? 0);
+    await page.fill("#speech-text", item.text);
+    await page.selectOption("#speech-language", item.language);
+    await page.click("#speech-play");
+    await page.waitForFunction(previousId => {
+      const driver = window.__phoneControllers.driver;
+      return driver.lastRequest?.id > previousId && driver.phase === "completed" && driver.current === null;
+    }, previous, {timeout: 30000});
+    const evidence = await page.evaluate(({language, textLength, previousId}) => {
+      const driver = window.__phoneControllers.driver, request = driver.lastRequest;
+      const events = window.__phoneProbe.audio.filter(event => event.request_id === request.id);
+      const socketCall = window.__phoneSpeechCalls.at(-1);
+      return {language: request.language, voice_id: request.voice_id, service: request.service,
+        text_length: request.text_length, expected_text_length: textLength, rate: request.rate,
+        started: events.filter(event => event.phase === "start").length === 1,
+        ended: events.filter(event => event.phase === "end").length === 1,
+        secure_connection: socketCall?.secure === true, user_gesture: socketCall?.user_gesture_active === true,
+        request_id_advanced: request.id > previousId};
+    }, {language: item.language, textLength: [...item.text].length, previousId: previous});
+    requireGate(evidence.language === item.language && evidence.voice_id === "Cherry" && evidence.service === "backend" &&
+      evidence.text_length === evidence.expected_text_length && evidence.rate === 2 && evidence.started && evidence.ended &&
+      evidence.secure_connection && evidence.user_gesture && evidence.request_id_advanced, "MANUAL_BILINGUAL_TTS_FAILED");
+    results.push(evidence);
+  }
+  return {cases: results, physical_audibility_verified: false};
 }
 
 /* Functionality: Execute one public-relay acceptance and preserve safe success/failure evidence.
- * Inputs: validated options and existing deployed relay. Outputs: report; no credential fields.
- * Logic: guest-access boundary, camera-first/no-acquisition DOM gate, real ORS/WSS/model,
- * two lifecycles and TTS.
+ * Inputs: validated options and existing deployed relay. Outputs: report with body-free source/output events;
+ * no credential, utterance, pixel or coordinate values. Logic: guest-access boundary, camera-first/no-acquisition
+ * DOM gate, real ORS/WSS/model, two lifecycles and TTS; strict model-alert mode retains the first camera session
+ * until the correlated inference alert has completed backend playback.
  * Constraints: no service launch/deployment, TLS override, HTTP/model mocks, automatic retry or phone access. */
 export async function run(options) {
   const report = {complete: false, phase: "public_guest_access", target: options.url,
+    model_alert_gate_requested: options.requireModelAlert === true,
     browser: "Chrome with phone viewport; not Safari or a real iPhone", tls_validation: "enabled",
-    fixtures: {camera: "Chrome native fake-video device; no physical camera or microphone",
+    fixtures: {camera: options.fakeCameraFile ? "explicit caller-supplied Y4M frame source" :
+      "Chrome native fake-video device; no physical camera or microphone",
       gps: "Explicit synthetic NUS watchPosition callbacks with Date.now timestamps; not native/phone GPS"},
     actual_model_verified: false, model_alert_verified: false, real_ors_verified: false,
     real_iphone_verified: false, hardware_outputs_verified: false,
@@ -526,6 +722,9 @@ export async function run(options) {
   let browser, context, page, navigationVerified = false;
   try {
     const {chromium, request} = createRequire(import.meta.url)(options.runtime);
+    if (options.fakeCameraFile)
+      requireGate(options.fakeCameraFile.toLowerCase().endsWith(".y4m") &&
+        (await stat(options.fakeCameraFile)).isFile(), "INVALID_FAKE_CAMERA_FILE");
     report.phase = "public_guest_boundary";
     const guest = await request.newContext();
     try {
@@ -535,7 +734,8 @@ export async function run(options) {
     } finally { await guest.dispose(); }
     report.phase = "browser_and_tls";
     browser = await chromium.launch({channel: "chrome", headless: true,
-      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]});
+      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
+        ...(options.fakeCameraFile ? [`--use-file-for-fake-video-capture=${options.fakeCameraFile}`] : [])]});
     context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.grantPermissions(["geolocation"], {origin: PHONE_ORIGIN});
@@ -587,7 +787,7 @@ export async function run(options) {
       initialCamera.video_panel_hidden && initialCamera.get_user_media_calls === 0, "INITIAL_CAMERA_ENTRY_INVALID");
     const initialOutput = initialCamera.startup_outputs;
     requireGate(initialOutput.speech_calls === 0 && initialOutput.gps_watches === 0 && initialOutput.gps_one_shot_requests === 0 &&
-      initialOutput.voice_id === "" &&
+      initialOutput.voice_id === "Cherry" &&
       initialOutput.activation.ready === false && initialOutput.guidance.paused.speech === true &&
       initialOutput.guidance.reasons.speech === "activation_required", "STARTUP_OUTPUT_NOT_GATED");
     report.phase = "private_endpoint_boundaries"; report.checks.private_endpoints = [];
@@ -607,7 +807,7 @@ export async function run(options) {
       await page.waitForFunction(() => window.__phoneControllers.glue.speechActivation.describe().ready, null, {timeout: 10000});
       report.speech_activation_evidence = await page.evaluate(() => ({
         activation: window.__phoneControllers.glue.speechActivation.describe(),
-        calls: structuredClone(window.__phoneSpeechCalls), native: structuredClone(window.__phoneProbe.native)}));
+        calls: structuredClone(window.__phoneSpeechCalls), audio: structuredClone(window.__phoneProbe.audio)}));
       report.speech_activation = verifySpeechActivation(report.speech_activation_evidence);
     } catch (error) {
       report.failures.push(safeFailure(error, report.phase));
@@ -617,10 +817,14 @@ export async function run(options) {
     if (navigationVerified) {
       try {
         await page.waitForFunction(() => window.__phoneProbe.utterances.some(item => item.kind === "navigation"), null, {timeout: 15000});
-      } catch (error) { report.failures.push(safeFailure(error, "navigation_native_output")); }
+      } catch (error) { report.failures.push(safeFailure(error, "navigation_backend_output")); }
     }
     report.phase = "first_real_model_session";
-    await startCamera(page, true); const firstSession = await waitCameraFrames(page);
+    await startCamera(page, true, Boolean(options.fakeCameraFile)); const firstSession = await waitCameraFrames(page);
+    if (options.requireModelAlert) {
+      report.phase = "first_model_risk_alert";
+      report.model_alert_evidence = await waitModelAlert(page, firstSession);
+    }
     report.checks.navigation_before_camera_stop = await page.evaluate(navigationEvidence);
     if (navigationVerified && !report.checks.navigation_before_camera_stop.active) {
       report.failures.push({phase: report.phase, code: "NAVIGATION_FAILED_BEFORE_CAMERA_STOP", type: "GateError"});
@@ -661,34 +865,55 @@ export async function run(options) {
     requireGate(report.cleanup.media_calls.every(call => call.audio_false && call.video) &&
       report.cleanup.tracks.every(track => track.kind === "video" && track.ready_state === "ended") &&
       report.cleanup.camera_stream_cleared && report.cleanup.gps_watch_cleared && report.cleanup.gps_deadline_cleared &&
-      report.cleanup.scheduler_cleared && report.cleanup.native_utterance_cleared && report.cleanup.camera_socket_closed, "RESOURCE_CLEANUP_FAILED");
+      report.cleanup.scheduler_cleared && report.cleanup.speech_request_cleared && report.cleanup.camera_socket_closed, "RESOURCE_CLEANUP_FAILED");
     await waitNode(() => report.sockets.filter(item => item.path === `${PREFIX}ws/detect/local/`).every(item => item.closed),
       15000, "MODEL_SOCKET_NOT_CLOSED");
     report.frames = await page.evaluate(() => structuredClone(window.__phoneProbe.frames));
     report.model_sessions = verifyModelEvidence(report.frames, report.sockets.filter(item => item.path === `${PREFIX}ws/detect/local/`));
     report.actual_model_verified = true;
     report.phase = "separate_synthetic_risk_tts"; report.synthetic_tts = await syntheticSpeech(page);
-    report.phase = "control_hub_and_native_events";
+    report.phase = "manual_bilingual_tts"; report.checks.manual_bilingual_tts = await manualBilingualTts(page);
+    await waitNode(() => report.sockets.filter(item => item.path === `${PREFIX}ws/tts/`).every(item => item.closed),
+      15000, "TTS_SOCKET_NOT_CLOSED");
+    const ttsSockets = report.sockets.filter(item => item.path === `${PREFIX}ws/tts/`);
+    const ttsEvidence = await page.evaluate(() => ({audio: structuredClone(window.__phoneProbe.audio),
+      submissions: structuredClone(window.__phoneProbe.ttsSubmissions)}));
+    report.checks.backend_tts_streams = verifyTtsStreamEvidence(ttsSockets, ttsEvidence.audio,
+      ttsEvidence.submissions);
+    report.phase = "control_hub_and_backend_audio";
     await waitNode(() => report.sockets.some(item => item.path === `${PREFIX}ws/control/` && item.pongs > 0),
       20000, "CONTROL_HEARTBEAT_MISSING");
     const controls = report.sockets.filter(item => item.path === `${PREFIX}ws/control/`);
     requireGate(controls.length === 1 && controls[0].welcomes.length === 1 &&
       controls[0].welcomes[0] === report.identity.control_session_id, "CONTROL_HUB_IDENTITY");
-    report.output_evidence = await page.evaluate(() => ({utterances: structuredClone(window.__phoneProbe.utterances),
-      native: structuredClone(window.__phoneProbe.native)}));
+    report.output_evidence = await page.evaluate(() => ({guidance: structuredClone(window.__phoneProbe.guidance),
+      utterances: structuredClone(window.__phoneProbe.utterances),
+      audio: structuredClone(window.__phoneProbe.audio),
+      tts_submissions: structuredClone(window.__phoneProbe.ttsSubmissions)}));
     requireGate(report.output_evidence.utterances.every(item => item.request_owned && item.text_matches_policy &&
-      item.local_chinese_voice && item.configured_rate === 2 && item.engine_rate === 2), "NATIVE_SPEECH_IDENTITY");
+      item.backend_voice && item.configured_rate === 2 && item.server_rate === 2), "BACKEND_SPEECH_IDENTITY");
     report.model_alert_verified = report.output_evidence.utterances.some(item => item.kind === "risk" &&
       !item.synthetic_risk && Number.isFinite(item.capture_to_start_ms) && item.capture_to_start_ms >= 0 &&
       item.capture_to_start_ms < 1000 && report.frames.some(frame => frame.session_id === item.session_id &&
         frame.index === item.frame_index && frame.captured_at_ms === item.captured_at_ms &&
         frame.alert_track_ids.includes(item.track_id)));
+    if (options.requireModelAlert)
+      requireGate(report.model_alert_verified && report.model_alert_evidence?.backend_audio_ended === true,
+        "MODEL_RISK_ALERT_NOT_VERIFIED");
     requireGate(report.failures.length === 0, "OBSERVED_BROWSER_FAILURES");
     report.phase = "complete"; report.complete = true;
   } catch (error) {
     report.failures.push(safeFailure(error, report.phase));
     if (page) {
-      try { report.partial_probe = await page.evaluate(() => structuredClone(window.__phoneProbe ?? null)); } catch {}
+      try { report.partial_probe = await page.evaluate(() => {
+        const probe = structuredClone(window.__phoneProbe ?? null);
+        if (probe?.synthesisRequests) probe.synthesisRequests = probe.synthesisRequests.map(item => ({
+          request_id: item.request_id ?? null, language: item.language ?? null, rate: item.rate ?? null}));
+        if (probe?.ttsSubmissions) probe.ttsSubmissions = probe.ttsSubmissions.map(item => ({
+          request_id: item.request_id ?? null, audio_request_id: item.audio_request_id ?? null,
+          language: item.language ?? null, rate: item.rate ?? null}));
+        return probe;
+      }); } catch {}
       try { report.partial_cleanup = await page.evaluate(cleanupEvidence); } catch {}
       try {
         await requireNew(options.screenshot);

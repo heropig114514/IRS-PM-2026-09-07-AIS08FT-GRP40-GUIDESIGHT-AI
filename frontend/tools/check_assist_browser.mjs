@@ -1,6 +1,6 @@
-/* Responsibilities: Verify the unified local assist entry through Chrome, MCP and native Chinese TTS.
+/* Responsibilities: Verify a local or deployed unified assist entry through Chrome, MCP and speech lifecycle.
  * Implementation: Explicit GPS/ORS fixtures surround unchanged controllers; default-on controls
- * stay gated until a real navigation-start click produces native calibration speech; synthetic
+ * stay gated until a real user click produces calibration playback; synthetic
  * arbitration and optional real local-file PRF2 inference have separate evidence partitions.
  * Related Modules: integration/assist-mvp.js/assist-guidance.js/video-replay.js; navigation-ui.js,
  * camera.js, ai-control.js, speech-output.js; check_local_navigation_browser.mjs; integration.assist.
@@ -15,7 +15,7 @@
  * Variable Index: ROUTE and FIX are explicit synthetic route/sensor inputs, never saved as location
  * evidence. MCP_SCRIPT invokes the existing outputs tools. assistProbe stores body-free lifecycle
  * and validated frame identities; real model metadata is never replaced or generated in video mode.
- * Constraints: No service/Git changes, GPU mocks, retries, camera permission, native speech-event
+ * Constraints: No service/Git changes, GPU mocks, retries, camera permission, speech-event
  * simulation, media seek/loop, CDN replacement, coordinate/utterance/credential serialization or
  * physical-audibility claim. Missing dependencies, voices or fresh actual alerts fail explicitly.
  */
@@ -442,16 +442,18 @@ async function requireNew(path) {
 }
 
 /* Functionality: Validate explicit CLI scope before browser work. Inputs: argv/environment.
- * Outputs: Canonical paths/URL. Logic: only loopback /maps/test and new JSON destination accepted.
- * Constraints: no query credentials, implicit video, service start, downloads or remote endpoint. */
+ * Outputs: Canonical paths/URL. Logic: accept only loopback /maps/test or the approved public test entry,
+ * with a new JSON destination. Constraints: no query credentials, implicit video, service start or downloads. */
 export function validateArguments(argv, environment) {
   const [url, output, video, ...extra] = argv;
   if (!url || !output || extra.length || !environment.PRS_PLAYWRIGHT_PATH || !environment.PYTHON)
     throw new Error("Use URL NEW_REPORT.json [VIDEO_PATH]; set PYTHON and PRS_PLAYWRIGHT_PATH");
   const address = new URL(url);
-  if (address.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(address.hostname) ||
-      address.pathname !== "/maps/test" || address.username || address.password || address.search || address.hash)
-    throw new Error("Use loopback assist /maps/test without credentials/query/hash");
+  const loopback = address.protocol === "http:" && ["127.0.0.1", "localhost"].includes(address.hostname) &&
+    address.pathname === "/maps/test";
+  const publicTest = address.href === "https://47.239.50.129/mvp/maps/test";
+  if ((!loopback && !publicTest) || address.username || address.password || address.search || address.hash)
+    throw new Error("Use loopback /maps/test or the approved public test entry without credentials/query/hash");
   const outputPath = resolve(output);
   if (!outputPath.toLowerCase().endsWith(".json")) throw new Error("Report path must end with .json");
   return {url: address.href, output: outputPath, screenshot: outputPath.slice(0, -5) + ".png",

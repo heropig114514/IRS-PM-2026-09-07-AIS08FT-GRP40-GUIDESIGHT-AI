@@ -1,0 +1,51 @@
+{
+  "video": "model_tests\\datasets\\street-video\\mot17\\MOT17-07-FRCNN-raw.mp4",
+  "frame_index": 286,
+  "timestamp_s": 9.533333333333333,
+  "image": "models\\experiments\\walk-fusion-inputs\\mot07-signal-frame286.png",
+  "fixture_sha256": "9afcc8fb27776a1851cf4a484cb21a56576633c814af8b892bb9b7224ff68bfc",
+  "source_video_sha256": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+  "reference_new_objects": [
+    {
+      "xyxy": [
+        366.62713623046875,
+        64.79476928710938,
+        373.724365234375,
+        76.38906860351562
+      ],
+      "score": 0.09664957970380783,
+      "class_id": 84,
+      "label": "pedestrian light",
+      "light_state": "unknown",
+      "light_scores": {
+        "red": 0.0,
+        "green": 0.09664957970380783,
+        "off": 0.0
+      },
+      "front_light": true,
+      "track_id": null,
+      "class_name": "pedestrian light",
+      "confidence": 0.09664957970380783,
+      "bbox": [
+        366.62713623046875,
+        64.79476928710938,
+        373.724365234375,
+        76.38906860351562
+      ],
+      "distance_m": 42.326576232910156,
+      "smoothed_distance_m": null,
+      "relative_speed_mps": null,
+      "motion_state": "unknown",
+      "direction": "front",
+      "ttc_sec": null,
+      "risk_score": null,
+      "risk_level": "unknown",
+      "alert_priority": 0,
+      "alert_required": false,
+      "risk_reasons": [
+        "track_unavailable"
+      ]
+    }
+  ],
+  "scope": "Additional real PRF2 merged pedestrian-light contract; not a timing comparison or colour-quality benchmark"
+}

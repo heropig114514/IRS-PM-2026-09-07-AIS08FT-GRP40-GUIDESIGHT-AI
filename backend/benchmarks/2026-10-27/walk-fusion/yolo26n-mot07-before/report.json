@@ -1,0 +1,404 @@
+{
+  "status": "completed",
+  "backend": "tensorrt",
+  "fusion": "gpu",
+  "completed_frames": 500,
+  "scope": "Full-video native inference; no truth-based accuracy acceptance",
+  "quality_accepted": false,
+  "reference": null,
+  "video_sha256": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+  "source_sha256": {
+    "core/detector.py": "e0e71dc988aa3783aebaad90c8b26e296a5fb421dd1820e4e6e5fef4a659112e",
+    "core/detection_model.py": "7cd80d66df0ee4e75e53662e58206cc9786976b8aaa327b75cff8c8ff3dc8a8a",
+    "zerogpu/runtime.py": "272842fbcf0cdb8714ae7b05a4b8dbdf9086e0f8bad59d17884c3f2c822dd996",
+    "realtime/depth.py": "b6983edce363dec70f7fca78e43b15dfa0d1106ec42649a12cfc14ed95b1b931",
+    "realtime/depth_runtime.py": "7d8cb754e1c1e1ac0acbf4ad67871c0e3c805e7fdc0c7a48b485e78fe0c7ec19",
+    "realtime/depth_config.py": "8b5712dd6557f53cce89a86541c77e311b84bc753c96321aed8e37f958f63186",
+    "realtime/depth_fast.py": "3ffbdc04bffba8c861948de20474d00dc7c3e6b14a35778d6a1217dbe86d9953",
+    "realtime/depth_predictor.py": "06af6d24f205cd4dc11ba665e0b96c251f1308749b4bde01d67fc71c9bda1019",
+    "realtime/detector.py": "fd778519c5d9e1861c9a0a4d869f84dd3aac3a60e9d60c2f9b54f6897709c47c",
+    "realtime/distance.py": "90cad78eda4b243c41adee431156cb7184446511d294134ae178e860d41c57b5",
+    "realtime/tracking.py": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+    "realtime/risk.py": "060d92e18b9a6ca1deca0f00a0a30895e553f84d1635f8eb108650b675eef7f7",
+    "integration/inference/services.py": "dede1f0c2b518573e53aac3237e2651cb572f959d8a3ba3e90dbf6e1ae6927ec",
+    "tools/benchmark_depth_integration.py": "a90eb13894f28f5bd2626b8e5401b208be27d06382c7e45468e279d9f271d560"
+  },
+  "settings": {
+    "batch": 1,
+    "precision": "FP32",
+    "depth_edge": 768,
+    "detection_model": "yolo26n",
+    "detection_manifest_sha256": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023",
+    "fixture_max_edge": 640,
+    "jpeg_quality": 80,
+    "distance": {
+      "distance_mode": "depth",
+      "depth_interval": 3,
+      "focal_length_px": 700.0,
+      "reference_width_px": 640,
+      "object_heights_m": [
+        [
+          "person",
+          1.7
+        ],
+        [
+          "bicycle",
+          1.1
+        ],
+        [
+          "motorcycle",
+          1.2
+        ],
+        [
+          "car",
+          1.5
+        ],
+        [
+          "bus",
+          3.2
+        ],
+        [
+          "truck",
+          3.0
+        ]
+      ]
+    },
+    "tracking": {
+      "tracker": "botsort.yaml",
+      "history_size": 8,
+      "min_valid_samples": 3,
+      "ema_alpha": 0.5,
+      "stale_timeout_s": 2.0,
+      "motion_history_timeout_s": 2.0,
+      "min_time_span_s": 0.1,
+      "approaching_threshold_mps": 0.2,
+      "moving_away_threshold_mps": 0.2,
+      "confirmation_updates": 2
+    },
+    "risk": {
+      "min_closing_speed_mps": 0.2,
+      "max_ttc_sec": 10.0,
+      "distance_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          25
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          10.0,
+          5
+        ]
+      ],
+      "ttc_bands": [
+        [
+          1.5,
+          40
+        ],
+        [
+          3.0,
+          30
+        ],
+        [
+          5.0,
+          15
+        ],
+        [
+          8.0,
+          5
+        ]
+      ],
+      "closing_speed_bands": [
+        [
+          1.0,
+          5
+        ],
+        [
+          2.0,
+          10
+        ]
+      ],
+      "motion_weights": [
+        [
+          "approaching",
+          15
+        ],
+        [
+          "moving_away",
+          -10
+        ],
+        [
+          "stationary",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "direction_weights": [
+        [
+          "front",
+          10
+        ],
+        [
+          "front_left",
+          7
+        ],
+        [
+          "front_right",
+          7
+        ],
+        [
+          "left",
+          3
+        ],
+        [
+          "right",
+          3
+        ],
+        [
+          "behind",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "class_weights": [
+        [
+          "car",
+          15
+        ],
+        [
+          "truck",
+          18
+        ],
+        [
+          "bus",
+          18
+        ],
+        [
+          "motorcycle",
+          15
+        ],
+        [
+          "bicycle",
+          12
+        ],
+        [
+          "scooter",
+          12
+        ],
+        [
+          "person",
+          5
+        ],
+        [
+          "animal",
+          5
+        ],
+        [
+          "bird",
+          5
+        ],
+        [
+          "cat",
+          5
+        ],
+        [
+          "dog",
+          5
+        ],
+        [
+          "horse",
+          5
+        ],
+        [
+          "sheep",
+          5
+        ],
+        [
+          "cow",
+          5
+        ],
+        [
+          "elephant",
+          5
+        ],
+        [
+          "bear",
+          5
+        ],
+        [
+          "zebra",
+          5
+        ],
+        [
+          "giraffe",
+          5
+        ],
+        [
+          "bench",
+          1
+        ],
+        [
+          "chair",
+          1
+        ],
+        [
+          "stop sign",
+          1
+        ],
+        [
+          "fire hydrant",
+          1
+        ],
+        [
+          "pole",
+          1
+        ],
+        [
+          "sign",
+          1
+        ],
+        [
+          "bollard",
+          1
+        ],
+        [
+          "traffic_cone",
+          1
+        ],
+        [
+          "stairs",
+          3
+        ]
+      ],
+      "default_class_weight": 5,
+      "risk_level_thresholds": [
+        25,
+        50,
+        75
+      ],
+      "alert_priorities": [
+        [
+          "low",
+          0
+        ],
+        [
+          "medium",
+          2
+        ],
+        [
+          "high",
+          3
+        ],
+        [
+          "critical",
+          4
+        ],
+        [
+          "unknown",
+          0
+        ]
+      ],
+      "medium_alert_enabled": true,
+      "medium_alert_max_distance_m": 3.0,
+      "medium_alert_directions": [
+        "front",
+        "front_left",
+        "front_right"
+      ],
+      "front_left_fraction": 0.3333333333333333,
+      "front_right_fraction": 0.6666666666666666
+    }
+  },
+  "declared_frames": 500,
+  "source_fps": 30.0,
+  "source_size": [
+    960,
+    540
+  ],
+  "depth_cache": "models\\experiments\\walk-fusion-cache\\yolo26n-mot07",
+  "load_ms": 3417.1664000023156,
+  "weights": {
+    "detection_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+  },
+  "engine_manifest_sha256": "0d1dac8c2ab3079a171cf762854e4f255955b781e778af3b41d2be6e2603c0f7",
+  "torch_peak_reserved_bytes": 213909504,
+  "first_frame": {
+    "wall_ms": 1263.1102000013925,
+    "server_ms": 1263.0036000009568,
+    "depth_predict_ms": 230.71659999914118,
+    "depth_fusion_ms": 43.145400002686074,
+    "tracking_ms": 15.116699996724492,
+    "render_ms": 7.886400002462324,
+    "comparison": null
+  },
+  "steady": {
+    "wall_ms": {
+      "count": 499,
+      "mean_ms": 45.90189679364555,
+      "min_ms": 33.44619999916176,
+      "max_ms": 60.98149999888847,
+      "p50_ms": 46.29619999832357,
+      "p95_ms": 54.46913000159839,
+      "p99_ms": 57.79227999752038
+    },
+    "server_ms": {
+      "count": 499,
+      "mean_ms": 45.81057675339887,
+      "min_ms": 33.34840000024997,
+      "max_ms": 60.89059999794699,
+      "p50_ms": 46.20439999780501,
+      "p95_ms": 54.33517000165011,
+      "p99_ms": 57.70125599941821
+    },
+    "depth_predict_ms": {
+      "count": 499,
+      "mean_ms": 11.337215430817714,
+      "min_ms": 7.600599998113466,
+      "max_ms": 18.09529999809456,
+      "p50_ms": 11.372599998139776,
+      "p95_ms": 14.476499999727821,
+      "p99_ms": 15.606059996644035
+    },
+    "depth_fusion_ms": {
+      "count": 499,
+      "mean_ms": 5.936558517013379,
+      "min_ms": 2.473399999871617,
+      "max_ms": 15.35879999937606,
+      "p50_ms": 5.605199999990873,
+      "p95_ms": 9.834539996518288,
+      "p99_ms": 12.217420002489234
+    },
+    "tracking_ms": {
+      "count": 499,
+      "mean_ms": 8.816704809813125,
+      "min_ms": 7.442899997840868,
+      "max_ms": 20.10149999841815,
+      "p50_ms": 8.757999999943422,
+      "p95_ms": 9.762419998878613,
+      "p99_ms": 10.481174001615727
+    },
+    "render_ms": {
+      "count": 499,
+      "mean_ms": 7.829984168206001,
+      "min_ms": 3.757999998924788,
+      "max_ms": 13.305299999046838,
+      "p50_ms": 7.900799999333685,
+      "p95_ms": 9.863779997976962,
+      "p99_ms": 10.533992001292063
+    }
+  },
+  "comparisons": []
+}

@@ -19,7 +19,10 @@ MCPControlTests.test_vibration_tools — typed routing and structured browser re
 MCPControlTests.test_vibration_validation — reject invalid/missing arguments before dispatch.
 MCPControlTests.test_speech_tools — typed speech routing and structured state;
 MCPControlTests.test_speech_validation — bounds/whitespace validation before dispatch.
-MCPControlTests.test_navigation_tools — navigation routing, schemas and missing-session errors.
+MCPControlTests.test_navigation_tools — navigation routing, schemas and missing-session errors;
+MCPControlTests.test_embedded_navigation — in-page focus skips page handoff;
+MCPControlTests.test_embedded_navigation_unavailable — unavailable panel avoids snapshot/wait;
+MCPControlTests.test_route_navigation — standard page handoff remains verified.
 Variable Index: None; each test owns its hub or disposable Django database rows.
 """
 
@@ -33,7 +36,7 @@ from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, TestCase, TransactionTestCase
 from mcp.client import Client
 
-from . import ai_database
+from . import ai_database, ai_mcp
 from .ai_bridge import BrowserHub
 from .ai_mcp import mcp
 
@@ -315,6 +318,58 @@ class MCPControlTests(TransactionTestCase):
                     command.assert_not_awaited()
                 missing = await client.call_tool(name, {"session_id": "missing"})
                 self.assertTrue(missing.is_error)
+
+    async def test_embedded_navigation(self):
+        """Functionality: Verify same-page camera focus does not wait for a new connection.
+        Inputs: Existing tab generation and browser same-page acknowledgement/snapshot.
+        Outputs: Fresh snapshot after one command; Logic: exercise the actual MCP adapter.
+        Constraints: Browser DOM scrolling is covered by the frontend resolver test.
+        """
+        previous = object()
+        snapshot = {"surface": "assist-product", "url": "https://example.test/mvp/maps/"}
+        with patch("core.ai_mcp.hub.connection", return_value=previous), \
+                patch("core.ai_mcp.browser_call", new_callable=AsyncMock) as browser, \
+                patch("core.ai_mcp.hub.wait_page", new_callable=AsyncMock) as wait_page:
+            browser.side_effect = [
+                {"same_page": True, "available": True, "page": "camera"}, snapshot,
+            ]
+            result = await ai_mcp.ui_navigate("tab", "camera")
+        self.assertEqual(result, snapshot)
+        self.assertEqual(browser.await_count, 2)
+        wait_page.assert_not_awaited()
+
+    async def test_embedded_navigation_unavailable(self):
+        """Functionality: Return unavailable embedded capability without waiting or resnapshot.
+        Inputs: Browser same-page refusal; Outputs: exact structured refusal.
+        Logic: The adapter returns before handoff and snapshot calls.
+        Constraints: Does not change current page or camera-source selection.
+        """
+        previous = object()
+        refusal = {"same_page": True, "available": False, "reason": "camera_panel_hidden"}
+        with patch("core.ai_mcp.hub.connection", return_value=previous), \
+                patch("core.ai_mcp.browser_call", new_callable=AsyncMock,
+                      return_value=refusal) as browser, \
+                patch("core.ai_mcp.hub.wait_page", new_callable=AsyncMock) as wait_page:
+            result = await ai_mcp.ui_navigate("tab", "camera")
+        self.assertEqual(result, refusal)
+        browser.assert_awaited_once_with("tab", "navigate", {"page": "camera"}, timeout=20)
+        wait_page.assert_not_awaited()
+
+    async def test_route_navigation(self):
+        """Functionality: Keep standard camera route changes on the existing handoff contract.
+        Inputs: Standard navigation acknowledgement, changed connection generation and snapshot.
+        Outputs: Fresh destination snapshot; Logic: await the new page before reading it.
+        Constraints: Synthetic page registry; no real browser navigation.
+        """
+        previous = object()
+        destination = {"url": "https://example.test/prs/live/"}
+        with patch("core.ai_mcp.hub.connection", return_value=previous), \
+                patch("core.ai_mcp.browser_call", new_callable=AsyncMock) as browser, \
+                patch("core.ai_mcp.hub.wait_page", new_callable=AsyncMock) as wait_page:
+            browser.side_effect = [{"navigating_to": destination["url"]}, destination]
+            result = await ai_mcp.ui_navigate("tab", "camera")
+        self.assertEqual(result, destination)
+        wait_page.assert_awaited_once_with("tab", previous, 20)
 
     async def test_tool_error(self):
         """Functionality: Verify invalid calls appear as MCP errors instead of success-shaped data.

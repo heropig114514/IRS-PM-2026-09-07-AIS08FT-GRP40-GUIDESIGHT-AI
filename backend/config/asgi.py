@@ -1,7 +1,7 @@
-"""Responsibilities: Dispatch Django, MCP HTTP and camera/HF/AI control/voice agent WebSockets.
+"""Responsibilities: Dispatch Django, MCP HTTP, camera/HF/AI control/agent and speech WebSockets.
 Implementation: Initialize Django before assembling handlers; ASGI lifespan owns MCP task groups.
 Related Modules: config.settings/camera_server/production;
-core.echo/hf_video_relay/ai_bridge/ai_mcp/agent.transport.
+core.echo/hf_video_relay/ai_bridge/ai_mcp/agent.transport/agent.tts.
 Declaration Index: application — dispatch by protocol and path, preserving HTTP/media contracts.
 Variable Index: django_application — Django ASGI HTTP application.
 """
@@ -14,6 +14,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django_application = get_asgi_application()
 
 from core.agent.transport import agent_socket  # noqa: E402
+from core.agent.tts import tts_socket  # noqa: E402
 from core.ai_bridge import hub  # noqa: E402
 from core.ai_mcp import mcp_application  # noqa: E402
 from core.echo import echo_socket  # noqa: E402
@@ -21,7 +22,7 @@ from core.hf_video_relay import relay  # noqa: E402
 
 
 async def application(scope, receive, send):
-    """Functionality: Provide one entry point for HTTP, MCP and four WebSocket paths.
+    """Functionality: Provide one entry point for HTTP, MCP and five WebSocket paths.
     Inputs: ASGI scope, receive and send; settings are selected through the environment.
     Outputs: HTTP responses or WebSocket messages; no Python return value.
     Logic: Delegate MCP HTTP/lifespan to the SDK, control sockets to hub, agent sockets to bound
@@ -41,6 +42,8 @@ async def application(scope, receive, send):
             await hub.socket(scope, receive, send)
         elif scope["path"] == "/ws/agent/":
             await agent_socket(scope, receive, send)
+        elif scope["path"] == "/ws/tts/":
+            await tts_socket(scope, receive, send)
         else:
             await send({"type": "websocket.close", "code": 1008})
     else:

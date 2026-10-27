@@ -1,11 +1,13 @@
 /* Responsibilities: Expose live PRS DOM state, actions, device output and walking navigation to MCP.
  * Implementation: One WebSocket per page; sessionStorage identity survives explicit navigation;
  * correlated commands execute once and return snapshots/device acknowledgements/errors;
+ * agent UI dispatch protects controls that acquire cameras or request camera permission;
  * no automatic reconnect.
  * Related Modules: core.ai_bridge/ai_mcp, index.html, maps.html, camera/maps controllers,
  * vibration.js, speech-output.js, navigation-ui.js, agent-device.js, agent-client.js.
  * Declaration Index: selectorFor — exact CSS paths; visible — rendered state;
  * uniqueElement — unambiguous selection; snapshot — live DOM description;
+ * navigatePage — route or embedded-panel navigation;
  * waitForState — bounded observation; performVibration — shared structured vibration calls;
  * performSpeech — shared speech state/voices/speak/stop interface;
  * performNavigation — shared walking navigation start/stop/status;
@@ -14,6 +16,7 @@
  * connectControl.onMessage — correlated command handler;
  * connectControl.startHeartbeat — idle keepalive; connectControl.stopHeartbeat — timer cleanup.
  * Variable Index: SESSION_KEY — tab identity storage key; CONTROL_SELECTOR — discoverable controls;
+ * USER_GESTURE_CONTROL_IDS — camera permission, camera choice and camera start controls reserved for users;
  * connectControl sessionId/socket/heartbeat — tab transport state; base — application mount URL;
  * AGENT_TOKEN_KEY — tab-local ownership secret, never part of a snapshot.
  */
@@ -25,6 +28,15 @@ import {performDevice} from "./agent-device.js";
 const SESSION_KEY = "prs.ai.session";
 const AGENT_TOKEN_KEY = "prs.agent.token";
 const CONTROL_SELECTOR = "button,a[href],input,select,textarea,[role=button],[contenteditable=true]";
+
+/* Functionality: Identify camera controls whose actions require direct user interaction.
+ * Inputs: None. Outputs: Fixed set of control IDs.
+ * Logic: Protect camera permission, explicit device choice and the two camera-start buttons from
+ * synthetic assistant actions while leaving status reads and unrelated controls available.
+ * Constraints: This is an agent UI-action boundary, not a substitute for browser permission policy. */
+const USER_GESTURE_CONTROL_IDS = new Set([
+  "assist-devices-authorize", "assist-device", "product-camera-start", "start",
+]);
 
 /* Functionality: Generate an exact CSS selector for a DOM element.
  * Inputs: element. Outputs: Escaped ID or ancestor/nth-of-type selector.
@@ -63,15 +75,25 @@ export function uniqueElement(doc, selector) {
 
 /* Functionality: Describe current UI controls, values, status and visible page text.
  * Inputs: Browser document. Outputs: JSON-compatible snapshot with explicit truncation flags.
- * Logic: Read live values/options/bounds; exclude assistant dialogue/controls/status to avoid
- * recursively feeding its own conversation back as independent page evidence.
+ * Logic: Read live values/options/bounds and page surface capabilities; exclude assistant
+ * dialogue/controls/status to avoid recursively feeding its own conversation back as evidence.
  * Constraints: Limit controls to 500 and text to 30000 characters; does not capture media pixels. */
 export function snapshot(doc = document) {
+  const embeddedCameraPanel = doc.querySelector("#assist-camera-panel");
+  const cameraVideo = doc.querySelector("#preview");
   const panelText = doc.querySelector("#agent-panel")?.innerText;
   const text = panelText ? doc.body.innerText.replace(panelText, "") : doc.body.innerText;
   const controls = [...doc.querySelectorAll(CONTROL_SELECTOR)].filter(element => !element.closest("#agent-panel"));
   return {
     url: doc.location.href, title: doc.title, language: doc.documentElement.lang,
+    surface: doc.documentElement.dataset.assist === "true" ?
+      `assist-${doc.documentElement.dataset.assistView || "unknown"}` : "standard",
+    capabilities: {
+      camera_panel: Boolean(doc.querySelector("#assist-camera-panel, #preview")),
+      camera_panel_visible: embeddedCameraPanel ? !embeddedCameraPanel.hidden :
+        Boolean(cameraVideo && !cameraVideo.hidden),
+      maps_panel: Boolean(doc.querySelector("#navigation-panel, #maps-form")),
+    },
     text: text.slice(0, 30000), text_truncated: text.length > 30000,
     controls_truncated: controls.length > 500,
     controls: controls.slice(0, 500).map(element => {
@@ -97,6 +119,25 @@ export function snapshot(doc = document) {
   };
 }
 
+/* Functionality: Resolve one semantic page request against the current application surface.
+ * Inputs: page alias, browser document and configured application base URL.
+ * Outputs: Same-page focus result or an explicit destination URL.
+ * Logic: The unified assist surface focuses its embedded camera panel; standard PRS pages keep
+ * their established camera/maps routes. A hidden or missing embedded panel is reported directly.
+ * Constraints: Does not start camera/GPS work, reveal hidden panels, or change route allowlists. */
+export function navigatePage(page, doc, base) {
+  if (!["camera", "maps"].includes(page)) throw new Error("Unknown page destination");
+  if (page === "camera" && doc.documentElement.dataset.assist === "true") {
+    const panel = doc.querySelector("#assist-camera-panel");
+    if (!panel) return {same_page: true, available: false, reason: "page_unavailable"};
+    if (panel.hidden) return {same_page: true, available: false, reason: "camera_panel_hidden"};
+    panel.scrollIntoView({block: "start"});
+    return {same_page: true, available: true, page: "camera", section: "#assist-camera-panel"};
+  }
+  const destination = {camera: "live/", maps: "maps/"}[page];
+  return {same_page: false, available: true, navigating_to: new URL(destination, base).href};
+}
+
 /* Functionality: Observe an asynchronous application's DOM completion without reissuing work.
  * Inputs: document, selector, text/state and timeout_ms. Outputs: Completion or timeout error.
  * Logic: Poll state every 50 ms; optional text must be contained in rendered text or input value.
@@ -120,16 +161,17 @@ export async function waitForState(doc, args) {
 /* Functionality: Perform one DOM operation using the same controls as a human user.
  * Inputs: action name, args DOM/device/navigation parameters, browser document.
  * Outputs: DOM snapshot, structured device result or explicit error.
- * Logic: Vibration/speech commands use the page's shared controllers; DOM commands use native value
- * setters plus input/change events, and clicks/forms call native DOM methods.
- * Constraints: Async work may still be running; synthetic keyboard events do not type characters
- * or grant browser permissions. Disabled/read-only/hidden controls fail instead of being bypassed. */
+ * Logic: Vibration/speech commands use shared controllers; agent UI actions reject assistant-owned,
+ * output-toggle, camera-permission, device-choice and camera-start controls before dispatch.
+ * Other DOM commands use native value setters/events and clicks/forms call DOM methods.
+ * Constraints: Async work may still be running; synthetic events never grant browser permissions;
+ * disabled/read-only/hidden controls fail instead of being bypassed. */
 export async function performAction(action, args, doc = document) {
   if (["maps_status", "maps_locate", "maps_plan", "agent_navigation_status",
     "camera_status", "camera_start", "camera_stop"].includes(action)) return performDevice(action, args, doc);
   if (action === "agent_ui_action") {
     const element = uniqueElement(doc, args.selector);
-    if (element.closest("#agent-panel") ||
+    if (element.closest("#agent-panel") || USER_GESTURE_CONTROL_IDS.has(element.id) ||
         ["speech-enabled", "vibration-enabled", "navigation-speech-enabled"].includes(element.id))
       throw new Error("This control requires direct user interaction");
     return performAction(args.action, args, doc);
@@ -229,11 +271,14 @@ export function performVibration(action, args = {}, controller = tester) {
 }
 
 /* Functionality: Expose the page's speech output controller without duplicating playback logic.
- * Inputs: fixed speech action, args.text/language/voice_id/rate/volume, optional controller.
+ * Inputs: fixed speech action, args.text/language/voice_id/rate/volume, optional controller;
+ * the controller may carry the exact voice already selected by the page.
  * Outputs: State, voice inventory or one submission/cancellation acknowledgement.
- * Logic: Queries do not speak; mutating actions delegate once to the same UI interface.
- * Constraints: No automatic enabling, trusted activation, queue, voice substitution, sensor
- * authorization or retry. Missing speech UI returns page_unavailable without side effects. */
+ * Logic: Queries do not speak; mutating actions delegate once to the same UI interface. When a
+ * local-only page has an existing explicit voice selection and the caller omits voice_id, reuse
+ * that exact selection so the shared page policy remains satisfied.
+ * Constraints: Never select a replacement/default voice, enable output, synthesize activation,
+ * queue, authorize a sensor or retry. Missing speech UI returns page_unavailable without effects. */
 export function performSpeech(action, args = {}, controller = speechOutput) {
   if (!["speech_status", "speech_voices", "speech_speak", "speech_stop"].includes(action))
     throw new Error("Unknown speech command");
@@ -244,7 +289,8 @@ export function performSpeech(action, args = {}, controller = speechOutput) {
   if (action === "speech_voices") return controller.voiceList();
   if (action === "speech_stop") return controller.stop();
   const {language = "zh-CN", voice_id = null, rate = 1, volume = 1} = args;
-  return controller.speak(args.text, {language, voice_id, rate, volume});
+  const selectedVoice = voice_id || (controller.localOnly ? controller.voice?.value || null : null);
+  return controller.speak(args.text, {language, voice_id: selectedVoice, rate, volume});
 }
 
 /* Functionality: Register this open page with the application's MCP control service.
@@ -273,7 +319,8 @@ export function connectControl(win = window, doc = document) {
 
   /* Functionality: Dispatch correlated commands and acknowledge their exact result.
    * Inputs: WebSocket event. Outputs: Result message or diagnostic browser event.
-   * Logic: Navigation sends acknowledgement then schedules page replacement; other actions run once.
+   * Logic: Navigation either focuses an embedded panel or acknowledges and schedules page
+   * replacement; other actions run once.
    * Constraints: Errors preserve id; no command contents or entered values are logged. */
   async function onMessage(event) {
     let command;
@@ -291,11 +338,10 @@ export function connectControl(win = window, doc = document) {
         return;
       }
       if (command.action === "navigate") {
-        const destination = {camera: "live/", maps: "maps/"}[command.arguments.page];
-        if (!destination) throw new Error("Unknown page destination");
-        const target = new URL(destination, base).href;
-        send({type: "result", id: command.id, ok: true, result: {navigating_to: target}});
-        setTimeout(() => win.location.assign(target), 0);
+        const navigation = navigatePage(command.arguments.page, doc, base);
+        send({type: "result", id: command.id, ok: true, result: navigation});
+        if (!navigation.same_page && navigation.available)
+          setTimeout(() => win.location.assign(navigation.navigating_to), 0);
       } else {
         const result = await performAction(command.action, command.arguments, doc);
         send({type: "result", id: command.id, ok: true, result});

@@ -29,16 +29,20 @@ MAX_RESPONSE_BYTES = 262144
 
 class AgentError(Exception):
     """Functionality: Carry safe public diagnostics without upstream bodies or secrets.
-    Logic: Stable code and locally authored detail cross transport boundaries.
+    Logic: Stable code, locally authored diagnostic text and optional HTTP status cross
+    trusted internal boundaries.
     Constraints: Never construct detail from a provider exception string.
     """
 
-    def __init__(self, code, detail):
-        """Functionality: Initialize a public error. Inputs: code/detail; Outputs: exception.
-        Logic: Store fixed diagnostics; Constraints: no logging or other side effects.
+    def __init__(self, code, detail, *, http_status=None):
+        """Functionality: Initialize a safe service diagnostic.
+        Inputs: stable code, locally authored detail and optional HTTP status; Outputs: exception.
+        Logic: Retain bounded-classification inputs for the MCP adapter. Constraints: detail must
+        not contain provider response bodies, credentials or raw exception text; no side effects.
         """
         super().__init__(detail)
         self.code, self.detail = code, detail
+        self.http_status = http_status
 
 
 def configuration():

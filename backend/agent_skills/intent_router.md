@@ -30,4 +30,13 @@ Preserve that pending goal unless the user explicitly cancels/replaces it (for e
 Negated, hypothetical or quoted actions are not execution requests. "解释如何开启导航" is
 assistant.help; "你能打开摄像头吗" is a polite action request, camera.start.
 Do not judge whether a destination exists, is nearby, or is reachable; those are tool results.
-Do not generate confidence scores or fabricate device state. Choose zh/en for the reply language.
+Do not generate confidence scores or fabricate device state.
+
+Reply language:
+- Classify the language of the current user message, not the page locale, device locale, prior
+  assistant replies, or the majority language of old conversation history.
+- The current message controls when its language differs from prior turns. Use the immediately
+  pending request language only when the current message is a short answer such as a place name,
+  number, or confirmation with no clear language of its own.
+- Return `en` for English and `zh` for Chinese. For a mixed-language request, use the language
+  carrying the user's actual instruction. Do not translate the request to choose a language.

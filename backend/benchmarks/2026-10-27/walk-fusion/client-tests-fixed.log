@@ -1,0 +1,222 @@
+TAP version 13
+# Subtest: HF, local and resident contracts cannot substitute for each other
+ok 1 - HF, local and resident contracts cannot substitute for each other
+  ---
+  duration_ms: 4.6021
+  type: 'test'
+  ...
+# (node:37720) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: local geometry and temporal depth preserve distance tracking and risk interfaces
+ok 2 - local geometry and temporal depth preserve distance tracking and risk interfaces
+  ---
+  duration_ms: 9.9886
+  type: 'test'
+  ...
+# Subtest: distance strategies require explicit valid identity and selected cadence
+ok 3 - distance strategies require explicit valid identity and selected cadence
+  ---
+  duration_ms: 2.0608
+  type: 'test'
+  ...
+# Subtest: local native hello is independent from the preserved HF COCO gate
+ok 4 - local native hello is independent from the preserved HF COCO gate
+  ---
+  duration_ms: 1.3108
+  type: 'test'
+  ...
+# Subtest: explicit continuous local admission preserves per-frame budgets beyond55s
+ok 5 - explicit continuous local admission preserves per-frame budgets beyond55s
+  ---
+  duration_ms: 3.5133
+  type: 'test'
+  ...
+# Subtest: local duration defaults stay55 and explicit policies must match the hello
+ok 6 - local duration defaults stay55 and explicit policies must match the hello
+  ---
+  duration_ms: 1.3361
+  type: 'test'
+  ...
+# Subtest: local session policy rejects unsupported or coerced values
+ok 7 - local session policy rejects unsupported or coerced values
+  ---
+  duration_ms: 0.6147
+  type: 'test'
+  ...
+# Subtest: continuous local option cannot relax HF session duration
+ok 8 - continuous local option cannot relax HF session duration
+  ---
+  duration_ms: 0.3605
+  type: 'test'
+  ...
+# Subtest: local PRF2 carries big-endian source capture time and preserves JPEG
+ok 9 - local PRF2 carries big-endian source capture time and preserves JPEG
+  ---
+  duration_ms: 3.7842
+  type: 'test'
+  ...
+# Subtest: local responses bind the same session and exact source timestamp
+ok 10 - local responses bind the same session and exact source timestamp
+  ---
+  duration_ms: 2.2692
+  type: 'test'
+  ...
+# Subtest: depth metadata accepts meters and null while preserving the existing box fields
+ok 11 - depth metadata accepts meters and null while preserving the existing box fields
+  ---
+  duration_ms: 1.8583
+  type: 'test'
+  ...
+# Subtest: depth metadata rejects invalid distances and mismatched box aliases
+ok 12 - depth metadata rejects invalid distances and mismatched box aliases
+  ---
+  duration_ms: 2.0496
+  type: 'test'
+  ...
+# Subtest: depth packets carry 300 objects with the complete detection fields
+ok 13 - depth packets carry 300 objects with the complete detection fields
+  ---
+  duration_ms: 2.7823
+  type: 'test'
+  ...
+# Subtest: resident admission is explicit and supports its three workloads
+ok 14 - resident admission is explicit and supports its three workloads
+  ---
+  duration_ms: 2.3061
+  type: 'test'
+  ...
+# Subtest: resident cannot bypass HF admission or accept a changed native plan
+ok 15 - resident cannot bypass HF admission or accept a changed native plan
+  ---
+  duration_ms: 1.2948
+  type: 'test'
+  ...
+# Subtest: resident per-frame stages must match the admitted workload
+ok 16 - resident per-frame stages must match the admitted workload
+  ---
+  duration_ms: 1.0094
+  type: 'test'
+  ...
+# Subtest: resident end preserves final JPEG and checks complete delivery
+ok 17 - resident end preserves final JPEG and checks complete delivery
+  ---
+  duration_ms: 3.7425
+  type: 'test'
+  ...
+# Subtest: resident errors identify busy and unavailable service
+ok 18 - resident errors identify busy and unavailable service
+  ---
+  duration_ms: 0.5284
+  type: 'test'
+  ...
+# Subtest: binary packets preserve JPEG and bound twelve pending requests
+ok 19 - binary packets preserve JPEG and bound twelve pending requests
+  ---
+  duration_ms: 2.7096
+  type: 'test'
+  ...
+# Subtest: corruption and changed model conditions fail without fallback
+ok 20 - corruption and changed model conditions fail without fallback
+  ---
+  duration_ms: 1.9175
+  type: 'test'
+  ...
+# Subtest: out-of-order result stops the whole session
+ok 21 - out-of-order result stops the whole session
+  ---
+  duration_ms: 0.344
+  type: 'test'
+  ...
+# Subtest: stop and provider end never auto-restart
+ok 22 - stop and provider end never auto-restart
+  ---
+  duration_ms: 0.3878
+  type: 'test'
+  ...
+# Subtest: first response uses55s and steady response10s
+ok 23 - first response uses55s and steady response10s
+  ---
+  duration_ms: 1.1251
+  type: 'test'
+  ...
+# Subtest: final binary is verified before end and close
+ok 24 - final binary is verified before end and close
+  ---
+  duration_ms: 0.7958
+  type: 'test'
+  ...
+# Subtest: invalid hello or private capability rejects before input
+ok 25 - invalid hello or private capability rejects before input
+  ---
+  duration_ms: 0.7336
+  type: 'test'
+  ...
+# Subtest: selected precision and backend must match every returned frame
+ok 26 - selected precision and backend must match every returned frame
+  ---
+  duration_ms: 2.0125
+  type: 'test'
+  ...
+# Subtest: risk fields preserve deterministic scores and unavailable TTC
+ok 27 - risk fields preserve deterministic scores and unavailable TTC
+  ---
+  duration_ms: 4.6904
+  type: 'test'
+  ...
+# Subtest: risk rejects invalid or incomplete rule output
+ok 28 - risk rejects invalid or incomplete rule output
+  ---
+  duration_ms: 3.034
+  type: 'test'
+  ...
+# Subtest: risk supports 300 complete objects
+ok 29 - risk supports 300 complete objects
+  ---
+  duration_ms: 6.3038
+  type: 'test'
+  ...
+# Subtest: tracking fields accept motion and unavailable depth or IDs
+ok 30 - tracking fields accept motion and unavailable depth or IDs
+  ---
+  duration_ms: 3.2478
+  type: 'test'
+  ...
+# Subtest: tracking rejects malformed or incomplete motion data
+ok 31 - tracking rejects malformed or incomplete motion data
+  ---
+  duration_ms: 2.5644
+  type: 'test'
+  ...
+# Subtest: tracking supports 300 objects with complete motion fields
+ok 32 - tracking supports 300 objects with complete motion fields
+  ---
+  duration_ms: 4.8797
+  type: 'test'
+  ...
+# Subtest: walk model admits 87 classes, pedestrian-light state and declared lower thresholds
+ok 33 - walk model admits 87 classes, pedestrian-light state and declared lower thresholds
+  ---
+  duration_ms: 2.0487
+  type: 'test'
+  ...
+# Subtest: walk model rejects forged identities, labels and thresholds
+ok 34 - walk model rejects forged identities, labels and thresholds
+  ---
+  duration_ms: 1.0319
+  type: 'test'
+  ...
+# Subtest: walk weights require explicit local admission
+ok 35 - walk weights require explicit local admission
+  ---
+  duration_ms: 0.2683
+  type: 'test'
+  ...
+1..35
+# tests 35
+# suites 0
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 199.5331

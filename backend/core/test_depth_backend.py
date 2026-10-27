@@ -6,11 +6,17 @@ Declaration Index: DepthBackendTests; DepthBackendTests.test_explicit_selection;
 DepthBackendTests.test_service_freezes_selection; DepthBackendTests.test_no_shape_fallback;
 DepthBackendTests.test_precision_policy_rejected_before_model_load;
 DepthBackendTests.test_comparison_does_not_hide_decision_changes.
+DepthBackendTests.test_model_and_fusion_are_frozen;
+DepthBackendTests.test_host_fusion_mode_boundary.
+DepthBackendTests.test_launcher_verifies_selected_weights.
 Variable Index: None. No checkpoint or engine is loaded by these contract tests.
 """
 
 import asyncio
+import hashlib
+import json
 import os
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -43,7 +49,8 @@ class DepthBackendTests(SimpleTestCase):
                                            "PRS_DEPTH_ENGINE_MANIFEST": "models/test.json"})
         self.assertEqual(actual.manifest, root / "models/test.json")
         for environment in ({"PRS_DEPTH_BACKEND": "auto"}, {"PRS_DEPTH_BACKEND": "tensorrt"},
-                            {"PRS_DEPTH_ENGINE_MANIFEST": "models/test.json"}):
+                            {"PRS_DEPTH_ENGINE_MANIFEST": "models/test.json"},
+                            {"PRS_DEPTH_FUSION": "auto"}):
             with self.subTest(environment=environment), self.assertRaises(ValueError):
                 read_depth_backend(root, environment)
 
@@ -80,6 +87,70 @@ class DepthBackendTests(SimpleTestCase):
             pool(SimpleNamespace(shape=(1, 3, 768, 768)))
         self.assertEqual(caught.exception.code, "depth_input_shape")
         runner.assert_not_called()
+
+    def test_model_and_fusion_are_frozen(self):
+        """Functionality: Preserve an optional model's advertised identity across lazy loading.
+        Inputs: walk/host startup then a changed process environment. Outputs: original identity.
+        Logic: check actual manifest/class count, file selection, fusion and deferred factory args.
+        Constraints: no model initialization or GPU work; the default remains the original model.
+        """
+        from integration.inference.services import InferenceRuntime
+
+        with patch.dict(os.environ, {"PRS_DETECTION_MODEL": "yolo26n-walk",
+                                     "PRS_DEPTH_FUSION": "host"}):
+            runtime = InferenceRuntime()
+        try:
+            with patch.dict(os.environ, {"PRS_DETECTION_MODEL": "yolo26n",
+                                         "PRS_DEPTH_FUSION": "gpu"}):
+                contract = runtime.contract("test")
+                self.assertEqual((contract["model"], contract["classes"]), ("yolo26n-walk", 87))
+                self.assertEqual(contract["depth_fusion"], "host")
+                self.assertEqual(runtime.detection_weights.name, "yolo26n-walk.pt")
+                self.assertEqual(runtime.status()["models"]["detection"]["model"], "yolo26n-walk")
+                self.assertEqual(runtime.factory.keywords["detection_model"], "yolo26n-walk")
+                self.assertEqual(runtime.factory.keywords["depth_config"].fusion, "host")
+        finally:
+            asyncio.run(runtime.close())
+
+    def test_host_fusion_mode_boundary(self):
+        """Functionality: Reject unsupported fusion/mode combinations before loading models.
+        Inputs: host fusion with geometric or temporal distance. Outputs: explicit ValueError.
+        Logic: call the actual factory with frozen configs. Constraints: no altered B/C algorithm.
+        """
+        from integration.inference.services import load_detector
+        from realtime.distance_config import DistanceConfig
+
+        for mode in ("geometry", "temporal_depth"):
+            with self.subTest(mode=mode), self.assertRaises(ValueError):
+                load_detector(DistanceConfig(distance_mode=mode), DepthBackendConfig(fusion="host"))
+
+    def test_launcher_verifies_selected_weights(self):
+        """Functionality: Check the optional checkpoint even when original-model weights are absent.
+        Inputs: inert walk bytes, manifest and geometric mode. Outputs: pass then rejection.
+        Logic: use the actual launcher preflight, mutate bytes and require a digest failure.
+        Constraints: fixture is never deserialized; no optional model substitutes for missing files.
+        """
+        from realtime.distance_config import DistanceConfig
+        from tools.run_local_mvp import StartupError, verify_models
+
+        manifest = json.loads((Path(__file__).resolve().parents[1]
+                               / "models/yolo26n-walk.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "models").mkdir()
+            weights = root / "models/yolo26n-walk.pt"
+            weights.write_bytes(b"inert walk fixture")
+            manifest["source_sha256"] = hashlib.sha256(weights.read_bytes()).hexdigest()
+            profile = root / "models/yolo26n-walk.json"
+            profile.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch("tools.run_local_mvp.ROOT", root), \
+                    patch("core.detection_model.model_files", return_value=(weights, profile)), \
+                    patch("realtime.distance_config.read_distance_config",
+                          return_value=DistanceConfig(distance_mode="geometry")):
+                verify_models()
+                weights.write_bytes(b"changed weights")
+                with self.assertRaises(StartupError):
+                    verify_models()
 
     def test_precision_policy_rejected_before_model_load(self):
         """Functionality: Reject unsupported precision or ambiguous artifacts before checkpoint I/O.

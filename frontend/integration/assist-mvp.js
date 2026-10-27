@@ -1,22 +1,24 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
- * Implementation: Default-enabled unified outputs, interface-language local voice preference,
- * synchronous user-gesture speech activation and one-click product rear-camera acquisition,
- * canonical shared module URLs, independent source lifecycles, explicit controls,
+ * Implementation: Default-enabled unified outputs, one backend bilingual voice preference,
+ * synchronous user-gesture audio unlock, prioritized live assistant reply speech and
+ * one-click product rear-camera acquisition,
+ * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
  * original frame transports and passive maps snapshots; no navigation or algorithm calculations.
  * Related Modules: assist-panel.html/assist.css/assist-guidance.js; maps-navigation-bridge.js,
  * devices.js/video-replay.js/catalog.js/voice-preferences.js; original camera/navigation/speech/vibration singletons.
  * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; guidanceDiagnostic; onGuidance; applyVoice;
  * renderSpeechActivation; activateSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
- * onBoundary; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
+ * onBoundary; speakAssistantReply; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
  * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
  * locks user source choice during permission/admission; fileChoice/permissionChoice invalidate
  * late metadata/permission UI; boundaryStopped prevents repeated lifecycle cancellation;
  * fileReady/latest retain one source state/result only; stoppingAll makes two-source cleanup atomic.
  * Exported controllers are the original instances; navigationPort forwards the existing bridge API;
  * replay href uses its original integration/video base so ../../ws preserves the current application mount.
- * speechActivation gates automatic speech until a real native start; defaults do not acquire sensors.
- * testView retains localized manual diagnostic choices; voicePreference stores configuration availability;
+ * speechActivation gates automatic speech until the backend audio stream starts; guidanceManager queues live
+ * replies behind risk alerts and ahead of navigation; defaults do not acquire sensors.
+ * testView retains localized manual diagnostic choices; voicePreference stores backend TTS availability;
  * languageObserver watches only the document language and never starts or cancels speech;
  * cameraFailure retains a finite native error type across the core's following stop event;
  * GUIDANCE_PHASE_LABELS provides bilingual lifecycle labels to guidanceDiagnostic.
@@ -33,7 +35,7 @@ import {MapsNavigationSpeechBridge} from "./maps-navigation-bridge.js";
 import {VideoReplay} from "./video-replay.js";
 import {authorizeCameraDevices, explicitDeviceId} from "./devices.js";
 import {resultText} from "./catalog.js";
-import {interfaceSpeechLanguage, selectLocalVoice} from "./voice-preferences.js";
+import {interfaceSpeechLanguage} from "./voice-preferences.js";
 export {cameraApp} from "../camera.js";
 export {navigation} from "../navigation-ui.js";
 export {speechOutput} from "../speech-output.js";
@@ -61,10 +63,11 @@ const GUIDANCE_PHASE_LABELS = {
   output_end: ["输出已结束", "Output ended"],
   output_error: ["输出失败", "Output failed"],
   pattern_elapsed: ["振动模式已完成", "Vibration pattern completed"],
-  stopped: ["导航与风险输出已停止", "Navigation and risk outputs stopped"],
+  stopped: ["导航、风险与助手输出已停止", "Navigation, risk and assistant outputs stopped"],
   configuration_changed: ["语音配置已更新", "Voice configuration updated"],
+  assistant_replies_cleared: ["待播报的助手回复已清除", "Queued assistant replies cleared"],
 };
-let voicePreference = {language: null, voiceId: "", reason: "local_voice_unavailable"};
+let voicePreference = {language: null, voiceId: "Cherry", reason: "backend_tts_unavailable"};
 let languageObserver = null;
 let cameraFailure = null;
 let riskOwner = null, sessionId = null, sourceStarting = null, fileReady = false, latest = null;
@@ -165,12 +168,12 @@ function startProductCamera() {
 }
 
 /* Functionality: Explain native camera failures without hiding the controller's detailed message.
- * Inputs: Retained error type. Outputs: Fixed localized action. Logic: Known permission/device
- * failures are distinguished, with a generic message for other connection/start errors.
- * Constraints: No error-body logging, hardware assumption, permission change or automatic retry. */
+ * Inputs: Retained error type. Outputs: Fixed localized action. Logic: Permission guidance tells
+ * the user to start from the visible click target if no prompt appeared; device and busy states are
+ * distinguished from other connection/start errors. Constraints: No permission change or retry. */
 function cameraFailureMessage(reason) {
   if (reason === "NotAllowedError" || reason === "SecurityError")
-    return productText("摄像头权限被拒绝。请在 Safari 网站设置中允许摄像头，然后再次点击开始检测。", "Camera access was denied. Allow camera access in your browser's site settings, then tap Start detection again.");
+    return productText("摄像头请求未获准。若没有出现权限弹窗，请在本页直接点击“开启环境感知”；若之前拒绝过，请在浏览器网站设置中允许摄像头。", "The browser did not grant camera access. If no prompt appeared, tap Start environment awareness on this page; if access was previously denied, allow camera access in the browser's site settings.");
   if (reason === "NotFoundError" || reason === "OverconstrainedError")
     return productText("未能打开后置摄像头。请使用带后置摄像头的手机，或进入测试页手动选择镜头。", "The rear camera is unavailable. Use a phone with a rear camera, or choose a camera manually on the test page.");
   if (reason === "NotReadableError" || reason === "AbortError")
@@ -248,7 +251,7 @@ function onSource(event, source) {
  * Inputs: Manager event. Outputs: Finite status without logging media, GPS or spoken text.
  * Logic: Product text describes available actions; test diagnostics use finite phase labels and request identities.
  * The startup gate uses the activation button; recovery appears only for a separate channel pause.
- * Constraints: Engine acceptance/start/end are not physical speaker or motor verification. */
+ * Constraints: Backend stream events are not physical speaker verification. */
 function onGuidance(event) {
   const state = guidanceManager.describe();
   const diagnostic = guidanceDiagnostic(event);
@@ -259,7 +262,7 @@ function onGuidance(event) {
     : state.paused?.speech && state.reasons.speech !== "activation_required"
       ? productText("语音提醒已暂停，请点击恢复语音。", "Voice alerts are paused. Tap Resume voice.")
       : !speechActivation.describe().ready
-        ? productText("开始导航或环境检测时，将启用语音提醒。", "Starting navigation or detection will activate voice alerts.")
+        ? productText("发送助手指令、开始导航或环境检测时，将启用语音提醒。", "Sending an assistant request, starting navigation or detection activates voice alerts.")
         : productText("语音提醒已就绪。", "Voice alerts are ready.");
   setStatusText("assist-output-status", status);
   setStatusText("navigation-speech-status", status);
@@ -272,8 +275,8 @@ function onGuidance(event) {
 
 /* Functionality: Display genuine speech activation independently of enabled output preferences.
  * Inputs: Activation metadata. Outputs: Accessible status and explicit startup control state.
- * Logic: Only native start marks ready; pending submission never claims sound or sensor access.
- * Constraints: No native calls, automatic retry, voice substitution or hardware verification. */
+ * Logic: First backend PCM playback marks ready; pending submission never claims sound or sensor access.
+ * Constraints: No browser voice lookup, automatic retry, voice substitution or hardware verification. */
 function renderSpeechActivation(state) {
   const enabled = speechOutput.enabled.checked;
   const output = guidanceManager.describe();
@@ -284,33 +287,33 @@ function renderSpeechActivation(state) {
     setStatusText("assist-speech-status", !speechOutput.supported
       ? productText("此浏览器不支持语音提醒，请使用支持语音的浏览器。", "This browser cannot provide voice alerts. Use a browser with speech support.")
       : !enabled ? productText("语音提醒已关闭。", "Voice alerts are off.")
-      : voicePreference.reason === "voice_query_failed"
-        ? productText("暂时无法读取设备声音，请刷新页面后重试。", "Cannot read device voices. Refresh this page and try again.")
+      : voicePreference.reason === "backend_tts_unavailable"
+        ? productText("后端语音服务暂不可用，请检查网络连接。", "The backend speech service is unavailable. Check the network connection.")
       : voicePreference.reason === "unsupported_interface_language"
         ? productText("当前语言暂不支持语音提醒，请切换中文或英文。", "Voice alerts do not support this language. Choose Chinese or English.")
       : voicePreference.reason
-        ? productText("未找到当前语言的本地声音。请在设备设置中安装中文声音，或切换界面语言后再试。", "No local voice matches this language. Install an English voice in device settings, or change the interface language and try again.")
+        ? productText("后端中英文语音暂不可用，请检查语音服务配置。", "Backend Chinese and English speech is unavailable. Check the speech service configuration.")
       : state.ready
-        ? gated ? productText("点击启动语音，或重新开始导航、检测。", "Tap Activate voice, or start navigation or detection again.")
+        ? gated ? productText("点击启动语音、发送助手指令，或重新开始导航、检测。", "Tap Activate voice, send an assistant request, or start navigation or detection again.")
           : output.paused.speech ? productText("语音提醒已暂停，请点击恢复语音。", "Voice alerts are paused. Tap Resume voice.")
           : productText("语音提醒已就绪。", "Voice alerts are ready.")
       : state.state === "queued" ? productText("正在启用语音提醒。", "Activating voice alerts.")
       : state.state === "error"
-        ? productText("语音尚未启动，请保持页面在前台并再次点击启动语音。", "Voice has not started. Keep this page open and tap Activate voice again.")
-        : productText("语音跟随界面语言。点击启动语音，或开始导航、检测。", "Voice follows the interface language. Tap Activate voice, or start navigation or detection."));
+        ? productText("语音尚未启动，请保持页面在前台，再次点击启动语音或发送助手指令。", "Voice has not started. Keep this page open, then tap Activate voice again or send an assistant request.")
+        : productText("语音跟随界面语言。点击启动语音、发送助手指令，或开始导航、检测。", "Voice follows the interface language. Tap Activate voice, send an assistant request, or start navigation or detection."));
     return;
   }
   node("assist-speech-status").textContent = !enabled ? productText("语音输出已关闭。", "Speech output is off.") : state.ready
-    ? gated ? productText("语音已停止；点击“启动语音”或开始导航、检测后恢复。", "Voice has stopped. Tap Activate voice, or start navigation or detection to resume.")
-      : output.paused.speech ? productText(`语音引擎已启动，但自动播报已暂停（${output.reasons.speech}），请手动恢复输出。`, `The speech engine has started, but automatic announcements are paused (${String(output.reasons.speech).replaceAll("_", " ")}). Resume output manually.`)
-        : productText("语音引擎已启动，导航和预警可自动播报；请确认设备实际声音。", "The speech engine has started and can announce navigation and alerts. Confirm that sound is audible on the device.")
+    ? gated ? productText("语音已停止；点击“启动语音”、发送助手指令或开始导航、检测后恢复。", "Voice has stopped. Tap Activate voice, send an assistant request, or start navigation or detection to resume.")
+      : output.paused.speech ? productText(`流式音频已启动，但自动播报已暂停（${output.reasons.speech}），请手动恢复输出。`, `Streamed audio has started, but automatic announcements are paused (${String(output.reasons.speech).replaceAll("_", " ")}). Resume output manually.`)
+        : productText("后端语音已开始播放，助手回复、导航和风险提醒可自动播报；请确认设备实际声音。", "Backend speech playback has started and can announce assistant replies, navigation and risk alerts. Confirm that sound is audible on the device.")
     : state.state === "queued" ? productText("正在启动语音，请等待提示音。", "Starting voice. Wait for the prompt.")
-      : productText(`语音提醒已开启，尚未启动（${state.reason || "activation_required"}）。选择本地声音后，点击“启动语音”或开始导航、检测。`, `Voice alerts are enabled but have not started (${String(state.reason || "activation_required").replaceAll("_", " ")}). Select a local voice, then tap Activate voice or start navigation or detection.`);
+      : productText(`语音提醒已开启，尚未启动（${state.reason || "activation_required"}）。点击“启动语音”、发送助手指令或开始导航、检测。`, `Voice alerts are enabled but have not started (${String(state.reason || "activation_required").replaceAll("_", " ")}). Tap Activate voice, send an assistant request, or start navigation or detection.`);
 }
 
-/* Functionality: Start the first utterance directly within the current real click stack.
- * Inputs: Explicit startup, navigation or perception click. Outputs: Activation acknowledgement.
- * Logic: Delegate synchronously before any permission promise or inference callback.
+/* Functionality: Start the first utterance directly within the current real user-gesture stack.
+ * Inputs: Explicit startup, navigation, perception or assistant-submit gesture. Outputs: Activation acknowledgement.
+ * Logic: Unlock the audio context synchronously before any permission promise or inference callback.
  * Constraints: No await, task deferral, automatic enabling, device selection or playback retry. */
 function activateSpeech() {
   boundaryStopped = false;
@@ -322,10 +325,27 @@ function activateSpeech() {
 
 /* Functionality: Respect first-speech activation when manually resuming automatic output.
  * Inputs: Explicit recovery click. Outputs: Startup or manager recovery result.
- * Logic: An unstarted engine must first receive synchronous calibration, not asynchronous risk.
+ * Logic: An unstarted audio context must first receive explicit calibration, not asynchronous risk.
  * Constraints: Existing unrelated output errors still require the manager's explicit recovery. */
 function resumeSpeech() {
   return speechActivation.describe().ready ? guidanceManager.resume("speech") : activateSpeech();
+}
+
+/* Functionality: Submit one newly received assistant reply for automatic backend speech.
+ * Inputs: CustomEvent carrying reply text. Outputs: Manager queue entry or no output.
+ * Logic: Require visible page, enabled driver and either completed activation or its pending
+ * backend calibration; the manager gate holds pending replies until playback starts.
+ * Constraints: Historical replay, disabled/unavailable output and unrelated paused speech are never queued. */
+function speakAssistantReply(event) {
+  const text = event.detail?.text;
+  const activation = speechActivation.describe(), output = guidanceManager.describe();
+  const selection = speechActivation.selection();
+  const awaitingActivation = activation.state === "queued" &&
+    output.paused.speech && output.reasons.speech === "activation_required";
+  if (typeof text !== "string" || !text.trim() || doc.visibilityState !== "visible" ||
+      !speechOutput.enabled.checked || (!activation.ready && !awaitingActivation) ||
+      selection.reason || (output.paused.speech && !awaitingActivation)) return;
+  guidanceManager.enqueueAssistantReply(text);
 }
 
 /* Functionality: Apply the user's default-on policy only to this unified MVP document.
@@ -343,35 +363,33 @@ function enableDefaultOutputs() {
   renderSpeechActivation(speechActivation.describe());
 }
 
-/* Functionality: Apply the selected manual or product voice to both automatic sources.
- * Inputs: Shared integration voice/language. Outputs: Manager/manual UI configuration.
- * Logic: Preserve exact native IDs, including empty unavailable selection.
+/* Functionality: Apply the fixed backend voice and selected language to automatic sources.
+ * Inputs: Shared backend voice/language. Outputs: Manager/manual UI configuration.
+ * Logic: Preserve the exact server voice ID while applying explicit Chinese/English language.
  * Constraints: No output, enablement, readiness reset or current-utterance cancellation. */
 function applyVoice() {
-  const voiceId = node("navigation-speech-voice").value, language = node("navigation-speech-language").value;
+  const voiceId = "Cherry", language = node("navigation-speech-language").value;
+  node("navigation-speech-voice").value = voiceId;
   guidanceManager.configure({voiceId, language});
   speechOutput.voice.value = voiceId; speechOutput.language.value = language;
 }
 
-/* Functionality: Configure automatic product speech for the existing interface language.
- * Inputs: Native inventory, document lang and current integration selection. Outputs: Future settings.
- * Logic: Rank matching local voices; a queued calibration retains its exact selection until native
- * start so a concurrent inventory/language change cannot invalidate its startup confirmation.
- * Constraints: No engine output, cancellation, readiness reset, remote voice or automatic retry. */
+/* Functionality: Configure automatic product speech for the interface language and backend voice.
+ * Inputs: Document language and controller availability. Outputs: Fixed server voice and future settings.
+ * Logic: Native voice inventory is not queried; a queued calibration retains its language until
+ * first backend playback so a concurrent UI language change cannot relabel that request.
+ * Constraints: No synthesis request, cancellation, readiness reset, voice fallback or retry. */
 function readProductVoices() {
   if (["感知尚未开始。", "Obstacle detection has not started."].includes(node("assist-status").textContent))
     setStatusText("assist-status", productText("感知尚未开始。", "Obstacle detection has not started."));
   if (speechActivation.describe().state === "queued") return;
   const language = interfaceSpeechLanguage(doc.documentElement.lang);
-  const inventory = speechOutput.voiceList();
-  const voiceId = inventory.accepted && language
-    ? selectLocalVoice(inventory.voices, language, node("navigation-speech-voice").value) : "";
-  voicePreference = {language, voiceId, reason: !language ? "unsupported_interface_language"
-    : !inventory.accepted ? inventory.reason || "voice_query_failed" : !voiceId ? "local_voice_unavailable" : null};
+  const voiceId = "Cherry";
+  voicePreference = {language, voiceId, reason: !speechOutput.supported ? "backend_tts_unavailable"
+    : !language ? "unsupported_interface_language" : null};
   const select = node("navigation-speech-voice");
   const option = doc.createElement("option"); option.value = voiceId;
-  option.textContent = voiceId ? productText("跟随界面语言", "Follow interface language")
-    : productText("本地声音不可用", "Local voice unavailable");
+  option.textContent = productText("后端语音 · Cherry（中文 / English）", "Backend voice · Cherry (中文 / English)");
   select.replaceChildren(option); select.value = voiceId;
   node("navigation-speech-language").value = language || "";
   speechOutput.rate.value = "2"; speechOutput.volume.value = "1";
@@ -379,10 +397,10 @@ function readProductVoices() {
   if (latest) renderResults(latest);
 }
 
-/* Functionality: Follow UI/system language changes and delayed native voice availability.
- * Inputs: Product document and original driver lifecycle. Outputs: Future selection refreshes.
- * Logic: Observe only lang; a native start releases a deferred calibration selection update.
- * Constraints: Voice inventory events never speak, resume the manager, cancel or reset readiness. */
+/* Functionality: Follow UI language changes after the current calibration completes.
+ * Inputs: Product document and shared driver lifecycle. Outputs: Future language settings.
+ * Logic: Observe only lang; first backend playback releases a deferred calibration setting update.
+ * Constraints: No browser voice inventory, output, manager resume, cancellation or readiness reset. */
 function observeProductLanguage() {
   languageObserver = new MutationObserver(() => readProductVoices());
   languageObserver.observe(doc.documentElement, {attributes: true, attributeFilter: ["lang"]});
@@ -392,26 +410,18 @@ function observeProductLanguage() {
   });
 }
 
-/* Functionality: Refresh product preferences or the diagnostic page's manual voice inventory.
- * Inputs: Native voice inventory and explicit view marker. Outputs: Options or unavailable state.
- * Logic: Diagnostic mode preserves its empty initial choice; product mode follows interface language.
- * Constraints: No remote/default speech, core setting change, playback or automatic error recovery. */
+/* Functionality: Refresh the single backend voice selection on both assist views.
+ * Inputs: Explicit view marker and selected language. Outputs: Fixed Cherry option and manager config.
+ * Logic: Diagnostic mode retains its language choice; product mode follows document language.
+ * Constraints: Does not enumerate device voices, synthesize, change core settings or retry errors. */
 function readVoices() {
   if (!testView) { readProductVoices(); return; }
-  const select = node("navigation-speech-voice"), selected = select.value;
+  const select = node("navigation-speech-voice");
   const language = node("navigation-speech-language").value;
   select.replaceChildren();
-  const empty = doc.createElement("option"); empty.value = ""; empty.textContent = productText("请选择本地声音", "Select a local voice"); select.append(empty);
-  for (const voice of speechOutput.voiceList().voices.filter(item => item.local_service === true &&
-      item.language.split("-")[0].toLowerCase() === language.split("-")[0].toLowerCase())) {
-    const option = doc.createElement("option"); option.value = voice.id;
-    option.textContent = `${voice.name} (${voice.language}) [local]`; option.dataset.languageOriginal = ""; select.append(option);
-  }
-  if (selected && ![...select.options].some(option => option.value === selected)) {
-    const missing = doc.createElement("option"); missing.value = selected; missing.disabled = true;
-    missing.textContent = `${selected} [unavailable]`; select.append(missing);
-  }
-  select.value = selected; applyVoice();
+  const option = doc.createElement("option"); option.value = "Cherry";
+  option.textContent = productText("后端语音 · Cherry（中文 / English）", "Backend voice · Cherry (中文 / English)");
+  option.dataset.languageOriginal = ""; select.append(option); select.value = "Cherry"; applyVoice();
   if (latest) renderResults(latest);
 }
 
@@ -562,8 +572,9 @@ function onBoundary(event) {
 
 /* Functionality: Bind the dedicated local integration surface to original controllers.
  * Inputs: Explicit assist document marker. Outputs: Read-only setup and user action handlers.
- * Logic: Select only local PRF2, reuse shared drivers; product speech follows the interface language
- * and accepts the voice assistant's release gesture as its synchronous activation gesture.
+ * Logic: Select only local PRF2, reuse shared drivers; expose the existing ping button only on the
+ * diagnostic page; product speech uses backend bilingual TTS and accepts a voice-release or
+ * text-submit gesture as synchronous audio activation.
  * Constraints: No automatic permissions, route requests, inference or first playback. */
 function initialize() {
   if (doc.documentElement.dataset.assist !== "true" || !navigation)
@@ -574,8 +585,10 @@ function initialize() {
     cameraApp.localFacingMode = "environment";
     node("product-camera-start").addEventListener("click", startProductCamera);
   }
+  node("ping").hidden = !testView;
+  node("ping").textContent = productText("测试页面连接", "Test page connection");
   cameraApp.processing.value = "local"; cameraApp.handleProcessingChange();
-  node("maps-navigation-speech-panel").querySelector("h2").textContent = productText("导航与风险播报声音", "Navigation and risk alert audio");
+  node("maps-navigation-speech-panel").querySelector("h2").textContent = productText("自动语音播报", "Automatic speech output");
   guidanceManager.subscribe(onGuidance);
   cameraApp.subscribe(event => onSource(event, "camera"));
   videoReplay.subscribe(event => onSource(event, "video"));
@@ -592,7 +605,11 @@ function initialize() {
     node(id).addEventListener("click", resumeSpeech);
   node("assist-speech-start").addEventListener("click", activateSpeech);
   if (!testView) window.addEventListener("prs-assist-voice-gesture", activateSpeech);
-  speechOutput.enabled.addEventListener("change", () => renderSpeechActivation(speechActivation.describe()));
+  speechOutput.enabled.addEventListener("change", () => {
+    if (!speechOutput.enabled.checked) guidanceManager.clearAssistantReplies("speech_disabled");
+    renderSpeechActivation(speechActivation.describe());
+  });
+  window.addEventListener("prs-agent-reply", speakAssistantReply);
   node("assist-resume-vibration").addEventListener("click", () => guidanceManager.resume("vibration"));
   node("assist-source").addEventListener("change", renderControls);
   node("assist-device").addEventListener("change", () => { cameraApp.localDeviceId = node("assist-device").value; renderControls(); });
@@ -618,7 +635,6 @@ function initialize() {
   node("assist-stop-all").addEventListener("click", () => stopAll());
   doc.addEventListener("visibilitychange", onBoundary, true);
   window.addEventListener("pagehide", onBoundary, true);
-  window.speechSynthesis?.addEventListener("voiceschanged", readVoices);
   if (!testView) observeProductLanguage();
   enableDefaultOutputs(); readVoices(); renderControls();
 }

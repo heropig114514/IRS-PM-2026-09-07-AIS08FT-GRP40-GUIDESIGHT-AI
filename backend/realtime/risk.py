@@ -99,7 +99,10 @@ class RiskConfig:
                             ("bird", 5), ("cat", 5), ("dog", 5), ("horse", 5), ("sheep", 5),
                             ("cow", 5), ("elephant", 5), ("bear", 5), ("zebra", 5),
                             ("giraffe", 5), ("bench", 1), ("chair", 1), ("stop sign", 1),
-                            ("fire hydrant", 1), ("pole", 1), ("sign", 1))
+                            ("fire hydrant", 1), ("pole", 1), ("sign", 1),
+                            # Walk-model obstacles (core.detection_model WALK): static, low-weight
+                            # like pole; stairs slightly higher as a fall hazard.
+                            ("bollard", 1), ("traffic_cone", 1), ("stairs", 3))
     default_class_weight: float = 5
     risk_level_thresholds: tuple = (25, 50, 75)
     alert_priorities: tuple = (("low", 0), ("medium", 2), ("high", 3), ("critical", 4),

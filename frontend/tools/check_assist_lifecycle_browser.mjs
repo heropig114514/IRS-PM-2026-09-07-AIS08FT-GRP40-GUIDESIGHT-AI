@@ -1,10 +1,12 @@
 /* Responsibilities: Verify original assist camera and repeated hidden/pending-input boundaries.
- * Implementation: Real Chrome/entry/PRF2/local model; explicitly synthetic canvas.captureStream
+ * Implementation: Real Chrome/entry/PRF2 transport; explicitly synthetic canvas.captureStream
  * camera permission/inventory and delayed metadata boundaries. Verify unified default-on controls,
- * then explicitly disable output via UI; no physical camera or native TTS success claim.
+ * then explicitly disable output via UI; verify configured backend voice without claiming playback.
  * Related Modules: integration/assist-mvp.js/devices.js/video-replay.js; camera.js/frame-pipeline.js;
  * check_assist_browser.mjs exports pure CLI validation; backend integration.assist/protocol.
- * Declaration Index: installMediaFixture; installMediaFixture.makeStream;
+ * Declaration Index: normalizeApplicationPath — compare mounted URLs with canonical ASGI paths;
+ * waitForPrf2Input — await one observed binary-frame header;
+ * installMediaFixture; installMediaFixture.makeStream;
  * installMediaFixture.makeStream.draw; installMediaFixture.makeStream.stopTrack;
  * installMediaFixture.requestMedia; installMediaFixture.readInventory;
  * installMediaFixture.fixture.holdPermission; installMediaFixture.fixture.holdInventory;
@@ -14,10 +16,12 @@
  * hiddenPrelude; cameraSession; pendingPermission; pendingInventory; pendingMetadata;
  * pendingMetadata.installMetadataBoundary; pendingMetadata.installMetadataBoundary.ignoreLoad;
  * pendingMetadata.installMetadataBoundary.restore; requireNew; screenshot; run; run.socketOpened;
- * run.socketOpened.sent; run.socketOpened.received; main.
- * Variable Index: SYNTHETIC_DEVICE is fixture-only, never a real camera ID; assistLifecycle holds
- * production references and body-free observations. Media fixtures own native synthetic tracks,
- * canvas draw timers and explicit unresolved permission/inventory callbacks, not device permissions.
+ * run.socketOpened.sent; run.socketOpened.received — retain admission or allowlisted failure codes; main.
+ * Variable Index: SYNTHETIC_DEVICE is fixture-only, never a real camera ID; normalizeApplicationPath
+ * removes only the approved /mvp mount prefix; assistLifecycle holds
+ * production references and body-free observations; WebSocket errors retain only safe codes. Media fixtures own native synthetic tracks,
+ * canvas draw timers and explicit unresolved permission/inventory callbacks, not device permissions;
+ * metadata_boundary_held records whether the test-only native media boundary remains installed.
  * Constraints: No service/Git changes, production method replacements, GPU mocks, implicit retries,
  * real route/GPS calls, saved pixels/audio/text/coordinates/credentials, physical camera claim or
  * simulated successful decoder/native speech events. Metadata fixture only verifies cancelled loading.
@@ -113,21 +117,25 @@ function installMediaFixture() {
 
 /* Functionality: Observe unchanged actual entry and original camera events.
  * Inputs: Page modules. Outputs: Body-free probe and original object references.
- * Logic: keep client reference across CameraApp.stop so actual socket closure remains observable.
+ * Logic: resolve canonical assets through the page's configured API base and keep client reference
+ * across CameraApp.stop so actual socket closure and server admission errors remain observable.
  * Constraints: no output enablement, GPU result mutation, image/body/location retention. */
 async function observeLifecycle() {
-  const glue = await import("/assets/integration/assist-mvp.js"); await glue.assistReady;
-  const {cameraApp} = await import("/assets/camera.js");
+  const base = new URL(document.documentElement.dataset.apiBase || "../", location.href);
+  const asset = path => new URL(`assets/${path}`, base).href;
+  const glue = await import(asset("integration/assist-mvp.js")); await glue.assistReady;
+  const {cameraApp} = await import(asset("camera.js"));
   if (glue.cameraApp !== cameraApp) throw new Error("Duplicate camera module");
   const state = window.assistLifecycle = {glue, camera: cameraApp, lastClient: null,
     frames: [], cameraEvents: [], guidance: [], metadataBoundary: null};
   /* Functionality: Preserve original camera admission/frame/terminal identity.
-   * Inputs: Camera event. Outputs: Finite evidence. Logic: no body/boxes retained.
+   * Inputs: Camera event. Outputs: lifecycle IDs, provider and safe error class. Logic: no body/boxes/error details retained.
    * Constraints: metadata comes only from actual validated local model responses. */
   function recordCamera(event) {
     if (event.type === "session") state.lastClient = cameraApp.client;
     state.cameraEvents.push({type: event.type, session_id: event.sessionId ?? null,
-      session_seconds: event.contract?.session_seconds, provider: event.provider ?? null});
+      session_seconds: event.contract?.session_seconds, provider: event.provider ?? null,
+      error_type: event.errorType ?? null});
     if (event.type === "frame") state.frames.push({index: event.result.metadata.index,
       model: event.result.metadata.model, provider: event.result.metadata.provider,
       timestamp_source: event.result.metadata.timestamp_source, capture_time_s: event.result.metadata.capture_time_s,
@@ -139,6 +147,11 @@ async function observeLifecycle() {
   function recordGuidance(event) { state.guidance.push(structuredClone(event)); }
   cameraApp.subscribe(recordCamera); glue.guidanceManager.subscribe(recordGuidance);
 }
+
+/* Functionality: Map mounted public requests to canonical ASGI route paths.
+ * Inputs: Absolute pathname. Outputs: The same path with only the approved /mvp mount removed.
+ * Logic: Preserve all other path segments; Constraints: accepts no URL/body and changes no request. */
+function normalizeApplicationPath(path) { return path.replace(/^\/mvp(?=\/)/, ""); }
 
 /* Functionality: Capture original finite lifecycle/resource/control state.
  * Inputs: Page. Outputs: Safe report. Logic: never serialize navigation route/position or media objects.
@@ -153,13 +166,15 @@ async function captureLifecycle(page) {
       video_loading_cleared: video.loading === null, video_file_cleared: video.file === null,
       guidance: state.glue.guidanceManager.describe(), camera_events: structuredClone(state.cameraEvents),
       speech_activation: state.glue.speechActivation.describe(), native_speech_calls: window.__assistNativeSpeechCalls.length,
+      backend_voice: (() => { const voice = state.glue.speechOutput.voiceList().voices.find(item => item.id === "Cherry");
+        return voice ? {id: voice.id, service: voice.service, languages: voice.languages} : null; })(),
       frames: structuredClone(state.frames), events: structuredClone(state.guidance), media: __assistMediaFixture.describe(),
       controls: Object.fromEntries(["assist-source", "assist-device", "assist-video-file", "assist-devices-authorize",
         "assist-devices-refresh", "assist-video-start", "start"].map(id => [id, {disabled: document.getElementById(id).disabled}])),
       selected: document.getElementById("assist-device").value,
       options: [...document.getElementById("assist-device").options].map(option => option.value),
       status: document.getElementById("assist-status").textContent,
-      metadata_waiting: state.metadataBoundary !== null};
+      metadata_boundary_held: state.metadataBoundary !== null};
   });
 }
 
@@ -187,18 +202,19 @@ async function setVisibility(page, value) {
  * Logic: real handlers consume hidden then visible; Constraints: no private boundaryStopped mutation. */
 async function hiddenPrelude(page) { await setVisibility(page, "hidden"); await setVisibility(page, "visible"); }
 
-/* Functionality: Verify real CameraApp/PRF2/model processing and its terminal UI edge.
- * Inputs: Page and user-stop or explicit track-ended boundary.
- * Outputs: Closed actual-model/synthetic-camera evidence. Logic: start via original controls,
- * await validated local result then stop via original handler; exactly one risk-stop, no nav-stop.
- * Constraints: canvas is synthetic, track-ended event explicit, physical camera and TTS unverified. */
-async function cameraSession(page, boundary) {
-  const before = await captureLifecycle(page), initialFrames = before.frames.length;
+/* Functionality: Verify the original camera transport and its terminal UI edge.
+ * Inputs: Page, user-stop or explicit track-ended boundary, and body-free WebSocket report.
+ * Outputs: Closed real-PRF2/synthetic-camera evidence. Logic: await one actual binary header,
+ * then stop through the original handler; exactly one risk-stop, no navigation-stop.
+ * Constraints: inference output is not required here; the strict public relay test owns model claims. */
+async function cameraSession(page, boundary, report) {
+  const before = await captureLifecycle(page);
+  const previousSockets = report.websockets.filter(item => item.path === "/ws/detect/local/").length;
   await page.click("#start");
-  await page.waitForFunction(offset => window.assistLifecycle.frames.length > offset ||
-    window.assistLifecycle.camera.mode === "idle", initialFrames, {timeout: 60000});
+  await page.waitForFunction(() => window.assistLifecycle.camera.mode === "camera" &&
+    window.assistLifecycle.lastClient?.socket.readyState === 1, null, {timeout: 30000});
+  await waitForPrf2Input(report, previousSockets);
   const active = await captureLifecycle(page);
-  assert.ok(active.frames.length > initialFrames, "No actual validated camera PRF2/model frame");
   assert.equal(active.camera_mode, "camera");
   assert.equal(active.camera_events.filter(event => event.type === "session").at(-1).session_seconds, null);
   const riskStops = active.events.filter(event => event.phase === "risk_stopped").length;
@@ -212,8 +228,23 @@ async function cameraSession(page, boundary) {
   assert.equal(after.events.filter(event => event.phase === "risk_stopped").length - riskStops, 1);
   assert.equal(after.events.filter(event => event.phase === "navigation_stopped").length, navStops);
   assert.ok(after.media.streams.every(stream => stream.tracks_ended && stream.draw_timer_cleared));
-  return {scope: "actual_PRF2_model_with_explicit_synthetic_canvas_camera", boundary,
-    physical_camera_verified: false, model_processed_synthetic_pixels: true, before: active, after};
+  return {scope: "actual_PRF2_transport_with_explicit_synthetic_canvas_camera", boundary,
+    physical_camera_verified: false, model_output_verified: false, before: active, after};
+}
+
+/* Functionality: Wait for a real PRF2 binary input observed by the external browser listener.
+ * Inputs: Body-free report and count of earlier local detector sockets. Outputs: One accepted socket entry.
+ * Logic: Poll only actual listener evidence for a bounded 10-second interval.
+ * Constraints: no frame creation, image inspection, retry, or fabricated model result. */
+async function waitForPrf2Input(report, previousSockets) {
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    const socket = report.websockets.filter(item => item.path === "/ws/detect/local/").slice(previousSockets)
+      .find(item => item.inputs.length > 0);
+    if (socket) return socket;
+    await new Promise(resolvePromise => setTimeout(resolvePromise, 25));
+  }
+  assert.fail("No actual PRF2 input header reached the local detector socket");
 }
 
 /* Functionality: Reject permission completion after a second hidden boundary.
@@ -295,6 +326,7 @@ async function pendingMetadata(page) {
     await page.waitForTimeout(50); const late = await captureLifecycle(page);
     assert.equal(late.video_mode, "idle"); assert.equal(late.video_loading_cleared, true);
     assert.equal(late.video_file_cleared, true); assert.equal(late.controls["assist-video-start"].disabled, true);
+    assert.equal(hidden.metadata_boundary_held, true); assert.equal(late.metadata_boundary_held, true);
     assert.equal(late.status, hidden.status); assert.equal(late.camera_events.length, hidden.camera_events.length);
     assertUnlocked(late); await setVisibility(page, "visible"); return {scope: "explicit_held_metadata_cancel_second_hidden", hidden, late};
   } finally { await page.evaluate(() => window.assistLifecycle.metadataBoundary?.restore()); }
@@ -317,7 +349,7 @@ async function screenshot(page, path) {
 /* Functionality: Run actual entry lifecycle checks without owning any service.
  * Inputs: Validated CLI settings. Outputs: Truthful complete/failure report.
  * Logic: explicit synthetic media boundary, actual camera/model transport, then cancelled pending inputs.
- * Constraints: no TTS/physical camera/GPS/ORS claim, retries, downloads or production method mocks. */
+ * Constraints: no TTS playback/physical camera/GPS/ORS claim, retries, downloads or production method mocks. */
 async function run(options) {
   const report = {complete: false, physical_camera_verified: false, real_gps_verified: false, real_ors_verified: false,
     native_tts_verified: false, model_processed_synthetic_pixels: false,
@@ -337,7 +369,7 @@ async function run(options) {
       provider: "openrouteservice", profile: "foot-walking", configured: true, code: "explicit_lifecycle_config_fixture"}}));
     page = await context.newPage();
     page.on("pageerror", error => report.failures.push({type: error.name, message: error.message.split("\n")[0].slice(0, 240)}));
-    page.on("request", request => { if (new URL(request.url()).pathname === "/maps/route/")
+    page.on("request", request => { if (normalizeApplicationPath(new URL(request.url()).pathname) === "/maps/route/")
       report.failures.push({type: "UnexpectedRoute", message: "Lifecycle tool must not request a route"}); });
     page.on("requestfailed", request => { const address = new URL(request.url());
       if (address.origin !== new URL(options.url).origin) report.dependency_failures.push({origin: address.origin,
@@ -346,19 +378,21 @@ async function run(options) {
      * Outputs: Public header/lifecycle records. Logic: discard media/control bodies.
      * Constraints: no transport or prediction replacement. */
     function socketOpened(socket) {
-      const path = new URL(socket.url()).pathname, entry = {path, closed: false, inputs: [], hellos: []};
+      const path = normalizeApplicationPath(new URL(socket.url()).pathname), entry = {path, closed: false, inputs: [], hellos: [], errors: []};
       report.websockets.push(entry); socket.on("close", () => { entry.closed = true; });
       /* Functionality: Inspect original local input header only. Inputs: Sent frame. Outputs: PRF2 metadata.
        * Logic: keep index/source time; Constraints: never retain JPEG pixels. */
       function sent(frame) { if (!Buffer.isBuffer(frame.payload)) return;
         assert.ok(frame.payload.length >= 16 && frame.payload.readUInt32BE(0) === 0x50524632, "Local frame must be PRF2");
         entry.inputs.push({index: frame.payload.readUInt32BE(4), capture_time_s: frame.payload.readDoubleBE(8), bytes: frame.payload.length}); }
-      /* Functionality: Inspect public session hello only. Inputs: Received control. Outputs: Continuous contract.
-       * Logic: discard every binary/result/private body; Constraints: no generated admission. */
+      /* Functionality: Inspect public admission and safe error codes. Inputs: Received control.
+       * Outputs: Session contract or allowlisted failure identifier. Logic: discard binary/result/error detail.
+       * Constraints: no generated admission or retained media/body text. */
       function received(frame) { if (typeof frame.payload !== "string") return;
         let value; try { value = JSON.parse(frame.payload); } catch { return; }
         if (value.kind === "session") entry.hellos.push({provider: value.provider, protocol_version: value.protocol_version,
-          session_seconds: value.session_seconds, model: value.model}); }
+          session_seconds: value.session_seconds, model: value.model});
+        else if (value.kind === "error") entry.errors.push({code: /^[a-z][a-z0-9_]{0,79}$/.test(value.code) ? value.code : "unknown"}); }
       if (path === "/ws/detect/local/") { socket.on("framesent", sent); socket.on("framereceived", received); }
     }
     page.on("websocket", socketOpened);
@@ -369,8 +403,11 @@ async function run(options) {
     assert.equal(await page.evaluate(() => globalThis.L?.version), "1.9.4", "Original Leaflet dependency unavailable");
     for (const id of ["speech-enabled", "navigation-speech-enabled", "assist-risk-enabled"])
       assert.equal(await page.isChecked(`#${id}`), true);
-    assert.equal(await page.inputValue("#navigation-speech-voice"), "");
+    assert.equal(await page.inputValue("#navigation-speech-voice"), "Cherry");
     report.startup = await captureLifecycle(page);
+    report.startup.backend_voice = {voice: report.startup.backend_voice,
+      camera_calls: report.startup.media.requests.length,
+      speech_calls: report.websockets.filter(item => item.path === "/ws/tts/").length};
     assert.equal(report.startup.media.requests.length, 0); assert.equal(report.startup.native_speech_calls, 0);
     assert.equal(report.startup.navigation.active, false); assert.equal(report.startup.navigation.watch_active, false);
     assert.equal(report.startup.speech_activation.ready, false);
@@ -387,8 +424,7 @@ async function run(options) {
     assert.equal(await page.inputValue("#assist-device"), "", "Authorization must not auto-select a device");
     await page.selectOption("#assist-device", "explicit-synthetic-canvas-camera");
     for (const boundary of ["original_stop_button", "explicit_track_ended_fixture"])
-      report.sessions.push(await cameraSession(page, boundary));
-    report.model_processed_synthetic_pixels = true;
+      report.sessions.push(await cameraSession(page, boundary, report));
     report.sessions.push(await pendingPermission(page)); report.sessions.push(await pendingInventory(page));
     report.sessions.push(await pendingMetadata(page));
     report.final = await captureLifecycle(page); assertUnlocked(report.final);

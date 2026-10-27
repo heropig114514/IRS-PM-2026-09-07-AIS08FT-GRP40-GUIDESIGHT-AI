@@ -1,10 +1,46 @@
 # PRS Practice Module
 
+## SECTION 1 : PROJECT TITLE
+
+PRS Practice Module — Voice-Assisted Navigation and Perception
+
+## SECTION 2 : EXECUTIVE SUMMARY / PAPER ABSTRACT
+
+This project integrates browser-based walking navigation, a bilingual voice assistant, and camera-based environmental awareness. The backend provides agent, routing, and inference interfaces; the frontend uses native browser APIs for maps, speech, and camera interaction. The repository includes local and public-service guides, automated checks, and model evaluation fixtures. See the engineering documentation below for scope and verification boundaries.
+
+## SECTION 3 : CREDITS / PROJECT CONTRIBUTION
+
+Verified contributor names, identifiers, and individual work items have not been provided in this repository. Add the approved contribution table before submission; no contributor details are inferred here.
+
+## SECTION 4 : VIDEO OF SYSTEM MODELLING & USE CASE DEMO
+
+The [`Video/`](Video/README.md) directory is reserved for the project demonstration. No presentation video is included yet. The MOT17 clips under `backend/model_tests/datasets/` are test fixtures, not a presentation recording.
+
+## SECTION 5 : USER GUIDE
+
+- [System code index](SystemCode/README.md)
+- [Backend setup and checks](backend/README.md)
+- [Frontend guide](frontend/README.md)
+- [Local MVP setup and verification boundaries](backend/LOCAL-MVP.md)
+- [Operations and deployment guide](backend/deploy/README.md)
+
+The repository follows the [IRS-PM project submission template](https://github.com/IRS-PM/Workshop-Project-Submission-Template). The canonical source remains at root-level `backend/` and `frontend/` paths because CI, deployment tooling, and developer commands use those paths directly; `SystemCode/` indexes them without copying source files.
+
+## SECTION 6 : PROJECT REPORT / PAPER
+
+The [`ProjectReport/`](ProjectReport/README.md) directory is reserved for the final report, paper, and appendices. No report or paper is included yet.
+
+## SECTION 7 : MISCELLANEOUS
+
+The [`Miscellaneous/`](Miscellaneous/README.md) directory is reserved for optional supporting materials. No additional submission material is included yet.
+
+## Engineering Overview and Operations
+
 This repository contains the frontend and backend. The backend follows the Django, DRF, and ASGI stack and layered design used by AiInterviewer while maintaining its own business logic and database. The frontend uses native browser APIs.
 
 The repository is organized around `backend/` and `frontend/`; run commands from the relevant directory. The local MVP connects existing software and algorithms through a separate web process and CUDA inference process. See [Local MVP](backend/LOCAL-MVP.md) for environment setup, official weights, launchers, and verification boundaries.
 
-Phones can use the existing server's independent `/mvp/` HTTPS relay for local navigation and detection without sharing a network with the development computer. See [Phone MVP](backend/PHONE-MVP.md) for access, startup, and shutdown. The existing `/prs/` service remains independent.
+The public phone service exposes exactly two page entries: [Phone Navigation and Detection](https://47.239.50.129/mvp/maps/) and [Phone MVP Tests](https://47.239.50.129/mvp/maps/test). Their required API, asset, WebSocket, and inference-tunnel paths remain internal support routes; the bare `/mvp` and `/mvp/` paths are not pages. See [Phone MVP](backend/PHONE-MVP.md) for access, startup, and shutdown. The existing `/prs/` service remains independent.
 
 ```text
 backend/              Backend development entry point
@@ -39,4 +75,4 @@ At the user's request, ORS replaces the Google route implementation from the ori
 
 Local Guidance navigation examples are for alert-arbitration integration only; they do not verify GPS, ORS, or complete navigation. Actual phone audio, vibration, and risk accuracy require separate verification.
 
-Local course files, reports, and archives are not committed to Git. `.gitignore` uses a root-directory allowlist. Any new root-level path intended for version control must be added to that allowlist explicitly.
+Course reports, presentation videos, survey materials, and archives are not included in this repository yet; the corresponding submission directories contain indexes only. Test videos remain under `backend/model_tests/datasets/` and are not presentation deliverables. `.gitignore` uses a root-directory allowlist, so any new root-level path intended for version control must be added to that allowlist explicitly.

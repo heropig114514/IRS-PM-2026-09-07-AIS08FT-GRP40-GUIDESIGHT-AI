@@ -1,7 +1,10 @@
 # PRS camera deployment
 
-Phone access uses a separate public guest `/mvp/` HTTPS relay and does not replace the `/prs/`
-service described here. The dedicated `prs-mvp-web.service` owns the two public Web pages on
+Phone access exposes exactly [the navigation page](https://47.239.50.129/mvp/maps/) and
+[the diagnostic page](https://47.239.50.129/mvp/maps/test) through a separate public HTTPS relay; the
+bare `/mvp` and `/mvp/` mount paths return 404. Required API, asset, WebSocket, and inference tunnel
+paths remain internal support routes. The relay does not replace the `/prs/` service described here.
+The dedicated `prs-mvp-web.service` owns the two public Web pages on
 127.0.0.1:18766. A laptop-hosted GPU worker may connect through a distinct reverse SSH inference
 port, 127.0.0.1:18767; Web availability does not depend on that tunnel. Its service template,
 deployment boundary, and operator steps are documented in the [phone MVP guide](../PHONE-MVP.md).

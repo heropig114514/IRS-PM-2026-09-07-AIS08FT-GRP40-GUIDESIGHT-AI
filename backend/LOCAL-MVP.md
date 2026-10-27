@@ -51,6 +51,10 @@ Native depth can explicitly select the verified FP32 TensorRT implementation thr
 Prepare the optional GPU dependency and exact input-shape artifacts before startup. The handshake,
 health response and result metadata identify depth separately from detection. Missing/stale engines
 or unsupported shapes fail explicitly. An unconfigured service continues to use native Torch.
+The PRF2 worker also accepts explicit `PRS_DEPTH_FUSION=host` in same-frame depth mode A.
+`PRS_DETECTION_MODEL=yolo26n-walk` selects the optional 87-class detector independently; the
+original `yolo26n` and GPU fusion remain the unconfigured defaults. The launcher, worker health
+and static service probe use the selected detector manifest, not a hard-coded COCO identity.
 
 The default algorithm remains dual-model mode A. See [distance modes](DISTANCE-MODES.md) for environment variables, startup, and output compatibility when explicitly selecting geometric mode B or low-frequency depth mode C. The dual-model requirements below apply to default A; B does not require depth weights.
 

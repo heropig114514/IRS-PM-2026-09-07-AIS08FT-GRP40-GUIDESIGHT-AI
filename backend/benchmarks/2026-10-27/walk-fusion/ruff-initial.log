@@ -1,0 +1,12 @@
+E501 Line too long (101 > 100)
+  --> core\test_depth_backend.py:9:101
+   |
+ 7 | DepthBackendTests.test_precision_policy_rejected_before_model_load;
+ 8 | DepthBackendTests.test_comparison_does_not_hide_decision_changes.
+ 9 | DepthBackendTests.test_model_and_fusion_are_frozen; DepthBackendTests.test_host_fusion_mode_boundary.
+   |                                                                                                     ^
+10 | Variable Index: None. No checkpoint or engine is loaded by these contract tests.
+11 | """
+   |
+
+Found 1 error.

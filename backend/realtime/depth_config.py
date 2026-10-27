@@ -2,7 +2,8 @@
 Implementation: Lightweight environment parsing; no Torch, model loading or automatic fallback.
 Related Modules: realtime.services/depth; integration.inference.services; tools.run_local_mvp.
 Declaration Index: DepthBackendConfig; DepthBackendConfig.__post_init__; read_depth_backend.
-Variable Index: DepthBackendConfig.backend/manifest — immutable startup selection and artifact path.
+Variable Index: DepthBackendConfig.backend/manifest/fusion — immutable execution, artifacts and
+ROI reduction selection; host fusion is an explicit same-frame CPU reduction, not model fallback.
 """
 
 import os
@@ -19,15 +20,18 @@ class DepthBackendConfig:
 
     backend: str = "torch"
     manifest: Path | None = None
+    fusion: str = "gpu"
 
     def __post_init__(self):
         """Functionality: Reject ambiguous or unsupported startup selections.
-        Inputs: backend name and optional manifest path. Outputs: valid immutable configuration.
+        Inputs: backend, manifest and fusion names. Outputs: valid immutable configuration.
         Logic: enforce the two supported backends and TensorRT-only manifest ownership.
         Constraints: file contents and runtime identity are validated on the GPU worker.
         """
         if self.backend not in {"torch", "tensorrt"}:
             raise ValueError("PRS_DEPTH_BACKEND must be torch or tensorrt")
+        if self.fusion not in {"gpu", "host"}:
+            raise ValueError("PRS_DEPTH_FUSION must be gpu or host")
         if (self.backend == "tensorrt") != (self.manifest is not None):
             raise ValueError("TensorRT requires PRS_DEPTH_ENGINE_MANIFEST; Torch must omit it")
         if self.manifest is not None and (
@@ -38,10 +42,11 @@ class DepthBackendConfig:
 def read_depth_backend(root, environment=None):
     """Functionality: Resolve native depth settings once against the backend workspace.
     Inputs: backend root and optional environment mapping. Outputs: frozen DepthBackendConfig.
-    Logic: parse only the two explicit settings and resolve relative paths against root.
+    Logic: parse explicit execution/fusion settings and resolve relative paths against root.
     Constraints: no dotenv reads or GPU/package imports; paths are trusted operator configuration.
     """
     environment = os.environ if environment is None else environment
     name = environment.get("PRS_DEPTH_BACKEND", "torch")
     path = environment.get("PRS_DEPTH_ENGINE_MANIFEST", "")
-    return DepthBackendConfig(name, (Path(root) / path).resolve() if path else None)
+    return DepthBackendConfig(name, (Path(root) / path).resolve() if path else None,
+                              environment.get("PRS_DEPTH_FUSION", "gpu"))

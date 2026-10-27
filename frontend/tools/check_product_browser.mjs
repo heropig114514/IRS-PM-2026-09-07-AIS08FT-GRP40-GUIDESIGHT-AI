@@ -1,20 +1,34 @@
 /* Responsibilities: Verify the released public guest assist surface and diagnostic page through Chrome.
- * Implementation: Trusted public HTTPS, native fake camera and TTS;
+ * Implementation: Trusted public HTTPS, native fake camera and backend-streamed TTS;
  * rear constraints, permission results, route and GPS use explicit fixtures; model frames are genuine.
  * Related Modules: integration/assist-product.html, product-ui.js, assist-mvp.js, speech-activation.js;
  * check_phone_relay_browser.mjs provides shared evidence privacy helpers.
- * Declaration Index: validateArguments; verifyInitial; verifyProductSurface; verifyCameraRequest;
- * verifyCameraDisplay; installProbe; installProbe.supportedConstraints;
- * installProbe.observedSpeak; installProbe.checkedVideo; installProbe.getCurrentPosition;
- * installProbe.watchPosition; installProbe.watchPosition.emit; installProbe.clearWatch; observe; observe.recordFrame;
- * observe.recordSpeech; surfaceEvidence; initialEvidence; waitVoice; run; installDelayedVoices;
- * installDelayedVoices.getVoices; installDelayedVoices.available; installDelayedVoices.release;
- * setSyntheticVisibility; installCameraBoundary; installCameraBoundary.checkedVideo;
- * installCameraBoundary.supportedConstraints; installCameraBoundary.resolvePermission;
- * installCameraBoundary.rejectPermission; runCameraBoundaries; runBoundaries; main.
+ * Declaration Index: validateArguments — pin the public product URL and new artifact paths;
+ * verifyInitial — enforce default preferences and activation gates; verifyProductSurface — enforce accessible product layout;
+ * verifyCameraRequest — validate one user-gesture rear-camera request; verifyCameraDisplay — validate a decoded model result;
+ * installProbe — install synthetic sensor and browser observation boundaries;
+ * installProbe.observedWebSocket — observe TTS connection metadata;
+ * installProbe.supportedConstraints — advertise the explicit synthetic rear-camera capability;
+ * installProbe.checkedVideo — delegate a rear-camera request to Chrome fake video;
+ * installProbe.getCurrentPosition — deliver one synthetic location; installProbe.watchPosition — own periodic location callbacks;
+ * installProbe.watchPosition.emit — deliver an active fix; installProbe.clearWatch — release its timer;
+ * observe — import canonical controllers and subscribe to real output events;
+ * observe.recordFrame — retain actual model frame metadata; observe.recordAudio — retain backend playback lifecycle;
+ * surfaceEvidence — inspect responsive visible controls; initialEvidence — inspect startup state without side effects;
+ * waitVoice — wait for the backend bilingual voice inventory;
+ * manualBilingualTts — verify four backend PCM samples and retain bounded failure state;
+ * run — execute formal and diagnostic page acceptance; setSyntheticVisibility — simulate page visibility boundaries;
+ * installCameraBoundary — construct permission-resolution fixtures;
+ * installCameraBoundary.checkedVideo — count explicit camera requests;
+ * installCameraBoundary.supportedConstraints — report fixture rear-camera support;
+ * installCameraBoundary.resolvePermission — resolve a pending synthetic permission;
+ * installCameraBoundary.rejectPermission — reject it with a fixed browser error;
+ * runCameraBoundaries — test camera permission cleanup and failure states;
+ * runBoundaries — test synthetic lifecycle, route and visibility boundaries;
+ * main — validate the CLI, run the selected acceptance and write its report.
  * Variable Index: ORIGIN/PREFIX — approved relay; ROUTE/POINT — explicit synthetic fixtures;
  * report — body-free evidence without login credentials, pixels or positions.
- * Constraints: No device/route/model changes, physical camera/GPS, synthesized speech start/end, retries,
+ * Constraints: No device/route/model changes, physical camera/GPS, fabricated audio start/end, retries,
  * installation, TLS bypass, actual audibility claim, service control or commits.
  */
 import {createRequire} from "node:module";
@@ -63,8 +77,9 @@ export function verifyInitial(value) {
   requireGate(value.outputs.every(Boolean) && value.source === "camera" && value.rate === 2 && value.volume === 1,
     "PRODUCT_DEFAULTS_INVALID");
   requireGate(value.activation.ready === false && value.gated === true, "PRODUCT_ACTIVATION_GATE_MISSING");
-  requireGate(value.voice.local_service === true && /^zh(?:-|$)/i.test(value.voice.language) && value.voice.id,
-    "PRODUCT_AUTOMATIC_LOCAL_VOICE_MISSING");
+  requireGate(value.voice.service === "backend" && value.voice.id === "Cherry" &&
+    value.voice.languages?.includes("zh-CN") && value.voice.languages?.includes("en-US"),
+  "PRODUCT_BACKEND_VOICE_MISSING");
   return value;
 }
 
@@ -101,22 +116,30 @@ export function verifyCameraDisplay(value) {
   return value;
 }
 
-/* Functionality: Install explicit sensor fixtures and read-only native media/speech probes.
+/* Functionality: Install explicit sensor fixtures and read-only media/backend-speech probes.
  * Inputs: fixed synthetic position before production modules. Outputs: body-free counters/track handles.
  * Logic: record exact rear request then explicitly translate facingMode for Chrome's sole fake camera;
  * real TTS and sensor callbacks use real clocks. Constraints: CLI must enable fake-device flags;
- * no actual GPS/microphone, native rear-camera proof or generated speech lifecycle events. */
+ * no actual GPS/microphone, native rear-camera proof or generated audio lifecycle events. */
 function installProbe(point) {
-  const nativeSpeak = window.speechSynthesis?.speak?.bind(window.speechSynthesis);
   const nativeVideo = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
   const nativeConstraints = navigator.mediaDevices?.getSupportedConstraints?.bind(navigator.mediaDevices);
   const probe = {speech: [], media: [], tracks: [], watches: [], oneShots: 0}; window.__productProbe = probe;
-  /* Functionality: Observe actual synchronous speech submission. Inputs: original utterance.
-   * Outputs: native result. Logic: preserve gesture stack. Constraints: never save utterance text. */
-  function observedSpeak(utterance) {
-    probe.speech.push({user_gesture_active: navigator.userActivation?.isActive === true, at: performance.now()});
-    return nativeSpeak(utterance);
+  /* Functionality: Observe the fixed backend speech socket without reading request bodies.
+   * Inputs: constructor URL/protocols. Outputs: native socket and safe gesture/path evidence.
+   * Logic: delegate to the original constructor once; Constraints: no content capture or event fabrication. */
+  function observedWebSocket(url, protocols) {
+    const socket = protocols === undefined ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
+    const address = new URL(String(url), location.href);
+    if (address.pathname.endsWith("/ws/tts/"))
+      probe.speech.push({user_gesture_active: navigator.userActivation?.isActive === true,
+        secure: address.protocol === "wss:", path: address.pathname, at: performance.now()});
+    return socket;
   }
+  const NativeWebSocket = window.WebSocket;
+  observedWebSocket.prototype = NativeWebSocket.prototype;
+  Object.setPrototypeOf(observedWebSocket, NativeWebSocket);
+  window.WebSocket = observedWebSocket;
   /* Functionality: Declare explicit synthetic rear support for Chrome's single fake camera.
    * Inputs: None. Outputs: native support plus labeled facingMode fixture. Logic: preserve other flags.
    * Constraints: never product code or proof of a real rear lens. */
@@ -153,7 +176,6 @@ function installProbe(point) {
     const item = probe.watches[id]; if (!item?.active) throw new Error("UNKNOWN_GPS_OWNER");
     item.active = false; clearInterval(item.timer); item.timer = null;
   }
-  if (nativeSpeak) window.speechSynthesis.speak = observedSpeak;
   if (nativeVideo) {
     navigator.mediaDevices.getUserMedia = checkedVideo;
     navigator.mediaDevices.getSupportedConstraints = supportedConstraints;
@@ -161,7 +183,7 @@ function installProbe(point) {
   Object.defineProperty(navigator, "geolocation", {configurable: true, value: {getCurrentPosition, watchPosition, clearWatch}});
 }
 
-/* Functionality: Observe canonical production instances and true frame/native speech events.
+/* Functionality: Observe canonical production instances and real frame/backend-audio events.
  * Inputs: initialized product page. Outputs: singleton identity; body-free browser probe.
  * Logic: canonical asset URLs only. Constraints: never replace a controller or generate output metadata. */
 async function observe() {
@@ -171,7 +193,7 @@ async function observe() {
   const {navigation} = await import(new URL("navigation-ui.js", asset));
   const {speechOutput} = await import(new URL("speech-output.js", asset));
   window.__productControllers = {glue, cameraApp, navigation, speechOutput};
-  window.__productEvents = {frames: [], native: []};
+  window.__productEvents = {frames: [], audio: []};
   /* Functionality: Save validated model identity only. Inputs: original frame event.
    * Outputs: bounded frame metadata. Logic: allowlist. Constraints: no pixels, coordinates or object boxes. */
   function recordFrame(event) {
@@ -182,10 +204,10 @@ async function observe() {
       timestamp_source: data.timestamp_source, capture_time_s: data.capture_time_s, captured_at_ms: event.capturedAt,
       target_count: data.count});
   }
-  /* Functionality: Save native driver lifecycle identity. Inputs: original event.
-   * Outputs: phase/request only. Logic: allowlist. Constraints: no spoken body or forged native event. */
-  function recordSpeech(event) { window.__productEvents.native.push({phase: event.phase, request_id: event.request_id}); }
-  cameraApp.subscribe(recordFrame); speechOutput.subscribe(recordSpeech);
+  /* Functionality: Save backend audio lifecycle identity. Inputs: original driver event.
+   * Outputs: phase/request only. Logic: allowlist. Constraints: no spoken body or fabricated playback. */
+  function recordAudio(event) { window.__productEvents.audio.push({phase: event.phase, request_id: event.request_id}); }
+  cameraApp.subscribe(recordFrame); speechOutput.subscribe(recordAudio);
   return {camera: glue.cameraApp === cameraApp, navigation: glue.navigation === navigation,
     speech: glue.speechOutput === speechOutput, continuous_session: cameraApp.localSessionSeconds === null};
 }
@@ -212,7 +234,7 @@ function surfaceEvidence() {
       "navigation-speech-voice", "navigation-speech-language", "navigation-voices-refresh", "assist-source",
       "assist-video-file", "assist-video-start", "assist-devices-authorize", "assist-devices-refresh", "assist-device",
       "ping", "example"].filter(id => visible(document.getElementById(id))),
-    visible_test_text: ["连续视频测试", "原生语音输出", "语音选择", "往返延迟", "FPS", "PRF2", "CUDA", "请求编号",
+    visible_test_text: ["连续视频测试", "后端语音输出测试", "语音选择", "往返延迟", "FPS", "PRF2", "CUDA", "请求编号",
       "填入 NUS 示例", "Fill NUS example", "手动输入坐标", "Enter coordinates manually", "实时画面", "Live camera",
       "尚未开始导航", "Navigation not started", "暂无可靠导航进度", "No reliable navigation progress",
       "等待转向指令", "Waiting for turn guidance", "Find a route to start navigation."].filter(word => text.includes(word)),
@@ -232,18 +254,78 @@ function initialEvidence() {
     source: document.getElementById("assist-source").value, rate: Number(document.getElementById("speech-rate").value),
     volume: Number(document.getElementById("speech-volume").value),
     activation: glue.speechActivation.describe(), gated: glue.guidanceManager.describe().reasons.speech === "activation_required",
-    voice: {id: voice.id, language: voice.language, local_service: voice.local_service}};
+    voice: {id: voice.id, language: voice.language, local_service: voice.local_service,
+      service: voice.service, languages: voice.languages}};
 }
 
-/* Functionality: Observe automatic voice matching for the currently chosen interface language.
- * Inputs: page/language family. Outputs: native local-service selection evidence.
- * Logic: bounded observation only. Constraints: no voice control selection or synthesized voiceschanged. */
-async function waitVoice(page, family) {
-  await page.waitForFunction(language => {
+/* Functionality: Confirm fixed backend voice availability independently of interface language.
+ * Inputs: initialized page. Outputs: safe bilingual provider metadata.
+ * Logic: bounded observation of the shared driver; Constraints: no synthesis request or local voice lookup. */
+async function waitVoice(page) {
+  await page.waitForFunction(() => {
     const driver = window.__productControllers?.speechOutput, id = document.getElementById("navigation-speech-voice")?.value;
-    return driver?.voiceList().voices.some(voice => voice.id === id && voice.local_service && voice.language.split("-")[0].toLowerCase() === language);
-  }, family, {timeout: 15000});
+    return driver?.backendOnly && driver.voiceList().voices.some(voice => voice.id === id && voice.service === "backend" &&
+      voice.languages.includes("zh-CN") && voice.languages.includes("en-US"));
+  }, null, {timeout: 15000});
   return page.evaluate(initialEvidence);
+}
+
+/* Functionality: Verify real backend PCM playback for fixed English, Chinese and auto-detected samples.
+ * Inputs: diagnostic page with the fixed backend voice and mutable report.
+ * Outputs: body-free request/lifecycle evidence or a bounded failure snapshot.
+ * Logic: preserve an already-enabled user preference, enable it only if off, submit each sample from a real
+ * click, and await the owned audio end.
+ * Constraints: no text is returned or recorded; checks browser scheduling, not physical audibility or speech quality. */
+async function manualBilingualTts(page, report) {
+  const cases = [
+    {language: "en-US", text: "Turn left at the next street."},
+    {language: "zh-CN", text: "前方路口左转。"},
+    {language: "auto", text: "Turn left at the next street."},
+    {language: "auto", text: "前方路口左转。"},
+  ], results = [];
+  if (!await page.locator("#speech-enabled").isChecked()) await page.click("#speech-enabled");
+  requireGate(await page.locator("#speech-enabled").isChecked(), "DIAGNOSTIC_SPEECH_DISABLED");
+  for (const item of cases) {
+    const previous = await page.evaluate(() => window.__productControllers.speechOutput.lastRequest?.id ?? 0);
+    await page.fill("#speech-text", item.text);
+    await page.selectOption("#speech-language", item.language);
+    await page.click("#speech-play");
+    try {
+      await page.waitForFunction(previousId => {
+        const driver = window.__productControllers.speechOutput;
+        return driver.lastRequest?.id > previousId && driver.phase === "completed" && driver.current === null;
+      }, previous, {timeout: 30000});
+    } catch {
+      report.checks.diagnostic_bilingual_tts_failure = await page.evaluate(() => {
+        const driver = window.__productControllers.speechOutput, request = driver.lastRequest;
+        const socket = window.__productProbe.speech.at(-1);
+        return {state: driver.phase, active_request: driver.current !== null, last_error: driver.lastError,
+          request: request ? {id: request.id, language: request.language, voice_id: request.voice_id,
+            service: request.service, text_length: request.text_length} : null,
+          socket: socket ? {secure: socket.secure, path: socket.path,
+            user_gesture_active: socket.user_gesture_active} : null,
+          message_code: document.getElementById("speech-message")?.dataset.kind ?? null};
+      });
+      throw error;
+    }
+    const evidence = await page.evaluate(({language, textLength, previousId}) => {
+      const driver = window.__productControllers.speechOutput, request = driver.lastRequest;
+      const events = window.__productEvents.audio.filter(event => event.request_id === request.id);
+      const socketCall = window.__productProbe.speech.at(-1);
+      return {language: request.language, voice_id: request.voice_id, service: request.service,
+        text_length: request.text_length, expected_text_length: textLength, rate: request.rate,
+        started: events.filter(event => event.phase === "start").length === 1,
+        ended: events.filter(event => event.phase === "end").length === 1,
+        secure_connection: socketCall?.secure === true, same_origin_tts_path: socketCall?.path.endsWith("/ws/tts/") === true,
+        user_gesture: socketCall?.user_gesture_active === true, request_id_advanced: request.id > previousId};
+    }, {language: item.language, textLength: [...item.text].length, previousId: previous});
+    requireGate(evidence.language === item.language && evidence.voice_id === "Cherry" && evidence.service === "backend" &&
+      evidence.text_length === evidence.expected_text_length && evidence.rate === 2 && evidence.started && evidence.ended &&
+      evidence.secure_connection && evidence.same_origin_tts_path && evidence.user_gesture && evidence.request_id_advanced,
+    "DIAGNOSTIC_BILINGUAL_TTS_FAILED");
+    results.push(evidence);
+  }
+  return {cases: results, physical_audibility_verified: false};
 }
 
 /* Functionality: Run product and diagnostic acceptance against the public guest service.
@@ -258,7 +340,8 @@ export async function run(options) {
     fixtures: {camera: "Chrome native fake-video; explicit facingMode-support/constraint translation fixture; original exact rear recorded",
       gps: "explicit synthetic NUS callbacks with Date.now",
       camera_content: options.fakeCameraFile ? "explicit local Y4M fake-video fixture with recognizable targets" : "Chrome default synthetic pattern",
-      route: "explicit synthetic ORS response fixture", speech: "native Chrome local voices", model: "real local GPU through public relay"},
+      route: "explicit synthetic ORS response fixture", speech: "real backend Qwen PCM streamed over same-origin WebSocket",
+      model: "real local GPU through public relay"},
     actual_iphone_verified: false, actual_gps_verified: false, actual_ors_verified: false, physical_audibility_verified: false};
   let browser, context, page;
   try {
@@ -278,7 +361,7 @@ export async function run(options) {
       "PRODUCT_MICROPHONE_POLICY_MISSING");
     report.checks.identity = await page.evaluate(observe);
     requireGate(Object.values(report.checks.identity).every(Boolean), "PRODUCT_CORE_IDENTITY_INVALID");
-    await waitVoice(page, "zh"); report.checks.initial = verifyInitial(await page.evaluate(initialEvidence));
+    await waitVoice(page); report.checks.initial = verifyInitial(await page.evaluate(initialEvidence));
     report.checks.mobile_surface = verifyProductSurface(await page.evaluate(surfaceEvidence));
     await page.screenshot({path: options.screenshot, fullPage: true, mask: [page.locator("#map")]});
     await page.setViewportSize({width: 1280, height: 900});
@@ -286,10 +369,10 @@ export async function run(options) {
     await page.screenshot({path: options.desktopScreenshot, fullPage: true, mask: [page.locator("#map")]});
     await page.setViewportSize({width: 390, height: 844});
     report.phase = "interface_language";
-    await page.selectOption("#language", "en"); await waitVoice(page, "en");
+    await page.selectOption("#language", "en"); await waitVoice(page);
     report.checks.english_voice = (await page.evaluate(initialEvidence)).voice;
     report.checks.english_surface = verifyProductSurface(await page.evaluate(surfaceEvidence));
-    await page.selectOption("#language", "zh-CN"); await waitVoice(page, "zh");
+    await page.selectOption("#language", "zh-CN"); await waitVoice(page);
     requireGate(await page.evaluate(() => window.__productProbe.speech.length) === 0, "LANGUAGE_CHANGE_STARTED_SPEECH");
     report.phase = "camera_start_gesture";
     requireGate(await page.locator("#product-camera-start").evaluate(node => node.tagName === "BUTTON"), "PRODUCT_CAMERA_NOT_ACTIONABLE");
@@ -299,7 +382,7 @@ export async function run(options) {
     report.checks.camera_request = verifyCameraRequest(await page.evaluate(() => window.__productProbe.media));
     report.checks.activation = verifySpeechActivation(await page.evaluate(() => ({
       activation: window.__productControllers.glue.speechActivation.describe(), calls: window.__productProbe.speech,
-      native: window.__productEvents.native})));
+      audio: window.__productEvents.audio})));
     report.checks.activation.source = "product_environment_click";
     report.checks.camera_display = verifyCameraDisplay(await page.evaluate(() => {
       const preview = document.getElementById("preview"), result = document.getElementById("echo");
@@ -341,7 +424,7 @@ export async function run(options) {
     report.checks.cleanup = await page.evaluate(() => ({tracks_ended: window.__productProbe.tracks.every(track => track.readyState === "ended"),
       gps_released: window.__productProbe.watches.every(item => !item.active && item.timer === null),
       camera_stream_cleared: window.__productControllers.cameraApp.stream === null,
-      native_speech_released: window.__productControllers.speechOutput.current === null,
+      speech_request_released: window.__productControllers.speechOutput.current === null,
       scheduler_released: window.__productControllers.glue.guidanceManager.schedulerTimer === null}));
     requireGate(Object.values(report.checks.cleanup).every(Boolean), "PRODUCT_CLEANUP_INCOMPLETE");
     report.phase = "diagnostic_surface";
@@ -349,11 +432,14 @@ export async function run(options) {
     requireGate(diagnostic.status() === 200, "DIAGNOSTIC_HTTP_FAILED"); await page.evaluate(observe);
     requireGate(await page.locator("#speech-play").isVisible() && await page.locator("#navigation-speech-voice").isVisible() &&
       await page.locator("#example").isVisible() && await page.locator("#assist-source").isVisible(), "DIAGNOSTIC_CONTROLS_MISSING");
+    report.phase = "diagnostic_bilingual_tts";
+    report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page, report);
     await page.selectOption("#assist-source", "video");
     requireGate(await page.locator("#assist-video-file").isVisible(), "DIAGNOSTIC_VIDEO_MISSING");
-    report.checks.diagnostics = {page_status: diagnostic.status(), manual_voice_visible: true, test_inputs_visible: true,
-      explicit_voice_required: await page.inputValue("#navigation-speech-voice") === ""};
-    requireGate(report.checks.diagnostics.explicit_voice_required, "DIAGNOSTIC_VOICE_POLICY_CHANGED");
+    report.checks.diagnostics = {page_status: diagnostic.status(), backend_voice_visible: true, test_inputs_visible: true,
+      backend_voice_selected: await page.inputValue("#navigation-speech-voice") === "Cherry",
+      bilingual_tts_cases: report.checks.diagnostic_bilingual_tts.cases.length};
+    requireGate(report.checks.diagnostics.backend_voice_selected, "DIAGNOSTIC_BACKEND_VOICE_MISSING");
     await page.screenshot({path: options.diagnosticScreenshot, fullPage: true, mask: [page.locator("#map")]});
     requireGate(report.failures.length === 0, "BROWSER_PAGE_ERRORS"); report.complete = true; report.phase = "complete";
   } catch (error) { report.failures.push(safeFailure(error, report.phase)); }
@@ -364,25 +450,6 @@ export async function run(options) {
     await writeFile(options.output, JSON.stringify(report, null, 2), {flag: "wx"});
   }
   return report;
-}
-
-/* Functionality: Hold only native voice-list visibility to reproduce delayed browser discovery.
- * Inputs: native browser synthesis. Outputs: explicit release seam and original-inventory availability.
- * Logic: hide inventory, then expose the unchanged native list with a labeled synthetic list event.
- * Constraints: no fabricated voice, native speech event, remote voice, playback or engine replacement. */
-function installDelayedVoices() {
-  const engine = window.speechSynthesis, original = engine.getVoices.bind(engine); let held = true;
-  /* Functionality: Return either empty or the original native inventory. Inputs: None.
-   * Outputs: native voices. Logic: explicit held boundary. Constraints: never fabricate a voice. */
-  function getVoices() { return held ? [] : original(); }
-  /* Functionality: Inspect native inventory readiness without publishing voice bodies. Inputs: None.
-   * Outputs: local Chinese availability. Logic: original method. Constraints: no UI or output mutation. */
-  function available() { return original().some(voice => voice.localService && /^zh(?:-|$)/i.test(voice.lang)); }
-  /* Functionality: Deliver a declared delayed-inventory boundary. Inputs: None.
-   * Outputs: original voices and synthetic list-change event. Logic: single explicit transition.
-   * Constraints: does not synthesize utterance start/end, select a control or call speak. */
-  function release() { held = false; engine.dispatchEvent(new Event("voiceschanged")); }
-  engine.getVoices = getVoices; window.__productDelayedVoices = {available, release};
 }
 
 /* Functionality: Exercise the existing lifecycle listener at an explicit synthetic visibility boundary.
@@ -436,7 +503,7 @@ export async function runCameraBoundaries(options) {
   await requireNew(options.output); await mkdir(dirname(options.output), {recursive: true});
   const report = {complete: false, phase: "startup", failures: [], checks: {}, fixtures: {
     camera: "explicit pending getUserMedia promise; late grant is stoppable synthetic track; named DOMException failures",
-    rear_support: "explicit getSupportedConstraints fixture", speech: "native local Chrome speech lifecycle"},
+    rear_support: "explicit getSupportedConstraints fixture", speech: "no TTS request; backend voice metadata only"},
     actual_iphone_verified: false, actual_camera_verified: false, actual_gps_verified: false,
     model_verified: false, physical_audibility_verified: false};
   let browser, context, page; let modelConnections = 0;
@@ -452,7 +519,7 @@ export async function runCameraBoundaries(options) {
     requireGate(response.status() === 200, "PRODUCT_HTTP_FAILED");
     requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
       "PRODUCT_MICROPHONE_POLICY_MISSING");
-    await page.evaluate(observe); await waitVoice(page, "zh");
+    await page.evaluate(observe); await waitVoice(page);
     report.checks.initial = verifyInitial(await page.evaluate(initialEvidence));
     report.phase = "double_click_permission_pending";
     await page.locator("#product-camera-start").dblclick();
@@ -506,18 +573,19 @@ export async function runCameraBoundaries(options) {
   return report;
 }
 
-/* Functionality: Test delayed voice lists, incomplete route selection and visibility without repeating inference.
- * Inputs: pinned public product/new report paths. Outputs: boundary JSON and ready-map screenshots.
- * Logic: explicit inventory/route/GPS/visibility fixtures surround unchanged controllers and native TTS.
- * Constraints: no camera acquisition, actual GPS/ORS, GPU session, native speech-event simulation or retry. */
+/* Functionality: Test backend voice inventory, product activation, diagnostic bilingual TTS and page boundaries.
+ * Inputs: pinned public product/new report paths. Outputs: boundary JSON and product ready-map screenshots.
+ * Logic: exercise real backend PCM on the product activation and diagnostic pages; explicit route/GPS/visibility
+ * fixtures surround their existing controllers. Constraints: no camera acquisition, actual GPS/ORS, GPU session,
+ * fabricated speech lifecycle or retry. */
 export async function runBoundaries(options) {
   for (const path of [options.output, options.screenshot, options.desktopScreenshot]) await requireNew(path);
   await mkdir(dirname(options.output), {recursive: true});
   const report = {complete: false, phase: "startup", failures: [], checks: {}, fixtures: {
-    voice_inventory: "native inventory temporarily hidden; explicit synthetic voiceschanged on release",
+    voice_inventory: "fixed server-provided Cherry voice supports Chinese and English",
     gps: "explicit synthetic NUS callbacks with Date.now", route: "explicit synthetic ORS response fixture",
     visibility: "explicit synthetic visibilityState/event", page_cache: "explicit synthetic persisted pagehide",
-    speech: "real native local Chrome TTS lifecycle"},
+    speech: "real backend Qwen PCM stream and Web Audio lifecycle"},
     actual_iphone_verified: false, actual_gps_verified: false, actual_ors_verified: false, physical_audibility_verified: false};
   let browser, context, page;
   try {
@@ -525,7 +593,7 @@ export async function runBoundaries(options) {
     browser = await chromium.launch({channel: "chrome", headless: true});
     context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
-    await context.addInitScript(installProbe, POINT); await context.addInitScript(installDelayedVoices);
+    await context.addInitScript(installProbe, POINT);
     await context.route(`${ORIGIN}${PREFIX}maps/route/`, route => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(ROUTE)}));
     page = await context.newPage(); page.on("pageerror", error => report.failures.push(safeFailure(error, report.phase)));
     const response = await page.goto(options.url, {waitUntil: "domcontentloaded", timeout: 30000});
@@ -533,14 +601,12 @@ export async function runBoundaries(options) {
     requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
       "PRODUCT_MICROPHONE_POLICY_MISSING");
     await page.evaluate(observe);
-    report.phase = "delayed_native_inventory";
+    report.phase = "backend_voice_inventory";
     const held = await page.evaluate(initialEvidence);
-    requireGate(!held.voice.id && held.speech_calls === 0 && held.camera_calls === 0 && held.gps_one_shots === 0 && held.gps_watches === 0,
-      "DELAYED_VOICE_STARTED_OR_SELECTED");
-    requireGate(await page.locator("#assist-speech-start").isDisabled(), "MISSING_VOICE_START_NOT_DISABLED");
-    await page.waitForFunction(() => window.__productDelayedVoices.available(), null, {timeout: 15000});
-    await page.evaluate(() => window.__productDelayedVoices.release());
-    await waitVoice(page, "zh"); report.checks.delayed_inventory = verifyInitial(await page.evaluate(initialEvidence));
+    requireGate(held.voice.id === "Cherry" && held.voice.service === "backend" && held.speech_calls === 0 &&
+      held.camera_calls === 0 && held.gps_one_shots === 0 && held.gps_watches === 0,
+      "BACKEND_VOICE_NOT_READY_OR_AUTOSTARTED");
+    report.checks.backend_voice = verifyInitial(held);
     report.phase = "ready_layout"; await page.waitForFunction(() => !document.getElementById("locate").disabled);
     report.checks.mobile_surface = verifyProductSurface(await page.evaluate(surfaceEvidence));
     await page.screenshot({path: options.screenshot, fullPage: true, mask: [page.locator("#map")], maskColor: "#dfe7df"});
@@ -550,12 +616,12 @@ export async function runBoundaries(options) {
     await page.setViewportSize({width: 390, height: 844});
     report.phase = "cached_page_observers";
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", {persisted: true})));
-    await page.selectOption("#language", "en"); await waitVoice(page, "en");
+    await page.selectOption("#language", "en"); await waitVoice(page);
     requireGate(await page.locator("h1").innerText() === "Your walk starts here.", "CACHED_PAGE_COPY_OBSERVER_LOST");
-    report.checks.cached_page = {product_copy_updates: true, voice_follows_language: true,
+    report.checks.cached_page = {product_copy_updates: true, backend_voice_stable: true,
       automatic_speech_calls: await page.evaluate(() => window.__productProbe.speech.length)};
     requireGate(report.checks.cached_page.automatic_speech_calls === 0, "CACHED_PAGE_AUTOMATIC_SPEECH");
-    await page.selectOption("#language", "zh-CN"); await waitVoice(page, "zh");
+    await page.selectOption("#language", "zh-CN"); await waitVoice(page);
     report.phase = "incomplete_route_selection";
     await page.click("#plan");
     report.checks.incomplete_route = await page.evaluate(() => ({
@@ -573,7 +639,7 @@ export async function runBoundaries(options) {
     await page.click("#navigation-start"); await page.waitForFunction(() => window.__productControllers.navigation.active);
     await page.waitForFunction(() => window.__productControllers.glue.speechActivation.describe().ready, null, {timeout: 15000});
     report.checks.activation = verifySpeechActivation(await page.evaluate(() => ({activation: window.__productControllers.glue.speechActivation.describe(),
-      calls: window.__productProbe.speech, native: window.__productEvents.native})));
+      calls: window.__productProbe.speech, audio: window.__productEvents.audio})));
     report.checks.activation.source = "product_navigation_start";
     await page.evaluate(setSyntheticVisibility, true);
     report.checks.hidden = await page.evaluate(() => ({navigation_stopped: !window.__productControllers.navigation.active,
@@ -588,6 +654,14 @@ export async function runBoundaries(options) {
       gps_released: window.__productProbe.watches.every(item => !item.active),
       speech_released: window.__productControllers.speechOutput.current === null}));
     requireGate(Object.values(report.checks.returned).every(Boolean), "VISIBILITY_AUTOMATIC_RESTART");
+    report.phase = "diagnostic_page_bilingual_tts";
+    const diagnosticUrl = new URL("test", options.url);
+    const diagnostic = await page.goto(diagnosticUrl.href, {waitUntil: "domcontentloaded", timeout: 30000});
+    requireGate(diagnostic.status() === 200, "DIAGNOSTIC_HTTP_FAILED");
+    await page.evaluate(observe);
+    requireGate(await page.locator("#speech-play").isVisible() && await page.locator("#speech-enabled").isVisible(),
+      "DIAGNOSTIC_TTS_CONTROLS_MISSING");
+    report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page, report);
     requireGate(report.failures.length === 0, "BROWSER_PAGE_ERRORS"); report.complete = true; report.phase = "complete";
   } catch (error) { report.failures.push(safeFailure(error, report.phase)); }
   finally {

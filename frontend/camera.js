@@ -1,6 +1,6 @@
 /**
  * Responsibilities: Manage camera permission, explicit Echo/HF/resident/local-CUDA transport, phase timing, and observable lifecycle.
- * Implementation: 640-pixel maximum edge and JPEG 0.8; after the first HF/local frame completes, capture at up to 30 FPS with a 12-frame limit and ordered display; any error stops processing.
+ * Implementation: 640-pixel maximum edge and JPEG 0.8; after the first HF/local frame completes, capture at up to 30 FPS with a 12-frame limit and ordered display; errors stop processing and retain their browser error names.
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
  * frame-pipeline.js, scene-client.js, integration/local-mvp.js；core.echo/hf_video_relay/integration.asgi；
  * tools/benchmark_phone_browser.mjs validates the real page; fixture input is not physical phone-camera evidence.
@@ -20,7 +20,7 @@
  * aggregate only steady-state frames with pipeline scheduling observations; serial Echo frames without observations are not counted as zero;
  * SCENE_MAX_AGE_MS — maximum age for scene-description frame/detection reuse; lastFrame/lastDetection retain only the latest
  * encoded JPEG and detection metadata in memory for scene-client.js, then clear on stop without persistence;
- * cameraApp — exported reference to the page controller;
+ * cameraApp — exported reference to the page controller; lastErrorType — latest browser error name, cleared at the next explicit start;
  * cameraPhase — lifecycle phase; pipeline — bounded cancellation signal; apiBase — same-origin API mount; listeners — observer set;
  * localDeviceId — device explicitly selected in the local UI; localFacingMode — null by default, with the integrated entry optionally requesting the rear camera using environment;
  * if both are set, explicit deviceId takes precedence; invalid non-null facing modes are rejected. localOnly prevents the local MVP from starting HF accidentally; sessionId identifies result lifecycle;
@@ -87,6 +87,7 @@ export class CameraApp {
     this.objectUrl = null;
     this.frameTimings = null;
     this.cameraPhase = "idle";
+    this.lastErrorType = null;
     this.pipeline = null;
     this.lastFrame = null;
     this.lastDetection = null;
@@ -159,9 +160,10 @@ export class CameraApp {
     this.stopButton.disabled = this.mode !== "camera";
   }
   /** Functionality: Handle connection failure. Inputs: Error. Outputs: Resource cleanup and readable status.
-   * Logic: Log mode, camera phase, and completed count, then stop and display the reason.
+   * Logic: Retain the native error name, log mode/phase/count, then stop and display the reason.
    * Constraints: Logs contain no frame data or credentials; cameraPhase may be idle for other operations; do not infer remote failure causes. */
   handleDisconnect(error) {
+    this.lastErrorType = error.name;
     this.emit({type: "error", sessionId: this.sessionId, errorType: error.name});
     console.error("Camera processing failed:", {
       message: error.message, mode: this.mode, cameraPhase: this.cameraPhase,
@@ -174,13 +176,14 @@ export class CameraApp {
   }
   /** Functionality: Request camera access and use the explicitly selected mode. Inputs: localDeviceId, localFacingMode, facingMode, processing, and browser media APIs.
    * Outputs: Local video, returned image, round-trip timings, and post-first-frame completion rate.
-   * Logic: Preserve one in-flight job; HF/local/resident modes share the 30 FPS/12-job pipeline. For local mode, explicit deviceId wins; otherwise only an entry that explicitly sets environment may request the rear camera.
+   * Logic: Clear prior failure state; HF/local/resident modes share the 30 FPS/12-job pipeline. For local mode, explicit deviceId wins; otherwise only an entry that explicitly sets environment may request the rear camera.
    * Check facingMode constraint support before requesting rear-camera permission; pass localSessionSeconds locally while HF retains exact-camera behavior.
    * Constraints: Require exact camera selection; fail if unsupported or no rear camera exists, with no front/default-camera fallback.
    * Detection failure stops processing without mode switching or automatic permission retry; never discard sent frames to inflate rate.
    * Without a fixed delay there is no 10 FPS guarantee; timing begins before drawImage and is not sensor exposure or final screen-render time. */
   async start() {
     if (this.mode !== "idle") return;
+    this.lastErrorType = null;
     const token = ++this.generation;
     this.mode = "camera";
     this.cameraPhase = "permission";

@@ -418,6 +418,8 @@ class DiscoveryTests(SimpleTestCase):
         )
         with patch.dict("os.environ", {"ORS_API_KEY": "test-secret"}):
             with patch("core.agent.poi.httpx2.AsyncClient", return_value=client):
-                with self.assertRaisesRegex(AgentError, "403"):
+                with self.assertRaises(AgentError) as caught:
                     await poi.categories()
+        self.assertEqual(caught.exception.code, "poi_http_error")
+        self.assertEqual(caught.exception.http_status, 403)
         self.assertEqual(len(requests), 1)

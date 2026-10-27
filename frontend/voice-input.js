@@ -1,5 +1,6 @@
 /* Responsibilities: Explicit microphone capture and deterministic 16kHz PCM WAV encoding.
- * Implementation: AudioWorklet capture, 20s bound, flush handshake and generation cancellation.
+ * Implementation: Start permission-bound media calls synchronously from the user gesture, then use
+ * AudioWorklet capture, a 20s bound, flush handshake and generation-based cancellation.
  * Related Modules: voice-worklet.js, agent-client.js, backend/core/agent/provider.py.
  * Declaration Index: encodeWav; VoiceInput; VoiceInput.constructor; VoiceInput.start;
  * VoiceInput.finish; VoiceInput.release; VoiceInput.cancel.
@@ -51,21 +52,39 @@ export class VoiceInput {
     this.generation = 0;
     this.chunks = [];
   }
-  /* Functionality: Start capture after a user click. Inputs: browser media/WebAudio APIs.
-   * Outputs: live capture or explicit error; Logic: load own worklet and use silent graph.
+  /* Functionality: Start capture after a user gesture. Inputs: browser media/WebAudio APIs.
+   * Outputs: live capture or explicit error; Logic: invoke microphone permission and Web Audio
+   * resume synchronously before awaiting either, then load the worklet and connect a silent graph.
    * Constraints: Permission remains browser-owned; late granted streams are immediately released. */
   async start() {
     const generation = ++this.generation;
-    if (!globalThis.isSecureContext || !navigator.mediaDevices?.getUserMedia || !globalThis.AudioContext)
-      throw new Error("语音输入需要 HTTPS 和支持录音的浏览器。");
+    if (!globalThis.isSecureContext) {
+      const error = new Error("Microphone capture requires a secure HTTPS page.");
+      error.name = "SecurityError";
+      throw error;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || !globalThis.AudioContext) {
+      const error = new Error("This browser does not support microphone capture.");
+      error.name = "NotSupportedError";
+      throw error;
+    }
     this.context = new AudioContext();
+    let mediaRequest;
+    let stream = null;
     try {
-      await this.context.resume();
-      if (generation !== this.generation) return false;
-      const stream = await navigator.mediaDevices.getUserMedia({video: false,
+      mediaRequest = navigator.mediaDevices.getUserMedia({video: false,
         audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}});
+      const resumeRequest = this.context.resume();
+      const [mediaResult, resumeResult] = await Promise.allSettled([mediaRequest, resumeRequest]);
+      if (mediaResult.status === "rejected") throw mediaResult.reason;
+      stream = mediaResult.value;
       if (generation !== this.generation) { stream.getTracks().forEach(track => track.stop()); return false; }
       this.stream = stream;
+      if (resumeResult.status === "rejected") {
+        const error = new Error("The browser did not start the audio capture context.");
+        error.name = "AudioContextError";
+        throw error;
+      }
       const context = this.context;
       await context.audioWorklet.addModule(new URL("./voice-worklet.js", import.meta.url));
       if (generation !== this.generation) return false;
@@ -82,6 +101,8 @@ export class VoiceInput {
       this.node.connect(context.destination);
       return true;
     } catch (error) {
+      if (mediaRequest && !stream)
+        mediaRequest.then(late => late.getTracks().forEach(track => track.stop()), () => {});
       if (generation !== this.generation) return false;
       await this.cancel();
       throw error;

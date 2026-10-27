@@ -1,11 +1,13 @@
 """Responsibilities: Quantify the actual native TensorRT depth integration on complete videos.
-Implementation: Original frames/timestamps, full pipeline, complete depth comparisons and controls.
+Implementation: Original frames/timestamps, explicit 80/87-class model and GPU/host fusion;
+full pipeline, complete depth comparisons and same-model controls.
 Related Modules: integration.inference.services; realtime.depth_config/depth_runtime;
 tools.benchmark_video; tools.benchmark_inference; DEPTH-EXPORT.md.
 Declaration Index: DepthCapture; DepthCapture.__init__; DepthCapture.__call__; DepthCapture.consume;
 compare_boxes; compare_depth; run; main.
 Variable Index: NUMERIC_FIELDS — explicitly reported continuous distance/motion values, not ignored;
-SOURCE_FILES — computation implementations bound to each comparison.
+SOURCE_FILES — computation implementations bound to each comparison;
+TIMING_FIELDS — unchanged whole-frame and nested phase host durations, not kernel measurements.
 """
 
 import argparse
@@ -25,10 +27,13 @@ from tools.benchmark_inference import distribution
 from tools.benchmark_video import VideoFrames
 
 NUMERIC_FIELDS = {"distance_m", "smoothed_distance_m", "relative_speed_mps", "ttc_sec"}
-SOURCE_FILES = ("core/detector.py", "realtime/depth.py", "realtime/depth_runtime.py",
+SOURCE_FILES = ("core/detector.py", "core/detection_model.py", "zerogpu/runtime.py",
+                "realtime/depth.py", "realtime/depth_runtime.py", "realtime/depth_config.py",
+                "realtime/depth_fast.py",
                 "realtime/depth_predictor.py", "realtime/detector.py", "realtime/distance.py",
                 "realtime/tracking.py", "realtime/risk.py", "integration/inference/services.py",
                 "tools/benchmark_depth_integration.py")
+TIMING_FIELDS = ("server_ms", "depth_predict_ms", "depth_fusion_ms", "tracking_ms", "render_ms")
 
 
 class DepthCapture:
@@ -124,17 +129,21 @@ def run(args):
 
     args.output.mkdir(parents=True, exist_ok=False)
     if not args.reference:
-        if args.backend != "torch" or args.depth_cache is None:
-            raise ValueError("The reference requires Torch and an explicit private depth cache")
+        if args.depth_cache is None:
+            raise ValueError("The reference requires an explicit private depth cache")
         args.depth_cache.mkdir(parents=True, exist_ok=False)
-    config = DepthBackendConfig(args.backend, args.manifest)
-    report = {"status": "running", "backend": args.backend, "completed_frames": 0,
+    config = DepthBackendConfig(args.backend, args.manifest, args.fusion)
+    report = {"status": "running", "backend": args.backend, "fusion": args.fusion,
+              "completed_frames": 0,
               "scope": "Full-video native inference; no truth-based accuracy acceptance",
               "quality_accepted": False,
               "reference": str(args.reference) if args.reference else None,
               "video_sha256": file_hash(args.video),
               "source_sha256": {name: file_hash(name) for name in SOURCE_FILES},
               "settings": {"batch": 1, "precision": "FP32", "depth_edge": 768,
+                           "detection_model": args.detection_model,
+                           "detection_manifest_sha256": file_hash(
+                               Path("models") / (args.detection_model + ".json")),
                            "fixture_max_edge": 640, "jpeg_quality": 80,
                            "distance": asdict(DEFAULT_DISTANCE_CONFIG),
                            "tracking": asdict(DEFAULT_TRACKING_CONFIG),
@@ -157,7 +166,7 @@ def run(args):
             depth_cache = args.depth_cache
         report["depth_cache"] = str(depth_cache)
         started = time.perf_counter()
-        detector, hashes = load_detector(DEFAULT_DISTANCE_CONFIG, config)
+        detector, hashes = load_detector(DEFAULT_DISTANCE_CONFIG, config, args.detection_model)
         report["load_ms"] = (time.perf_counter() - started) * 1000
         report["weights"] = hashes
         if args.reference and hashes != original["weights"]:
@@ -175,6 +184,9 @@ def run(args):
                 depth = capture.consume()
                 if metadata["depth_backend"] != args.backend:
                     raise ValueError("Actual depth backend differs from requested backend")
+                if (metadata["model"] != args.detection_model
+                        or metadata["depth_fusion"] != args.fusion):
+                    raise ValueError("Actual detection model or fusion differs from selection")
                 row = {**identity, "metadata": metadata, "wall_ms": wall_ms}
                 row["depth_sha256"] = hashlib.sha256(depth.tobytes()).hexdigest()
                 map_path = depth_cache / f"{identity['index']:06d}.npy"
@@ -198,8 +210,8 @@ def run(args):
                     np.save(map_path, depth, allow_pickle=False)
                 output.write(json.dumps(row, allow_nan=False) + "\n")
                 output.flush()
-                frames.append({"wall_ms": wall_ms, "server_ms": metadata["server_ms"],
-                               "depth_predict_ms": metadata["depth_predict_ms"],
+                frames.append({"wall_ms": wall_ms,
+                               **{name: metadata[name] for name in TIMING_FIELDS},
                                "comparison": row.get("comparison")})
                 report["completed_frames"] += 1
                 if identity["index"] % 100 == 0:
@@ -219,7 +231,7 @@ def run(args):
             reference_file.close()
         report["first_frame"] = frames[0] if frames else None
         report["steady"] = {name: distribution([row[name] for row in frames[1:]])
-                            for name in ("wall_ms", "server_ms", "depth_predict_ms")}
+                            for name in ("wall_ms", *TIMING_FIELDS)}
         report["comparisons"] = [row["comparison"] for row in frames if row["comparison"]]
         (args.output / "report.json").write_text(json.dumps(report, indent=2, allow_nan=False)
                                                 + "\n", encoding="utf-8")
@@ -228,13 +240,15 @@ def run(args):
 
 def main():
     """Functionality: Run one explicit full-video baseline or candidate process.
-    Inputs: video, backend, artifact manifest, new output, cache/reference arguments.
+    Inputs: video, detection model, depth backend/fusion, manifest, output and cache/reference.
     Outputs: structured report and process failure on runtime errors.
     Logic: parse and run once. Constraints: no automatic service control, downloads or retries.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--video", type=Path, required=True)
     parser.add_argument("--backend", choices=("torch", "tensorrt"), required=True)
+    parser.add_argument("--detection-model", choices=("yolo26n", "yolo26n-walk"), default="yolo26n")
+    parser.add_argument("--fusion", choices=("gpu", "host"), default="gpu")
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--reference", type=Path)

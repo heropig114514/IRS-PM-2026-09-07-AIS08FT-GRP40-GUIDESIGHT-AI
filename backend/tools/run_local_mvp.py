@@ -158,15 +158,17 @@ print(json.dumps(result))
 
 def verify_models():
     """Functionality: Verify selected trusted local checkpoints before starting any service.
-    Inputs: fixed backend/models paths and detection manifest. Outputs: None or safe failure.
+    Inputs: selected detection profile/manifest and fixed depth path. Outputs: None or safe failure.
     Logic: Compare SHA256 before Torch deserialization; Constraints: no download/replacement.
     """
+    from core.detection_model import model_files, validate_manifest
     from realtime.distance_config import read_distance_config
 
     model_dir = ROOT / "models"
     try:
-        manifest = json.loads((model_dir / "yolo26n.json").read_text(encoding="utf-8"))
-        expected = {"yolo26n.pt": manifest["source_sha256"]}
+        weights, manifest_path = model_files()
+        manifest = validate_manifest(json.loads(manifest_path.read_text(encoding="utf-8")))
+        expected = {weights.name: manifest["source_sha256"]}
         if read_distance_config().distance_mode != "geometry":
             expected["yolo26n-depth.pt"] = DEPTH_SHA256
         for name, digest in expected.items():
@@ -175,7 +177,7 @@ def verify_models():
                 raise StartupError(f"Missing local checkpoint: {path}; provision it explicitly.")
             if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
                 raise StartupError(f"Checkpoint SHA256 mismatch: {path}; service was not started.")
-    except (OSError, json.JSONDecodeError, KeyError) as error:
+    except (OSError, ValueError, KeyError) as error:
         raise StartupError(f"Unable to verify model manifest: {type(error).__name__}.") from None
 
 

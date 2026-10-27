@@ -13,6 +13,7 @@ executor — single native worker thread; load_error — explicit initialization
 detector/hashes/active_session/frame_size — worker-owned resident/state/provenance;
 distance_config — startup-selected A/B/C profile; B has no depth dependency or hash;
 depth_config — startup-frozen Torch/TensorRT selection; no inference-time backend switching;
+detection_model/detection_weights — frozen 80/87-class model and health-check asset path;
 incoming/received/delivered/inflight — bounded session accounting and uncancellable GPU work.
 session_seconds/stopping — frozen explicit session policy and cancellation-safe continuous wait.
 """
@@ -27,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from threading import BoundedSemaphore
 
+from core.detection_model import PROFILES, selected_model
 from core.detector import DetectionError, decode_frame
 from integration.errors import IntegrationError
 from integration.protocol import (
@@ -52,17 +54,23 @@ from realtime.protocol import pack_result, unpack_result
 logger = logging.getLogger(__name__)
 
 
-def load_detector(distance_config=None, depth_config=None):
+def load_detector(distance_config=None, depth_config=None, detection_model=None):
     """Functionality: Load the existing native FP32 complete pipeline and record actual assets.
-    Inputs: fixed model files, frozen distance/depth backend profiles. Outputs: detector and hashes.
+    Inputs: explicit detection profile and frozen distance/depth profiles; omitted values use env.
+    Outputs: detector and hashes.
     Logic: preflight selected local files/CUDA; A uses original constructors/default rules;
     B does not open/hash/initialize depth weights; C wraps the same depth fusion with tracking.
     Constraints: lazy imports, no download/CPU fallback/implicit detection parameter changes;
     depth hash records supplied bytes, not independently verified calibration or provenance.
     """
-    weights, depth_weights = ROOT / "models/yolo26n.pt", ROOT / "models/yolo26n-depth.pt"
+    name = selected_model() if detection_model is None else detection_model
+    weights_name, manifest_name, _ = PROFILES[name]
+    weights, manifest_path = ROOT / weights_name, ROOT / manifest_name
+    depth_weights = ROOT / "models/yolo26n-depth.pt"
     distance_config = read_distance_config() if distance_config is None else distance_config
     depth_config = read_depth_backend(ROOT) if depth_config is None else depth_config
+    if depth_config.fusion == "host" and distance_config.distance_mode != "depth":
+        raise ValueError("Host depth fusion is supported only in same-frame depth mode A")
     needs_depth = distance_config.distance_mode != "geometry"
     if not weights.is_file() or (needs_depth and not depth_weights.is_file()):
         raise IntegrationError(
@@ -78,7 +86,6 @@ def load_detector(distance_config=None, depth_config=None):
     from realtime.depth import DepthEstimator
     from realtime.detector import ResidentDetector
 
-    manifest_path = ROOT / "models/yolo26n.json"
     manifest = read_manifest(manifest_path)
     hashes = {
         "detection_sha256": hashlib.sha256(weights.read_bytes()).hexdigest(),
@@ -93,8 +100,13 @@ def load_detector(distance_config=None, depth_config=None):
     depth = (DepthEstimator(depth_weights, manifest["build"]["ultralytics"],
                             backend=depth_config.backend, engine_manifest=depth_config.manifest)
              if needs_depth else None)
-    return ResidentDetector(weights, manifest_path, depth_estimator=depth,
-                            distance_config=distance_config), hashes
+    detector = ResidentDetector(weights, manifest_path, depth_estimator=depth,
+                                 distance_config=distance_config)
+    detector.distance_strategy.fast_roi = depth_config.fusion == "host"
+    logger.info("Native pipeline selected detection=%s depth=%s fusion=%s", name,
+                depth_config.backend if needs_depth else None,
+                depth_config.fusion if needs_depth else None)
+    return detector, hashes
 
 
 class InferenceRuntime:
@@ -107,7 +119,8 @@ class InferenceRuntime:
     def __init__(self, factory=load_detector, manifest_reader=read_manifest):
         """Functionality: Initialize unloaded process state without Torch or model I/O.
         Inputs: explicit factory/manifest test seams. Outputs: lazy runtime.
-        Logic: thread creation is lazy inside ThreadPoolExecutor. Constraints: no inference here.
+        Logic: freeze model, manifest, depth and fusion before admission; thread creation is lazy.
+        Constraints: no inference here; host fusion requires same-frame depth mode A.
         """
         self.factory, self.manifest_reader = factory, manifest_reader
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prs-local-gpu")
@@ -115,11 +128,19 @@ class InferenceRuntime:
         self.hashes, self.frame_size, self.busy = {}, None, False
         self.distance_config = read_distance_config()
         self.depth_config = read_depth_backend(ROOT)
+        if self.depth_config.fusion == "host" and self.distance_config.distance_mode != "depth":
+            raise ValueError("Host depth fusion is supported only in same-frame depth mode A")
+        self.detection_model = selected_model()
+        weights_name, manifest_name, _ = PROFILES[self.detection_model]
+        self.detection_weights = ROOT / weights_name
+        if manifest_reader is read_manifest:
+            self.manifest_reader = partial(manifest_reader, ROOT / manifest_name)
         self.session_seconds = local_session_seconds()
         if factory is load_detector:
             # Freeze configuration before hello; lazy model loading must use that same identity.
             self.factory = partial(factory, distance_config=self.distance_config,
-                                   depth_config=self.depth_config)
+                                   depth_config=self.depth_config,
+                                   detection_model=self.detection_model)
 
     def contract(self, session_id):
         """Functionality: Declare identity without initializing GPU state.
@@ -133,6 +154,8 @@ class InferenceRuntime:
                               session_seconds=self.session_seconds)
         contract["depth_backend"] = (self.depth_config.backend
                                      if self.distance_config.distance_mode != "geometry" else None)
+        contract["depth_fusion"] = (self.depth_config.fusion
+                                    if self.distance_config.distance_mode != "geometry" else None)
         return contract
 
     def status(self):
@@ -158,7 +181,9 @@ class InferenceRuntime:
             "error_code": self.load_error.code if self.load_error else None,
             "models": {
                 "detection": {
-                    "present": (ROOT / "models/yolo26n.pt").is_file(),
+                    "model": self.detection_model,
+                    "classes": PROFILES[self.detection_model][2],
+                    "present": self.detection_weights.is_file(),
                     "expected_sha256": expected,
                     "verified_sha256": self.hashes.get("detection_sha256"),
                 },
@@ -167,6 +192,8 @@ class InferenceRuntime:
                     "sha256": self.hashes.get("depth_sha256"),
                     "backend": (self.depth_config.backend
                                 if self.distance_config.distance_mode != "geometry" else None),
+                    "fusion": (self.depth_config.fusion
+                               if self.distance_config.distance_mode != "geometry" else None),
                     "engine_shapes": (self.detector.depth_estimator.forward.shapes
                                       if loaded and self.depth_config.backend == "tensorrt"
                                       and self.detector.depth_estimator is not None else []),

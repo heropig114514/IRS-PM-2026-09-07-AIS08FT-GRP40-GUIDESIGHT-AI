@@ -6,7 +6,8 @@ Declaration Index: database_call — threaded ORM/errors; browser_call — brows
 register_tool — explicit registry profile; register_tool.register — selected tool decorator;
 system_status — connectivity/configuration; system_routes — route discovery;
 system_request — existing HTTP invocation; ui_sessions — tab discovery; ui_snapshot — live DOM;
-ui_navigate — page transition verification; ui_action — control dispatch/state observation;
+ui_navigate — route handoff or same-page panel focus; ui_action — control dispatch/state
+observation;
 vibration_status — read browser prerequisites; vibration_test — one fixed vibration request;
 vibration_stop — one cancellation request;
 speech_status — observe engine state; speech_voices — list device voices;
@@ -284,24 +285,35 @@ async def ui_snapshot(session_id: str) -> dict[str, Any]:
 
 
 @register_tool(
-    description="Navigate a PRS tab to camera or maps and wait for its new page to connect."
+    description="Focus the embedded camera panel on unified assist pages, or navigate to "
+    "maps/camera on standard pages and verify the resulting page."
 )
 async def ui_navigate(
     session_id: str, page: Literal["camera", "maps"], timeout: float = 20
 ) -> dict[str, Any]:
-    """Functionality: Navigate an existing tab and verify its replacement page registration.
+    """Functionality: Navigate an existing tab and verify its resulting page or embedded panel.
     Inputs: session_id, page alias, total timeout seconds (0 < timeout <= 60).
-    Outputs: Fresh snapshot after navigation; explicit timeout/disconnection error otherwise.
-    Logic: Capture the connection generation, acknowledge navigation then observe its successor.
-    Constraints: Same sessionStorage tab ID survives navigation; no repeated navigation on failure.
+    Outputs: Fresh snapshot, explicit unavailable-panel result, or timeout/disconnection error.
+    Logic: An in-page focus acknowledgement skips the page-generation wait; true route changes
+    retain the existing registration handoff and then obtain a fresh snapshot.
+    Constraints: Same sessionStorage tab ID survives route changes; no repeated navigation
+    on failure.
     """
     if not 0 < timeout <= 60:
         raise ToolError("timeout must be greater than 0 and at most 60 seconds")
     previous = hub.connection(session_id)
     try:
         async with asyncio.timeout(timeout):
-            await browser_call(session_id, "navigate", {"page": page}, timeout=timeout)
-            await hub.wait_page(session_id, previous, timeout)
+            navigation = await browser_call(
+                session_id, "navigate", {"page": page}, timeout=timeout
+            )
+            if not isinstance(navigation, dict):
+                raise ToolError("Browser navigation returned an invalid result")
+            if navigation.get("same_page"):
+                if navigation.get("available") is False:
+                    return navigation
+            else:
+                await hub.wait_page(session_id, previous, timeout)
             return await browser_call(session_id, "snapshot", timeout=timeout)
     except TimeoutError as error:
         logger.error("MCP navigation timeout session=%s page=%s", session_id, page)
@@ -312,8 +324,9 @@ async def ui_navigate(
     description="Operate a DOM control with an exact CSS selector. Actions: click (optional "
     "x/y offsets for map points), fill, select, check, key, submit, scroll, wait. Values are "
     "strings except check's boolean. wait accepts text and state=visible/hidden/enabled; "
-    "it observes completion without repeating operations. Synthetic keys do not implement "
-    "browser-native typing/default actions; use fill, click or submit for those effects."
+    "it observes completion without repeating operations. Camera permission, explicit camera "
+    "selection and camera-start controls require direct user interaction. Synthetic keys do not "
+    "implement browser-native typing/default actions; use fill, click or submit for other controls."
 )
 async def ui_action(
     session_id: str,
@@ -330,7 +343,7 @@ async def ui_action(
     Inputs: session/action/selector, value, x/y pixel offsets, wait text/state, timeout (0..59s).
     Outputs: Post-dispatch DOM snapshot; async application completion must be observed separately.
     Logic: Send all explicit arguments to the browser's documented action dispatcher.
-    Constraints: Disabled/ambiguous controls fail; browser permissions/trusted-event rules apply.
+    Constraints: Disabled/ambiguous and protected camera controls fail; browser permissions apply.
     """
     if not 0 < timeout <= 59:
         raise ToolError("timeout must be greater than 0 and at most 59 seconds")

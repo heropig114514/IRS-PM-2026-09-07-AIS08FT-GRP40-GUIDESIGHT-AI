@@ -4,7 +4,7 @@ one parent-pinned HF commit publishes its exact configuration and removes retire
 Related Modules: zerogpu.app/live_transport/live_worker/runtime/aoti/jit_cache;
 realtime.depth/distance/distance_config/performance/tracking/risk;
 core.inference_plan;
-core.detector; realtime.protocol.
+core.detector/detection_model; realtime.protocol.
 Declaration Index: stage_bundle; publish; main.
 Variable Index: ROOT/SPACE_ID — fixed workspace/owned Space; FILES — source/destination allowlist;
 RETIRED — explicit obsolete files; MAX_FILE_BYTES — per-file upload bound.
@@ -48,6 +48,7 @@ FILES = {
     "realtime/risk.py": "realtime/risk.py",
     "core/__init__.py": "core/__init__.py",
     "core/detector.py": "core/detector.py",
+    "core/detection_model.py": "core/detection_model.py",
     "core/inference_plan.py": "core/inference_plan.py",
     "models/yolo26n.json": "models/yolo26n.json",
     "models/distance-config.json": "models/distance-config.json",

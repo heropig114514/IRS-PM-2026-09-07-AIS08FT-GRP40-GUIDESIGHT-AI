@@ -1,7 +1,7 @@
 /* Responsibilities: Protect product checker boundaries and prevent optimistic UI acceptance.
  * Implementation: Pure body-free snapshots exercise negative acceptance gates without browsers.
  * Related Modules: tools/check_product_browser.mjs; phone-relay-browser.test.mjs.
- * Declaration Index: initial; surface; testURL; testStartup; testVoice; testDefaults; testDiagnostics;
+ * Declaration Index: initial; surface; testURL; testStartup; testBackendVoice; testDefaults; testDiagnostics;
  * testAccessibility; testCameraRequest; testCameraDisplay.
  * Variable Index: URL/ENV — synthetic CLI fixtures, never access credentials or a real runtime.
  */
@@ -12,11 +12,11 @@ import {validateArguments, verifyInitial, verifyProductSurface, verifyCameraRequ
 const URL = "https://47.239.50.129/mvp/maps/", ENV = {PRS_PLAYWRIGHT_PATH: "synthetic-runtime"};
 
 /* Functionality: Build a fresh startup snapshot. Inputs: None. Outputs: synthetic evidence.
- * Logic: valid defaults with unactivated native engine. Constraints: never represents browser success. */
+ * Logic: valid defaults with fixed bilingual backend voice and unactivated outputs. Constraints: never represents browser success. */
 function initial() {
   return {camera_calls: 0, speech_calls: 0, gps_watches: 0, gps_one_shots: 0, outputs: [true, true, true],
     source: "camera", rate: 2, volume: 1, activation: {ready: false}, gated: true,
-    voice: {id: "synthetic-local", language: "zh-CN", local_service: true}};
+    voice: {id: "Cherry", language: "multi", languages: ["zh-CN", "en-US"], service: "backend", local_service: false}};
 }
 
 /* Functionality: Build a fresh surface snapshot. Inputs: None. Outputs: synthetic layout evidence.
@@ -51,13 +51,17 @@ test("enabled product outputs cannot excuse on-load permissions or playback", fu
   }
 });
 
-/* Functionality: Reject remote, mismatched and missing automatic voices. Inputs: inventory snapshots.
- * Outputs: rejection. Logic: local language and activation gates. Constraints: no playback or remote lookup. */
-test("product voice must be local and follow the supported interface language", function testVoice() {
-  for (const voice of [{id: "remote", language: "zh-CN", local_service: false},
-    {id: "wrong-language", language: "en-US", local_service: true}, {}]) {
+/* Functionality: Require the one fixed bilingual backend voice and explicit startup gate.
+ * Inputs: voice metadata. Outputs: acceptance/rejection. Logic: service and language capabilities are checked.
+ * Constraints: metadata does not prove provider credentials, playback, or audibility. */
+test("product voice is the fixed Chinese and English backend service", function testBackendVoice() {
+  const valid = verifyInitial(initial());
+  assert.equal(valid.voice.id, "Cherry");
+  for (const voice of [{id: "local", language: "zh-CN", languages: ["zh-CN"], local_service: true, service: "native"},
+    {id: "Other", languages: ["zh-CN", "en-US"], service: "backend"},
+    {id: "Cherry", languages: ["zh-CN"], service: "backend"}, {}]) {
     const value = initial(); value.voice = voice;
-    assert.throws(() => verifyInitial(value), /PRODUCT_AUTOMATIC_LOCAL_VOICE_MISSING/);
+    assert.throws(() => verifyInitial(value), /PRODUCT_BACKEND_VOICE_MISSING/);
   }
   const ready = initial(); ready.activation.ready = true;
   assert.throws(() => verifyInitial(ready), /PRODUCT_ACTIVATION_GATE_MISSING/);

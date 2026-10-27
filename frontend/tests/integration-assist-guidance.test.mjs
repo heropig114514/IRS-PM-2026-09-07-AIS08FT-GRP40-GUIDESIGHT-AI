@@ -9,7 +9,8 @@
  * Speech.manual; Speech.stopOwned; Vibration; Vibration.constructor; Vibration.subscribe;
  * Vibration.emit; Vibration.describe; Vibration.testPattern; Vibration.stopOwned;
  * box; navigationSnapshot; fixture; fixture.risk; fixture.navigation;
- * testDisabled; testNavigationOnly; testRiskOnly; testPreemption; testLatestNavigation;
+ * testDisabled; testNavigationOnly; testAssistantReplyQueue; testAssistantReplyPriority;
+ * testRiskOnly; testPreemption; testLatestNavigation;
  * testCompletedNavigation; testRiskCompletion; testEscalation; testCooldown; testSourceClock;
  * testQueuedRisk; testQueuedNavigation; testNavigationExpiry; testIndependentStops;
  * testIndependentSwitches; testForeignSpeech; testForeignVibration; testSynchronous;
@@ -22,6 +23,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {AssistGuidanceManager} from "../integration/assist-guidance.js";
+import {MAX_TEXT_LENGTH} from "../speech-output.js";
 import {videoAlertText} from "../integration/video-alerts.js";
 import {navigationSpeechText} from "../integration/navigation-speech.js";
 
@@ -57,7 +59,7 @@ class Clock {
   }
 }
 
-/* Functionality: Model one shared speech driver with independent native events.
+/* Functionality: Model one shared backend speech driver with independent PCM events.
  * Logic: Preserve request IDs, explicit voice and manual ownership; cancellation can remain uncertain.
  * Constraints: No synthesis, permission grant, actual engine or audible output. */
 class Speech {
@@ -67,7 +69,7 @@ class Speech {
     Object.assign(this, {clock, current: null, lastRequest: null, sequence: 0, listeners: new Set(), requests: [],
       attempts: [], enabled: true, cancelFailure: false, refusal: null, synchronous: null,
       rate: {value: "2"}, volume: {value: "1"},
-      voices: [{id: "local-zh", language: "zh-CN", local_service: true}]});
+      backendOnly: true, voices: [{id: "Cherry", language: "multi", languages: ["zh-CN", "en-US"], service: "backend"}]});
   }
   /* Functionality: Subscribe. Inputs: Listener. Outputs: Unsubscribe.
    * Logic: Local set. Constraints: No implicit replay. */
@@ -92,14 +94,14 @@ class Speech {
     assert.equal(this.current, null);
     if (this.refusal) return {accepted: false, reason: this.refusal};
     const id = ++this.sequence;
-    this.current = {id, text, options, started: false}; this.lastRequest = {id, ...options};
+    this.current = {id, text, options, started: false}; this.lastRequest = {id, ...options, service: "backend"};
     this.requests.push(this.current); this.emit("submitted");
     if (this.synchronous) this.start();
     if (this.synchronous === "end") this.end();
     if (this.synchronous === "error") this.error();
     return {accepted: true, last_request: {id}};
   }
-  /* Functionality: Start current utterance. Inputs: Current. Outputs: Native-style event.
+  /* Functionality: Start current utterance. Inputs: Current. Outputs: PCM-start event.
    * Logic: Mark before dispatch. Constraints: Not audible proof. */
   start() { this.current.started = true; this.emit("start"); }
   /* Functionality: Complete current utterance. Inputs: Current. Outputs: End event.
@@ -184,7 +186,7 @@ function fixture(enable = true) {
   const clock = new Clock(), speech = new Speech(clock), vibration = new Vibration(clock), events = [];
   const manager = new AssistGuidanceManager({speech, vibration, now: clock.now, epochNow: clock.epochNow,
     setTimer: clock.setTimer, clearTimer: clock.clearTimer});
-  manager.subscribe(event => events.push(event)); manager.configure({voiceId: "local-zh", language: "zh-CN"});
+  manager.subscribe(event => events.push(event)); manager.configure({voiceId: "Cherry", language: "zh-CN"});
   if (enable) { manager.setRiskEnabled(true); manager.setNavigationEnabled(true); }
   let frame = 0;
   return {clock, speech, vibration, manager, events,
@@ -214,6 +216,44 @@ test("navigation works alone and completed same-step GPS never repeats", functio
   const f = fixture(); f.navigation(); assert.equal(f.speech.requests[0].text, navigationSpeechText(f.manager.latestNavigation, "zh-CN"));
   f.speech.start(); f.speech.end(); f.clock.advance(200); f.navigation(); assert.equal(f.speech.requests.length, 1);
   assert.equal(f.vibration.requests.length, 0); f.manager.dispose();
+});
+
+/* Functionality: Verify complete FIFO assistant speech and driver-sized text segmentation.
+ * Inputs: Two queued replies, one longer than the native utterance limit. Outputs: Ordered owned requests.
+ * Logic: Complete each simulated native utterance, then concatenate the long reply's submitted parts.
+ * Constraints: Fake driver events verify scheduling only; they do not prove browser audio is audible. */
+test("live assistant replies queue in order and long text is spoken without truncation", function testAssistantReplyQueue() {
+  const f = fixture(), longReply = "甲".repeat(MAX_TEXT_LENGTH - 5) + "。后半段也必须完整播报。";
+  f.manager.enqueueAssistantReply(longReply); f.manager.enqueueAssistantReply("第二条助手回复。");
+  const parts = [];
+  while (f.manager.describe().queued_assistant_replies) {
+    const request = f.speech.current;
+    assert.ok(request, "the next queued assistant part should own the speech driver");
+    assert.equal(request.options.voice_id, "Cherry");
+    assert.equal(request.options.language, "auto");
+    parts.push(request.text); f.speech.start(); f.speech.end();
+  }
+  assert.ok(parts.slice(0, -1).every(part => [...part].length <= MAX_TEXT_LENGTH));
+  assert.equal(parts.slice(0, -1).join(""), longReply);
+  assert.equal(parts.at(-1), "第二条助手回复。");
+  assert.equal(f.manager.describe().queued_assistant_replies, 0);
+  f.manager.dispose();
+});
+
+/* Functionality: Verify assistant priority against route guidance and risk output.
+ * Inputs: Synthetic active route, assistant reply and risk source. Outputs: Owned priority transitions.
+ * Logic: Assistant preempts navigation; required risk preempts the reply; route guidance resumes last.
+ * Constraints: No GPS, camera, algorithm execution, physical output or device permission is exercised. */
+test("risk preempts a live assistant reply and route guidance resumes after both", function testAssistantReplyPriority() {
+  const f = fixture(); f.navigation(); f.manager.enqueueAssistantReply("正在测试的助手回复。");
+  assert.equal(f.speech.current.text, "正在测试的助手回复。");
+  f.speech.start(); f.risk();
+  assert.equal(f.speech.current.text, videoAlertText(box(), "zh-CN"));
+  f.speech.start(); f.risk([]); f.speech.end();
+  assert.equal(f.speech.current.text, "正在测试的助手回复。");
+  f.speech.start(); f.speech.end();
+  assert.equal(f.speech.current.text, navigationSpeechText(f.manager.latestNavigation, "zh-CN"));
+  f.manager.dispose();
 });
 
 // Functionality: Check risk-only output; Inputs: Required box; Outputs: Existing text/pattern; Logic: No nav prerequisite; Constraints: No scoring change.
@@ -358,12 +398,18 @@ test("manual cancellation pauses speech without silently replaying either source
   f.manager.resume("speech"); assert.equal(f.manager.active.speech.kind, "risk"); f.manager.dispose();
 });
 
-// Functionality: Enforce explicit local voice; Inputs: Missing/remote/wrong language; Outputs: No speech; Logic: Native identity validation; Constraints: No replacement.
-test("unavailable remote and wrong-language voices cannot be substituted", function testVoice() {
-  for (const voices of [[], [{id: "local-zh", language: "zh-CN", local_service: false}], [{id: "local-zh", language: "en-US", local_service: true}]]) {
+// Functionality: Enforce the backend-only assist voice; Inputs: Missing/non-backend/wrong-language inventory; Outputs: No speech; Logic: Exact backend identity; Constraints: No local fallback.
+test("missing and invalid backend voices cannot trigger local speech", function testVoice() {
+  for (const voices of [[],
+    [{id: "Cherry", language: "multi", languages: ["zh-CN", "en-US"], service: "native"}],
+    [{id: "Cherry", language: "multi", languages: ["en-US"], service: "backend"}]]) {
     const f = fixture(); f.speech.voices = voices; f.navigation(); f.risk();
     assert.equal(f.speech.requests.length, 0); assert.equal(f.manager.paused.speech, true); f.manager.dispose();
   }
+  const disabledBackend = fixture(); disabledBackend.speech.backendOnly = false;
+  disabledBackend.navigation(); disabledBackend.risk();
+  assert.equal(disabledBackend.speech.requests.length, 0); assert.equal(disabledBackend.manager.paused.speech, true);
+  disabledBackend.manager.dispose();
 });
 
 // Functionality: Isolate tracker identities; Inputs: Same track after epoch reset; Outputs: Immediate new alert; Logic: History reset; Constraints: No algorithm mutation.

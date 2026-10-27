@@ -1,16 +1,19 @@
 """Responsibilities: Admit public guest traffic through one explicit HTTPS relay around the
 unchanged local assist application.
-Implementation: Loopback peer, exact Host/Origin/path gates; canonical internal headers preserve
-existing Web/GPU checks. Public responses retain /mvp/WSS, with no account authentication.
-Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol; core.ai_bridge/ai_mcp;
+Implementation: Expose only the product and diagnostic page entries, with their required resource
+and API paths, through exact Host/Origin/path gates; canonical headers preserve Web/GPU checks.
+Public responses retain /mvp/WSS, with no account authentication.
+Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol;
+core.ai_bridge/ai_mcp/agent.tts;
 deployment reverse SSH and Nginx terminate public TLS without exposing the worker or MCP.
 Declaration Index: mobile_origin; reject; MobileApplication; MobileApplication.__init__;
 MobileApplication.__call__; MobileApplication.public_path; MobileApplication.forward;
 MobileApplication.forward.public_send.
 Variable Index: MOUNT — fixed public /mvp prefix; HTTP_METHODS — exact public endpoint methods;
-WS_PATHS — exact control, assistant, and local-detection sockets; STRIPPED_HEADERS — proxy/relay
-headers never trusted downstream; logger — body-free admission diagnostics. Public origin is an
-explicit routing boundary, not user identity. No MCP/admin or general API route is exposed.
+WS_PATHS — exact control, assistant, local-detection, echo, and backend speech sockets;
+STRIPPED_HEADERS — proxy/relay headers never trusted downstream; logger — body-free admission
+diagnostics. Public origin is an explicit routing boundary, not user identity. No MCP/admin or
+general API route is exposed.
 """
 
 import json
@@ -22,14 +25,15 @@ from .protocol import is_loopback, web_origins
 
 MOUNT = "/mvp"
 HTTP_METHODS = {
-    "/": frozenset({"GET", "HEAD"}),
     "/maps/": frozenset({"GET", "HEAD"}),
     "/maps/test": frozenset({"GET", "HEAD"}),
     "/maps/config/": frozenset({"GET", "HEAD"}),
     "/maps/route/": frozenset({"POST"}),
     "/integration/status/": frozenset({"GET"}),
 }
-WS_PATHS = frozenset({"/ws/control/", "/ws/agent/", "/ws/detect/local/"})
+WS_PATHS = frozenset(
+    {"/ws/control/", "/ws/agent/", "/ws/detect/local/", "/ws/echo/", "/ws/tts/"}
+)
 STRIPPED_HEADERS = frozenset(
     {
         b"host",
@@ -118,8 +122,9 @@ class MobileApplication:
     """Functionality: Isolate one public mobile relay from original localhost capabilities.
     Logic: validate original peer/headers before mapping admitted public traffic to canonical local
     inputs. Same process/hub remains available to the computer's original local MCP client.
-    Constraints: one worker and proxy-stripped paths; no public MCP/admin/general API routes,
-    account authentication, trusted forwarded headers, algorithm changes or extra controllers.
+    Constraints: one worker and proxy-stripped path contract; no public MCP/admin/general API
+    routes, account authentication, trusted forwarded headers, algorithm changes or extra
+    controllers.
     """
 
     def __init__(self, application, *, public_origin=None):
@@ -184,8 +189,8 @@ class MobileApplication:
     def public_path(self, path, kind):
         """Functionality: Resolve exact allowed public endpoint methods.
         Inputs: already stripped decoded path and protocol. Outputs: permitted method set or None.
-        Logic: three exact browser WS paths and fixed HTTP routes; asset serving retains assist's
-        exact allowlist.
+        Logic: five exact browser WS paths and fixed HTTP routes; the anonymous diagnostic echo
+        path retains the original handler's bounds; asset serving retains assist's exact allowlist.
         Constraints: prefixed/double-prefixed paths, traversal, empty segments and backslashes
         rejected;
         this layer never invents an asset filename or delegates unrelated software routes.

@@ -1,8 +1,9 @@
 """Responsibilities: Validate and measure the current ordered binary live protocol.
-Implementation: Exact model/JPEG/box validation; explicitly qualified precision when supplied;
+Implementation: Selected native model/JPEG/box validation, including merged pedestrian lights;
+explicitly qualified original-model precision when supplied;
 bounded eight-slot pacing and full-result timings, plus optional provider/relay stage observations.
 Original FP32 control and existing FPS/latency acceptance remain unchanged.
-Related Modules: realtime.protocol; core.detector;
+Related Modules: realtime.protocol; core.detector/detection_model;
 tools.benchmark_live_remote/benchmark_zerogpu_live.
 Declaration Index: validate; stream; stream.capture; stream.receive.
 Variable Index: ROOT — backend; RECEIVE_TIMEOUT_SECONDS — steady failure budget;
@@ -27,22 +28,39 @@ RECEIVE_TIMEOUT_SECONDS = 10
 
 def validate(metadata, jpeg, manifest, plan=None):
     """Functionality: Verify actual returned model identity, JPEG dimensions and finite boxes.
-    Inputs: response metadata/JPEG, original manifest, optional explicitly qualified plan.
+    Inputs: metadata/JPEG, selected native manifest and optional original-model qualified plan.
     Outputs: no value or ValueError. Logic: exact model/settings/source and declared precision/
-    backend; original JPEG decoder and box boundaries. No plan means the original FP32 control.
+    backend; original JPEG decoder and box boundaries. No plan means native FP32.
     Constraints: a supplied plan must pass complete COCO metadata validation; this frame check
     does not itself measure mAP. Checksum/order already checked by protocol; no camera assertion.
     """
+    from core.detection_model import light_rule, validate_manifest
+    from core.detector import CLASS_CONF, PEDESTRIAN_LIGHT
+
+    validate_manifest(manifest)
+    classes = len(manifest["names"])
+    rule = light_rule(manifest)
+    thresholds = dict(CLASS_CONF)
+    if rule:
+        thresholds.update(dict.fromkeys(rule["classes"], rule["class_confidence"]))
+        thresholds[PEDESTRIAN_LIGHT] = rule["class_confidence"]
+        if (metadata.get("light_model") != manifest["model"]
+                or metadata.get("light_green_threshold") != rule["green_threshold"]):
+            raise ValueError("Pedestrian-light manifest identity mismatch")
+    if metadata.get("class_confidence_thresholds") != thresholds:
+        raise ValueError("Declared class thresholds differ from the selected model")
     expected = {
         "schema_version": 1,
-        "model": "yolo26n",
+        "model": manifest["model"],
         "backend": "PyTorch resident CUDA",
         "precision": "FP32",
-        "classes": 80,
+        "classes": classes,
         "confidence_threshold": 0.25,
         "source_sha256": manifest["source_sha256"],
     }
     if plan is not None:
+        if manifest["model"] != "yolo26n":
+            raise ValueError("The original acceleration plan does not qualify walk weights")
         validate_plan(plan, manifest)
         expected.update({key: plan[key] for key in ("precision", "backend")})
         expected["output_precision"] = "FP32"
@@ -56,12 +74,18 @@ def validate(metadata, jpeg, manifest, plan=None):
         raise ValueError("Resident count mismatch")
     for box in boxes:
         cls, score, xyxy = box["class_id"], box["score"], box["xyxy"]
+        signal = rule is not None and box["label"] == PEDESTRIAN_LIGHT
+        label_valid = (signal and cls == rule["class_id"]
+                       and box.get("light_state") in {"red", "green", "unknown"}) or (
+                           type(cls) is int and 0 <= cls < classes
+                           and box["label"] == manifest["names"][cls]
+                           and (rule is None or box["label"] not in rule["classes"]))
         if (
             type(cls) is not int
-            or not 0 <= cls < 80
-            or box["label"] != manifest["names"][cls]
+            or not 0 <= cls < classes
+            or not label_valid
             or not math.isfinite(score)
-            or not 0.25 <= score <= 1
+            or not thresholds.get(box["label"], 0.25) <= score <= 1
             or len(xyxy) != 4
             or not all(math.isfinite(value) for value in xyxy)
             or not 0 <= xyxy[0] < xyxy[2] <= image.width

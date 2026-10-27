@@ -146,6 +146,35 @@ manifest fail configuration validation. PRF2 freezes the configuration at startu
 health response and frame metadata expose `depth_backend`; health also lists loaded engine tensor
 shapes. Detection's existing `backend` field still describes detection, not the separate depth model.
 
+### Detection model and ROI fusion
+
+The independent `PRS_DETECTION_MODEL` selects `yolo26n` (default) or `yolo26n-walk` (87 classes).
+PRF2 freezes its selected checkpoint and manifest before the first handshake; health checks and
+lazy loading use that same selection. The launcher verifies the selected checkpoint, and
+`tools.check_local_mvp` reads the same explicit model setting. See [WALK-MODEL.md](WALK-MODEL.md)
+for the additional classes and pedestrian-light decision rule. Depth engines depend on the depth
+checkpoint, so selecting the walk detector does not require rebuilding the unchanged depth model.
+
+`PRS_DEPTH_FUSION=gpu` preserves the original per-object GPU reduction. Explicit
+`PRS_DEPTH_FUSION=host` selects the existing FP32 host partition implementation in PRF2 mode A:
+the full aligned depth plane transfers once, then each ROI uses the same bounds, finite-positive
+filter and central order statistics. Transfer and partition time remain inside fusion/frame timing.
+This does not move model forward to CPU or lower depth frequency. Mode B/C plus host fusion is
+rejected at startup, rather than silently using another fusion policy. This setting is specific to
+the PRF2 worker; the independent resident-v1/HF paths keep their own existing configuration.
+
+```powershell
+# Optional 87-class local PRF2 worker, with the unchanged TensorRT depth engine bundle.
+$env:PRS_DETECTION_MODEL = 'yolo26n-walk'
+$env:PRS_DEPTH_BACKEND = 'tensorrt'
+$env:PRS_DEPTH_ENGINE_MANIFEST = 'models/experiments/depth-serving-fp32/manifest.json'
+$env:PRS_DEPTH_FUSION = 'host'
+```
+
+Hello, health and each frame identify `depth_fusion`; health also names the detector and class
+count. Unset `PRS_DEPTH_FUSION` defaults to `gpu`; unset `PRS_DETECTION_MODEL` defaults to the
+original COCO model. The original HF acceleration plan does not qualify the walk checkpoint.
+
 `DepthEstimator` uses `AcceleratedDepthPredictor` to replace only the depth forward call. Image
 preparation, letterbox removal, calibration, depth alignment, distance fusion, tracking and risk
 rules retain their native implementation. The prebuilt engines do not run the native Torch depth
@@ -189,6 +218,17 @@ prediction timing. Object numeric differences are reported separately from struc
 decision differences; JPEG differences remain visible. `completed` means all frames were processed,
 not that outputs are bitwise identical or truth-based quality is accepted. Processing rate derived
 from mean offline frame latency is not camera FPS or browser end-to-end throughput.
+
+Use `--detection-model yolo26n` or `--detection-model yolo26n-walk` to select independent comparison
+groups; changing models invalidates a reference. `--fusion gpu|host` selects only ROI reduction.
+For a TensorRT fusion comparison, use `--backend tensorrt` and the same manifest in all three
+processes: GPU-before, host and GPU-after. A reference can use either explicitly selected depth
+backend and always requires a fresh private cache. Source/checkpoint identity and every source
+frame remain fixed; no speedup is inferred by comparing the two detector checkpoints.
+
+The [walk/fusion summary](benchmarks/2026-10-27/walk-fusion/summary.json) retains same-model
+whole-video controls, exact map/object/JPEG comparisons, per-phase times and actual service probes.
+These street videos do not replace the walk model's held-out detection/colour quality evaluation.
 
 The [integration summary](benchmarks/2026-10-26/depth-integration/summary.json) links complete video
 controls, service probes and numerical differences. Read it together with the

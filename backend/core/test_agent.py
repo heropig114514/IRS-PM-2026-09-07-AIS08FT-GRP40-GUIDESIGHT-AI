@@ -3,13 +3,21 @@ Implementation: Real in-process MCP; mock only Qwen/browser/network boundaries e
 Related Modules: core.agent.*, frontend/tools/check_agent_browser.mjs.
 Declaration Index: AgentTests; AgentTests.setUp; AgentTests.test_skill_catalog_and_paths;
 AgentTests.test_mcp_schema_binding; AgentTests.test_runtime_uses_evidence_and_memory;
-AgentTests.test_tool_failure_stops_without_retry; AgentTests.test_cancel_and_deduplicate;
+AgentTests.test_tool_failure_stops_without_retry;
+AgentTests.test_service_error_reaches_agent_as_structured_evidence;
+AgentTests.test_failed_tool_is_not_replaced_when_model_fails;
+AgentTests.test_route_error_is_explained;
+AgentTests.test_english_failure_explanation_ignores_chinese_history;
+AgentTests.test_tool_error_normalization; AgentTests.test_tool_error_diagnostic_allowlist;
+AgentTests.test_empty_failure_explanation_is_not_replaced;
+AgentTests.test_declined_action_blocks_batched_mutations; AgentTests.test_cancel_and_deduplicate;
 AgentTests.test_input_validation; AgentTests.test_audio_validation;
 AgentTests.test_provider_contract; AgentTests.test_provider_contract.handler;
 AgentTests.test_geocoder_contract; AgentTests.test_start_observes_actual_state;
 AgentTests.test_skill_reference_context; AgentTests.test_geocoder_country_override;
 AgentTests.test_geocoder_contract.handler; AgentTests.test_geocoder_rejects_unknown_country;
 AgentTests.test_cancel_before_start; AgentTests.test_socket_binding_and_heartbeat;
+AgentTests.test_socket_enforces_explicit_idle_session_capacity;
 AgentTests.test_socket_rejects_wrong_owner;
 tool_message; wav_input.
 Variable Index: None; test fixtures are call-local and never access physical devices/services.
@@ -23,6 +31,7 @@ import tempfile
 import uuid
 import wave
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import httpx2
@@ -32,7 +41,12 @@ from mcp.client import Client
 
 from core.agent.places import search_context, search_places
 from core.agent.provider import AgentError, completion, transcribe
-from core.agent.runtime import Conversation, conversations
+from core.agent.runtime import (
+    Conversation,
+    conversations,
+    tool_exception,
+    tool_failure,
+)
 from core.agent.skills import catalog, fingerprint, instructions, read_skill
 from core.agent.tools import BrowserTools, create_server
 from core.agent.transport import agent_socket, handle_message
@@ -185,25 +199,277 @@ class AgentTests(SimpleTestCase):
 
     async def test_tool_failure_stops_without_retry(self):
         """Functionality: Preserve unknown completion on transport failure.
-        Inputs: one scripted mutation and failing browser; Outputs: terminal error, no replay.
-        Logic: Real MCP error stops runtime; Constraints: fake transport failure only.
+        Inputs: one scripted mutation and failing browser; Outputs: agent-authored explanation,
+        no replay.
+        Logic: Real MCP error becomes bounded evidence for one final model response.
+        Constraints: fake transport failure only; no provider quality claim.
         """
         self.router.return_value = tool_message("route_intent", {
-            "route": "system", "intent_ids": ["camera.start"], "language": "zh",
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
         })
         conversation = Conversation("owned-tab", "token")
         with patch(
             "core.agent.runtime.completion", AsyncMock(side_effect=[
                 tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
                 tool_message("camera_start"),
+                {"role": "assistant", "content":
+                 "I couldn't confirm the camera started; its state is unknown."},
             ])
         ) as model:
             with patch("core.ai_mcp.browser_call", AsyncMock(side_effect=TimeoutError)) as browser:
-                await conversation.run("request", "开启摄像头", None)
-        self.assertEqual(model.await_count, 3)
+                await conversation.run("request", "Start my camera", None)
+        self.assertEqual(model.await_count, 4)
         self.assertEqual(browser.await_count, 1)
-        self.assertTrue(any(event.get("code") == "tool_failed" for event in conversation.events))
+        results = [event["result"] for event in conversation.events
+                   if event["type"] == "tool_result"]
+        self.assertEqual(results[-1]["completion"], "unknown")
+        self.assertEqual(results[-1]["reason"], "operation_timeout")
+        replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
+        self.assertEqual(replies, ["I couldn't confirm the camera started; its state is unknown."])
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
         self.assertEqual(len(conversation.turns), 1)
+
+    async def test_route_error_is_explained(self):
+        """Functionality: Keep raw MCP exception text out of the model explanation context.
+        Inputs: Camera navigation request and a synthetic JSON-shaped relay exception.
+        Outputs: Normalized failure and exception class reach the model, without raw JSON.
+        Logic: Run actual in-process MCP encoding and inspect the next completion context.
+        Constraints: Synthetic relay failure; does not exercise the remote proxy.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            tool_message("ui_navigate", {"page": "camera"}),
+            {"role": "assistant", "content": "The camera page is unavailable in this app."},
+        ])) as model:
+            with patch("core.ai_mcp.browser_call", AsyncMock(
+                side_effect=ValueError('{"code":"not_found"}')
+            )):
+                await conversation.run("request", "Open my camera", None)
+        messages = model.await_args_list[3].args[0]
+        tool_result = next(message["content"] for message in reversed(messages)
+                           if message.get("role") == "tool")
+        self.assertIn('"reason": "operation_failed"', tool_result)
+        self.assertIn('"completion": "unknown"', tool_result)
+        self.assertIn('"error_type": "ValueError"', tool_result)
+        self.assertNotIn('"code":"not_found"', tool_result)
+        self.assertEqual(conversation.events[-2]["type"], "reply")
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+    async def test_english_failure_explanation_ignores_chinese_history(self):
+        """Functionality: Keep a failed action explanation aligned with the current English turn.
+        Inputs: Chinese history, an English navigation request and a failed navigation tool.
+        Outputs: Language policy in the model context and one bounded failure response. Logic:
+        Exercise real MCP dispatch with synthetic classifier/provider and relay boundaries.
+        Constraints: Verifies prompt wiring, not live provider language quality or public routing.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["navigation.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        conversation.turns = [[
+            {"role": "user", "content": "带我去附近的超市。"},
+            {"role": "assistant", "content": "正在查找附近的超市。"},
+        ]]
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "navigation"}),
+            tool_message("maps_status"),
+            {"role": "assistant", "content": "The maps page is not ready."},
+        ])) as model:
+            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "page": "maps", "navigation": {"route": None}, "destination": None,
+            })) as browser:
+                await conversation.run(
+                    "request", "I want to go to the nearest supermarket now.", None,
+                )
+        self.assertEqual(model.await_count, 4)
+        self.assertEqual(browser.await_count, 1)
+        final_system_messages = [
+            item["content"] for item in model.await_args_list[3].args[0]
+            if item.get("role") == "system"
+        ]
+        self.assertTrue(any("Required response language for this turn: English (en)" in item
+                            and "Respond only in the required language" in item
+                            for item in final_system_messages))
+        self.assertTrue(any("tool output" in item and "page/device locale" in item
+                            for item in final_system_messages))
+        self.assertEqual(
+            next(event["language"] for event in conversation.events if event["type"] == "intent"),
+            "en",
+        )
+        self.assertEqual(
+            [event["name"] for event in conversation.events if event["type"] == "tool_start"],
+            ["discover_tools", "read_skill", "maps_status"],
+        )
+
+    async def test_service_error_reaches_agent_as_structured_evidence(self):
+        """Functionality: Preserve safe service diagnostics for agent reasoning.
+        Inputs: Navigation tool failure with a stable code, HTTP status and trusted diagnostic.
+        Outputs: The next model request receives those fields and authors the dialogue reply.
+        Logic: Exercise the real MCP adapter and runtime with a synthetic service exception.
+        Constraints: No live map-provider call or model-quality claim.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["navigation.search"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "navigation"}),
+            tool_message("places_categories"),
+            {"role": "assistant", "content": "The map provider rejected this request (HTTP 403)."},
+        ])) as model:
+            with patch("core.agent.tools.poi.categories", AsyncMock(side_effect=AgentError(
+                "ors_authentication_failed", "The map provider rejected the configured credential.",
+                http_status=403,
+            ))):
+                await conversation.run("request", "Find nearby supermarkets", None)
+        tool_result = next(
+            message["content"] for message in reversed(model.await_args_list[3].args[0])
+            if message.get("role") == "tool"
+        )
+        evidence = json.loads(tool_result)
+        self.assertEqual(evidence["error_code"], "ors_authentication_failed")
+        self.assertEqual(evidence["http_status"], 403)
+        self.assertEqual(
+            evidence["diagnostic"], "The map provider rejected the configured credential."
+        )
+        self.assertEqual(
+            [event["text"] for event in conversation.events if event["type"] == "reply"],
+            ["The map provider rejected this request (HTTP 403)."],
+        )
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+    async def test_failed_tool_is_not_replaced_when_model_fails(self):
+        """Functionality: Do not fabricate dialogue when agent explanation generation fails.
+        Inputs: One tool timeout followed by an unavailable explanation model.
+        Outputs: Typed status event, preserved evidence and one mutation dispatch.
+        Logic: Exercise the structured timeout adapter and the runtime error boundary.
+        Constraints: Synthetic provider/transport errors; no model-quality claim.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            tool_message("camera_start"), RuntimeError("provider unavailable"),
+        ])):
+            with patch("core.ai_mcp.browser_call", AsyncMock(side_effect=TimeoutError)) as browser:
+                await conversation.run("request", "Start my camera", None)
+        browser.assert_awaited_once()
+        replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
+        self.assertEqual(replies, [])
+        errors = [event for event in conversation.events if event["type"] == "error"]
+        self.assertEqual([event["code"] for event in errors], ["agent_explanation_unavailable"])
+        evidence = json.dumps(conversation.turns[-1], ensure_ascii=False)
+        self.assertIn("operation_timeout", evidence)
+        self.assertNotIn("provider unavailable", evidence)
+
+    def test_tool_error_normalization(self):
+        """Functionality: Map explicit MCP error codes while withholding raw payloads.
+        Inputs: Small synthetic CallToolResult content objects.
+        Outputs: Route-unavailable failure with a known failed completion.
+        Logic: Exercise the production normalizer without an SDK that wraps exception text.
+        Constraints: Does not establish browser or public-relay error wording.
+        """
+        result = SimpleNamespace(content=[SimpleNamespace(text='{"code":"not_found"}')])
+        normalized = tool_failure("ui_navigate", result)
+        self.assertEqual(normalized, {
+            "outcome": "failed", "tool": "ui_navigate", "reason": "route_unavailable",
+            "completion": "failed", "error_code": "not_found",
+        })
+        read_error = SimpleNamespace(content=[SimpleNamespace(text="internal error")])
+        self.assertEqual(tool_failure("camera_status", read_error)["completion"], "not_started")
+        timeout = tool_exception("camera_start", TimeoutError("sensitive detail"))
+        self.assertEqual(timeout, {
+            "outcome": "failed", "tool": "camera_start", "reason": "operation_timeout",
+            "completion": "unknown", "error_type": "TimeoutError",
+        })
+        self.assertEqual(
+            tool_exception("camera_status", RuntimeError("sensitive detail"))["completion"],
+            "not_started",
+        )
+
+    def test_tool_error_diagnostic_allowlist(self):
+        """Functionality: Preserve service code/status without forwarding raw error payload text.
+        Inputs: Synthetic MCP JSON with a known code, HTTP status and sensitive detail field.
+        Outputs: Bounded normalized evidence with free-form payload content removed.
+        Logic: Exercise the runtime parser against an error result from a tool boundary.
+        Constraints: No live provider call or diagnosis-quality assertion.
+        """
+        result = SimpleNamespace(content=[SimpleNamespace(text=json.dumps({
+            "code": "geocoder_http_error", "status": 429,
+            "error_type": "HTTPStatusError",
+            "detail": "credential-value-must-not-be-forwarded",
+        }))])
+        normalized = tool_failure("places_search", result)
+        self.assertEqual(normalized["reason"], "geocoder_http_error")
+        self.assertEqual(normalized["error_code"], "geocoder_http_error")
+        self.assertEqual(normalized["http_status"], 429)
+        self.assertEqual(normalized["error_type"], "HTTPStatusError")
+        self.assertNotIn("detail", normalized)
+        self.assertNotIn("credential-value-must-not-be-forwarded", json.dumps(normalized))
+
+    async def test_empty_failure_explanation_is_not_replaced(self):
+        """Functionality: Keep an empty model explanation out of assistant dialogue.
+        Inputs: Camera request, failed camera tool and blank final model response.
+        Outputs: Explanation-unavailable event and no fixed reply or extra tool dispatch.
+        Logic: Exercise the normal failure-evidence and error-status path.
+        Constraints: Synthetic provider/transport state; no camera permission is requested.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            tool_message("camera_start"), {"role": "assistant", "content": ""},
+        ])):
+            with patch("core.ai_mcp.browser_call", AsyncMock(side_effect=TimeoutError)) as browser:
+                await conversation.run("request", "Start my camera", None)
+        browser.assert_awaited_once()
+        replies = [event["text"] for event in conversation.events if event["type"] == "reply"]
+        self.assertEqual(replies, [])
+        self.assertIn("agent_explanation_unavailable", [
+            event.get("code") for event in conversation.events if event["type"] == "error"
+        ])
+
+    async def test_declined_action_blocks_batched_mutations(self):
+        """Functionality: Stop every later action in a model batch after a negative outcome.
+        Inputs: Camera start/stop tool batch and an explicit browser refusal.
+        Outputs: One browser call plus a not_executed result for the batched stop.
+        Logic: Preserve MCP call/result pairing while ending the action phase immediately.
+        Constraints: Synthetic page state; no physical camera is requested.
+        """
+        self.router.return_value = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["camera.start"], "language": "en",
+        })
+        batch = tool_message("camera_start")
+        batch["tool_calls"].append({
+            "id": uuid.uuid4().hex, "type": "function",
+            "function": {"name": "camera_stop", "arguments": "{}"},
+        })
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
+            tool_message("discover_tools"), tool_message("read_skill", {"name": "camera"}),
+            batch, {"role": "assistant", "content": "The browser could not find a camera."},
+        ])) as model:
+            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "available": True, "accepted": False, "reason": "camera_not_found",
+                "state": "stopped",
+            })) as browser:
+                await conversation.run("request", "Start my camera", None)
+        browser.assert_awaited_once()
+        self.assertEqual(browser.await_args.args[1], "camera_start")
+        final_context = model.await_args_list[3].args[0]
+        paired_results = [message for message in final_context if message.get("role") == "tool"]
+        self.assertEqual(json.loads(paired_results[-1]["content"]), {
+            "outcome": "not_executed", "reason": "previous_action_failed",
+        })
+        self.assertEqual(conversation.events[-2]["type"], "reply")
 
     async def test_cancel_and_deduplicate(self):
         """Functionality: Prevent duplicate/overlapping tasks and cancel future scheduling.
@@ -464,6 +730,77 @@ class AgentTests(SimpleTestCase):
                 )
                 await connection.send_input({"type": "websocket.disconnect"})
                 await connection.wait()
+
+    async def test_socket_enforces_explicit_idle_session_capacity(self):
+        """Functionality: Admit retained sessions to the configured limit and reject overflow.
+        Inputs: Sixty-five distinct authenticated ASGI tabs, disconnected between admissions.
+        Outputs: Sixty-four ready sessions then one typed capacity rejection; Logic: mirror the
+        30-minute idle retention boundary without removing sessions to make room.
+        Constraints: Control ownership is mocked; no provider, proxy or external network is used.
+        """
+        tokens = {f"capacity-tab-{index}": str(uuid.uuid4()) for index in range(65)}
+        scope = {
+            "type": "websocket",
+            "path": "/ws/agent/",
+            "headers": [(b"origin", b"http://127.0.0.1:8766"), (b"host", b"127.0.0.1:8766")],
+        }
+        with patch.dict(conversations, {}, clear=True):
+            with patch(
+                "core.agent.transport.hub.command",
+                AsyncMock(side_effect=lambda session_id, _command: {"token": tokens[session_id]}),
+            ):
+                for session_id, token in list(tokens.items())[:64]:
+                    connection = ApplicationCommunicator(agent_socket, scope)
+                    await connection.send_input({"type": "websocket.connect"})
+                    self.assertEqual(
+                        (await connection.receive_output())["type"], "websocket.accept"
+                    )
+                    await connection.send_input(
+                        {
+                            "type": "websocket.receive",
+                            "text": json.dumps(
+                                {"type": "hello", "session_id": session_id, "token": token}
+                            ),
+                        }
+                    )
+                    ready = json.loads((await connection.receive_output())["text"])
+                    self.assertEqual(ready, {"type": "ready", "busy": False, "events": []})
+                    await connection.send_input({"type": "websocket.disconnect"})
+                    await connection.wait()
+                self.assertEqual(len(conversations), 64)
+                overflow_session = "capacity-tab-64"
+                connection = ApplicationCommunicator(agent_socket, scope)
+                await connection.send_input({"type": "websocket.connect"})
+                self.assertEqual((await connection.receive_output())["type"], "websocket.accept")
+                with self.assertLogs("core.agent.transport", level="WARNING") as captured:
+                    await connection.send_input(
+                        {
+                            "type": "websocket.receive",
+                            "text": json.dumps(
+                                {
+                                    "type": "hello",
+                                    "session_id": overflow_session,
+                                    "token": tokens[overflow_session],
+                                }
+                            ),
+                        }
+                    )
+                    rejected = json.loads((await connection.receive_output())["text"])
+                self.assertEqual(
+                    rejected,
+                    {
+                        "type": "rejected",
+                        "code": "agent_capacity",
+                        "detail": (
+                            "The assistant session capacity is currently reached. "
+                            "Refresh the page later."
+                        ),
+                    },
+                )
+                self.assertIn("retained=64 limit=64", captured.output[0])
+                self.assertEqual((await connection.receive_output())["type"], "websocket.close")
+                await connection.wait()
+                self.assertEqual(len(conversations), 64)
 
     async def test_socket_rejects_wrong_owner(self):
         """Functionality: Refuse forged origin and mismatched tab token.

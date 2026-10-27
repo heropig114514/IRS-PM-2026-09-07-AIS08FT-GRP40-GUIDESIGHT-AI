@@ -11,10 +11,11 @@
  * testResidentAdmission; testResidentIdentity; testResidentWorkload; testResidentEnd; testResidentErrors;
  * testLocalHello; testLocalCapture; testLocalCorrelation; testDistanceModes; testDistanceModeFailures;
  * testProviderIsolation; testLocalContinuous; testSessionDurationAdmission;
- * testSessionDurationOptions; testHfDurationIsolation.
- * Variable Index: manifest/contract — original public model identity; plan — current deployment's
- * compute/quality contract for integration regression; residentContract — independent native identity;
- * localContract — independent local capability admission; JPEG — synthetic markers;
+ * testSessionDurationOptions; testHfDurationIsolation; testWalkModel; testWalkModelFailures;
+ * testWalkProviderBoundary.
+ * Variable Index: manifest/contract — original public model identity; walkManifest/walkContract —
+ * opt-in 87-class walking-aid identity; plan — deployment compute/quality contract;
+ * residentContract/localContract — independent native admissions; JPEG — synthetic markers;
  * duration options exercise explicit continuous-local admission with virtual timers, never actual long-running inference.
  */
 import assert from "node:assert/strict";
@@ -25,6 +26,7 @@ import {decodeResult, LiveDetectionClient} from "../live-detection-client.js";
 
 const manifest = JSON.parse(await readFile(new URL("../../backend/models/yolo26n.json", import.meta.url)));
 const plan = JSON.parse(await readFile(new URL("../../backend/models/inference-plan.json", import.meta.url)));
+const walkManifest = JSON.parse(await readFile(new URL("../../backend/models/yolo26n-walk.json", import.meta.url)));
 const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes: 80,
   backend: "PyTorch resident CUDA", output_precision: "FP32",
   validation: {images: 5000, replicates: 3, baseline_ap: 0.4, worst_ap: 0.395,
@@ -36,7 +38,8 @@ const residentContract = {...contract, protocol: "resident-v1", mode: "detection
   session_seconds: null, idle_seconds: 15, model_load_ms: 100};
 for (const key of ["validation", "cold_seconds", "steady_seconds"]) delete residentContract[key];
 const localContract = {...contract, provider: "local", protocol_version: 2, session_id: "1".repeat(32),
-  depth_model: "yolo26n-depth", depth_units: "m", tracking_model: "botsort", risk_model: "rules-v1",
+  depth_model: "yolo26n-depth", depth_units: "m", distance_mode: "depth", distance_units: "m",
+  depth_interval: 1, tracking_model: "botsort", risk_model: "rules-v1",
   capabilities: {detection: true, depth: true, tracking: true, risk: true}};
 delete localContract.validation;
 
@@ -104,7 +107,8 @@ test("distance strategies require explicit valid identity and selected cadence",
     distance_estimator: "pinhole-height-v1", distance_ms: 0.1};
   delete base.depth_model; delete base.depth_units; delete base.depth_ms;
   for (const changes of [{distance_mode: undefined}, {distance_mode: "unknown"},
-    {distance_estimator: undefined}, {distance_units: "cm"}, {distance_ms: -1}, {depth_model: "yolo26n-depth"}])
+    {distance_estimator: undefined}, {distance_units: "cm"}, {depth_interval: undefined},
+    {distance_ms: -1}, {depth_model: "yolo26n-depth"}])
     await assert.rejects(decodeResult(packet(0, {...base, ...changes}), 0, contract));
   const hello = {...localContract, distance_mode: "temporal_depth", distance_units: "m", depth_interval: 3};
   const temporal = {...riskMetadata(), provider: "local", session_id: hello.session_id,
@@ -119,7 +123,9 @@ test("distance strategies require explicit valid identity and selected cadence",
 test("local native hello is independent from the preserved HF COCO gate", async function testLocalHello() {
   const good = await admitted(fixture("local"), localContract); good.client.stop();
   for (const changes of [{provider: "hf"}, {protocol_version: 1}, {precision: "FP16"},
-    {validation: contract.validation}, {capabilities: {detection: true}}, {session_id: "wrong"}, {risk_model: undefined}]) {
+    {validation: contract.validation}, {capabilities: {detection: true}}, {session_id: "wrong"},
+    {risk_model: undefined}, {distance_mode: undefined}, {distance_units: undefined},
+    {depth_interval: undefined}, {depth_interval: 0}]) {
     const f = fixture("local"), waiting = assert.rejects(f.client.connect());
     f.socket.message(JSON.stringify({...localContract, ...changes})); await waiting;
     assert.equal(f.socket.sent.length, 0); assert.equal(f.state.errors.length, 1);
@@ -218,7 +224,7 @@ test("local responses bind the same session and exact source timestamp", async f
 });
 
 /** Functionality: Accept additive depth fields with finite meters or explicitly unavailable null.
- * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged legacy box.
+ * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged detection fields.
  * Logic: actual packet/hash/client validation. Constraints: synthetic data, no depth accuracy claim. */
 test("depth metadata accepts meters and null while preserving the existing box fields", async function testDepthResult() {
   for (const distance of [2.4, null]) {
@@ -247,9 +253,9 @@ test("depth metadata rejects invalid distances and mismatched box aliases", asyn
 });
 
 /** Functionality: Support300 full-precision fused detections within the coordinated256KiB limit.
- * Inputs: maximal count with legacy/canonical aliases. Outputs: complete result above64KiB.
+ * Inputs: maximal count with the complete detection field set. Outputs: complete result above64KiB.
  * Logic: use real JSON/header/SHA checks. Constraints: no network or browser rendering assertion. */
-test("depth packets carry 300 objects retaining legacy fields", async function testDepthCapacity() {
+test("depth packets carry 300 objects with the complete detection fields", async function testDepthCapacity() {
   const xyxy = [0.12345678901234, 0.23456789012345, 8.12345678901234, 9.23456789012345];
   const box = {class_id: 9, label: manifest.names[9], score: 0.9312345678901234, xyxy,
     class_name: manifest.names[9], confidence: 0.9312345678901234, bbox: xyxy, distance_m: 2.4};
@@ -284,6 +290,7 @@ function packet(index, overrides = {}, jpeg = JPEG) {
   const metadata = {schema_version: 1, index, model: "yolo26n", backend: "PyTorch resident CUDA",
     precision: "FP32", output_precision: "FP32", classes: 80,
     confidence_threshold: 0.25, source_sha256: manifest.source_sha256,
+    distance_mode: "depth", distance_units: "m", depth_interval: 1,
     width: 10, height: 10, count: 0, boxes: [], raw_sha256: "a".repeat(64),
     jpeg_sha256: createHash("sha256").update(jpeg).digest("hex"),
     inference_ms: 1, graph_setup_ms: 0, prepare_ms: 1, gpu_stage_ms: 1, render_ms: 1, server_ms: 3,
@@ -571,7 +578,7 @@ function riskMetadata() {
   return data;
 }
 
-/** Functionality: Preserve risk fields, unknown missing depth, and legacy packet acceptance.
+/** Functionality: Preserve risk fields, unknown missing depth, and the complete current packet contract.
  * Inputs: all five levels, finite long-horizon TTC, cached motion with no current depth.
  * Outputs: complete unmodified metadata. Logic: real decoder validation.
  * Constraints: no scoring or alert delivery in browser. */
@@ -671,7 +678,7 @@ test("tracking fields accept motion and unavailable depth or IDs", async functio
 
 /** Functionality: Reject malformed IDs/motion fields, duplicated identities and disabled CMC.
  * Inputs: independently corrupted box and tracker fields. Outputs: rejection before JPEG display.
- * Logic: additive contract boundaries checked without changing legacy packet acceptance.
+ * Logic: validate every current tracking field before display.
  * Constraints: does not compare state sign during hysteresis, since switching is intentionally delayed. */
 test("tracking rejects malformed or incomplete motion data", async function testTrackingFailures() {
   for (const changes of [{track_id: 0}, {track_id: -1}, {track_id: 1.5}, {track_id: 2 ** 53},
@@ -707,4 +714,75 @@ test("tracking supports 300 objects with complete motion fields", async function
   assert.ok(new DataView(input).getUint32(4) > 128 * 1024);
   const result = await decodeResult(input, 0, contract);
   assert.deepEqual(result.metadata.boxes, data.boxes);
+});
+
+const walkContract = {...localContract, model: "yolo26n-walk", classes: 87, names: walkManifest.names,
+  source_sha256: walkManifest.source_sha256};
+
+/** Functionality: Admit the opt-in walk model, its neutral pedestrian-light box and lowered class thresholds.
+ * Inputs: walk hello and results with a merged signal and a 0.12 traffic light. Outputs: decoded boxes.
+ * Logic: thresholds come from the result's declared class_confidence_thresholds (never above 0.25).
+ * Constraints: synthetic protocol fixtures; no colour accuracy is established here. */
+test("walk model admits 87 classes, pedestrian-light state and declared lower thresholds", async function testWalkModel() {
+  const value = await admitted(fixture("local"), walkContract);
+  assert.deepEqual(value.state.errors, []);
+  const signal = {class_id: 84, label: "pedestrian light", score: 0.07, xyxy: [1, 1, 3, 8],
+    light_state: "red", light_scores: {red: 0.07, green: 0, off: 0}};
+  const light = {class_id: 9, label: "traffic light", score: 0.13, xyxy: [4, 1, 6, 8]};
+  const pole = {class_id: 80, label: "pole", score: 0.6, xyxy: [7, 0, 9, 9]};
+  const thresholds = {"traffic light": 0.12, ped_red: 0.05, ped_green: 0.05, ped_off: 0.05, "pedestrian light": 0.05};
+  const base = riskMetadata();
+  const boxes = [signal, light, pole].map((box, index) => ({...base.boxes[0], ...box,
+    track_id: index + 1, class_name: box.label, confidence: box.score, bbox: box.xyxy}));
+  const result = await decodeResult(packet(0, {...base, model: "yolo26n-walk", classes: 87,
+    source_sha256: walkManifest.source_sha256, provider: "local", session_id: walkContract.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture",
+    class_confidence_thresholds: thresholds, count: 3, boxes}), 0, walkContract, {captureTimeS: 2});
+  assert.deepEqual(result.metadata.boxes.map(box => box.label), ["pedestrian light", "traffic light", "pole"]);
+  // The COCO model keeps working with its own declared traffic-light threshold.
+  const coco = await decodeResult(packet(0, {class_confidence_thresholds: {"traffic light": 0.12}, count: 1,
+    boxes: [light]}), 0, contract);
+  assert.equal(coco.metadata.boxes[0].score, 0.13);
+});
+
+/** Functionality: Reject forged model identity, signal labels outside the walk model and threshold abuse.
+ * Inputs: corrupted hello/result fixtures. Outputs: errors before display.
+ * Logic: one boundary per case. Constraints: no fallback to the COCO identity. */
+test("walk model rejects forged identities, labels and thresholds", async function testWalkModelFailures() {
+  const forged = fixture("local");
+  const connected = forged.client.connect();
+  forged.socket.message(JSON.stringify({...walkContract, names: manifest.names}));
+  await assert.rejects(connected);
+  const walkResult = {...riskMetadata(), model: "yolo26n-walk", classes: 87,
+    source_sha256: walkManifest.source_sha256, provider: "local", session_id: walkContract.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture"};
+  const signal = {class_id: 84, label: "pedestrian light", score: 0.07, xyxy: [1, 1, 3, 8], light_state: "red"};
+  const cases = [
+    [contract, {class_confidence_thresholds: {"pedestrian light": 0.05}, count: 1, boxes: [signal]}],
+    [walkContract, {...walkResult, count: 1, boxes: [signal]}],
+    [walkContract, {...walkResult, class_confidence_thresholds: {"pedestrian light": 0.05}, count: 1,
+      boxes: [{...signal, light_state: "amber"}]}],
+    [walkContract, {...walkResult, class_confidence_thresholds: {"traffic light": 0.5}, count: 0, boxes: []}],
+    [walkContract, {...walkResult, count: 1, boxes: [{class_id: 87, label: "x", score: 0.9, xyxy: [0, 0, 1, 1]}]}],
+    [walkContract, {count: 0, boxes: []}],
+    [walkContract, {...walkResult, class_confidence_thresholds: {"pedestrian light": 0.05}, count: 1,
+      boxes: [{...signal, class_id: 85}]}],
+    [walkContract, {...walkResult, count: 1, boxes: [{class_id: 85, label: "ped_green", score: 0.9, xyxy: [1, 1, 3, 8]}]}],
+  ];
+  for (const [selected, overrides] of cases)
+    await assert.rejects(decodeResult(packet(0, overrides), 0, selected, {captureTimeS: 2}));
+});
+
+/** Functionality: Prevent original-model HF qualification from admitting optional walk weights.
+ * Inputs: walk identity substituted into valid HF/resident contracts. Outputs: admission failure.
+ * Logic: keep local 87-class support separate from other providers. Constraints: no GPU claims. */
+test("walk weights require explicit local admission", async function testWalkProviderBoundary() {
+  for (const provider of ["hf", "resident"]) {
+    const value = fixture(provider);
+    const connected = value.client.connect();
+    const base = provider === "hf" ? contract : residentContract;
+    value.socket.message(JSON.stringify({...base, model: "yolo26n-walk", classes: 87,
+      names: walkManifest.names, source_sha256: walkManifest.source_sha256}));
+    await assert.rejects(connected);
+  }
 });

@@ -1,4 +1,5 @@
 """Responsibilities: Verified YOLO26n weights and explicitly selected Torch precision/layout.
+The class count is the manifest profile's (80 COCO or 87 walk model, core.detection_model).
 Implementation: Pin/fuse eval model; allocation-local Graph buffers with FP32 owned CPU outputs;
 fixed-shape AOT export permits dense channels-last constants while normalizing anchor storage.
 Related Modules: zerogpu.live_worker reuses the allocation-local graph;
@@ -17,6 +18,8 @@ benchmark are explicit; defaults preserve the original FP32 control, with no dev
 import hashlib
 import logging
 import time
+
+from core.detection_model import PROFILES
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +67,9 @@ def load_model(path, manifest, device, config=None):
     model.end2end = True
     names = [model.names[i] for i in range(len(model.names))]
     head = model.model[-1]
-    if names != manifest["names"] or len(names) != 80 or not head.end2end or head.max_det != 300:
+    expected_classes = PROFILES.get(manifest.get("model"), (None, None, 0))[2]
+    if (names != manifest["names"] or len(names) != expected_classes
+            or not head.end2end or head.max_det != 300):
         raise ValueError("Model class order or end-to-end head does not match")
     # The ONNX exporter fuses the same eval branches and uses the plain top-k export path.
     model.fuse(verbose=False)

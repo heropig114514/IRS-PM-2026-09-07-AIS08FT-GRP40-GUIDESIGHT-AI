@@ -1,9 +1,11 @@
-/* Responsibilities: Arbitrate real navigation and algorithm-required risk output in one owner.
+/* Responsibilities: Arbitrate live assistant replies, navigation and algorithm-required risk output in one owner.
  * Implementation: Latest-source scheduling, separate monotonic/GPS clocks, existing short-text
- * policies, owned preemption, source deadlines and start-based channel cooldowns.
+ * policies, a temporary FIFO for live assistant replies, owned preemption, source deadlines and
+ * start-based channel cooldowns. Assistant replies use automatic bilingual TTS language selection;
+ * risk/navigation guidance follows the explicit UI language. Long replies use safe text boundaries.
  * Related Modules: video-alerts.js, navigation-speech.js, maps-navigation-bridge.js, events.js,
  * catalog.js, ../navigation.js, ../speech-output.js, ../vibration.js; no core/device creation.
- * Declaration Index: AssistGuidanceManager; AssistGuidanceManager.constructor;
+ * Declaration Index: splitAssistantReply; AssistGuidanceManager; AssistGuidanceManager.constructor;
  * AssistGuidanceManager.navPort.begin; AssistGuidanceManager.navPort.ingest;
  * AssistGuidanceManager.navPort.stop; AssistGuidanceManager.navPort.describe;
  * AssistGuidanceManager.subscribe; AssistGuidanceManager.describe; AssistGuidanceManager.context;
@@ -16,17 +18,21 @@
  * AssistGuidanceManager.navigationFresh; AssistGuidanceManager.navigationCandidate;
  * AssistGuidanceManager.refreshNavigation; AssistGuidanceManager.eligible;
  * AssistGuidanceManager.driverOwns; AssistGuidanceManager.cancel;
+ * AssistGuidanceManager.enqueueAssistantReply; AssistGuidanceManager.clearAssistantReplies;
  * AssistGuidanceManager.submitSpeech; AssistGuidanceManager.submitVibration;
  * AssistGuidanceManager.outputEvent; AssistGuidanceManager.armTimer;
  * AssistGuidanceManager.pump; AssistGuidanceManager.stop; AssistGuidanceManager.dispose.
  * Variable Index: RISK_TTL_MS/COOLDOWN_MS retain existing output policies; PATTERNS retains
  * existing driver pattern names/durations. latestRisk/latestNavigation are bounded sources;
- * active/pendingSubmission preserve ownership; histories separate speech/vibration actual starts;
+ * active/pendingSubmission preserve ownership; pumpRequested coalesces synchronous lifecycle reentry;
+ * histories separate speech/vibration actual starts;
+ * assistantReplies/assistantReplySequence retain only queued live reply text and request identity;
  * navigationRevision/completedNavigation deduplicate completed steps; paused/reasons require
  * explicit recovery; schedulerTimer expires sources without retrying failed output.
  */
 import {EventBus} from "./events.js";
 import {languageOf} from "./catalog.js";
+import {MAX_TEXT_LENGTH} from "../speech-output.js";
 import {selectVideoAlert, videoAlertText} from "./video-alerts.js";
 import {navigationSpeechText} from "./navigation-speech.js";
 import {NAVIGATION_POLICY} from "../navigation.js";
@@ -35,10 +41,27 @@ const RISK_TTL_MS = 1000, COOLDOWN_MS = 3000;
 const PATTERNS = {1: {name: "short", duration: 200}, 2: {name: "short", duration: 200},
   3: {name: "double", duration: 400}, 4: {name: "long", duration: 800}};
 
-/* Functionality: Own all automatic speech/vibration for one explicitly unified assistance page.
- * Logic: Every required risk tier takes speech precedence over navigation; completed navigation
- * steps are not repeated, but still-current interrupted guidance may resume after risk clears.
- * Constraints: Disabled initially; no algorithms, navigation controls, voice replacement or retries. */
+/* Functionality: Divide an assistant response into driver-sized utterances without losing text.
+ * Inputs: Nonempty response string. Outputs: Ordered chunks of at most MAX_TEXT_LENGTH code points.
+ * Logic: Prefer the last sentence/word boundary within the limit, otherwise cut at the exact limit.
+ * Constraints: Concatenating chunks reproduces the input exactly; no paraphrase or truncation. */
+function splitAssistantReply(text) {
+  const remaining = [...text], chunks = [];
+  while (remaining.length > MAX_TEXT_LENGTH) {
+    let boundary = MAX_TEXT_LENGTH;
+    for (let index = MAX_TEXT_LENGTH - 1; index >= Math.floor(MAX_TEXT_LENGTH * 0.6); index--) {
+      if (/[\s。！？.!?；;，,]/u.test(remaining[index])) { boundary = index + 1; break; }
+    }
+    chunks.push(remaining.splice(0, boundary).join(""));
+  }
+  if (remaining.length) chunks.push(remaining.join(""));
+  return chunks;
+}
+
+/* Functionality: Own assistant reply, navigation and risk speech plus vibration for one assistance page.
+ * Logic: Risk precedes live assistant replies, which precede navigation; assistant replies resume
+ * in order after higher-priority work, and completed navigation steps are not repeated.
+ * Constraints: Disabled initially; no algorithms, navigation controls, voice replacement or failed-output retries. */
 export class AssistGuidanceManager {
   /* Functionality: Bind caller-owned drivers and separate source clocks without starting output.
    * Inputs: Speech/vibration, monotonic now, epochNow and injectable timers. Outputs: Disabled owner.
@@ -61,8 +84,9 @@ export class AssistGuidanceManager {
     this.reasons = {speech: null, vibration: null};
     this.navigationKey = this.navigation = null;
     this.navigationRevision = 0; this.completedNavigation = null;
+    this.assistantReplies = []; this.assistantReplySequence = 0;
     this.pendingSubmission = this.schedulerTimer = null;
-    this.suspended = this.pumping = this.disposed = false;
+    this.suspended = this.pumping = this.pumpRequested = this.disposed = false;
     this.suppressions = new Map();
     this.navPort = Object.freeze({
       // Functionality: Accept bridge run identity. Inputs: ID. Outputs: Manager state.
@@ -87,11 +111,13 @@ export class AssistGuidanceManager {
   subscribe(listener) { return this.events.subscribe(listener); }
 
   /* Functionality: Describe independent sources and unified ownership. Inputs: Instance state.
-   * Outputs: JSON-compatible metadata. Logic: Distinguish enabled sources and paused channels.
+   * Outputs: JSON-compatible metadata, including queued reply count but no reply text.
+   * Logic: Distinguish enabled sources, queued assistant replies and paused channels.
    * Constraints: No utterance, coordinates, images or hardware-success claim. */
   describe() {
     return {risk_enabled: this.riskEnabled, navigation_enabled: this.navigationEnabled,
       risk_session_id: this.riskSessionId, navigation_run_id: this.navigationRunId,
+      queued_assistant_replies: this.assistantReplies.length,
       paused: {...this.paused}, reasons: {...this.reasons},
       navigation_state: this.latestNavigation?.state ?? null,
       navigation_pending: Boolean(this.navigation && this.completedNavigation !== this.navigation.revision),
@@ -119,10 +145,36 @@ export class AssistGuidanceManager {
       paused: {...this.paused}, reasons: {...this.reasons}, at: this.now(), ...details});
   }
 
-  /* Functionality: Store an explicit common local voice selection. Inputs: voiceId/language.
-   * Outputs: State. Logic: Live identity is checked at each submission.
-   * Constraints: Does not enable, resume or replace an unavailable voice. */
+  /* Functionality: Store the shared voice ID and language selection. Inputs: voiceId/language.
+   * Outputs: State. Logic: The unified assist pages require the server-provided Cherry voice.
+   * Constraints: Does not enable, resume or replace a voice; local browser synthesis is not an assist-page path. */
   configure({voiceId, language}) { this.voiceId = voiceId; this.language = languageOf(language); return this.describe(); }
+
+  /* Functionality: Queue one live assistant reply for prioritized automatic speech.
+   * Inputs: Reply text. Outputs: Acceptance and reply identity; no text is returned in metadata.
+   * Logic: Preserve complete text in bounded driver-sized chunks; risk and current assistant order
+   * take precedence over navigation. Completion advances one chunk; explicit stop clears the queue.
+   * Constraints: Callers must establish a visible page, enabled output, configured speech service and
+   * genuine speech activation first; errors never trigger an automatic retry. */
+  enqueueAssistantReply(text) {
+    if (this.disposed) return {accepted: false, reason: "disposed"};
+    if (typeof text !== "string" || !text.trim()) return {accepted: false, reason: "invalid_text"};
+    const reply = {id: ++this.assistantReplySequence, chunks: splitAssistantReply(text), index: 0};
+    this.assistantReplies.push(reply);
+    this.pump();
+    return {accepted: true, reply_id: reply.id, queued_replies: this.assistantReplies.length};
+  }
+
+  /* Functionality: Discard pending reply speech after an explicit stop or output disable.
+   * Inputs: Fixed stop reason. Outputs: Cleared pending text and body-free lifecycle metadata.
+   * Logic: Remove every not-yet-completed reply before future source changes can schedule it.
+   * Constraints: Does not stop unrelated speech or change source/channel recovery state. */
+  clearAssistantReplies(reason = "assistant_replies_cleared") {
+    const count = this.assistantReplies.length;
+    this.assistantReplies.length = 0;
+    if (count) this.report("assistant_replies_cleared", {reason, count});
+    return this.describe();
+  }
 
   /* Functionality: Latch one output-channel failure. Inputs: Channel/reason/descriptor.
    * Outputs: Paused state/event. Logic: Preserve ownership if cancellation is unconfirmed.
@@ -334,9 +386,11 @@ export class AssistGuidanceManager {
     }
   }
 
-  /* Functionality: Submit one explicitly local utterance. Inputs: Frozen descriptor/text.
+  /* Functionality: Submit one backend risk, navigation or assistant utterance.
+   * Inputs: Frozen descriptor/text.
    * Outputs: Request ownership or diagnosed pause/suppression. Logic: Protect all foreign speech.
-   * Constraints: No default voice, automatic enablement, retry or scene/manual preemption. */
+   * Constraints: Backend Cherry is mandatory; no local voice, automatic enablement, retry or
+   * scene/manual preemption is permitted. */
   submitSpeech(descriptor, text) {
     const status = this.speech?.describe();
     if (this.paused.speech) return this.suppress("speech", "channel_paused", descriptor);
@@ -344,14 +398,16 @@ export class AssistGuidanceManager {
       return this.suppress("speech", "speech_unavailable", descriptor);
     if (status.active_request || status.engine_speaking || status.engine_pending || status.engine_paused)
       return this.suppress("speech", "foreign_speech_busy", descriptor);
-    if (typeof this.voiceId !== "string" || !this.voiceId) return this.suppress("speech", "explicit_local_voice_required", descriptor);
+    if (typeof this.voiceId !== "string" || !this.voiceId) return this.suppress("speech", "speech_voice_unavailable", descriptor);
     const inventory = this.speech.voiceList(), voices = inventory.voices?.filter(voice => voice.id === this.voiceId) || [];
-    if (!inventory.accepted || voices.length !== 1 || voices[0].local_service !== true ||
-        typeof voices[0].language !== "string" || voices[0].language.split("-")[0].toLowerCase() !== this.language.split("-")[0].toLowerCase())
-      return this.pause("speech", "local_voice_unavailable", descriptor);
+    const voice = voices[0];
+    if (!this.speech.backendOnly || !inventory.accepted || voices.length !== 1 || voice?.service !== "backend" ||
+        voice.id !== "Cherry" || !voice.languages?.includes(this.language))
+      return this.pause("speech", "backend_voice_unavailable", descriptor);
     this.pendingSubmission = {...descriptor, channel: "speech", started: false, requestId: null};
     let result;
-    try { result = this.speech.speak(text, {language: this.language, voice_id: this.voiceId,
+    const language = descriptor.kind === "assistant" ? "auto" : this.language;
+    try { result = this.speech.speak(text, {language, voice_id: this.voiceId,
       rate: Number(this.speech.rate?.value ?? 2), volume: Number(this.speech.volume?.value ?? 1)}); }
     catch { result = {accepted: false, reason: "speak_failed"}; }
     const pending = this.pendingSubmission; this.pendingSubmission = null;
@@ -390,7 +446,8 @@ export class AssistGuidanceManager {
 
   /* Functionality: Consume real driver lifecycle with synchronous submission support.
    * Inputs: Body-free shared-driver event. Outputs: Start cooldown, completion or latched failure.
-   * Logic: Match exact owned IDs; unconfirmed external stop retains ownership and pauses.
+   * Logic: Match exact owned IDs; advance assistant replies only after the shared driver reports completion.
+   * Unconfirmed external stop retains ownership and pauses.
    * Constraints: Old/foreign callbacks cannot complete another request or silently recover a channel. */
   outputEvent(event) {
     if (this.disposed || this.suspended || !Object.hasOwn(this.active, event.channel)) return;
@@ -419,6 +476,13 @@ export class AssistGuidanceManager {
       else { this.active[channel] = null; active.finished = true; }
       if (event.phase === "end" && active.kind === "navigation" && active.revision === this.navigationRevision &&
           active.generation === this.navigationGeneration) this.completedNavigation = active.revision;
+      if (event.phase === "end" && active.kind === "assistant") {
+        const reply = this.assistantReplies[0];
+        if (reply?.id === active.replyId) {
+          reply.index++;
+          if (reply.index >= reply.chunks.length) this.assistantReplies.shift();
+        }
+      }
       this.report("output_" + event.phase, {channel, request_id: active.requestId, ...this.context(active), reason: event.reason ?? null});
       if (event.phase !== "end") this.pause(channel, event.reason || (event.phase === "cancel" ? "cancelled" : "output_error"), active);
     }
@@ -426,7 +490,8 @@ export class AssistGuidanceManager {
   }
 
   /* Functionality: Arm only the earliest source/nominal-pattern deadline. Inputs: Source clocks.
-   * Outputs: One timer. Logic: Recompute exact original deadlines after each state change.
+   * Outputs: One timer. Logic: Recompute exact original deadlines after each state change; only
+   * navigation speech has a GPS-source deadline, while assistant replies have none.
    * Constraints: No cooldown loop, failed-output retry or source timestamp refresh. */
   armTimer() {
     if (this.schedulerTimer !== null) this.clearTimer(this.schedulerTimer);
@@ -440,7 +505,8 @@ export class AssistGuidanceManager {
     const speech = this.active.speech;
     if (speech && !speech.started && !speech.cancelFailed) {
       if (speech.kind === "risk") delays.push(RISK_TTL_MS - (this.now() - speech.source.captured_at_ms));
-      else if (speech.notice !== "error") delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - speech.snapshot.position.timestamp));
+      else if (speech.kind === "navigation" && speech.notice !== "error")
+        delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - speech.snapshot.position.timestamp));
     }
     const vibration = this.active.vibration;
     if (vibration && !vibration.elapsed && !vibration.cancelFailed) delays.push(vibration.endsAt - this.now());
@@ -448,13 +514,14 @@ export class AssistGuidanceManager {
     if (Number.isFinite(delay)) this.schedulerTimer = this.setTimer(() => { this.schedulerTimer = null; this.pump(); }, delay);
   }
 
-  /* Functionality: Arbitrate latest eligible risk and current real navigation.
+  /* Functionality: Arbitrate current risk, queued assistant replies and real navigation.
    * Inputs: Independent source/driver state. Outputs: Owned speech/vibration actions.
-   * Logic: Risk preempts only owned navigation/lower risk; started short risk may finish after
-   * source loss; latest fresh unfinished navigation resumes only after current risk disappears.
-   * Constraints: No manual/scene preemption, frame FIFO, algorithm changes or failed cleanup retries. */
+   * Logic: Risk preempts owned navigation or assistant replies; replies preempt navigation and
+   * continue in FIFO order; latest fresh navigation resumes after higher-priority speech.
+   * Constraints: No manual/foreign preemption, frame FIFO, algorithm changes or failed cleanup retries. */
   pump() {
-    if (this.disposed || this.suspended || this.pumping) return;
+    if (this.disposed || this.suspended) return;
+    if (this.pumping) { this.pumpRequested = true; return; }
     this.pumping = true;
     try {
       this.refreshNavigation();
@@ -465,7 +532,9 @@ export class AssistGuidanceManager {
         const expiredQueued = !speech.started && this.now() - speech.source.captured_at_ms >= RISK_TTL_MS;
         if ((!box && !speech.started) || expiredQueued || box && box.alert_priority > speech.box.alert_priority)
           this.cancel("speech", expiredQueued ? "risk_expired_before_start" : "risk_changed");
-      } else if (speech?.kind === "navigation" && box) this.cancel("speech", "risk_preempted_navigation");
+      } else if (speech?.kind === "navigation" && (box || this.assistantReplies.length))
+        this.cancel("speech", box ? "risk_preempted_navigation" : "assistant_reply_priority");
+      else if (speech?.kind === "assistant" && box) this.cancel("speech", "risk_preempted_assistant");
       const vibration = this.active.vibration;
       if (vibration) {
         if (!vibration.elapsed && this.now() >= vibration.endsAt) {
@@ -481,19 +550,32 @@ export class AssistGuidanceManager {
             captured_at_ms: this.latestRisk.capturedAt, tracking_epoch: this.trackingEpoch})};
         if (!this.active.speech && this.eligible(box, "speech")) this.submitSpeech(descriptor, videoAlertText(box, this.language));
         if (!this.active.vibration && this.eligible(box, "vibration")) this.submitVibration(descriptor);
+      } else if (!this.active.speech && this.assistantReplies.length) {
+        const reply = this.assistantReplies[0];
+        this.submitSpeech({kind: "assistant", replyId: reply.id,
+          source: Object.freeze({reply_id: reply.id, part_index: reply.index + 1,
+            part_count: reply.chunks.length})}, reply.chunks[reply.index]);
       } else if (!this.active.speech && this.navigationEnabled && this.navigation &&
           this.completedNavigation !== this.navigation.revision)
         this.submitSpeech(this.navigation, navigationSpeechText(this.navigation.snapshot, this.language));
-    } finally { this.pumping = false; this.armTimer(); }
+    } finally {
+      this.pumping = false; this.armTimer();
+      if (this.pumpRequested) { this.pumpRequested = false; this.pump(); }
+    }
   }
 
   /* Functionality: Stop all manager-owned work at a page/global lifecycle boundary.
    * Inputs: Reason. Outputs: Cleared independent sources with honest retained failed ownership.
-   * Logic: Suspend scheduling across both source stops to prevent intermediate submissions.
+   * Logic: Clear pending assistant text, cancel owned assistant speech, then suspend both source
+   * stops to prevent intermediate submissions.
    * Constraints: Driver switches, channel errors and unrelated manual requests remain unchanged. */
   stop(reason = "stop") {
     const previous = this.suspended; this.suspended = true;
-    try { this.stopRisk(reason); this.stopNavigation(reason); }
+    try {
+      this.clearAssistantReplies(reason);
+      if (this.active.speech?.kind === "assistant") this.cancel("speech", reason, true);
+      this.stopRisk(reason); this.stopNavigation(reason);
+    }
     finally { this.suspended = previous; }
     if (this.schedulerTimer !== null) this.clearTimer(this.schedulerTimer);
     this.schedulerTimer = null; this.report("stopped", {reason}); return this.describe();

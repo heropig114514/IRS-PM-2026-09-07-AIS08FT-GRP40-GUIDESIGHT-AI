@@ -8,7 +8,8 @@ Declaration Index: TrackerFixture; TrackerFixture.__init__; TrackerFixture.reset
 DetectorFixture; DetectorFixture.__init__; DetectorFixture.predict; fixture_runtime; socket_scope;
 open_worker; terminal; PeerFixture; PeerFixture.__init__; PeerFixture.recv; PeerFixture.send;
 PeerFixture.context; ProtocolTests; ProtocolTests.test_source_clock_and_byte_boundaries;
-ProtocolTests.test_identity_and_destination; RuntimeTests;
+ProtocolTests.test_identity_and_destination; ProtocolTests.test_explicit_distance_identity;
+RuntimeTests;
 RuntimeTests.test_load_once_reset_and_source;
 RuntimeTests.test_failed_initialization_latches; RuntimeTests.test_status_does_not_load;
 WorkerTests; WorkerTests.test_ordered_results_and_second_session;
@@ -34,7 +35,7 @@ import json
 import struct
 import threading
 from contextlib import asynccontextmanager
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from asgiref.testing import ApplicationCommunicator
 from django.test import SimpleTestCase
@@ -54,6 +55,7 @@ from .protocol import (
     read_manifest,
     unpack_request,
     validate_contract,
+    validate_result,
 )
 from .services import IntegrationApplication, LocalGateway
 
@@ -320,6 +322,32 @@ class ProtocolTests(SimpleTestCase):
                 self.assertRaises(IntegrationError),
             ):
                 inference_url()
+
+    def test_explicit_distance_identity(self):
+        """Functionality: Require one canonical distance identity in every session and result.
+        Inputs: all supported strategies and independently omitted identity fields.
+        Outputs: exact mode-specific intervals or typed rejection.
+        Logic: validate producer and correlated result records at their shared boundary.
+        Constraints: synthetic metadata verifies protocol rules, not distance accuracy.
+        """
+        for mode, interval in (("depth", 1), ("geometry", 0), ("temporal_depth", 3)):
+            hello = model_contract("a" * 32, MANIFEST, distance_mode=mode)
+            self.assertEqual((hello["distance_mode"], hello["distance_units"],
+                              hello["depth_interval"]), (mode, "m", interval))
+            self.assertIs(validate_contract(hello), hello)
+            result = {**hello, "index": 0, "capture_time_s": 1.0,
+                      "timestamp_source": "browser_capture"}
+            validate_result(result, hello, 0, 1.0)
+            for key in ("distance_mode", "distance_units", "depth_interval"):
+                missing_hello = dict(hello)
+                missing_hello.pop(key)
+                with self.subTest(mode=mode, missing=key), self.assertRaises(IntegrationError):
+                    validate_contract(missing_hello)
+                missing_result = dict(result)
+                missing_result.pop(key)
+                with self.subTest(mode=mode, result_missing=key):
+                    with self.assertRaises(IntegrationError):
+                        validate_result(missing_result, hello, 0, 1.0)
 
 
 class RuntimeTests(SimpleTestCase):
@@ -942,19 +970,21 @@ class WrapperTests(SimpleTestCase):
             elif name == "navigation-mvp.js":
                 self.assertIn(b"new WalkingNavigation", body)
                 self.assertIn(b"new NavigationSpeechAdapter", body)
+                self.assertIn(b'from "/assets/navigation.js"', body)
+                self.assertIn(b'from "/assets/maps-client.js"', body)
+                self.assertNotIn(b"../navigation.js", body)
                 self.assertNotIn(b"GuidanceManager", body)
             await response.wait()
 
-        for path in ("/integration/navigation.js", "/integration/maps-client.js"):
-            response = ApplicationCommunicator(
-                wrapper, {"type": "http", "path": path, "method": "GET"}
-            )
-            start = await response.receive_output()
-            body = (await response.receive_output())["body"]
-            self.assertEqual(start["status"], 200)
-            self.assertEqual(dict(start["headers"])[b"content-type"], b"text/javascript")
-            self.assertTrue(body)
-            await response.wait()
+        downstream = AsyncMock()
+        wrapper = IntegrationApplication(downstream)
+        for path in ("/integration/navigation.js", "/integration/maps-client.js",
+                     "/assets/navigation.js", "/assets/maps-client.js"):
+            receive, send = AsyncMock(), AsyncMock()
+            scope = {"type": "http", "path": path, "method": "GET"}
+            await wrapper(scope, receive, send)
+            downstream.assert_awaited_with(scope, receive, send)
+            downstream.reset_mock()
 
     async def test_inference_health_is_lazy(self):
         """Functionality: Exercise the independent worker health ASGI path without initializing

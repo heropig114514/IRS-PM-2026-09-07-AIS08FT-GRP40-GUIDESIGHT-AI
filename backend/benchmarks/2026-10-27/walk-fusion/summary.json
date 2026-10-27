@@ -1,0 +1,3459 @@
+{
+  "scope": "Optional 87-class native detector integration and explicit host ROI fusion; same-model TensorRT FP32 controls",
+  "quality_accepted": false,
+  "upstream": {
+    "main_revision": "943a0fe61246383fdbfdcb8297f01410a749fda1",
+    "previous_local_revision": "00ad1ef0621b91ae47b8e3f557903cca1c24f776",
+    "walk_checkpoint": "models/yolo26n-walk.pt",
+    "checkpoint_origin": "Tracked checkpoint provided by upstream; not a newly exported deployment engine",
+    "default_detection_model": "yolo26n"
+  },
+  "environment": {
+    "os": "Windows",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "vram_mib": 6144,
+    "driver": "610.74",
+    "python": "3.12.14",
+    "torch": "2.8.0+cu126",
+    "ultralytics": "8.4.171",
+    "numpy": "1.26.4",
+    "pillow": "12.3.0",
+    "opencv_python": "4.11.0.86",
+    "tensorrt_cu12": "10.13.3.9",
+    "onnx": "1.17.0",
+    "onnxruntime_gpu": "1.23.2",
+    "benchmark_and_worker_python": ".venv/depth-export/Scripts/python.exe",
+    "web_and_test_python": ".venv/Scripts/python.exe",
+    "dependency_boundary": "Nested export environment reuses the base native packages; standard separate web/inference virtual-environment launcher was not exercised"
+  },
+  "applied": {
+    "implementation": "Expose existing exact host depth ROI medians in native PRF2 load_detector through startup-frozen PRS_DEPTH_FUSION; one full aligned FP32 plane transfer replaces repeated per-object GPU reductions",
+    "scope": "Same-frame distance mode A only; geometry and temporal-depth plus host fail explicitly",
+    "defaults": {
+      "PRS_DETECTION_MODEL": "yolo26n",
+      "PRS_DEPTH_BACKEND": "torch",
+      "PRS_DEPTH_FUSION": "gpu"
+    },
+    "local_explicit_selection": {
+      "PRS_DETECTION_MODEL": "yolo26n",
+      "PRS_DEPTH_BACKEND": "tensorrt",
+      "PRS_DEPTH_ENGINE_MANIFEST": "models/experiments/depth-serving-fp32/manifest.json",
+      "PRS_DEPTH_FUSION": "host"
+    },
+    "optional_walk_selection": "PRS_DETECTION_MODEL=yolo26n-walk; original HF acceleration plan does not qualify these weights",
+    "engine_manifest_sha256": "0d1dac8c2ab3079a171cf762854e4f255955b781e778af3b41d2be6e2603c0f7",
+    "no_forward_change_this_round": true,
+    "no_precision_or_sampling_change": true,
+    "no_automatic_fallback": true,
+    "other_changes": [
+      "Freeze selected detector/manifest before hello and lazy load; health uses the selected weights",
+      "Preserve independent HF, local PRF2 and resident-v1 admission contracts; walk is admitted only by the local client contract",
+      "Validate actual walk thresholds and neutral merged pedestrian-light output in service probes",
+      "Add shared registry to remote deployment allowlists and optional manifest to phone test bundle; no remote deployment performed"
+    ]
+  },
+  "protocol": {
+    "total_processed_frames": 8886,
+    "compared_frames": 5924,
+    "unique_source_frames": 1154,
+    "runs": 15,
+    "sequence": "GPU fusion before, host fusion, GPU fusion after; separate fresh processes; all runs use identical TensorRT depth artifacts",
+    "timing": "First frame and load are separate; every remaining frame is retained in the steady distribution; no clipping, subsampling or outlier deletion",
+    "input": "All source frames in original order with source index/fps timestamps; RGB PIL bilinear maximum edge 640 and JPEG80; SDK depth edge 768 batch1 FP32, TF32 disabled",
+    "steady_video_metric": "server_ms is complete native inference host duration including detection, depth, fusion transfer/reduction, tracking, risk and rendering; depth_fusion_ms is a nested phase, not depth Forward",
+    "validation": "Complete aligned FP32 map comparison/cache I/O occurs after the timed prediction; all object fields, raw detections and rendered JPEG are compared exactly",
+    "unchanged": "Within each group: checkpoint, source, engine, thresholds, ROI, pedestrian-light rules, risk, timestamps, precision and depth frequency; never infer acceleration across the two model weights",
+    "shared_host": "Ordinary Windows workstation, no concurrent benchmark GPU jobs; CPU scheduling and thermal/clock drift were not controlled. Short CPU-only client checks occurred during the initial sequence",
+    "replicate_reason": "Initial walk-night host mean was 0.595% slower than its first control and 7.019% faster than its second control. Run one additional complete GPU/host/GPU sequence with unchanged inputs and independent baseline/cache; retain both sequences, including the regression. This is an explicit diagnostic replication, not replacement or filtering.",
+    "reproduction": {
+      "working_directory": "backend",
+      "python": ".venv/depth-export/Scripts/python.exe",
+      "environment": {
+        "PYTHONUTF8": "1",
+        "YOLO_OFFLINE": "1",
+        "YOLO_AUTOINSTALL": "0",
+        "YOLO_CONFIG_DIR": ".venv/ultralytics",
+        "MPLCONFIGDIR": ".venv/matplotlib",
+        "TEMP": ".venv/tmp",
+        "TMP": ".venv/tmp"
+      },
+      "before": "python -B -m tools.benchmark_depth_integration --video model_tests/datasets/street-video/mot17/MOT17-{07|10}-FRCNN-raw.mp4 --detection-model {model} --backend tensorrt --fusion gpu --manifest models/experiments/depth-serving-fp32/manifest.json --depth-cache models/experiments/{fresh-cache} --output benchmarks/{fresh-before}",
+      "candidate": "Use the same command with --fusion host, a new --output and --reference benchmarks/{fresh-before}",
+      "after": "Use the same command with --fusion gpu, another new --output and --reference benchmarks/{fresh-before}",
+      "replicate": "Use an independent fresh cache and three new report directories with identical model/video/settings; no automatic retries",
+      "service": "python -B -m tools.check_local_mvp --frames 31 --output {new-service-report}; selected model/fusion must match worker environment",
+      "signal": "Use --frames 1 --input models/experiments/walk-fusion-inputs/mot07-signal-frame286.png with the same service probe; extract original frame286 and require the JPEG fixture hash in signal-fixture.json"
+    }
+  },
+  "full_video": [
+    {
+      "model": "yolo26n",
+      "video": "MOT17-07-FRCNN-raw.mp4",
+      "scene": "day",
+      "independent_replicate": false,
+      "weights": {
+        "detection_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+      },
+      "video_sha256": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+      "settings": {
+        "batch": 1,
+        "precision": "FP32",
+        "depth_edge": 768,
+        "detection_model": "yolo26n",
+        "detection_manifest_sha256": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023",
+        "fixture_max_edge": 640,
+        "jpeg_quality": 80,
+        "distance": {
+          "distance_mode": "depth",
+          "depth_interval": 3,
+          "focal_length_px": 700.0,
+          "reference_width_px": 640,
+          "object_heights_m": [
+            [
+              "person",
+              1.7
+            ],
+            [
+              "bicycle",
+              1.1
+            ],
+            [
+              "motorcycle",
+              1.2
+            ],
+            [
+              "car",
+              1.5
+            ],
+            [
+              "bus",
+              3.2
+            ],
+            [
+              "truck",
+              3.0
+            ]
+          ]
+        },
+        "tracking": {
+          "tracker": "botsort.yaml",
+          "history_size": 8,
+          "min_valid_samples": 3,
+          "ema_alpha": 0.5,
+          "stale_timeout_s": 2.0,
+          "motion_history_timeout_s": 2.0,
+          "min_time_span_s": 0.1,
+          "approaching_threshold_mps": 0.2,
+          "moving_away_threshold_mps": 0.2,
+          "confirmation_updates": 2
+        },
+        "risk": {
+          "min_closing_speed_mps": 0.2,
+          "max_ttc_sec": 10.0,
+          "distance_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              25
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              10.0,
+              5
+            ]
+          ],
+          "ttc_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              30
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              8.0,
+              5
+            ]
+          ],
+          "closing_speed_bands": [
+            [
+              1.0,
+              5
+            ],
+            [
+              2.0,
+              10
+            ]
+          ],
+          "motion_weights": [
+            [
+              "approaching",
+              15
+            ],
+            [
+              "moving_away",
+              -10
+            ],
+            [
+              "stationary",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "direction_weights": [
+            [
+              "front",
+              10
+            ],
+            [
+              "front_left",
+              7
+            ],
+            [
+              "front_right",
+              7
+            ],
+            [
+              "left",
+              3
+            ],
+            [
+              "right",
+              3
+            ],
+            [
+              "behind",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "class_weights": [
+            [
+              "car",
+              15
+            ],
+            [
+              "truck",
+              18
+            ],
+            [
+              "bus",
+              18
+            ],
+            [
+              "motorcycle",
+              15
+            ],
+            [
+              "bicycle",
+              12
+            ],
+            [
+              "scooter",
+              12
+            ],
+            [
+              "person",
+              5
+            ],
+            [
+              "animal",
+              5
+            ],
+            [
+              "bird",
+              5
+            ],
+            [
+              "cat",
+              5
+            ],
+            [
+              "dog",
+              5
+            ],
+            [
+              "horse",
+              5
+            ],
+            [
+              "sheep",
+              5
+            ],
+            [
+              "cow",
+              5
+            ],
+            [
+              "elephant",
+              5
+            ],
+            [
+              "bear",
+              5
+            ],
+            [
+              "zebra",
+              5
+            ],
+            [
+              "giraffe",
+              5
+            ],
+            [
+              "bench",
+              1
+            ],
+            [
+              "chair",
+              1
+            ],
+            [
+              "stop sign",
+              1
+            ],
+            [
+              "fire hydrant",
+              1
+            ],
+            [
+              "pole",
+              1
+            ],
+            [
+              "sign",
+              1
+            ],
+            [
+              "bollard",
+              1
+            ],
+            [
+              "traffic_cone",
+              1
+            ],
+            [
+              "stairs",
+              3
+            ]
+          ],
+          "default_class_weight": 5,
+          "risk_level_thresholds": [
+            25,
+            50,
+            75
+          ],
+          "alert_priorities": [
+            [
+              "low",
+              0
+            ],
+            [
+              "medium",
+              2
+            ],
+            [
+              "high",
+              3
+            ],
+            [
+              "critical",
+              4
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "medium_alert_enabled": true,
+          "medium_alert_max_distance_m": 3.0,
+          "medium_alert_directions": [
+            "front",
+            "front_left",
+            "front_right"
+          ],
+          "front_left_fraction": 0.3333333333333333,
+          "front_right_fraction": 0.6666666666666666
+        }
+      },
+      "source_fps": 30.0,
+      "source_size": [
+        960,
+        540
+      ],
+      "runs": {
+        "before": {
+          "report": "yolo26n-mot07-before/report.json",
+          "frames": "yolo26n-mot07-before/frames.jsonl",
+          "completed_frames": 500,
+          "fusion": "gpu",
+          "load_ms": 3417.1664000023156,
+          "first_frame": {
+            "wall_ms": 1263.1102000013925,
+            "server_ms": 1263.0036000009568,
+            "depth_predict_ms": 230.71659999914118,
+            "depth_fusion_ms": 43.145400002686074,
+            "tracking_ms": 15.116699996724492,
+            "render_ms": 7.886400002462324,
+            "comparison": null
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 499,
+              "mean_ms": 45.90189679364555,
+              "min_ms": 33.44619999916176,
+              "max_ms": 60.98149999888847,
+              "p50_ms": 46.29619999832357,
+              "p95_ms": 54.46913000159839,
+              "p99_ms": 57.79227999752038
+            },
+            "server_ms": {
+              "count": 499,
+              "mean_ms": 45.81057675339887,
+              "min_ms": 33.34840000024997,
+              "max_ms": 60.89059999794699,
+              "p50_ms": 46.20439999780501,
+              "p95_ms": 54.33517000165011,
+              "p99_ms": 57.70125599941821
+            },
+            "depth_predict_ms": {
+              "count": 499,
+              "mean_ms": 11.337215430817714,
+              "min_ms": 7.600599998113466,
+              "max_ms": 18.09529999809456,
+              "p50_ms": 11.372599998139776,
+              "p95_ms": 14.476499999727821,
+              "p99_ms": 15.606059996644035
+            },
+            "depth_fusion_ms": {
+              "count": 499,
+              "mean_ms": 5.936558517013379,
+              "min_ms": 2.473399999871617,
+              "max_ms": 15.35879999937606,
+              "p50_ms": 5.605199999990873,
+              "p95_ms": 9.834539996518288,
+              "p99_ms": 12.217420002489234
+            },
+            "tracking_ms": {
+              "count": 499,
+              "mean_ms": 8.816704809813125,
+              "min_ms": 7.442899997840868,
+              "max_ms": 20.10149999841815,
+              "p50_ms": 8.757999999943422,
+              "p95_ms": 9.762419998878613,
+              "p99_ms": 10.481174001615727
+            },
+            "render_ms": {
+              "count": 499,
+              "mean_ms": 7.829984168206001,
+              "min_ms": 3.757999998924788,
+              "max_ms": 13.305299999046838,
+              "p50_ms": 7.900799999333685,
+              "p95_ms": 9.863779997976962,
+              "p99_ms": 10.533992001292063
+            }
+          },
+          "compared_frames": 0,
+          "all_compared_outputs_exact": false
+        },
+        "host": {
+          "report": "yolo26n-mot07-host/report.json",
+          "frames": "yolo26n-mot07-host/frames.jsonl",
+          "completed_frames": 500,
+          "fusion": "host",
+          "load_ms": 2005.6140000015148,
+          "first_frame": {
+            "wall_ms": 864.6671999995306,
+            "server_ms": 864.5561000012094,
+            "depth_predict_ms": 204.71229999748175,
+            "depth_fusion_ms": 3.4878000005846843,
+            "tracking_ms": 3.9844000020821113,
+            "render_ms": 7.432999998854939,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 499,
+              "mean_ms": 43.905993787634664,
+              "min_ms": 30.34520000073826,
+              "max_ms": 61.24210000052699,
+              "p50_ms": 44.60710000057588,
+              "p95_ms": 51.31793000000471,
+              "p99_ms": 57.39611400174908
+            },
+            "server_ms": {
+              "count": 499,
+              "mean_ms": 43.815991983852264,
+              "min_ms": 30.258900002081646,
+              "max_ms": 61.1404000010225,
+              "p50_ms": 44.522000000142725,
+              "p95_ms": 51.22889000012947,
+              "p99_ms": 57.29413600201951
+            },
+            "depth_predict_ms": {
+              "count": 499,
+              "mean_ms": 13.041664929863954,
+              "min_ms": 7.565100000647362,
+              "max_ms": 21.251500002108514,
+              "p50_ms": 13.163300001906464,
+              "p95_ms": 16.135220002252026,
+              "p99_ms": 19.846889997570543
+            },
+            "depth_fusion_ms": {
+              "count": 499,
+              "mean_ms": 0.7722384770038512,
+              "min_ms": 0.5917000016779639,
+              "max_ms": 1.4194999967003241,
+              "p50_ms": 0.7483999979740474,
+              "p95_ms": 0.9608200005459366,
+              "p99_ms": 1.1590420015272684
+            },
+            "tracking_ms": {
+              "count": 499,
+              "mean_ms": 8.786553106162131,
+              "min_ms": 7.322999997995794,
+              "max_ms": 11.315900002955459,
+              "p50_ms": 8.762999997998122,
+              "p95_ms": 9.71853000082774,
+              "p99_ms": 10.641510000714334
+            },
+            "render_ms": {
+              "count": 499,
+              "mean_ms": 7.861402404732197,
+              "min_ms": 3.9020000003802124,
+              "max_ms": 11.346100000082515,
+              "p50_ms": 7.921100001112791,
+              "p95_ms": 9.884949999468517,
+              "p99_ms": 10.60531599810929
+            }
+          },
+          "compared_frames": 500,
+          "all_compared_outputs_exact": true
+        },
+        "after": {
+          "report": "yolo26n-mot07-after/report.json",
+          "frames": "yolo26n-mot07-after/frames.jsonl",
+          "completed_frames": 500,
+          "fusion": "gpu",
+          "load_ms": 2144.2434000018693,
+          "first_frame": {
+            "wall_ms": 923.9847999997437,
+            "server_ms": 923.8712999976997,
+            "depth_predict_ms": 199.54819999838946,
+            "depth_fusion_ms": 46.87700000067707,
+            "tracking_ms": 3.8604000001214445,
+            "render_ms": 7.293899998330744,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 499,
+              "mean_ms": 46.65227655305408,
+              "min_ms": 32.98250000079861,
+              "max_ms": 63.39979999756906,
+              "p50_ms": 46.66400000132853,
+              "p95_ms": 56.05388000003586,
+              "p99_ms": 61.636473999897134
+            },
+            "server_ms": {
+              "count": 499,
+              "mean_ms": 46.56065450898585,
+              "min_ms": 32.8910000025644,
+              "max_ms": 63.30960000195773,
+              "p50_ms": 46.57999999835738,
+              "p95_ms": 55.96192999801133,
+              "p99_ms": 61.542448002292076
+            },
+            "depth_predict_ms": {
+              "count": 499,
+              "mean_ms": 11.706167134181163,
+              "min_ms": 7.412799997837283,
+              "max_ms": 17.931700000190176,
+              "p50_ms": 11.673499997414183,
+              "p95_ms": 14.880499999708263,
+              "p99_ms": 17.01554599989322
+            },
+            "depth_fusion_ms": {
+              "count": 499,
+              "mean_ms": 5.90900140301375,
+              "min_ms": 2.4885999991965946,
+              "max_ms": 14.278400001785485,
+              "p50_ms": 5.594399997789878,
+              "p95_ms": 9.11140000098385,
+              "p99_ms": 12.193464001393295
+            },
+            "tracking_ms": {
+              "count": 499,
+              "mean_ms": 8.847300200287721,
+              "min_ms": 7.380099999863887,
+              "max_ms": 12.870899998233654,
+              "p50_ms": 8.792900003754767,
+              "p95_ms": 9.851169999456033,
+              "p99_ms": 12.296896000916604
+            },
+            "render_ms": {
+              "count": 499,
+              "mean_ms": 7.992596593173069,
+              "min_ms": 4.166899998381268,
+              "max_ms": 15.528899999480927,
+              "p50_ms": 8.009099998162128,
+              "p95_ms": 10.144370001216885,
+              "p99_ms": 10.829914000496501
+            }
+          },
+          "compared_frames": 500,
+          "all_compared_outputs_exact": true
+        }
+      },
+      "mean_latency_reduction_percent": {
+        "server_ms": {
+          "before": 4.353983099325676,
+          "after": 5.894810874284174
+        },
+        "wall_ms": {
+          "before": 4.348192875304424,
+          "after": 5.886706862624969
+        },
+        "depth_fusion_ms": {
+          "before": 86.9918156320582,
+          "after": 86.93115089446437
+        }
+      },
+      "gpu_control_server_mean_drift_percent": 1.6373462391113147,
+      "candidate_new_class_observations": []
+    },
+    {
+      "model": "yolo26n",
+      "video": "MOT17-10-FRCNN-raw.mp4",
+      "scene": "night",
+      "independent_replicate": false,
+      "weights": {
+        "detection_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+      },
+      "video_sha256": "0780ec0d648cfbca71a92cf0e45811e591b0f014307e3291a5f970112d855d01",
+      "settings": {
+        "batch": 1,
+        "precision": "FP32",
+        "depth_edge": 768,
+        "detection_model": "yolo26n",
+        "detection_manifest_sha256": "046b51c54008bb3729ecd877dba6839fdb641c9617b7afc01d7b835e630b1023",
+        "fixture_max_edge": 640,
+        "jpeg_quality": 80,
+        "distance": {
+          "distance_mode": "depth",
+          "depth_interval": 3,
+          "focal_length_px": 700.0,
+          "reference_width_px": 640,
+          "object_heights_m": [
+            [
+              "person",
+              1.7
+            ],
+            [
+              "bicycle",
+              1.1
+            ],
+            [
+              "motorcycle",
+              1.2
+            ],
+            [
+              "car",
+              1.5
+            ],
+            [
+              "bus",
+              3.2
+            ],
+            [
+              "truck",
+              3.0
+            ]
+          ]
+        },
+        "tracking": {
+          "tracker": "botsort.yaml",
+          "history_size": 8,
+          "min_valid_samples": 3,
+          "ema_alpha": 0.5,
+          "stale_timeout_s": 2.0,
+          "motion_history_timeout_s": 2.0,
+          "min_time_span_s": 0.1,
+          "approaching_threshold_mps": 0.2,
+          "moving_away_threshold_mps": 0.2,
+          "confirmation_updates": 2
+        },
+        "risk": {
+          "min_closing_speed_mps": 0.2,
+          "max_ttc_sec": 10.0,
+          "distance_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              25
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              10.0,
+              5
+            ]
+          ],
+          "ttc_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              30
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              8.0,
+              5
+            ]
+          ],
+          "closing_speed_bands": [
+            [
+              1.0,
+              5
+            ],
+            [
+              2.0,
+              10
+            ]
+          ],
+          "motion_weights": [
+            [
+              "approaching",
+              15
+            ],
+            [
+              "moving_away",
+              -10
+            ],
+            [
+              "stationary",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "direction_weights": [
+            [
+              "front",
+              10
+            ],
+            [
+              "front_left",
+              7
+            ],
+            [
+              "front_right",
+              7
+            ],
+            [
+              "left",
+              3
+            ],
+            [
+              "right",
+              3
+            ],
+            [
+              "behind",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "class_weights": [
+            [
+              "car",
+              15
+            ],
+            [
+              "truck",
+              18
+            ],
+            [
+              "bus",
+              18
+            ],
+            [
+              "motorcycle",
+              15
+            ],
+            [
+              "bicycle",
+              12
+            ],
+            [
+              "scooter",
+              12
+            ],
+            [
+              "person",
+              5
+            ],
+            [
+              "animal",
+              5
+            ],
+            [
+              "bird",
+              5
+            ],
+            [
+              "cat",
+              5
+            ],
+            [
+              "dog",
+              5
+            ],
+            [
+              "horse",
+              5
+            ],
+            [
+              "sheep",
+              5
+            ],
+            [
+              "cow",
+              5
+            ],
+            [
+              "elephant",
+              5
+            ],
+            [
+              "bear",
+              5
+            ],
+            [
+              "zebra",
+              5
+            ],
+            [
+              "giraffe",
+              5
+            ],
+            [
+              "bench",
+              1
+            ],
+            [
+              "chair",
+              1
+            ],
+            [
+              "stop sign",
+              1
+            ],
+            [
+              "fire hydrant",
+              1
+            ],
+            [
+              "pole",
+              1
+            ],
+            [
+              "sign",
+              1
+            ],
+            [
+              "bollard",
+              1
+            ],
+            [
+              "traffic_cone",
+              1
+            ],
+            [
+              "stairs",
+              3
+            ]
+          ],
+          "default_class_weight": 5,
+          "risk_level_thresholds": [
+            25,
+            50,
+            75
+          ],
+          "alert_priorities": [
+            [
+              "low",
+              0
+            ],
+            [
+              "medium",
+              2
+            ],
+            [
+              "high",
+              3
+            ],
+            [
+              "critical",
+              4
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "medium_alert_enabled": true,
+          "medium_alert_max_distance_m": 3.0,
+          "medium_alert_directions": [
+            "front",
+            "front_left",
+            "front_right"
+          ],
+          "front_left_fraction": 0.3333333333333333,
+          "front_right_fraction": 0.6666666666666666
+        }
+      },
+      "source_fps": 30.0,
+      "source_size": [
+        960,
+        540
+      ],
+      "runs": {
+        "before": {
+          "report": "yolo26n-mot10-before/report.json",
+          "frames": "yolo26n-mot10-before/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "gpu",
+          "load_ms": 2023.2413000012457,
+          "first_frame": {
+            "wall_ms": 937.8687999997055,
+            "server_ms": 937.7569000025687,
+            "depth_predict_ms": 199.33219999802532,
+            "depth_fusion_ms": 44.77170000245678,
+            "tracking_ms": 3.832700000202749,
+            "render_ms": 8.112200001050951,
+            "comparison": null
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 41.64389724348528,
+              "min_ms": 28.889000001072418,
+              "max_ms": 57.357199999387376,
+              "p50_ms": 41.51110000020708,
+              "p95_ms": 50.47249999915948,
+              "p99_ms": 52.95179600070696
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 41.554680244979224,
+              "min_ms": 28.799700001400197,
+              "max_ms": 57.241200000134995,
+              "p50_ms": 41.41700000036508,
+              "p95_ms": 50.38411999994423,
+              "p99_ms": 52.85942000031355
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 10.818372741241086,
+              "min_ms": 7.462599998689257,
+              "max_ms": 15.590000002703164,
+              "p50_ms": 10.838799997145543,
+              "p95_ms": 13.92399999895133,
+              "p99_ms": 15.075007999548689
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 4.727346554378391,
+              "min_ms": 1.8466000001353677,
+              "max_ms": 12.299299996811897,
+              "p50_ms": 4.478099999687402,
+              "p95_ms": 7.657520000793738,
+              "p99_ms": 9.774496002937667
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 8.333174119384399,
+              "min_ms": 6.87850000031176,
+              "max_ms": 13.194099996326258,
+              "p50_ms": 8.269900001323549,
+              "p95_ms": 9.43466000171611,
+              "p99_ms": 10.292207998863887
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 6.426811332231294,
+              "min_ms": 3.1410000010509975,
+              "max_ms": 13.554399996792199,
+              "p50_ms": 6.362300002365373,
+              "p95_ms": 8.740880000550533,
+              "p99_ms": 10.453492000087863
+            }
+          },
+          "compared_frames": 0,
+          "all_compared_outputs_exact": false
+        },
+        "host": {
+          "report": "yolo26n-mot10-host/report.json",
+          "frames": "yolo26n-mot10-host/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "host",
+          "load_ms": 1935.5572999993456,
+          "first_frame": {
+            "wall_ms": 898.6101000009512,
+            "server_ms": 898.5033000026306,
+            "depth_predict_ms": 217.42399999857298,
+            "depth_fusion_ms": 3.244700001232559,
+            "tracking_ms": 4.173799999989569,
+            "render_ms": 6.710700003168313,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 41.54435528328745,
+              "min_ms": 27.039399999921443,
+              "max_ms": 59.382499999628635,
+              "p50_ms": 42.61140000016894,
+              "p95_ms": 49.59247999940999,
+              "p99_ms": 53.515359998709755
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 41.456004134835275,
+              "min_ms": 26.95520000270335,
+              "max_ms": 59.263600000122096,
+              "p50_ms": 42.523500000243075,
+              "p95_ms": 49.499320000904845,
+              "p99_ms": 53.42787599991425
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 12.795637672259442,
+              "min_ms": 7.497700000385521,
+              "max_ms": 19.417700001213234,
+              "p50_ms": 13.304000000061933,
+              "p95_ms": 16.257739999127807,
+              "p99_ms": 18.472440000477945
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 0.7186393567507927,
+              "min_ms": 0.4671000024245586,
+              "max_ms": 1.3198000015108846,
+              "p50_ms": 0.706200000422541,
+              "p95_ms": 0.9292399990954436,
+              "p99_ms": 1.0464920007507317
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 8.327138744327002,
+              "min_ms": 6.9019000002299435,
+              "max_ms": 12.802299996110378,
+              "p50_ms": 8.228999999118969,
+              "p95_ms": 9.516779997647973,
+              "p99_ms": 10.687047998799244
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 6.478343951070338,
+              "min_ms": 3.225899999961257,
+              "max_ms": 12.50389999768231,
+              "p50_ms": 6.446700001106365,
+              "p95_ms": 8.677780000289204,
+              "p99_ms": 10.543543998646783
+            }
+          },
+          "compared_frames": 654,
+          "all_compared_outputs_exact": true
+        },
+        "after": {
+          "report": "yolo26n-mot10-after/report.json",
+          "frames": "yolo26n-mot10-after/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "gpu",
+          "load_ms": 2279.584799998702,
+          "first_frame": {
+            "wall_ms": 1018.1066999975883,
+            "server_ms": 1017.970900000364,
+            "depth_predict_ms": 209.3830000012531,
+            "depth_fusion_ms": 57.630800001788884,
+            "tracking_ms": 5.169999996724073,
+            "render_ms": 8.31810000090627,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 42.83480428788312,
+              "min_ms": 30.32539999912842,
+              "max_ms": 65.56460000138031,
+              "p50_ms": 42.77609999917331,
+              "p95_ms": 51.63224000061746,
+              "p99_ms": 57.622384000133025
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 42.74539938745412,
+              "min_ms": 30.244300000049407,
+              "max_ms": 65.41959999958635,
+              "p50_ms": 42.68859999865526,
+              "p95_ms": 51.536180000402965,
+              "p99_ms": 57.51514800009318
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 11.457831087166946,
+              "min_ms": 7.571199999802047,
+              "max_ms": 16.900900001928676,
+              "p50_ms": 11.58220000070287,
+              "p95_ms": 14.589619998878334,
+              "p99_ms": 15.751356000982923
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 4.832518223809176,
+              "min_ms": 1.774600001226645,
+              "max_ms": 13.25390000056359,
+              "p50_ms": 4.528500001470093,
+              "p95_ms": 8.427640001900727,
+              "p99_ms": 10.486100001871819
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 8.4640110260495,
+              "min_ms": 6.897700000990881,
+              "max_ms": 16.184500000235857,
+              "p50_ms": 8.348900002602022,
+              "p95_ms": 9.836680001899367,
+              "p99_ms": 12.048088001902215
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 6.410932618654934,
+              "min_ms": 3.1681999971624464,
+              "max_ms": 13.909700002841419,
+              "p50_ms": 6.380999999237247,
+              "p95_ms": 8.68023999792058,
+              "p99_ms": 10.551699999778066
+            }
+          },
+          "compared_frames": 654,
+          "all_compared_outputs_exact": true
+        }
+      },
+      "mean_latency_reduction_percent": {
+        "server_ms": {
+          "before": 0.23746088181215708,
+          "after": 3.0164538666055507
+        },
+        "wall_ms": {
+          "before": 0.23903132700530128,
+          "after": 3.012617954135721
+        },
+        "depth_fusion_ms": {
+          "before": 84.79825101704887,
+          "after": 85.12909163569933
+        }
+      },
+      "gpu_control_server_mean_drift_percent": 2.8654272766754474,
+      "candidate_new_class_observations": []
+    },
+    {
+      "model": "yolo26n-walk",
+      "video": "MOT17-07-FRCNN-raw.mp4",
+      "scene": "day",
+      "independent_replicate": false,
+      "weights": {
+        "detection_sha256": "ab0895c51f7fa894fa9ee16acf8dd783ef2a6aa3065549db07bfc7e5b4a1c5cd",
+        "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+      },
+      "video_sha256": "e697175a64408fc198de761374e36ae01ba8edd4f349490e654a2f2293010032",
+      "settings": {
+        "batch": 1,
+        "precision": "FP32",
+        "depth_edge": 768,
+        "detection_model": "yolo26n-walk",
+        "detection_manifest_sha256": "53dd47c36d525b301bc4f1f0bd8c12614cfc7601df2edebcda3d9cb7accd04c6",
+        "fixture_max_edge": 640,
+        "jpeg_quality": 80,
+        "distance": {
+          "distance_mode": "depth",
+          "depth_interval": 3,
+          "focal_length_px": 700.0,
+          "reference_width_px": 640,
+          "object_heights_m": [
+            [
+              "person",
+              1.7
+            ],
+            [
+              "bicycle",
+              1.1
+            ],
+            [
+              "motorcycle",
+              1.2
+            ],
+            [
+              "car",
+              1.5
+            ],
+            [
+              "bus",
+              3.2
+            ],
+            [
+              "truck",
+              3.0
+            ]
+          ]
+        },
+        "tracking": {
+          "tracker": "botsort.yaml",
+          "history_size": 8,
+          "min_valid_samples": 3,
+          "ema_alpha": 0.5,
+          "stale_timeout_s": 2.0,
+          "motion_history_timeout_s": 2.0,
+          "min_time_span_s": 0.1,
+          "approaching_threshold_mps": 0.2,
+          "moving_away_threshold_mps": 0.2,
+          "confirmation_updates": 2
+        },
+        "risk": {
+          "min_closing_speed_mps": 0.2,
+          "max_ttc_sec": 10.0,
+          "distance_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              25
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              10.0,
+              5
+            ]
+          ],
+          "ttc_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              30
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              8.0,
+              5
+            ]
+          ],
+          "closing_speed_bands": [
+            [
+              1.0,
+              5
+            ],
+            [
+              2.0,
+              10
+            ]
+          ],
+          "motion_weights": [
+            [
+              "approaching",
+              15
+            ],
+            [
+              "moving_away",
+              -10
+            ],
+            [
+              "stationary",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "direction_weights": [
+            [
+              "front",
+              10
+            ],
+            [
+              "front_left",
+              7
+            ],
+            [
+              "front_right",
+              7
+            ],
+            [
+              "left",
+              3
+            ],
+            [
+              "right",
+              3
+            ],
+            [
+              "behind",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "class_weights": [
+            [
+              "car",
+              15
+            ],
+            [
+              "truck",
+              18
+            ],
+            [
+              "bus",
+              18
+            ],
+            [
+              "motorcycle",
+              15
+            ],
+            [
+              "bicycle",
+              12
+            ],
+            [
+              "scooter",
+              12
+            ],
+            [
+              "person",
+              5
+            ],
+            [
+              "animal",
+              5
+            ],
+            [
+              "bird",
+              5
+            ],
+            [
+              "cat",
+              5
+            ],
+            [
+              "dog",
+              5
+            ],
+            [
+              "horse",
+              5
+            ],
+            [
+              "sheep",
+              5
+            ],
+            [
+              "cow",
+              5
+            ],
+            [
+              "elephant",
+              5
+            ],
+            [
+              "bear",
+              5
+            ],
+            [
+              "zebra",
+              5
+            ],
+            [
+              "giraffe",
+              5
+            ],
+            [
+              "bench",
+              1
+            ],
+            [
+              "chair",
+              1
+            ],
+            [
+              "stop sign",
+              1
+            ],
+            [
+              "fire hydrant",
+              1
+            ],
+            [
+              "pole",
+              1
+            ],
+            [
+              "sign",
+              1
+            ],
+            [
+              "bollard",
+              1
+            ],
+            [
+              "traffic_cone",
+              1
+            ],
+            [
+              "stairs",
+              3
+            ]
+          ],
+          "default_class_weight": 5,
+          "risk_level_thresholds": [
+            25,
+            50,
+            75
+          ],
+          "alert_priorities": [
+            [
+              "low",
+              0
+            ],
+            [
+              "medium",
+              2
+            ],
+            [
+              "high",
+              3
+            ],
+            [
+              "critical",
+              4
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "medium_alert_enabled": true,
+          "medium_alert_max_distance_m": 3.0,
+          "medium_alert_directions": [
+            "front",
+            "front_left",
+            "front_right"
+          ],
+          "front_left_fraction": 0.3333333333333333,
+          "front_right_fraction": 0.6666666666666666
+        }
+      },
+      "source_fps": 30.0,
+      "source_size": [
+        960,
+        540
+      ],
+      "runs": {
+        "before": {
+          "report": "yolo26n-walk-mot07-before/report.json",
+          "frames": "yolo26n-walk-mot07-before/frames.jsonl",
+          "completed_frames": 500,
+          "fusion": "gpu",
+          "load_ms": 2019.9267999996664,
+          "first_frame": {
+            "wall_ms": 928.5583999990195,
+            "server_ms": 928.4401999975671,
+            "depth_predict_ms": 219.88129999954253,
+            "depth_fusion_ms": 51.993199998833006,
+            "tracking_ms": 4.387400000268826,
+            "render_ms": 9.568199999193894,
+            "comparison": null
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 499,
+              "mean_ms": 50.64995771536343,
+              "min_ms": 35.79890000037267,
+              "max_ms": 71.01160000092932,
+              "p50_ms": 51.18989999755286,
+              "p95_ms": 60.13409000042884,
+              "p99_ms": 63.83522600022843
+            },
+            "server_ms": {
+              "count": 499,
+              "mean_ms": 50.555780160301836,
+              "min_ms": 35.70000000036089,
+              "max_ms": 70.88529999964521,
+              "p50_ms": 51.09259999881033,
+              "p95_ms": 60.041689997160574,
+              "p99_ms": 63.670416000677506
+            },
+            "depth_predict_ms": {
+              "count": 499,
+              "mean_ms": 11.610241082189805,
+              "min_ms": 7.534199998190161,
+              "max_ms": 17.123899997386616,
+              "p50_ms": 11.52880000154255,
+              "p95_ms": 14.610880001418991,
+              "p99_ms": 16.4790719976736
+            },
+            "depth_fusion_ms": {
+              "count": 499,
+              "mean_ms": 7.348479358634523,
+              "min_ms": 3.8821000016469043,
+              "max_ms": 16.76469999802066,
+              "p50_ms": 6.9325999975262675,
+              "p95_ms": 11.422310000125435,
+              "p99_ms": 14.155548001363059
+            },
+            "tracking_ms": {
+              "count": 499,
+              "mean_ms": 9.52596673358746,
+              "min_ms": 7.992700000613695,
+              "max_ms": 15.087100000528153,
+              "p50_ms": 9.427800003322773,
+              "p95_ms": 10.522660002970952,
+              "p99_ms": 13.301659999924595
+            },
+            "render_ms": {
+              "count": 499,
+              "mean_ms": 9.78524949895799,
+              "min_ms": 5.169299998669885,
+              "max_ms": 19.044499997107778,
+              "p50_ms": 9.748399999807589,
+              "p95_ms": 12.031240001670085,
+              "p99_ms": 15.401519997831201
+            }
+          },
+          "compared_frames": 0,
+          "all_compared_outputs_exact": false
+        },
+        "host": {
+          "report": "yolo26n-walk-mot07-host/report.json",
+          "frames": "yolo26n-walk-mot07-host/frames.jsonl",
+          "completed_frames": 500,
+          "fusion": "host",
+          "load_ms": 1924.7280000017781,
+          "first_frame": {
+            "wall_ms": 881.0878000003868,
+            "server_ms": 880.9600999993563,
+            "depth_predict_ms": 219.50570000262815,
+            "depth_fusion_ms": 3.7527999993471894,
+            "tracking_ms": 4.542999995464925,
+            "render_ms": 9.824900000239722,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 499,
+              "mean_ms": 48.03272164326426,
+              "min_ms": 31.2551999995776,
+              "max_ms": 85.92160000262083,
+              "p50_ms": 48.533500001212815,
+              "p95_ms": 57.397340000534314,
+              "p99_ms": 64.87825000025623
+            },
+            "server_ms": {
+              "count": 499,
+              "mean_ms": 47.93654729455338,
+              "min_ms": 31.162100000074133,
+              "max_ms": 85.8159000017622,
+              "p50_ms": 48.441499999171356,
+              "p95_ms": 57.29061999991245,
+              "p99_ms": 64.77829399933398
+            },
+            "depth_predict_ms": {
+              "count": 499,
+              "mean_ms": 13.518210621246517,
+              "min_ms": 7.51950000267243,
+              "max_ms": 29.74059999905876,
+              "p50_ms": 13.55889999831561,
+              "p95_ms": 17.825149998316192,
+              "p99_ms": 21.815318000371917
+            },
+            "depth_fusion_ms": {
+              "count": 499,
+              "mean_ms": 0.8629146292672109,
+              "min_ms": 0.641800001176307,
+              "max_ms": 3.300399999716319,
+              "p50_ms": 0.8249999991676304,
+              "p95_ms": 1.1207300009118626,
+              "p99_ms": 1.4571039976726752
+            },
+            "tracking_ms": {
+              "count": 499,
+              "mean_ms": 9.681807615239169,
+              "min_ms": 7.997599997906946,
+              "max_ms": 21.740599997428944,
+              "p50_ms": 9.489600000961218,
+              "p95_ms": 11.284950002664118,
+              "p99_ms": 14.096162000205368
+            },
+            "render_ms": {
+              "count": 499,
+              "mean_ms": 9.963176152343443,
+              "min_ms": 5.065699999249773,
+              "max_ms": 24.159900000086054,
+              "p50_ms": 9.843299998465227,
+              "p95_ms": 12.99710999992385,
+              "p99_ms": 19.006022000030498
+            }
+          },
+          "compared_frames": 500,
+          "all_compared_outputs_exact": true
+        },
+        "after": {
+          "report": "yolo26n-walk-mot07-after/report.json",
+          "frames": "yolo26n-walk-mot07-after/frames.jsonl",
+          "completed_frames": 500,
+          "fusion": "gpu",
+          "load_ms": 2005.986899999698,
+          "first_frame": {
+            "wall_ms": 988.5593999970297,
+            "server_ms": 988.4387999991304,
+            "depth_predict_ms": 221.03770000103395,
+            "depth_fusion_ms": 52.825999999186024,
+            "tracking_ms": 4.815600001165876,
+            "render_ms": 10.310400000889786,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 499,
+              "mean_ms": 53.95533907826238,
+              "min_ms": 36.95199999856413,
+              "max_ms": 71.99270000273827,
+              "p50_ms": 55.43960000068182,
+              "p95_ms": 61.94820999990043,
+              "p99_ms": 66.45809399778955
+            },
+            "server_ms": {
+              "count": 499,
+              "mean_ms": 53.85980721437587,
+              "min_ms": 36.859399999229936,
+              "max_ms": 71.89759999891976,
+              "p50_ms": 55.34749999787891,
+              "p95_ms": 61.840460000530584,
+              "p99_ms": 66.33267200100818
+            },
+            "depth_predict_ms": {
+              "count": 499,
+              "mean_ms": 13.3385170340411,
+              "min_ms": 7.4364000029163435,
+              "max_ms": 16.936899999564048,
+              "p50_ms": 14.582600000721868,
+              "p95_ms": 15.381039997373591,
+              "p99_ms": 15.95531199942343
+            },
+            "depth_fusion_ms": {
+              "count": 499,
+              "mean_ms": 7.3403775551599475,
+              "min_ms": 3.7402000016300008,
+              "max_ms": 19.33959999587387,
+              "p50_ms": 6.97760000184644,
+              "p95_ms": 11.085560002175043,
+              "p99_ms": 13.997287999591208
+            },
+            "tracking_ms": {
+              "count": 499,
+              "mean_ms": 9.58017835672105,
+              "min_ms": 8.006600000953767,
+              "max_ms": 15.847299997403752,
+              "p50_ms": 9.476699997321703,
+              "p95_ms": 10.611970003083115,
+              "p99_ms": 13.211816001494299
+            },
+            "render_ms": {
+              "count": 499,
+              "mean_ms": 9.763072144191673,
+              "min_ms": 5.116099997394485,
+              "max_ms": 19.13060000151745,
+              "p50_ms": 9.740000001329463,
+              "p95_ms": 11.97435000212863,
+              "p99_ms": 13.984914001994184
+            }
+          },
+          "compared_frames": 500,
+          "all_compared_outputs_exact": true
+        }
+      },
+      "mean_latency_reduction_percent": {
+        "server_ms": {
+          "before": 5.1808771567631196,
+          "after": 10.997551283921968
+        },
+        "wall_ms": {
+          "before": 5.167301593433105,
+          "after": 10.976888545556807
+        },
+        "depth_fusion_ms": {
+          "before": 88.25723544758578,
+          "after": 88.2442745923795
+        }
+      },
+      "gpu_control_server_mean_drift_percent": 6.535409093871469,
+      "candidate_new_class_observations": [
+        {
+          "frame_index": 286,
+          "labels": [
+            "pedestrian light"
+          ]
+        },
+        {
+          "frame_index": 287,
+          "labels": [
+            "pedestrian light"
+          ]
+        },
+        {
+          "frame_index": 469,
+          "labels": [
+            "pedestrian light"
+          ]
+        },
+        {
+          "frame_index": 470,
+          "labels": [
+            "pedestrian light"
+          ]
+        },
+        {
+          "frame_index": 471,
+          "labels": [
+            "pedestrian light"
+          ]
+        },
+        {
+          "frame_index": 472,
+          "labels": [
+            "pedestrian light"
+          ]
+        }
+      ]
+    },
+    {
+      "model": "yolo26n-walk",
+      "video": "MOT17-10-FRCNN-raw.mp4",
+      "scene": "night",
+      "independent_replicate": false,
+      "weights": {
+        "detection_sha256": "ab0895c51f7fa894fa9ee16acf8dd783ef2a6aa3065549db07bfc7e5b4a1c5cd",
+        "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+      },
+      "video_sha256": "0780ec0d648cfbca71a92cf0e45811e591b0f014307e3291a5f970112d855d01",
+      "settings": {
+        "batch": 1,
+        "precision": "FP32",
+        "depth_edge": 768,
+        "detection_model": "yolo26n-walk",
+        "detection_manifest_sha256": "53dd47c36d525b301bc4f1f0bd8c12614cfc7601df2edebcda3d9cb7accd04c6",
+        "fixture_max_edge": 640,
+        "jpeg_quality": 80,
+        "distance": {
+          "distance_mode": "depth",
+          "depth_interval": 3,
+          "focal_length_px": 700.0,
+          "reference_width_px": 640,
+          "object_heights_m": [
+            [
+              "person",
+              1.7
+            ],
+            [
+              "bicycle",
+              1.1
+            ],
+            [
+              "motorcycle",
+              1.2
+            ],
+            [
+              "car",
+              1.5
+            ],
+            [
+              "bus",
+              3.2
+            ],
+            [
+              "truck",
+              3.0
+            ]
+          ]
+        },
+        "tracking": {
+          "tracker": "botsort.yaml",
+          "history_size": 8,
+          "min_valid_samples": 3,
+          "ema_alpha": 0.5,
+          "stale_timeout_s": 2.0,
+          "motion_history_timeout_s": 2.0,
+          "min_time_span_s": 0.1,
+          "approaching_threshold_mps": 0.2,
+          "moving_away_threshold_mps": 0.2,
+          "confirmation_updates": 2
+        },
+        "risk": {
+          "min_closing_speed_mps": 0.2,
+          "max_ttc_sec": 10.0,
+          "distance_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              25
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              10.0,
+              5
+            ]
+          ],
+          "ttc_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              30
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              8.0,
+              5
+            ]
+          ],
+          "closing_speed_bands": [
+            [
+              1.0,
+              5
+            ],
+            [
+              2.0,
+              10
+            ]
+          ],
+          "motion_weights": [
+            [
+              "approaching",
+              15
+            ],
+            [
+              "moving_away",
+              -10
+            ],
+            [
+              "stationary",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "direction_weights": [
+            [
+              "front",
+              10
+            ],
+            [
+              "front_left",
+              7
+            ],
+            [
+              "front_right",
+              7
+            ],
+            [
+              "left",
+              3
+            ],
+            [
+              "right",
+              3
+            ],
+            [
+              "behind",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "class_weights": [
+            [
+              "car",
+              15
+            ],
+            [
+              "truck",
+              18
+            ],
+            [
+              "bus",
+              18
+            ],
+            [
+              "motorcycle",
+              15
+            ],
+            [
+              "bicycle",
+              12
+            ],
+            [
+              "scooter",
+              12
+            ],
+            [
+              "person",
+              5
+            ],
+            [
+              "animal",
+              5
+            ],
+            [
+              "bird",
+              5
+            ],
+            [
+              "cat",
+              5
+            ],
+            [
+              "dog",
+              5
+            ],
+            [
+              "horse",
+              5
+            ],
+            [
+              "sheep",
+              5
+            ],
+            [
+              "cow",
+              5
+            ],
+            [
+              "elephant",
+              5
+            ],
+            [
+              "bear",
+              5
+            ],
+            [
+              "zebra",
+              5
+            ],
+            [
+              "giraffe",
+              5
+            ],
+            [
+              "bench",
+              1
+            ],
+            [
+              "chair",
+              1
+            ],
+            [
+              "stop sign",
+              1
+            ],
+            [
+              "fire hydrant",
+              1
+            ],
+            [
+              "pole",
+              1
+            ],
+            [
+              "sign",
+              1
+            ],
+            [
+              "bollard",
+              1
+            ],
+            [
+              "traffic_cone",
+              1
+            ],
+            [
+              "stairs",
+              3
+            ]
+          ],
+          "default_class_weight": 5,
+          "risk_level_thresholds": [
+            25,
+            50,
+            75
+          ],
+          "alert_priorities": [
+            [
+              "low",
+              0
+            ],
+            [
+              "medium",
+              2
+            ],
+            [
+              "high",
+              3
+            ],
+            [
+              "critical",
+              4
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "medium_alert_enabled": true,
+          "medium_alert_max_distance_m": 3.0,
+          "medium_alert_directions": [
+            "front",
+            "front_left",
+            "front_right"
+          ],
+          "front_left_fraction": 0.3333333333333333,
+          "front_right_fraction": 0.6666666666666666
+        }
+      },
+      "source_fps": 30.0,
+      "source_size": [
+        960,
+        540
+      ],
+      "runs": {
+        "before": {
+          "report": "yolo26n-walk-mot10-before/report.json",
+          "frames": "yolo26n-walk-mot10-before/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "gpu",
+          "load_ms": 1978.9916000008816,
+          "first_frame": {
+            "wall_ms": 899.0936000009242,
+            "server_ms": 898.9914999983739,
+            "depth_predict_ms": 209.15169999716454,
+            "depth_fusion_ms": 46.66030000225874,
+            "tracking_ms": 4.309200001443969,
+            "render_ms": 8.133399998769164,
+            "comparison": null
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 45.38570980091569,
+              "min_ms": 32.20630000214442,
+              "max_ms": 65.12199999997392,
+              "p50_ms": 46.138400000927504,
+              "p95_ms": 54.0123799983121,
+              "p99_ms": 60.051028001180384
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 45.2918666156581,
+              "min_ms": 32.12359999815817,
+              "max_ms": 65.0052000019059,
+              "p50_ms": 46.03860000133864,
+              "p95_ms": 53.914520000398625,
+              "p99_ms": 59.933927999518346
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 11.909546554376512,
+              "min_ms": 7.57299999895622,
+              "max_ms": 18.81160000266391,
+              "p50_ms": 12.29339999918011,
+              "p95_ms": 14.671860000817105,
+              "p99_ms": 16.054332001513103
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 5.3805555895816015,
+              "min_ms": 1.9044000000576489,
+              "max_ms": 12.28090000222437,
+              "p50_ms": 5.145500002981862,
+              "p95_ms": 8.488880000368226,
+              "p99_ms": 10.758763998310314
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 8.747378560500223,
+              "min_ms": 6.967500001337612,
+              "max_ms": 15.09029999942868,
+              "p50_ms": 8.606499999586958,
+              "p95_ms": 10.202599997865036,
+              "p99_ms": 13.223659999057418
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 6.957137672232874,
+              "min_ms": 2.9119999999238644,
+              "max_ms": 18.37090000117314,
+              "p50_ms": 6.854100000055041,
+              "p95_ms": 9.431700000277488,
+              "p99_ms": 11.166127998876618
+            }
+          },
+          "compared_frames": 0,
+          "all_compared_outputs_exact": false
+        },
+        "host": {
+          "report": "yolo26n-walk-mot10-host/report.json",
+          "frames": "yolo26n-walk-mot10-host/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "host",
+          "load_ms": 2241.6301000012027,
+          "first_frame": {
+            "wall_ms": 858.8689000025624,
+            "server_ms": 858.7644999970507,
+            "depth_predict_ms": 199.54710000092746,
+            "depth_fusion_ms": 3.6432000015338417,
+            "tracking_ms": 3.8309999981720466,
+            "render_ms": 7.947699999931501,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 45.65328269519058,
+              "min_ms": 27.493599998706486,
+              "max_ms": 76.01570000042557,
+              "p50_ms": 46.93849999966915,
+              "p95_ms": 53.82854000054067,
+              "p99_ms": 61.41479999903822
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 45.56152358349248,
+              "min_ms": 27.414699998189462,
+              "max_ms": 75.87460000286228,
+              "p50_ms": 46.852399998897454,
+              "p95_ms": 53.71831999873393,
+              "p99_ms": 61.315703998698154
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 14.496954517629275,
+              "min_ms": 7.59969999853638,
+              "max_ms": 24.646200003189733,
+              "p50_ms": 15.410100000735838,
+              "p95_ms": 17.247199999837903,
+              "p99_ms": 18.41484000076889
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 0.7567462481900259,
+              "min_ms": 0.4403000020829495,
+              "max_ms": 1.4621999980590772,
+              "p50_ms": 0.7440999979735352,
+              "p95_ms": 1.0242399999697227,
+              "p99_ms": 1.1809839996567462
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 8.796404593946278,
+              "min_ms": 7.156499996199273,
+              "max_ms": 17.549399999552406,
+              "p50_ms": 8.567899996705819,
+              "p95_ms": 11.220660000981297,
+              "p99_ms": 13.37150399966049
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 6.94114931092794,
+              "min_ms": 2.967000000353437,
+              "max_ms": 15.057900000101654,
+              "p50_ms": 6.769200001144782,
+              "p95_ms": 10.013739998976234,
+              "p99_ms": 12.312420000816928
+            }
+          },
+          "compared_frames": 654,
+          "all_compared_outputs_exact": true
+        },
+        "after": {
+          "report": "yolo26n-walk-mot10-after/report.json",
+          "frames": "yolo26n-walk-mot10-after/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "gpu",
+          "load_ms": 2267.8438000002643,
+          "first_frame": {
+            "wall_ms": 895.1606999980868,
+            "server_ms": 895.0440000007802,
+            "depth_predict_ms": 206.69980000093346,
+            "depth_fusion_ms": 49.722899999324,
+            "tracking_ms": 5.81160000001546,
+            "render_ms": 8.878500000719214,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 49.10079724346948,
+              "min_ms": 31.79150000141817,
+              "max_ms": 104.88869999971939,
+              "p50_ms": 48.274900000251364,
+              "p95_ms": 63.04433999830508,
+              "p99_ms": 75.91252399841323
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 49.000824196036845,
+              "min_ms": 31.702899999800138,
+              "max_ms": 104.70390000045882,
+              "p50_ms": 48.181599999225,
+              "p95_ms": 62.91538000077708,
+              "p99_ms": 75.78750800079433
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 12.873001225030347,
+              "min_ms": 7.634499997948296,
+              "max_ms": 26.518999999098014,
+              "p50_ms": 13.040400001045782,
+              "p95_ms": 15.625539999018656,
+              "p99_ms": 18.462291999312583
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 5.682744257347562,
+              "min_ms": 1.8114000013156328,
+              "max_ms": 13.376099999732105,
+              "p50_ms": 5.431300000054762,
+              "p95_ms": 9.102720000373665,
+              "p99_ms": 10.635979999497067
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 9.55214196017113,
+              "min_ms": 6.983899998886045,
+              "max_ms": 29.012699997110758,
+              "p50_ms": 8.987400000478374,
+              "p95_ms": 13.357879997056443,
+              "p99_ms": 15.804415996099124
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 7.7198811638745095,
+              "min_ms": 3.1006999997771345,
+              "max_ms": 24.999700002808822,
+              "p50_ms": 7.322800000110874,
+              "p95_ms": 11.959219998243498,
+              "p99_ms": 14.781612000078894
+            }
+          },
+          "compared_frames": 654,
+          "all_compared_outputs_exact": true
+        }
+      },
+      "mean_latency_reduction_percent": {
+        "server_ms": {
+          "before": -0.5953761414221548,
+          "after": 7.018862782358126
+        },
+        "wall_ms": {
+          "before": -0.5895531775279128,
+          "after": 7.021300552787713
+        },
+        "depth_fusion_ms": {
+          "before": 85.93553703533297,
+          "after": 86.68343648912965
+        }
+      },
+      "gpu_control_server_mean_drift_percent": 8.189014623425784,
+      "candidate_new_class_observations": [
+        {
+          "frame_index": 178,
+          "labels": [
+            "pedestrian light"
+          ]
+        },
+        {
+          "frame_index": 526,
+          "labels": [
+            "pedestrian light"
+          ]
+        }
+      ]
+    },
+    {
+      "model": "yolo26n-walk",
+      "video": "MOT17-10-FRCNN-raw.mp4",
+      "scene": "night",
+      "independent_replicate": true,
+      "weights": {
+        "detection_sha256": "ab0895c51f7fa894fa9ee16acf8dd783ef2a6aa3065549db07bfc7e5b4a1c5cd",
+        "depth_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+      },
+      "video_sha256": "0780ec0d648cfbca71a92cf0e45811e591b0f014307e3291a5f970112d855d01",
+      "settings": {
+        "batch": 1,
+        "precision": "FP32",
+        "depth_edge": 768,
+        "detection_model": "yolo26n-walk",
+        "detection_manifest_sha256": "53dd47c36d525b301bc4f1f0bd8c12614cfc7601df2edebcda3d9cb7accd04c6",
+        "fixture_max_edge": 640,
+        "jpeg_quality": 80,
+        "distance": {
+          "distance_mode": "depth",
+          "depth_interval": 3,
+          "focal_length_px": 700.0,
+          "reference_width_px": 640,
+          "object_heights_m": [
+            [
+              "person",
+              1.7
+            ],
+            [
+              "bicycle",
+              1.1
+            ],
+            [
+              "motorcycle",
+              1.2
+            ],
+            [
+              "car",
+              1.5
+            ],
+            [
+              "bus",
+              3.2
+            ],
+            [
+              "truck",
+              3.0
+            ]
+          ]
+        },
+        "tracking": {
+          "tracker": "botsort.yaml",
+          "history_size": 8,
+          "min_valid_samples": 3,
+          "ema_alpha": 0.5,
+          "stale_timeout_s": 2.0,
+          "motion_history_timeout_s": 2.0,
+          "min_time_span_s": 0.1,
+          "approaching_threshold_mps": 0.2,
+          "moving_away_threshold_mps": 0.2,
+          "confirmation_updates": 2
+        },
+        "risk": {
+          "min_closing_speed_mps": 0.2,
+          "max_ttc_sec": 10.0,
+          "distance_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              25
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              10.0,
+              5
+            ]
+          ],
+          "ttc_bands": [
+            [
+              1.5,
+              40
+            ],
+            [
+              3.0,
+              30
+            ],
+            [
+              5.0,
+              15
+            ],
+            [
+              8.0,
+              5
+            ]
+          ],
+          "closing_speed_bands": [
+            [
+              1.0,
+              5
+            ],
+            [
+              2.0,
+              10
+            ]
+          ],
+          "motion_weights": [
+            [
+              "approaching",
+              15
+            ],
+            [
+              "moving_away",
+              -10
+            ],
+            [
+              "stationary",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "direction_weights": [
+            [
+              "front",
+              10
+            ],
+            [
+              "front_left",
+              7
+            ],
+            [
+              "front_right",
+              7
+            ],
+            [
+              "left",
+              3
+            ],
+            [
+              "right",
+              3
+            ],
+            [
+              "behind",
+              0
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "class_weights": [
+            [
+              "car",
+              15
+            ],
+            [
+              "truck",
+              18
+            ],
+            [
+              "bus",
+              18
+            ],
+            [
+              "motorcycle",
+              15
+            ],
+            [
+              "bicycle",
+              12
+            ],
+            [
+              "scooter",
+              12
+            ],
+            [
+              "person",
+              5
+            ],
+            [
+              "animal",
+              5
+            ],
+            [
+              "bird",
+              5
+            ],
+            [
+              "cat",
+              5
+            ],
+            [
+              "dog",
+              5
+            ],
+            [
+              "horse",
+              5
+            ],
+            [
+              "sheep",
+              5
+            ],
+            [
+              "cow",
+              5
+            ],
+            [
+              "elephant",
+              5
+            ],
+            [
+              "bear",
+              5
+            ],
+            [
+              "zebra",
+              5
+            ],
+            [
+              "giraffe",
+              5
+            ],
+            [
+              "bench",
+              1
+            ],
+            [
+              "chair",
+              1
+            ],
+            [
+              "stop sign",
+              1
+            ],
+            [
+              "fire hydrant",
+              1
+            ],
+            [
+              "pole",
+              1
+            ],
+            [
+              "sign",
+              1
+            ],
+            [
+              "bollard",
+              1
+            ],
+            [
+              "traffic_cone",
+              1
+            ],
+            [
+              "stairs",
+              3
+            ]
+          ],
+          "default_class_weight": 5,
+          "risk_level_thresholds": [
+            25,
+            50,
+            75
+          ],
+          "alert_priorities": [
+            [
+              "low",
+              0
+            ],
+            [
+              "medium",
+              2
+            ],
+            [
+              "high",
+              3
+            ],
+            [
+              "critical",
+              4
+            ],
+            [
+              "unknown",
+              0
+            ]
+          ],
+          "medium_alert_enabled": true,
+          "medium_alert_max_distance_m": 3.0,
+          "medium_alert_directions": [
+            "front",
+            "front_left",
+            "front_right"
+          ],
+          "front_left_fraction": 0.3333333333333333,
+          "front_right_fraction": 0.6666666666666666
+        }
+      },
+      "source_fps": 30.0,
+      "source_size": [
+        960,
+        540
+      ],
+      "runs": {
+        "before": {
+          "report": "yolo26n-walk-mot10-replicate-before/report.json",
+          "frames": "yolo26n-walk-mot10-replicate-before/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "gpu",
+          "load_ms": 2088.3821999996144,
+          "first_frame": {
+            "wall_ms": 923.772199999803,
+            "server_ms": 923.6612999993667,
+            "depth_predict_ms": 216.67990000059945,
+            "depth_fusion_ms": 45.66219999833265,
+            "tracking_ms": 3.8674999996146653,
+            "render_ms": 8.255999997345498,
+            "comparison": null
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 48.80129938745191,
+              "min_ms": 33.862099997350015,
+              "max_ms": 107.72759999963455,
+              "p50_ms": 47.360199998365715,
+              "p95_ms": 63.15541999938432,
+              "p99_ms": 73.38593599852175
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 48.702819908112566,
+              "min_ms": 33.76829999979236,
+              "max_ms": 107.60540000046603,
+              "p50_ms": 47.275400000216905,
+              "p95_ms": 63.031320001755375,
+              "p99_ms": 73.24679599958472
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 12.650206584941024,
+              "min_ms": 7.623900000908179,
+              "max_ms": 19.31999999942491,
+              "p50_ms": 12.617200001841411,
+              "p95_ms": 15.18917999783298,
+              "p99_ms": 17.113303999358322
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 5.626644104265267,
+              "min_ms": 1.8562999975983985,
+              "max_ms": 16.431899999588495,
+              "p50_ms": 5.337200000212761,
+              "p95_ms": 9.294520001276396,
+              "p99_ms": 12.011691999214236
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 9.610264318448355,
+              "min_ms": 7.205500001873588,
+              "max_ms": 33.399500000086846,
+              "p50_ms": 8.814900000288617,
+              "p95_ms": 14.127320002444321,
+              "p99_ms": 16.427703999361256
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 7.727557580368221,
+              "min_ms": 3.0574999982491136,
+              "max_ms": 22.69449999948847,
+              "p50_ms": 7.262300001457334,
+              "p95_ms": 12.38493999990169,
+              "p99_ms": 16.55498799867928
+            }
+          },
+          "compared_frames": 0,
+          "all_compared_outputs_exact": false
+        },
+        "host": {
+          "report": "yolo26n-walk-mot10-replicate-host/report.json",
+          "frames": "yolo26n-walk-mot10-replicate-host/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "host",
+          "load_ms": 2027.8400999995938,
+          "first_frame": {
+            "wall_ms": 823.0670000011742,
+            "server_ms": 822.9658000018389,
+            "depth_predict_ms": 189.77539999832516,
+            "depth_fusion_ms": 3.0340000012074597,
+            "tracking_ms": 3.7952000020595733,
+            "render_ms": 8.107000001473352,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 45.684406431767776,
+              "min_ms": 29.970799998409348,
+              "max_ms": 65.74320000072476,
+              "p50_ms": 46.68899999887799,
+              "p95_ms": 52.130820001184475,
+              "p99_ms": 54.89537600049516
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 45.59427748851772,
+              "min_ms": 29.86360000068089,
+              "max_ms": 65.63340000138851,
+              "p50_ms": 46.58220000055735,
+              "p95_ms": 52.03042000066489,
+              "p99_ms": 54.79928399960045
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 14.630094946379105,
+              "min_ms": 7.519399998273002,
+              "max_ms": 20.20730000003823,
+              "p50_ms": 15.249600000970531,
+              "p95_ms": 16.617460000998108,
+              "p99_ms": 17.111435999540845
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 0.7447516079847205,
+              "min_ms": 0.47419999827980064,
+              "max_ms": 1.4196000010997523,
+              "p50_ms": 0.7325000005948823,
+              "p95_ms": 0.9528800001135096,
+              "p99_ms": 1.0962720005773008
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 8.722680091915985,
+              "min_ms": 6.882199999381555,
+              "max_ms": 23.76649999860092,
+              "p50_ms": 8.561199996620417,
+              "p95_ms": 10.381339996820316,
+              "p99_ms": 13.107208000437822
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 6.868696784030394,
+              "min_ms": 2.9839000017091166,
+              "max_ms": 16.2875999994867,
+              "p50_ms": 6.7523999969125725,
+              "p95_ms": 9.42935999846668,
+              "p99_ms": 10.965059998852666
+            }
+          },
+          "compared_frames": 654,
+          "all_compared_outputs_exact": true
+        },
+        "after": {
+          "report": "yolo26n-walk-mot10-replicate-after/report.json",
+          "frames": "yolo26n-walk-mot10-replicate-after/frames.jsonl",
+          "completed_frames": 654,
+          "fusion": "gpu",
+          "load_ms": 2149.964899999759,
+          "first_frame": {
+            "wall_ms": 897.195699999429,
+            "server_ms": 897.0857999993314,
+            "depth_predict_ms": 182.44709999999031,
+            "depth_fusion_ms": 47.856299999693874,
+            "tracking_ms": 3.9450999975088052,
+            "render_ms": 8.722599999600789,
+            "comparison": {
+              "depth": {
+                "exact": true,
+                "different_pixels": 0,
+                "reference_nonfinite": 0,
+                "candidate_nonfinite": 0,
+                "max_abs_m": 0.0,
+                "mean_abs_m": 0.0
+              },
+              "objects": {
+                "structural_or_decision_changes": [],
+                "numeric_differences": {},
+                "exact": true
+              },
+              "raw_detection_exact": true,
+              "jpeg_exact": true
+            }
+          },
+          "steady": {
+            "wall_ms": {
+              "count": 653,
+              "mean_ms": 54.03052082689396,
+              "min_ms": 36.38729999875068,
+              "max_ms": 183.64910000309465,
+              "p50_ms": 50.728000001981854,
+              "p95_ms": 73.4920000002603,
+              "p99_ms": 113.95788800000446
+            },
+            "server_ms": {
+              "count": 653,
+              "mean_ms": 53.91348009203538,
+              "min_ms": 36.300899999332614,
+              "max_ms": 183.510999999271,
+              "p50_ms": 50.63800000061747,
+              "p95_ms": 73.36492000104045,
+              "p99_ms": 112.57225200053654
+            },
+            "depth_predict_ms": {
+              "count": 653,
+              "mean_ms": 14.082604594181078,
+              "min_ms": 7.8740999997535255,
+              "max_ms": 37.72019999814802,
+              "p50_ms": 14.010599999892293,
+              "p95_ms": 17.08017999844742,
+              "p99_ms": 22.907419999100966
+            },
+            "depth_fusion_ms": {
+              "count": 653,
+              "mean_ms": 6.458120061262059,
+              "min_ms": 2.2286999992502388,
+              "max_ms": 41.835900003206916,
+              "p50_ms": 5.699399996956345,
+              "p95_ms": 11.114940001425566,
+              "p99_ms": 20.938032000121893
+            },
+            "tracking_ms": {
+              "count": 653,
+              "mean_ms": 10.509363093390593,
+              "min_ms": 7.169799999246607,
+              "max_ms": 82.42840000093565,
+              "p50_ms": 9.133099996688543,
+              "p95_ms": 16.643359997397056,
+              "p99_ms": 30.826339997292962
+            },
+            "render_ms": {
+              "count": 653,
+              "mean_ms": 8.511585145630058,
+              "min_ms": 3.4009000009973533,
+              "max_ms": 35.021199997572694,
+              "p50_ms": 7.626999999047257,
+              "p95_ms": 15.15371999994386,
+              "p99_ms": 20.753556001436664
+            }
+          },
+          "compared_frames": 654,
+          "all_compared_outputs_exact": true
+        }
+      },
+      "mean_latency_reduction_percent": {
+        "server_ms": {
+          "before": 6.382674402549426,
+          "after": 15.430654057790372
+        },
+        "wall_ms": {
+          "before": 6.386905666051934,
+          "after": 15.44703672553137
+        },
+        "depth_fusion_ms": {
+          "before": 86.76384014727067,
+          "after": 88.46798137972091
+        }
+      },
+      "gpu_control_server_mean_drift_percent": 10.69888805977508,
+      "candidate_new_class_observations": [
+        {
+          "frame_index": 178,
+          "labels": [
+            "pedestrian light"
+          ]
+        },
+        {
+          "frame_index": 526,
+          "labels": [
+            "pedestrian light"
+          ]
+        }
+      ]
+    }
+  ],
+  "output_consistency": {
+    "all_5924_comparisons_exact": true,
+    "aligned_depth_nonfinite_count": 0,
+    "scope": "Host fusion and after-controls versus the same-model TensorRT GPU-fusion reference, including cold frames",
+    "limitation": "This does not assert TensorRT versus Torch bitwise equality; previously reported small FP32 differences remain in ../../2026-10-26/depth-integration/summary.json",
+    "new_classes": "Only neutral pedestrian light appeared among classes 80-86 in these clips; pole, bollard, traffic_cone and stairs have no positive full-video evidence here"
+  },
+  "real_service": {
+    "protocol": "PRF2 through actual Web 8766 and native worker 8767",
+    "timing": "One public bus image, 31 ordered frames plus a separate one-frame session per configuration. Median uses the 30 post-first frames. Fixture roundtrip excludes camera/encoding; no GPU-after control or browser FPS claim",
+    "model_comparisons": {
+      "yolo26n": {
+        "runs": {
+          "gpu": {
+            "report": "service-yolo26n-gpu.json",
+            "input_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+            "sessions": [
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 31,
+                  "received": 31,
+                  "forwarded": 31,
+                  "worker_received": 31,
+                  "worker_verified": 31,
+                  "delivered": 31
+                },
+                "first_frame_ms": 7640.67950000026,
+                "steady_median_ms": 42.932300000757095,
+                "steady_max_ms": 50.832299999456154
+              },
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 1,
+                  "received": 1,
+                  "forwarded": 1,
+                  "worker_received": 1,
+                  "worker_verified": 1,
+                  "delivered": 1
+                },
+                "first_frame_ms": 41.84000000168453,
+                "steady_median_ms": null,
+                "steady_max_ms": null
+              }
+            ]
+          },
+          "host": {
+            "report": "service-yolo26n-host.json",
+            "input_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+            "sessions": [
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 31,
+                  "received": 31,
+                  "forwarded": 31,
+                  "worker_received": 31,
+                  "worker_verified": 31,
+                  "delivered": 31
+                },
+                "first_frame_ms": 7822.337999998126,
+                "steady_median_ms": 42.691550001109135,
+                "steady_max_ms": 46.21979999865289
+              },
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 1,
+                  "received": 1,
+                  "forwarded": 1,
+                  "worker_received": 1,
+                  "worker_verified": 1,
+                  "delivered": 1
+                },
+                "first_frame_ms": 39.561900000990136,
+                "steady_median_ms": null,
+                "steady_max_ms": null
+              }
+            ]
+          }
+        },
+        "steady_fixture_roundtrip_median_reduction_percent": 0.5607666014718848
+      },
+      "yolo26n-walk": {
+        "runs": {
+          "gpu": {
+            "report": "service-yolo26n-walk-gpu.json",
+            "input_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+            "sessions": [
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 31,
+                  "received": 31,
+                  "forwarded": 31,
+                  "worker_received": 31,
+                  "worker_verified": 31,
+                  "delivered": 31
+                },
+                "first_frame_ms": 7931.350399998337,
+                "steady_median_ms": 47.23039999771572,
+                "steady_max_ms": 50.87990000174614
+              },
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 1,
+                  "received": 1,
+                  "forwarded": 1,
+                  "worker_received": 1,
+                  "worker_verified": 1,
+                  "delivered": 1
+                },
+                "first_frame_ms": 39.230499998666346,
+                "steady_median_ms": null,
+                "steady_max_ms": null
+              }
+            ]
+          },
+          "host": {
+            "report": "service-yolo26n-walk-host.json",
+            "input_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+            "sessions": [
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 31,
+                  "received": 31,
+                  "forwarded": 31,
+                  "worker_received": 31,
+                  "worker_verified": 31,
+                  "delivered": 31
+                },
+                "first_frame_ms": 8982.595600002242,
+                "steady_median_ms": 39.07165000055102,
+                "steady_max_ms": 44.14339999857475
+              },
+              {
+                "complete": true,
+                "end": {
+                  "kind": "ended",
+                  "frames": 1,
+                  "received": 1,
+                  "forwarded": 1,
+                  "worker_received": 1,
+                  "worker_verified": 1,
+                  "delivered": 1
+                },
+                "first_frame_ms": 33.63059999901452,
+                "steady_median_ms": null,
+                "steady_max_ms": null
+              }
+            ]
+          }
+        },
+        "steady_fixture_roundtrip_median_reduction_percent": 17.27436142306502
+      }
+    },
+    "pedestrian_light_probe": {
+      "report": "service-walk-signal.json",
+      "fixture": "signal-fixture.json",
+      "sessions": 2,
+      "frames_each": 1,
+      "observed": "Neutral pedestrian light class84, unknown state for below-threshold green score; real protocol transport only, not physical light accuracy or a performance comparison"
+    }
+  },
+  "interpretation": {
+    "decision": "Keep host fusion explicitly selectable and enable it in the local original-model service; retain GPU fusion as repository default",
+    "day": "Both original and walk host candidates reduce full-frame mean relative to both bracketing controls",
+    "night": "No stable universal full-frame gain: the first walk-night candidate regresses against the earlier control, while the independent replicate improves against both. Report each comparison separately",
+    "forward": "Reuse the previously validated FP32 TensorRT forward acceleration; this round reduces depth fusion overhead and does not claim a new Forward gain",
+    "static_service": "Walk bus fixture median improves about17.3%; original bus fixture improves about0.6%. These are ordered static probes, not whole-video or camera throughput"
+  },
+  "checks": {
+    "django_check": {
+      "command": "python manage.py check",
+      "passed": true,
+      "log": "check.log"
+    },
+    "migrations": {
+      "command": "python manage.py makemigrations --check --dry-run",
+      "passed": true,
+      "log": "migrations.log"
+    },
+    "backend_tests": {
+      "command": "python manage.py test",
+      "passed": true,
+      "run": 536,
+      "skipped": 8,
+      "log": "tests.log"
+    },
+    "ruff": {
+      "command": "ruff check .",
+      "passed": true,
+      "log": "ruff.log"
+    },
+    "backend_coverage": {
+      "command": "python -m coverage run manage.py test; python -m coverage report",
+      "passed": true,
+      "scope": "core production modules, branch-aware combined coverage",
+      "displayed_percent": 87,
+      "required_percent": 85,
+      "logs": [
+        "coverage-tests.log",
+        "coverage-report.log"
+      ]
+    },
+    "frontend": {
+      "command": "npm run test:coverage",
+      "passed": true,
+      "tests": 411,
+      "skipped": 0,
+      "lines_percent": 89.39,
+      "branches_percent": 87.5,
+      "functions_percent": 84.73,
+      "thresholds_percent": [
+        85,
+        80,
+        80
+      ],
+      "log": "frontend-coverage.log"
+    },
+    "deployment_closure_after_last_edits": {
+      "passed": true,
+      "tests": 16,
+      "log": "deployment-tests.log"
+    },
+    "manual_documentation_review": "Reviewed own edited headers, qualified declaration indexes and function/class responsibilities; no tools/check_docs.py exists",
+    "initial_failures_retained": {
+      "client-tests.log": "Sandbox EPERM prevented Node worker launch; rerun with approved execution boundary",
+      "client-tests-verified.log": "One walk fixture lacked required local PRF2 fields; fixture fixed, 35/35 focused tests then passed",
+      "client-tests-fixed.log": "Passing focused client suite",
+      "ruff-initial.log": "Long docstring lines corrected before passing lint"
+    },
+    "external_services_verified": false,
+    "log_formatting": "Only trailing blank lines and coverage-table trailing spaces were removed for Git whitespace checks; measurements, assertions and failure messages were retained."
+  },
+  "source_identity": {
+    "scope": "Every source-hash-bound file remained byte-identical across all15 runs and at final report generation",
+    "newline_note": "Reports bind exact measured Windows working bytes. Git stores normalized LF text; both hashes are supplied below. No measured implementation edit occurred after these runs",
+    "files": {
+      "core/detector.py": {
+        "measured_working_bytes_sha256": "e0e71dc988aa3783aebaad90c8b26e296a5fb421dd1820e4e6e5fef4a659112e",
+        "git_lf_bytes_sha256": "76c119d06e6ab0d8dbcac55d78bac75cc3575ad1ccda09623a0321cfce6c89a8"
+      },
+      "core/detection_model.py": {
+        "measured_working_bytes_sha256": "7cd80d66df0ee4e75e53662e58206cc9786976b8aaa327b75cff8c8ff3dc8a8a",
+        "git_lf_bytes_sha256": "7cd80d66df0ee4e75e53662e58206cc9786976b8aaa327b75cff8c8ff3dc8a8a"
+      },
+      "zerogpu/runtime.py": {
+        "measured_working_bytes_sha256": "272842fbcf0cdb8714ae7b05a4b8dbdf9086e0f8bad59d17884c3f2c822dd996",
+        "git_lf_bytes_sha256": "272842fbcf0cdb8714ae7b05a4b8dbdf9086e0f8bad59d17884c3f2c822dd996"
+      },
+      "realtime/depth.py": {
+        "measured_working_bytes_sha256": "b6983edce363dec70f7fca78e43b15dfa0d1106ec42649a12cfc14ed95b1b931",
+        "git_lf_bytes_sha256": "b6983edce363dec70f7fca78e43b15dfa0d1106ec42649a12cfc14ed95b1b931"
+      },
+      "realtime/depth_runtime.py": {
+        "measured_working_bytes_sha256": "7d8cb754e1c1e1ac0acbf4ad67871c0e3c805e7fdc0c7a48b485e78fe0c7ec19",
+        "git_lf_bytes_sha256": "f7e1ac4cb2b47c6bf613aeed08982e8a56eaece20060d656f9f2692528e89e4c"
+      },
+      "realtime/depth_config.py": {
+        "measured_working_bytes_sha256": "8b5712dd6557f53cce89a86541c77e311b84bc753c96321aed8e37f958f63186",
+        "git_lf_bytes_sha256": "0ee9ab720276ed72b48b0f5cfd5d89473cadda2319d2d8e97cefb4214aef8f4e"
+      },
+      "realtime/depth_fast.py": {
+        "measured_working_bytes_sha256": "3ffbdc04bffba8c861948de20474d00dc7c3e6b14a35778d6a1217dbe86d9953",
+        "git_lf_bytes_sha256": "3ffbdc04bffba8c861948de20474d00dc7c3e6b14a35778d6a1217dbe86d9953"
+      },
+      "realtime/depth_predictor.py": {
+        "measured_working_bytes_sha256": "06af6d24f205cd4dc11ba665e0b96c251f1308749b4bde01d67fc71c9bda1019",
+        "git_lf_bytes_sha256": "06af6d24f205cd4dc11ba665e0b96c251f1308749b4bde01d67fc71c9bda1019"
+      },
+      "realtime/detector.py": {
+        "measured_working_bytes_sha256": "fd778519c5d9e1861c9a0a4d869f84dd3aac3a60e9d60c2f9b54f6897709c47c",
+        "git_lf_bytes_sha256": "fd778519c5d9e1861c9a0a4d869f84dd3aac3a60e9d60c2f9b54f6897709c47c"
+      },
+      "realtime/distance.py": {
+        "measured_working_bytes_sha256": "90cad78eda4b243c41adee431156cb7184446511d294134ae178e860d41c57b5",
+        "git_lf_bytes_sha256": "90cad78eda4b243c41adee431156cb7184446511d294134ae178e860d41c57b5"
+      },
+      "realtime/tracking.py": {
+        "measured_working_bytes_sha256": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6",
+        "git_lf_bytes_sha256": "fae232beca6ba7ff5689836f3a6812da11f8216810a9855fa39547ab0c0b67f6"
+      },
+      "realtime/risk.py": {
+        "measured_working_bytes_sha256": "060d92e18b9a6ca1deca0f00a0a30895e553f84d1635f8eb108650b675eef7f7",
+        "git_lf_bytes_sha256": "060d92e18b9a6ca1deca0f00a0a30895e553f84d1635f8eb108650b675eef7f7"
+      },
+      "integration/inference/services.py": {
+        "measured_working_bytes_sha256": "dede1f0c2b518573e53aac3237e2651cb572f959d8a3ba3e90dbf6e1ae6927ec",
+        "git_lf_bytes_sha256": "4c1c348258ec567dfa79b74aed97da95f8095eee82f18e6e92d7cefddfa1e716"
+      },
+      "tools/benchmark_depth_integration.py": {
+        "measured_working_bytes_sha256": "a90eb13894f28f5bd2626b8e5401b208be27d06382c7e45468e279d9f271d560",
+        "git_lf_bytes_sha256": "a90eb13894f28f5bd2626b8e5401b208be27d06382c7e45468e279d9f271d560"
+      }
+    }
+  },
+  "prior_evidence": {
+    "forward": "../../2026-10-26/depth-export/summary.json",
+    "native_tensorrt": "../../2026-10-26/depth-integration/summary.json",
+    "path_base": "This report directory"
+  },
+  "final_local_health": {
+    "observed_utc": "2026-10-27T10:45:09.037415+00:00",
+    "url": "http://127.0.0.1:8766/integration/video/",
+    "ready": true,
+    "busy": false,
+    "models": {
+      "detection": {
+        "model": "yolo26n",
+        "classes": 80,
+        "present": true,
+        "expected_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "verified_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+      },
+      "depth": {
+        "present": true,
+        "sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+        "backend": "tensorrt",
+        "fusion": "host",
+        "engine_shapes": [
+          [
+            1,
+            3,
+            768,
+            576
+          ],
+          [
+            1,
+            3,
+            768,
+            608
+          ],
+          [
+            1,
+            3,
+            576,
+            768
+          ],
+          [
+            1,
+            3,
+            608,
+            768
+          ],
+          [
+            1,
+            3,
+            448,
+            768
+          ]
+        ]
+      }
+    },
+    "external_services": "disabled"
+  },
+  "unverified": [
+    "Truth-based depth/distance accuracy; no teammate truth dataset provided",
+    "Held-out87-class detection AP and pedestrian-light colour precision/recall; no new quality threshold",
+    "Positive runtime examples for pole, bollard, traffic_cone and stairs",
+    "Physical phone camera, speech/haptic output and browser capture-to-alert throughput",
+    "Long-duration load/concurrency, other GPUs and unknown aspect ratios",
+    "Remote HF/ORS/DashScope/TTS/phone deployment and external-service behavior",
+    "Standard split-environment launcher execution with TensorRT installed in its worker environment",
+    "New final depth weights require export/build/validation; existing engines are bound to current depth checkpoint"
+  ]
+}
