@@ -1,18 +1,18 @@
-/* Responsibilities: Verify unified browser-check CLI and native evidence acceptance independently.
- * Implementation: Explicit closed lifecycle records and source provenance expose false model claims.
+/* Responsibilities: Verify unified browser-check CLI and backend TTS evidence acceptance independently.
+ * Implementation: Explicit closed lifecycle records, command binding and source provenance expose false claims.
  * Related Modules: tools/check_assist_browser.mjs, tools/check_local_navigation_browser.mjs.
- * Declaration Index: evidence; testCli; testCliRejected; testNativePairing; testSyntheticScope;
- * testRealSource; testRealMismatch; testMissingRisk; testQueuedCancel; testCalibrationPartition.
+ * Declaration Index: evidence; testCli; testCliRejected; testBackendPairing; testSyntheticScope;
+ * testRealSource; testRealMismatch; testMissingRisk; testQueuedCancel; testCalibrationPartition; testSafeFailure.
  * Variable Index: ENV is a path-only runtime fixture; no executable is loaded during these tests.
- * Constraints: No browser, files, model, GPU, network, real GPS or native speech is exercised.
+ * Constraints: No browser, files, model, GPU, network, real GPS, provider call or physical audio is exercised.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {validateArguments, verifyAssistSession} from "../tools/check_assist_browser.mjs";
+import {safeFailure, validateArguments, verifyAssistSession} from "../tools/check_assist_browser.mjs";
 
 const ENV = {PYTHON: "explicit-python", PRS_PLAYWRIGHT_PATH: "explicit-playwright"};
 
-/* Functionality: Build independent native lifecycle/source evidence. Inputs: Risk/navigation kind.
+/* Functionality: Build independent backend lifecycle/source evidence. Inputs: Risk/navigation kind.
  * Outputs: Fresh checker fixture. Logic: preserve exact request/source identity in separate streams.
  * Constraints: Synthetic records test the checker, never claiming actual model or audible output. */
 function evidence(kind = "risk") {
@@ -21,8 +21,10 @@ function evidence(kind = "risk") {
   return {speech: [{...common, phase: "output_submitted"}, {...common, phase: "output_start", actual_start: true},
     {...common, phase: "output_end"}],
   driver: [{phase: "submitted", request_id: 1}, {phase: "start", request_id: 1}, {phase: "end", request_id: 1}],
-  utterances: [{...common, request_owned: true, text_matches_policy: true, local_chinese_voice: true,
-    rate_matches_user_setting: true, source_matches_validated_frame: true}],
+  utterances: [{...common, request_owned: true, text_matches_policy: true, backend_voice: true,
+    language_matches_request: true, rate_matches_user_setting: true, source_matches_validated_frame: true}],
+  tts_requests: [{request_id: 1, backend_voice: true, text_matches_policy: true,
+    language: "zh-CN", configured_language: "zh-CN", rate: 2, configured_rate: 2}],
   frames: [{session_id: "local-session", index: 4, captured_at_ms: 100, required_track_ids: [7],
     provider: "local", model: "yolo26n", timestamp_source: "browser_capture"}]};
 }
@@ -51,10 +53,10 @@ test("assist checker rejects remote credential query wrong path and malformed ar
   assert.throws(() => validateArguments(["http://localhost/maps/test", "new.json"], {}));
 });
 
-/* Functionality: Preserve request-ID completion requirements in unified evidence.
+/* Functionality: Preserve request-ID completion requirements in unified backend evidence.
  * Inputs: Independent closed request and orphan/duplicate terminal corruption. Outputs: Success/rejection.
- * Logic: same strict original native verifier; Constraints: counts alone cannot pass. */
-test("unified checker requires exact native request lifecycle pairing", function testNativePairing() {
+ * Logic: strict manager/driver/command pairing; Constraints: counts alone cannot pass. */
+test("unified checker requires exact backend request lifecycle pairing", function testBackendPairing() {
   assert.equal(verifyAssistSession(evidence()).completed, 1);
   const orphan = evidence(); orphan.speech.at(-1).request_id = 2;
   assert.throws(() => verifyAssistSession(orphan));
@@ -64,7 +66,7 @@ test("unified checker requires exact native request lifecycle pairing", function
 
 /* Functionality: Keep synthetic arbitration honest. Inputs: Explicit synthetic source evidence.
  * Outputs: No model verification claim. Logic: default mode never infers real model status.
- * Constraints: synthetic native evidence does not establish inference even when risk starts exist. */
+ * Constraints: synthetic backend evidence does not establish inference even when risk starts exist. */
 test("synthetic arbitration cannot implicitly claim actual inference", function testSyntheticScope() {
   const fixture = evidence(); fixture.frames = []; fixture.utterances[0].source_matches_validated_frame = false;
   assert.equal(verifyAssistSession(fixture, {minimumRiskStarts: 1}).actual_model_verified, false);
@@ -95,18 +97,19 @@ test("actual-model mode rejects stale foreign missing-track and nonlocal provena
 });
 
 /* Functionality: Reject insufficient real risk observations. Inputs: Navigation-only/fewer risk starts.
- * Outputs: Explicit failure. Logic: minimum is enforced on actual native starts, not submitted events.
+ * Outputs: Explicit failure. Logic: minimum is enforced on actual backend starts, not submitted events.
  * Constraints: no generated missing risk outputs or false completion. */
-test("selected real video must meet the requested native risk minimum", function testMissingRisk() {
+test("selected real video must meet the requested backend risk minimum", function testMissingRisk() {
   assert.throws(() => verifyAssistSession(evidence("navigation"), {actualModel: true, minimumRiskStarts: 1}), /Insufficient/);
   assert.throws(() => verifyAssistSession(evidence(), {actualModel: true, minimumRiskStarts: 3}), /Insufficient/);
 });
 
-/* Functionality: Preserve legal pre-start cancellation. Inputs: Queued native request then accepted cancel.
+/* Functionality: Preserve legal pre-start cancellation. Inputs: Queued backend request then accepted cancel.
  * Outputs: Honest zero-start cancellation. Logic: original lifecycle verifier remains authoritative.
  * Constraints: no end event is manufactured for a request that never started. */
-test("queued cancellation remains distinct from completed native speech", function testQueuedCancel() {
+test("queued cancellation remains distinct from completed backend speech", function testQueuedCancel() {
   const source = evidence(); source.utterances = [];
+  source.tts_requests = [];
   source.speech = [source.speech[0], {...source.speech[0], phase: "output_cancel", accepted: true}];
   source.driver = [source.driver[0], {request_id: 1, phase: "cancel"}];
   const summary = verifyAssistSession(source);
@@ -114,12 +117,33 @@ test("queued cancellation remains distinct from completed native speech", functi
 });
 
 /* Functionality: Keep first-speech calibration separate from automatic source-bound outputs.
- * Inputs: Explicit additional shared-driver calibration lifecycle. Outputs: Unchanged guidance count.
+ * Inputs: Explicit calibration lifecycle in its independent report partition. Outputs: Unchanged guidance count.
  * Logic: manager/source records remain authoritative; Constraints: calibration is never model risk. */
-test("native calibration does not inflate automatic guidance or model-risk counts", function testCalibrationPartition() {
+test("backend calibration does not inflate automatic guidance or model-risk counts", function testCalibrationPartition() {
   const source = evidence("navigation");
-  source.driver.unshift({phase: "submitted", request_id: 99}, {phase: "start", request_id: 99},
-    {phase: "end", request_id: 99});
+  source.activation = {events: [{phase: "submitted", request_id: 99}, {phase: "start", request_id: 99},
+    {phase: "end", request_id: 99}]};
   const result = verifyAssistSession(source);
   assert.equal(result.started, 1); assert.equal(result.navigation_started, 1); assert.equal(result.risk_started, 0);
+});
+
+/* Functionality: Redact string bodies while retaining actionable assertion shapes.
+ * Inputs: Assertion-like and primitive thrown values. Outputs: Bounded safe failure records.
+ * Logic: preserve operator, location and primitive numeric/boolean values, but reduce strings to lengths.
+ * Constraints: no source, coordinate or message body is copied into evidence. */
+test("failure evidence preserves assertion shapes without retaining string values", function testSafeFailure() {
+  const failure = safeFailure(Object.assign(new Error("Assertion failed"), {
+    operator: "strictEqual", actual: "private speech body", expected: "different body",
+  }));
+  assert.equal(failure.operator, "strictEqual");
+  assert.equal(failure.actual_type, "string");
+  assert.equal(failure.actual_length, [..."private speech body"].length);
+  assert.equal(failure.expected_length, [..."different body"].length);
+  assert.equal(JSON.stringify(failure).includes("private speech body"), false);
+  assert.deepEqual(safeFailure("primitive failure"), {type: "string", message: "primitive failure"});
+  const scalarFailure = safeFailure(Object.assign(new Error("Mismatch"), {actual: 4, expected: false}));
+  assert.equal(scalarFailure.actual, 4);
+  assert.equal(scalarFailure.expected, false);
+  assert.equal(scalarFailure.actual_type, "number");
+  assert.equal(scalarFailure.expected_type, "boolean");
 });

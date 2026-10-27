@@ -2,7 +2,7 @@
  * Responsibilities: Manage camera permission, explicit Echo/HF/local-CUDA transport, phase timing, and observable lifecycle.
  * Implementation: 640-pixel maximum edge and JPEG 0.8; after the first HF/local frame completes, capture at up to 30 FPS with a 12-frame limit and ordered display; any error stops processing and retains its browser error name for semantic status reporting.
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
- * frame-pipeline.js, scene-client.js, integration/local-mvp.js；core.echo/hf_video_relay/integration.asgi；
+ * frame-pipeline.js, scene-client.js, integration/local-mvp.js; core.echo/hf_video_relay/integration.asgi;
  * tools/benchmark_phone_browser.mjs validates the real page; fixture input is not physical phone-camera evidence.
  * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
@@ -13,7 +13,7 @@
  * CameraApp.publishFrame; CameraApp.handleSessionEnd;
  * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
- * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide。
+ * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide.
  * Variable Index: MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
  * PROCESSING_PATHS — the three explicit WebSocket modes; app — page controller; frameTimings — first-frame and bounded aggregate statistics;
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs and creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames

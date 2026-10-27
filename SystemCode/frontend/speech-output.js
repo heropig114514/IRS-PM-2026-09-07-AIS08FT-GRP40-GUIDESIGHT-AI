@@ -2,24 +2,27 @@
  * Implementation: Unified assist pages stream backend Qwen PCM through Web Audio; legacy standalone pages retain native SpeechSynthesis.
  * Both modes are off by default, share manual/MCP speak/stop, preserve activation/foreground rules, and never retry.
  * Snapshot request events before broadcasting and give each subscriber a copy to isolate synchronous reentry or mutation.
- * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js; core.ai_mcp/core.camera。
+ * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js; core.ai_mcp/core.camera.
  * Declaration Index: SpeechOutput; SpeechOutput.constructor; SpeechOutput.feedback;
  * SpeechOutput.render; SpeechOutput.refreshVoices; SpeechOutput.describe; SpeechOutput.voiceList;
  * SpeechOutput.result; SpeechOutput.speak; SpeechOutput.unlock; SpeechOutput.speakBackend;
+ * SpeechOutput.clearBackendWatchdog; SpeechOutput.armBackendWatchdog;
  * SpeechOutput.handleBackendMessage; SpeechOutput.schedulePcm; SpeechOutput.finishBackend;
  * SpeechOutput.handleBackendError; SpeechOutput.stopBackend; SpeechOutput.stop; SpeechOutput.handlePlay;
  * SpeechOutput.handleEnable; SpeechOutput.handleSample; SpeechOutput.handleStart;
  * SpeechOutput.handleEnd; SpeechOutput.handleError; SpeechOutput.handleVisibility;
- * SpeechOutput.handlePageHide; SpeechOutput.subscribe; SpeechOutput.notify; SpeechOutput.stopOwned。
+ * SpeechOutput.handlePageHide; SpeechOutput.subscribe; SpeechOutput.notify; SpeechOutput.stopOwned.
  * Variable Index: MAX_TEXT_LENGTH — 1,000 Unicode code points; LANGUAGES/SPEECH_LANGUAGES — explicit and auto Chinese/English modes;
  * BACKEND_VOICE — fixed cross-language Cherry voice; PCM_SAMPLE_RATE — 24 kHz server PCM contract;
+ * BACKEND_CONNECT_TIMEOUT_MS/BACKEND_FIRST_AUDIO_TIMEOUT_MS/BACKEND_AUDIO_IDLE_TIMEOUT_MS bound browser TTS waits;
  * SAMPLES — test text that is never played automatically; PHASE_LABELS/BACKEND_PHASE_LABELS — native/server phase labels; ERROR_CODES — standard error allowlist;
  * speechOutput — shared camera-page instance, null on other pages. engine/doc/win — browser dependencies;
  * current retains the utterance and isolates stale events; canceling isolates events during cancellation; sequence identifies requests;
  * phase/lastRequest/lastError/nativeVoices/voiceReadError — bounded state; listeners observe lifecycle without utterance text;
  * notify's local event fixes phase/request_id/reason/at for the current event and gives each snapshotted listener a copy;
  * backendOnly selects same-origin server TTS only on the product/diagnostic assist entries; it retains no native voice inventory.
- * audioContext/gain/sources/nextAudioTime own decoded PCM playback; stream state is request-object guarded; backendVoice is fixed Cherry.
+ * audioContext/gain/sources/nextAudioTime own decoded PCM playback; request watchdog and
+ * setTimer/clearTimer bound TTS progress; stream state is request-object guarded; backendVoice is fixed Cherry.
  * localOnly remains restricted to the standalone integration page's native speech policy.
  */
 export const MAX_TEXT_LENGTH = 1000;
@@ -27,6 +30,9 @@ const LANGUAGES = ["zh-CN", "en-US"];
 const SPEECH_LANGUAGES = [...LANGUAGES, "auto"];
 const BACKEND_VOICE = "Cherry";
 const PCM_SAMPLE_RATE = 24000;
+const BACKEND_CONNECT_TIMEOUT_MS = 15000;
+const BACKEND_FIRST_AUDIO_TIMEOUT_MS = 55000;
+const BACKEND_AUDIO_IDLE_TIMEOUT_MS = 35000;
 const SAMPLES = {"zh-CN": "这是 PRS 语音输出测试。", "en-US": "This is a PRS speech output test."};
 const PHASE_LABELS = {idle: "等待朗读", queued: "等待引擎开始", speaking: "引擎正在朗读",
   completed: "引擎报告完成", stopped: "已请求停止", error: "语音输出失败"};
@@ -51,6 +57,10 @@ export class SpeechOutput {
   constructor(doc = document, win = window) {
     this.doc = doc;
     this.win = win;
+    this.setTimer = typeof win.setTimeout === "function" ? win.setTimeout.bind(win) : globalThis.setTimeout;
+    this.clearTimer = typeof win.clearTimeout === "function" ? win.clearTimeout.bind(win) : globalThis.clearTimeout;
+    this.setTimer = typeof win.setTimeout === "function" ? win.setTimeout.bind(win) : globalThis.setTimeout;
+    this.clearTimer = typeof win.clearTimeout === "function" ? win.clearTimeout.bind(win) : globalThis.clearTimeout;
     this.backendOnly = doc.documentElement?.dataset?.assist === "true";
     this.engine = this.backendOnly ? null : win.speechSynthesis;
     this.AudioContext = win.AudioContext || win.webkitAudioContext;
@@ -399,7 +409,8 @@ export class SpeechOutput {
    * Inputs: validated text and language/rate/volume options, enabled/visible/activation gates.
    * Outputs: queued request metadata; binary PCM later advances start/end/error events.
    * Logic: Open one request-bound WebSocket and schedule little-endian PCM chunks through a gain node.
-   * Constraints: No native voice lookup, text logging, retry, language rewriting or implicit queue.
+   * Constraints: No native voice lookup, text logging, retry, language rewriting or implicit queue;
+   * connection, first-audio, stream-idle and scheduled-playback waits have client-side deadlines.
    */
   speakBackend(text, {language, rate, volume}) {
     let context, socket, audioReady;
@@ -424,14 +435,16 @@ export class SpeechOutput {
     }
     const requestId = ++this.sequence;
     const request = {id: requestId, socket, sources: new Set(), gain: null, sampleRate: null,
-      receivedBytes: 0, streamComplete: false, started: false, language, rate, volume};
+      receivedBytes: 0, streamComplete: false, started: false, language, rate, volume, watchdog: null};
     this.lastRequest = {id: requestId, text_length: [...text].length, language, voice_id: BACKEND_VOICE,
       rate, volume, service: "backend", local_service: false};
     this.current = request; this.phase = "queued"; this.lastError = null;
     this.nextAudioTime = 0;
     this.feedback("已连接后端，等待中英文语音音频流。", "idle"); this.render(); this.notify("submitted");
+    this.armBackendWatchdog(request, "connect", BACKEND_CONNECT_TIMEOUT_MS);
     socket.addEventListener("open", () => {
       if (this.current !== request) return;
+      this.armBackendWatchdog(request, "first_audio", BACKEND_FIRST_AUDIO_TIMEOUT_MS);
       audioReady.then(() => {
         if (this.current !== request) return;
         try {
@@ -455,9 +468,34 @@ export class SpeechOutput {
     return this.result("speak", true);
   }
 
+  /** Functionality: Clear the active backend request watchdog.
+   * Inputs: One request object. Outputs: no timer and no phase marker.
+   * Logic: clear before terminal state changes so close/error callbacks cannot fire a second terminal event.
+   * Constraints: Does not close the socket or alter playback ownership. */
+  clearBackendWatchdog(request) {
+    if (request?.watchdog !== null && request?.watchdog !== undefined) this.clearTimer(request.watchdog);
+    if (request) request.watchdog = null;
+  }
+
+  /** Functionality: Bound a backend stream while it waits for connection or audio.
+   * Inputs: request, phase and positive delay. Outputs: one terminal client error on expiry.
+   * Logic: identity-check the request before classifying the timeout; later frames rearm the idle deadline.
+   * Constraints: This is a stuck-transport guard, not a provider retry or audibility claim. */
+  armBackendWatchdog(request, phase, delay) {
+    this.clearBackendWatchdog(request);
+    request.watchdog = this.setTimer(() => {
+      if (this.current !== request) return;
+      request.watchdog = null;
+      const reason = {connect: "connection_timeout", first_audio: "first_audio_timeout",
+        audio_idle: "audio_idle_timeout", playback: "playback_timeout"}[phase];
+      this.handleBackendError(request, reason || "stream_timeout");
+    }, delay);
+  }
+
   /** Functionality: Route one backend control or PCM frame to the owned audio stream.
    * Inputs: Current request identity and native WebSocket message. Outputs: State transition/audio scheduling.
-   * Logic: Validate control IDs and PCM format; use request identity to ignore late frames after stop.
+   * Logic: Validate control IDs and PCM format; use request identity to ignore late frames after stop,
+   * reset idle timing on audio progress and switch to a playback deadline after server completion.
    * Constraints: Never decode provider text, create files, or claim that scheduled audio was audible.
    */
   handleBackendMessage(request, event) {
@@ -475,10 +513,18 @@ export class SpeechOutput {
     if (message.type === "audio_config" && message.format === "pcm_s16le_mono" &&
         message.sample_rate === PCM_SAMPLE_RATE) {
       request.sampleRate = message.sample_rate;
+      this.armBackendWatchdog(request, "audio_idle", BACKEND_AUDIO_IDLE_TIMEOUT_MS);
     } else if (message.type === "complete") {
       request.streamComplete = true;
+      this.clearBackendWatchdog(request);
       if (!request.receivedBytes) return this.handleBackendError(request, "empty_audio");
       if (request.sources.size === 0) this.finishBackend(request);
+      else {
+        const context = this.audioContext;
+        const remainingMs = context && Number.isFinite(context.currentTime) && Number.isFinite(this.nextAudioTime)
+          ? Math.max(0, this.nextAudioTime - context.currentTime) * 1000 : 0;
+        this.armBackendWatchdog(request, "playback", remainingMs + 10000);
+      }
     } else if (message.type === "error") {
       const allowed = ["tts_not_configured", "tts_timeout", "tts_upstream_error", "tts_upstream_unavailable",
         "tts_upstream_protocol", "tts_audio_limit", "invalid_speech_request", "invalid_message"];
@@ -488,13 +534,15 @@ export class SpeechOutput {
 
   /** Functionality: Schedule one little-endian PCM16 block in the shared Web Audio timeline.
    * Inputs: Current request and even-length PCM bytes. Outputs: Playback source and start event.
-   * Logic: Normalize signed samples, append continuously after queued audio, and apply requested gain.
+   * Logic: Normalize signed samples, append continuously after queued audio, apply requested gain,
+   * and bound gaps between server audio chunks.
    * Constraints: bounded by the backend stream limit; sample rate is fixed by protocol metadata.
    */
   schedulePcm(request, bytes) {
     if (!bytes.byteLength || bytes.byteLength % 2 || request.streamComplete)
       return this.handleBackendError(request, "invalid_audio_format");
     try {
+      this.clearBackendWatchdog(request);
       const context = this.audioContext;
       if (!context || context.state !== "running") return this.handleBackendError(request, "audio_context_unavailable");
       const samples = bytes.byteLength / 2, buffer = context.createBuffer(1, samples, request.sampleRate);
@@ -514,6 +562,7 @@ export class SpeechOutput {
           this.finishBackend(request);
       }, {once: true});
       source.start(startAt); request.receivedBytes += bytes.byteLength;
+      this.armBackendWatchdog(request, "audio_idle", BACKEND_AUDIO_IDLE_TIMEOUT_MS);
       if (!request.started) {
         request.started = true; this.phase = "speaking";
         this.feedback("后端语音已开始流式播放。", "live"); this.render();
@@ -525,11 +574,13 @@ export class SpeechOutput {
 
   /** Functionality: End the current server stream after every scheduled PCM source finishes.
    * Inputs: Owned request identity. Outputs: Completed phase and resource release.
-   * Logic: Completion requires both server terminal metadata and exhausted AudioBufferSourceNodes.
+   * Logic: Completion requires both server terminal metadata and exhausted AudioBufferSourceNodes;
+   * a playback deadline releases ownership if a scheduled source never ends.
    * Constraints: This reports browser scheduling completion, not physical speaker verification.
    */
   finishBackend(request) {
     if (this.current !== request) return;
+    this.clearBackendWatchdog(request);
     this.current = null; this.phase = "completed"; this.lastError = null;
     try { request.gain?.disconnect(); } catch {}
     this.feedback("后端语音播放完成；实际声音仍需在设备上确认。", "live"); this.render();
@@ -544,6 +595,7 @@ export class SpeechOutput {
    */
   handleBackendError(request, reason, error = null) {
     if (!request || this.current !== request) return;
+    this.clearBackendWatchdog(request);
     this.current = null; this.phase = "error"; this.lastError = reason;
     try { request.socket.close(); } catch {}
     for (const source of request.sources) {
@@ -576,6 +628,7 @@ export class SpeechOutput {
       this.win.console.error("[PRS speech] Backend stream cancellation failed", {request_id: this.lastRequest?.id,
         error_name: error?.name}); return this.result("stop", false, "cancel_failed");
     }
+    this.clearBackendWatchdog(request);
     for (const source of request.sources) {
       this.audioSources.delete(source); try { source.stop(); } catch {}
       try { source.disconnect(); } catch {}

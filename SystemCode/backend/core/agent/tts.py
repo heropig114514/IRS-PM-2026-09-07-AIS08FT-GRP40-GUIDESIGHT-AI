@@ -18,6 +18,7 @@ import base64
 import binascii
 import json
 import logging
+import time
 import uuid
 from urllib.parse import urlsplit
 
@@ -131,13 +132,18 @@ async def upstream_session(request, config, send, *, opener=connect):
     Inputs: Validated request, secret-bearing provider configuration, browser send and WS connector.
     Outputs: First-audio metadata, binary PCM chunks and one completion/error message.
     Logic: Await created/updated acknowledgements, append/commit one complete text, forward each
-    decoded audio delta immediately, then stop at response.done; WebSocket closure cancels upstream.
+    decoded audio delta immediately, then stop at response.done; record body-free first-audio and
+    terminal timing/byte counters to distinguish upstream stalls. WebSocket closure cancels
+    upstream.
     Constraints: One model call, a 45-second deadline, a 20 MB decoded-output cap and an upstream
     frame bound sized for the base64 representation of that output; provider diagnostics, text,
     binary audio and keys do not enter application logs or browser errors.
     """
     url = upstream_url(config)
+    started = time.monotonic()
     sent = 0
+    audio_chunks = 0
+    first_audio_ms = None
     stage = "connect"
     try:
         async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
@@ -196,6 +202,11 @@ async def upstream_session(request, config, send, *, opener=connect):
                         if sent > MAX_AUDIO_BYTES:
                             raise AgentError("tts_audio_limit", "本次语音输出超过大小限制。")
                         await send({"type": "websocket.send", "bytes": chunk})
+                        audio_chunks += 1
+                        if first_audio_ms is None:
+                            first_audio_ms = round((time.monotonic() - started) * 1000)
+                            logger.info("TTS first audio request=%s elapsed_ms=%d chunk_bytes=%d",
+                                request["request_id"], first_audio_ms, len(chunk))
                     elif kind == "response.done":
                         await send_json(
                             send,
@@ -205,21 +216,27 @@ async def upstream_session(request, config, send, *, opener=connect):
                                 "audio_bytes": sent,
                             },
                         )
+                        elapsed_ms = round((time.monotonic() - started) * 1000)
                         logger.info(
-                            "TTS completed request=%s audio_bytes=%d",
-                            request["request_id"], sent,
+                            "TTS completed request=%s audio_bytes=%d audio_chunks=%d "
+                            "first_audio_ms=%s elapsed_ms=%d",
+                            request["request_id"], sent, audio_chunks, first_audio_ms, elapsed_ms,
                         )
                         return
     except AgentError:
         raise
     except TimeoutError as error:
-        logger.warning("TTS timeout request=%s stage=%s", request["request_id"], stage)
+        logger.warning("TTS timeout request=%s stage=%s first_audio_ms=%s audio_chunks=%d "
+            "audio_bytes=%d elapsed_ms=%d", request["request_id"], stage, first_audio_ms,
+            audio_chunks, sent, round((time.monotonic() - started) * 1000))
         raise AgentError("tts_timeout", "后端语音合成超时，请稍后重试。") from error
     except asyncio.CancelledError:
         raise
     except Exception as error:
-        logger.warning("TTS transport failed request=%s stage=%s exception_type=%s",
-            request["request_id"], stage, type(error).__name__)
+        logger.warning("TTS transport failed request=%s stage=%s exception_type=%s "
+            "first_audio_ms=%s audio_chunks=%d audio_bytes=%d elapsed_ms=%d",
+            request["request_id"], stage, type(error).__name__, first_audio_ms, audio_chunks,
+            sent, round((time.monotonic() - started) * 1000))
         raise AgentError("tts_upstream_unavailable", "无法连接后端语音服务。") from error
 
 

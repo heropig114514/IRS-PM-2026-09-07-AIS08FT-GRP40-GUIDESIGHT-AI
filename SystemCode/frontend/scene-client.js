@@ -8,7 +8,7 @@
  * Declaration Index: SceneError; mapBox; mapObjects; encodeBase64; sceneLanguage; errorMessage; resolveSceneUrl;
  * SceneApiError; SceneApiError.constructor; normalizeJpeg; describeScene; describeCurrentScene;
  * SceneClient; SceneClient.constructor; SceneClient.setBusy; SceneClient.show; SceneClient.fail;
- * SceneClient.describe; SceneClient.speak。
+ * SceneClient.describe; SceneClient.speak.
  * Variable Index: MAX_OBJECTS=50/MAX_QUESTION_CHARS=200/MAX_JPEG_BYTES=1MiB — contract limits; REQUEST_TIMEOUT_MS — browser wait limit
  * (longer than the backend's 20-second upstream timeout); ERROR_MESSAGES — backend error codes mapped to translation keys in translations.js;
  * SceneApiError.code/status/requestId — error fields; sceneClient — camera-page instance, null on other pages/tests; instance busy — single in-flight marker.

@@ -177,9 +177,11 @@ test("observed backend start never clears an unrelated manager failure", functio
 });
 
 /* Functionality: Bound unstarted owned calibration. Inputs: Explicit clock advancement.
- * Outputs: Assertions. Logic: Cancel once exactly at deadline. Constraints: No retries or fabricated start. */
-test("queued watchdog cancels its own ID once after five seconds without retry", function testWatchdog() {
-  const f = fixture(); f.activation.activate(); f.advance(4999); assert.equal(f.state.cancellations.length, 0);
+ * Outputs: Assertions. Logic: Allow the backend's documented synthesis deadline, then cancel once.
+ * Constraints: No retries or fabricated start; fixture never waits on real provider latency. */
+test("queued watchdog cancels its own ID once at the backend startup deadline", function testWatchdog() {
+  const f = fixture(), timeout = f.activation.timeoutMs;
+  f.activation.activate(); f.advance(timeout - 1); assert.equal(f.state.cancellations.length, 0);
   f.advance(1); assert.equal(f.activation.describe().ready, false); assert.equal(f.activation.describe().reason, "activation_timeout");
   assert.deepEqual(f.state.cancellations.map(item => item.id), [1]); f.advance(100000);
   assert.equal(f.state.calls.length, 1); assert.equal(f.state.cancellations.length, 1); assert.equal(f.state.paused, true);
@@ -188,7 +190,7 @@ test("queued watchdog cancels its own ID once after five seconds without retry",
 /* Functionality: Preserve uncertain cancellation ownership. Inputs: Explicit cancel failure.
  * Outputs: Assertions. Logic: Only a new explicit stop can retry cleanup. Constraints: No automatic recovery. */
 test("cancel failure latches without activation retry and explicit stop can clean it", function testCancelFailure() {
-  const f = fixture(); f.speech.cancelFailure = true; f.activation.activate(); f.advance(5000);
+  const f = fixture(); f.speech.cancelFailure = true; f.activation.activate(); f.advance(f.activation.timeoutMs);
   assert.equal(f.activation.describe().cancel_failed, true); assert.equal(f.activation.describe().owned_request_id, 1);
   assert.equal(f.activation.activate().accepted, false); f.advance(50000);
   assert.equal(f.state.cancellations.length, 1); assert.equal(f.state.calls.length, 1);

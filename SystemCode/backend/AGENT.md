@@ -78,9 +78,12 @@ with dialogue only and no MCP/tools. Unsupported actions still fail. Model error
 switch to general chat or retry. Help renders the current catalog without MCP or device-readiness
 claims. The UI displays intent decisions before actual tool activity.
 
-History retains discovery/Skill bodies only as loaded markers; each turn discovers and loads again.
-Actual candidates, user input and action results remain intact. The 120000-character context boundary
-is unchanged. MCP registry schemas are reused rather than duplicated. Code owns input validation,
+History replaces prior successful discovery, Skill, UI snapshot, map-status and category observations
+with explicit refresh markers; each turn reloads or observes them again. Failures, candidates, user
+input and action results remain intact. Current POI categories use lossless `[id,name,group]` rows;
+their IDs and labels stay complete. The final serialized request, including visible tool schemas,
+uses the unchanged 120000-character context boundary and logs size-only rejection diagnostics.
+MCP registry schemas are reused rather than duplicated. Code owns input validation,
 permissions, cancellation, deadlines, correlation IDs, cleanup and observed state. Camera/navigation
 start tools issue one start and observe for up to 12 seconds, returning `verified` and actual state.
 Observation is not retrying and changes no controller parameters. Snapshots exclude the assistant UI
@@ -190,9 +193,10 @@ Start from `SystemCode/backend/` with one worker:
 ```
 
 Open `http://127.0.0.1:8766/live/` or `/maps/`. Localhost is a secure context for browser recording;
-remote access requires HTTPS and actual microphone/location/camera permissions. Disconnection asks
-for refresh, without automatic reconnect. Normal cross-page reattachment resumes the same conversation
-without executing submitted requests again.
+remote access requires HTTPS and actual microphone/location/camera permissions. A visible page restores
+the assistant socket with bounded backoff after disconnection. It does not resubmit an in-flight command;
+only a replayed reply matching that page's pending request may complete and speak once. Normal
+cross-page reattachment resumes the same conversation without executing submitted requests again.
 
 ## Execution, data and diagnostics
 

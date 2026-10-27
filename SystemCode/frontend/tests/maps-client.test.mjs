@@ -1,6 +1,6 @@
 /* Responsibilities: Test location permissions, coordinate order, route transport, and response contracts.
  * Implementation: Inject geolocation/fetch fixtures; live external-service integration is separate.
- * Related Modules: ../maps-client.js。
+ * Related Modules: ../maps-client.js.
  * Declaration Index: routeFixture — synthetic route; responseFixture — synthetic HTTP response.
  * Variable Index: None; test-local counters do not change production configuration.
  */

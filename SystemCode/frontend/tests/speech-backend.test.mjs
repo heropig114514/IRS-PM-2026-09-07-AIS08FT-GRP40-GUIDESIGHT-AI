@@ -10,10 +10,10 @@
  * FakeWebSocket.constructor; FakeWebSocket.open; FakeWebSocket.send; FakeWebSocket.message;
  * FakeWebSocket.close; AssistDocument; AssistDocument.constructor; AssistDocument.getElementById;
  * AssistDocument.querySelectorAll; AssistDocument.createElement; backendFixture; enable;
- * flushMicrotasks; pcmMessage; testPageContracts; testStreamingBilingualPlayback; testStopAndStaleFrames;
+ * flushMicrotasks; pcmMessage; testPageContracts; testStreamingBilingualPlayback; testBackendWatchdog; testStopAndStaleFrames;
  * testBackendErrors.
  * Variable Index: FakeWebSocket.instances and FakeAudioContext.instances — isolated transport/audio evidence;
- * PCM_RATE — protocol fixture sample rate; all other mutable state belongs to one test fixture.
+ * PCM_RATE — protocol fixture sample rate; per-test timer maps force connection, stream and playback deadlines without wall-clock waits.
  * Constraints: Fixtures verify application contracts and scheduled audio data, not provider availability,
  * speech quality, browser activation enforcement, or physical speaker audibility.
  */
@@ -202,6 +202,40 @@ test("Chinese and English backend audio streams play on formal and diagnostic pa
     assert.equal(output.describe().last_request.language, language);
     assert.equal(output.describe().last_request.voice_id, "Cherry");
     assert.doesNotMatch(JSON.stringify(logs), new RegExp(text));
+  }
+});
+
+/** Functionality: End a backend request that remains connecting or never produces PCM.
+ * Inputs: controllable SpeechOutput timers and fake sockets. Outputs: one visible terminal error and released ownership.
+ * Logic: invoke each client watchdog directly without waiting for wall-clock deadlines; Constraints: no provider or audio device. */
+test("backend speech watchdog releases stalled connection, stream and playback phases", async function testBackendWatchdog() {
+  for (const phase of ["connect", "first_audio", "audio_idle", "playback"]) {
+    const {output} = backendFixture("test"), timers = new Map(); let timerId = 0;
+    output.setTimer = (callback, delay) => { const id = ++timerId; timers.set(id, {callback, delay}); return id; };
+    output.clearTimer = id => timers.delete(id);
+    enable(output);
+    output.speak("watchdog test", {language: "en-US", voice_id: "Cherry"});
+    const socket = FakeWebSocket.instances[0];
+    if (phase !== "connect") {
+      socket.open(); await flushMicrotasks();
+      const requestId = JSON.parse(socket.sent[0]).request_id;
+      if (phase === "audio_idle" || phase === "playback") {
+        socket.message(JSON.stringify({type: "audio_config", request_id: requestId, sample_rate: PCM_RATE,
+          format: "pcm_s16le_mono"}));
+      }
+      if (phase === "playback") {
+        socket.message(pcmMessage(1));
+        socket.message(JSON.stringify({type: "complete", request_id: requestId, audio_bytes: 2}));
+      }
+    }
+    assert.equal(timers.size, 1, `${phase} watchdog is armed`);
+    const [deadlineId, deadline] = timers.entries().next().value; timers.delete(deadlineId); deadline.callback();
+    assert.equal(output.describe().active_request, false);
+    assert.equal(output.describe().state, "error");
+    const expected = {connect: "connection_timeout", first_audio: "first_audio_timeout",
+      audio_idle: "audio_idle_timeout", playback: "playback_timeout"};
+    assert.equal(output.describe().last_error, expected[phase]);
+    assert.equal(timers.size, 0, `${phase} watchdog is cleared after terminal error`);
   }
 });
 

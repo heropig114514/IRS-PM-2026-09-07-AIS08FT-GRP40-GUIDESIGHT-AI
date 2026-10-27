@@ -30,7 +30,7 @@ TTC values beyond the default 10-second evaluation horizon are **retained unchan
 | `alert_priorities` | low/unknown → 0; medium → 2; high → 3; critical → 4; 1 is reserved for normal |
 | `medium_alert_enabled` | true; medium alerts require valid closing speed, smoothed distance ≤3 m, and a front region |
 | `medium_alert_max_distance_m` | 3.0 m, inclusive |
-| `medium_alert_directions` | front、front_left、front_right |
+| `medium_alert_directions` | front, front_left, front_right |
 | `front_left_fraction` / `front_right_fraction` | 1/3 and 2/3; a box center between or on the boundaries is front |
 
 Low/unknown does not alert; high/critical does. Medium priority is also 0 unless its alert condition is met. During motion-classification hysteresis, a label may temporarily disagree with the current speed sign: `approaching` receives its bonus only with valid negative speed, and `moving_away` receives a reduction only with valid positive speed. Unknown motion earns no motion-only bonus, though short distance can still be high risk. A supplied TTC that does not satisfy the current formula or eligibility contributes nothing to the TTC component and adds `ttc_inconsistent`, preventing inconsistent input from creating urgency.
@@ -105,7 +105,7 @@ Tests cover valid/invalid TTC inputs, minimum speed, the 10-second horizon, dist
 The real local RTX 3060 dual-model run in `model_tests/outputs/risk-smoke-20261010/` processed 6 frames with 5 targets per frame. IDs remained stable; original detection hashes/boxes and raw depth exactly matched `outputs/bus-run-2`. All five final targets were stationary, all TTC values were null, risk scores were 27/33/30/27/27 (medium), and none generated alerts. For five targets, `risk_ms` ranged from 0.146 to 0.452 ms with a 0.233 ms median. The new stage processes existing CPU scalars only; it performs no GPU inference, CPU/GPU transfer, or model loading. Annotation/encoding/JSON transport overhead is excluded from that timing.
 
 On the same machine, a pure-CPU rules microbenchmark ran 1,000 iterations per group: 100 targets averaged 0.844 ms/frame and 300 targets averaged 4.165 ms/frame. Inputs were synthetic with valid approaching state; there was no model, tracking, or rendering. These are local measurements and do not represent HF, end-to-end phone latency, or sustained FPS. Evidence:
-[local-validation.json](benchmarks/2026-10-10/risk/local-validation.json)。
+[local-validation.json](benchmarks/2026-10-10/risk/local-validation.json).
 Real handheld video, external HF/PRS operation, and ground-truth accuracy for distance/speed/TTC/risk were not verified; this work was not committed or deployed.
 
 Monocular metric depth has error; depth is measured along the camera axis and is not Euclidean radial distance for every object. Camera motion also changes measured distance; BoT-SORT GMC compensates association only and does not convert speed into world velocity. TTC assumes constant current closing speed and represents extrapolated time to zero depth; it does not prove an object will intersect the user's path. EMA/history regression/hysteresis introduce delay, and the current real-time path uses processing-start time rather than hardware capture time. Risk rules have not been calibrated with real ground-truth scenes. `unknown` due to invalid input does not mean safe. This stage adds no cross-frame risk hysteresis, alert throttling, occlusion prediction, or TTS.

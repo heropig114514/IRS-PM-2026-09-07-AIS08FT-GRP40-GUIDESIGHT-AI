@@ -1,10 +1,10 @@
 /** Responsibilities: Verify language resolution, dictionary placeholders, source-text protection, and bidirectional DOM switching.
  * Implementation: Use explicit DOM/storage/event fixtures; do not request camera, GPS, or services.
- * Related Modules: i18n.js, translations.js。
+ * Related Modules: i18n.js, translations.js.
  * Declaration Index: testResolution; testCatalog; testDom; testDom.element;
  * testDom.element.matches; testDom.element.hasAttribute; testDom.element.getAttribute;
  * testDom.element.setAttribute; testDom.element.addEventListener;
- * testDom.Observer; testDom.Observer.constructor; testDom.Observer.observe。
+ * testDom.Observer; testDom.Observer.constructor; testDom.Observer.observe.
  * Variable Index: None; test-local variables hold controlled DOM, storage, and window events.
  */
 import test from 'node:test';

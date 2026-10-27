@@ -1,6 +1,6 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
  * Implementation: Default-enabled unified outputs, one backend bilingual voice preference,
- * synchronous user-gesture audio unlock, prioritized live assistant reply speech and
+ * synchronous user-gesture audio unlock, prioritized accepted assistant reply speech and
  * one-click product rear-camera acquisition,
  * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
  * original frame transports and passive maps snapshots; no navigation or algorithm calculations.
@@ -16,8 +16,9 @@
  * fileReady/latest retain one source state/result only; stoppingAll makes two-source cleanup atomic.
  * Exported controllers are the original instances; navigationPort forwards the existing bridge API;
  * replay href uses its original integration/video base so ../../ws preserves the current application mount.
- * speechActivation gates automatic speech until the backend audio stream starts; guidanceManager queues live
- * replies behind risk alerts and ahead of navigation; defaults do not acquire sensors.
+ * speechActivation gates automatic speech until the backend audio stream starts; guidanceManager queues accepted
+ * replies behind risk alerts and ahead of navigation; activation-gated replies remain queued until
+ * an explicit audio start; defaults do not acquire sensors.
  * testView retains localized manual diagnostic choices; voicePreference stores backend TTS availability;
  * languageObserver watches only the document language and never starts or cancels speech;
  * cameraFailure retains a finite native error type across the core's following stop event;
@@ -331,17 +332,17 @@ function resumeSpeech() {
   return speechActivation.describe().ready ? guidanceManager.resume("speech") : activateSpeech();
 }
 
-/* Functionality: Submit one newly received assistant reply for automatic backend speech.
+/* Functionality: Submit a live or matching in-flight replay reply for automatic backend speech.
  * Inputs: CustomEvent carrying reply text. Outputs: Manager queue entry or no output.
- * Logic: Require visible page, enabled driver and either completed activation or its pending
- * backend calibration; the manager gate holds pending replies until playback starts.
- * Constraints: Historical replay, disabled/unavailable output and unrelated paused speech are never queued. */
+ * Logic: Require visible page and a valid backend voice. When activation is incomplete, retain the
+ * reply while the manager's activation gate is paused; explicit activation later resumes the queue.
+ * Constraints: Disabled/unavailable output and unrelated paused speech are never queued. */
 function speakAssistantReply(event) {
   const text = event.detail?.text;
   const activation = speechActivation.describe(), output = guidanceManager.describe();
   const selection = speechActivation.selection();
-  const awaitingActivation = activation.state === "queued" &&
-    output.paused.speech && output.reasons.speech === "activation_required";
+  const awaitingActivation = !activation.ready && output.paused.speech &&
+    output.reasons.speech === "activation_required";
   if (typeof text !== "string" || !text.trim() || doc.visibilityState !== "visible" ||
       !speechOutput.enabled.checked || (!activation.ready && !awaitingActivation) ||
       selection.reason || (output.paused.speech && !awaitingActivation)) return;

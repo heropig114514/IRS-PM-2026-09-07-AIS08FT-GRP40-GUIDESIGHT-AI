@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=tools/** --test-coverage-exclude=tests/** --test-coverage-lines=85 --test-coverage-branches=80 --test-coverage-functions=80 tests/*.test.mjs",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=tools/** --test-coverage-exclude=tests/** --test-coverage-lines=85 --test-coverage-branches=80 --test-coverage-functions=80",
     "test:blackbox-coverage": "node tools/verify_blackbox_coverage.mjs"
   }
 }

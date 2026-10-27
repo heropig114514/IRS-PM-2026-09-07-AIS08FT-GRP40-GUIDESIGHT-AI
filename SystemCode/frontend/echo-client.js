@@ -1,11 +1,11 @@
 /**
  * Responsibilities: Manage one WebSocket connection, ping/pong, exact single-frame byte validation, and explicit error semantics.
  * Implementation: Allow one in-flight operation; stop immediately on timeout, disconnect, or content mismatch without reconnect or retry.
- * Related Modules: camera.js, SystemCode/backend/core/echo.py, tests/echo-client.test.mjs。
+ * Related Modules: camera.js, SystemCode/backend/core/echo.py, tests/echo-client.test.mjs.
  * Declaration Index: browserSocket; EchoClient; EchoClient.constructor; EchoClient.connect;
  * EchoClient.wait; EchoClient.wait.registerRequest; EchoClient.ping; EchoClient.sendFrame;
  * EchoClient.handleOpen; EchoClient.handleMessage; EchoClient.handleError; EchoClient.handleClose;
- * EchoClient.handleTimeout; EchoClient.complete; EchoClient.fail; EchoClient.stop。
+ * EchoClient.handleTimeout; EchoClient.complete; EchoClient.fail; EchoClient.stop.
  * Variable Index: TIMEOUT_MS — 10-second connect/echo timeout; MAX_FRAME_BYTES — 1 MiB input-frame limit.
  */
 export const TIMEOUT_MS = 10000;

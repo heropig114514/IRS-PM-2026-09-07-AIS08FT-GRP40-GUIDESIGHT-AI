@@ -1,7 +1,7 @@
-# Responsibilities: Track implementation source and selected test videos; keep credentials, environments, course deliverables, and generated artifacts local.
-# Implementation: Use an allowlist at the SystemCode source root and ignore private/runtime assets, generated outputs, and unselected model data.
+# Responsibilities: Keep reviewed application source and selected test videos in Git while excluding local credentials and generated experiment exports.
+# Implementation: Use an allowlist at the SystemCode source root; ignore private/runtime assets, generated outputs, local benchmark runs, and unselected model data.
 # Related Modules: backend/tools/deploy_space.py, backend/tools/prepare_kaggle.py,
-# backend/model_tests/README.md, README.md.
+# backend/model_tests/README.md, backend/ACCELERATION.md, README.md.
 # Declaration Index: None.
 # Variable Index: None.
 /*
@@ -20,6 +20,8 @@
 .venv-space/
 backend/.space-bundle/
 backend/.kaggle-bundle/
+backend/benchmarks/
+backend/notebooks/
 .env
 .env.*
 backend/server_info.txt

@@ -10,12 +10,15 @@
  * Variable Index: CALIBRATION is fixed zh-CN/en-US text, never a generated risk instruction; Cherry is the only accepted voice;
  * owned/generation/ignoreThrough isolate calibration IDs, late callbacks and old timers;
  * ready/firstStartedId retain the first matching driver start, never physical audibility;
- * state/reason expose recovery needs; timeoutMs only bounds initial queued calibration.
+ * state/reason expose recovery needs; DEFAULT_TIMEOUT_MS/timeoutMs allow up to 15 seconds to connect,
+ * the browser's 55-second audio deadline and a 5-second margin before cancelling calibration.
  * Constraints: No automatic enablement, voice substitution, retry, engine resume loop, media/GPS
  * permission, global speech cancellation, foreign request cancellation or core modifications.
  */
 
 const CALIBRATION = {"zh-CN": "语音提醒已开启。", "en-US": "Voice alerts are enabled."};
+
+const DEFAULT_TIMEOUT_MS = 75000;
 
 /* Functionality: Gate automatic speech until the shared driver observes its first playback start.
  * Logic: Keep calibration ownership separate from manager and manual requests, preserving both.
@@ -27,7 +30,7 @@ export class SpeechActivation {
    * Constraints: Construction never requests permissions, enables outputs, selects voices or starts audio. */
   constructor({speech, manager, config, onChange = () => {},
     setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
-    clearTimer = handle => globalThis.clearTimeout(handle), timeoutMs = 5000} = {}) {
+    clearTimer = handle => globalThis.clearTimeout(handle), timeoutMs = DEFAULT_TIMEOUT_MS} = {}) {
     if (!speech || !manager || typeof config !== "function" || typeof onChange !== "function" ||
         typeof setTimer !== "function" || typeof clearTimer !== "function" ||
         !Number.isFinite(timeoutMs) || timeoutMs <= 0)

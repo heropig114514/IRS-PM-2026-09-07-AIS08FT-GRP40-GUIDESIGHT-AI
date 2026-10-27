@@ -34,7 +34,7 @@ Centralized defaults are in [distance_config.py](realtime/distance_config.py); t
 Select a configuration file explicitly with `--distance-config` or `PRS_DISTANCE_CONFIG`. Precedence is centralized defaults < JSON file < environment variables < CLI arguments. Relative paths in `PRS_DISTANCE_CONFIG` resolve from the backend root; explicit CLI file paths resolve from the current terminal directory. `PRS_DISTANCE_MODE` overrides the mode; `PRS_DEPTH_INTERVAL` overrides the interval for C. Invalid modes, non-positive/non-integer intervals, invalid focal lengths/heights, and unknown JSON parameters raise errors directly.
 
 `focal_length_px` is the **vertical focal length fy** for reference image width `reference_width_px`, not a focal length in millimeters. Because bounding boxes belong to the current decoded frame rather than the detector's letterboxed square image, the effective value is
-`fy_current = focal_length_px * frame_width / reference_width_px`。
+`fy_current = focal_length_px * frame_width / reference_width_px`.
 The calibrated camera intrinsic `K[1,1]` can be used directly by setting the reference width to the calibration image width. Scaling assumes the frame retains its aspect ratio and is not cropped; cameras that crop or rotate should use calibration parameters for the corresponding output image. The default 700-pixel focal length and class heights are experimental assumptions; pose, vehicle model, occlusion, and truncation affect mode B's distances. Classes absent from the height table and invalid, empty, or out-of-bounds boxes return `null`; other class heights are not guessed. The height table replaces the entire dictionary, allowing an experiment to explicitly restrict participating classes.
 
 ## Run Modes A/B/C Separately

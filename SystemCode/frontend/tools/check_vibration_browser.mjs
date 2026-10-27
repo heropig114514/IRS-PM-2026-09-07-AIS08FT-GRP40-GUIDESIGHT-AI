@@ -1,8 +1,8 @@
 /** Responsibilities: Verify manual vibration UI, language switching, and mobile layout in real Chrome.
  * Implementation: Retain real HTML/CSS/modules/CSP; explicitly replace native vibrate and media-permission boundaries to control acceptance/rejection/errors.
- * Related Modules: index.html, vibration.js, camera.css, i18n.js, translations.js。
+ * Related Modules: index.html, vibration.js, camera.css, i18n.js, translations.js.
  * Declaration Index: installFixture; installFixture.vibrate; installFixture.denyCamera;
- * expectText; assertLayout; collectUntranslated; checkSupported; checkUnavailable; main。
+ * expectText; assertLayout; collectUntranslated; checkSupported; checkUnavailable; main.
  * Variable Index: None; main reads the development runtime from PRS_PLAYWRIGHT_PATH; report stores non-sensitive assertions and screenshot paths.
  * Constraints: No real motor, GPS, camera, HF, or GPU verification; do not disable TLS/CSP, retry network calls, or publish.
  */

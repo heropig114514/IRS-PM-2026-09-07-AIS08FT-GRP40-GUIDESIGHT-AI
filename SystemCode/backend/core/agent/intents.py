@@ -1,6 +1,7 @@
 """Responsibilities: Route natural language against a repository-owned intent catalog.
 Implementation: One structured Qwen classification, strict schema/mapping validation, explicit
-unmatched policy; general answers receive no MCP client or tools. No keyword or place-name table.
+unmatched policy and shared request context accounting; general answers receive no MCP client or
+tools. No keyword or place-name table.
 Related Modules: skills owns trusted bundle paths; runtime enforces mapped skills.
 Declaration Index: IntentDecision; IntentDecision.skills; IntentDecision.labels; load_catalog;
 dialogue; reply_language_instruction; classify; static_reply; general_answer.
@@ -12,7 +13,7 @@ import re
 from dataclasses import dataclass
 
 from . import skills
-from .provider import AgentError, completion
+from .provider import MAX_CONTEXT_CHARS, AgentError, completion
 
 
 @dataclass(frozen=True)
@@ -88,7 +89,8 @@ def dialogue(turns, text, prompt=None):
     """Functionality: Supply conversational context without execution data or tool schemas.
     Inputs: completed turns, current text, optional trusted prompt; Outputs: model messages.
     Logic: Preserve natural-language follow-ups, exclude tool calls/results and empty messages.
-    Constraints: Prior dialogue is untrusted evidence; 120000-character bound fails explicitly.
+    Constraints: Prior dialogue is untrusted evidence; an oversized message set fails early,
+    while completion checks the full serialized request including any tool schemas.
     """
     messages = [{"role": item["role"], "content": item["content"]}
                 for turn in turns for item in turn
@@ -97,7 +99,7 @@ def dialogue(turns, text, prompt=None):
     messages.append({"role": "user", "content": text})
     if prompt is not None:
         messages.insert(0, {"role": "system", "content": prompt})
-    if len(json.dumps(messages, ensure_ascii=False)) > 120000:
+    if len(json.dumps(messages, ensure_ascii=False, separators=(",", ":"))) > MAX_CONTEXT_CHARS:
         raise AgentError("context_limit", "对话上下文达到上限，请清空对话后重新开始。")
     return messages
 

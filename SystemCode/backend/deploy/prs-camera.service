@@ -1,7 +1,7 @@
 # Responsibilities: Run the isolated camera/HF/MCP service, listening only on 127.0.0.1:8766.
 # Implementation: One worker, MCP lifespan enabled, five transport input queues, explicit resource budgets, and no automatic restart; runtime directory is writable and source is read-only.
-# Related Modules: config.camera_server, core.hf_video_relay/ai_mcp/ai_bridge, nginx.locations.conf。
-# Declaration Index: None。
+# Related Modules: config.camera_server, core.hf_video_relay/ai_mcp/ai_bridge, nginx.locations.conf.
+# Declaration Index: None.
 # Variable Index: User/Group — prs-camera service identity; EnvironmentFile — dedicated credentials;
 # MemoryMax/CPUQuota/TasksMax — isolated service budgets; ExecStart — fixed ASGI runtime arguments.
 # OPENBLAS_NUM_THREADS limits numerical-library threads to avoid contention with other applications.

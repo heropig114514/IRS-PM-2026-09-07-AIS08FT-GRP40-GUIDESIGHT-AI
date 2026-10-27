@@ -1,23 +1,25 @@
-/* Responsibilities: Verify a local or deployed unified assist entry through Chrome, MCP and speech lifecycle.
+/* Responsibilities: Verify a local or deployed unified assist entry through Chrome, MCP and backend speech lifecycle.
  * Implementation: Explicit GPS/ORS fixtures surround unchanged controllers; default-on controls
- * stay gated until a real user click produces calibration playback; synthetic
- * arbitration and optional real local-file PRF2 inference have separate evidence partitions.
+ * stay gated until a real user click produces backend PCM playback; synthetic arbitration and
+ * optional real local-file PRF2 inference have separate evidence partitions.
  * Related Modules: integration/assist-mvp.js/assist-guidance.js/video-replay.js; navigation-ui.js,
  * camera.js, ai-control.js, speech-output.js; check_local_navigation_browser.mjs; integration.assist.
- * Declaration Index: installSpeechProbe; installSpeechProbe.observedSpeak; installGPS; installGPS.fixture.fix; installGPS.fixture.periodic;
+ * Declaration Index: installSpeechProbe; installSpeechProbe.observedSpeak; installSpeechProbe.observedWebSocketSend;
+ * installGPS; installGPS.fixture.fix; installGPS.fixture.periodic;
  * installGPS.fixture.stop; installGPS.fixture.describe; installGPS.geo.watchPosition;
  * installGPS.geo.clearWatch; installGPS.geo.getCurrentPosition; observe; observe.recordGuidance;
  * observe.recordDriver; observe.recordFrame; observe.recordNavigation; capture; resetProbe;
  * verifyAssistSession; runTool; planRoute; enableSpeech; deliverFix; waitOutput; assertStopped;
  * navigationSession; syntheticSession; videoSession; setVisibility; checkLayouts; requireNew;
  * validateArguments; safeFailure; run; run.fixtureRoute; run.requested; run.responded;
- * run.socketOpened; run.socketOpened.received; run.socketOpened.sent; main.
+ * run.socketOpened; run.socketOpened.received; run.socketOpened.sent; run.socketOpened.sentFrame; main.
  * Variable Index: ROUTE and FIX are explicit synthetic route/sensor inputs, never saved as location
- * evidence. MCP_SCRIPT invokes the existing outputs tools. assistProbe stores body-free lifecycle
- * and validated frame identities; real model metadata is never replaced or generated in video mode.
+ * evidence. MCP_SCRIPT invokes the existing outputs tools. assistProbe stores body-free lifecycle,
+ * TTS policy flags and validated frame identities; socket records retain PCM counts only, and real
+ * model metadata is never replaced or generated in video mode.
  * Constraints: No service/Git changes, GPU mocks, retries, camera permission, speech-event
  * simulation, media seek/loop, CDN replacement, coordinate/utterance/credential serialization or
- * physical-audibility claim. Missing dependencies, voices or fresh actual alerts fail explicitly.
+ * physical-audibility claim. Missing dependencies, backend PCM or fresh actual alerts fail explicitly.
  */
 import assert from "node:assert/strict";
 import {createRequire} from "node:module";
@@ -26,7 +28,7 @@ import {promisify} from "node:util";
 import {access, mkdir, stat, writeFile} from "node:fs/promises";
 import {resolve, dirname} from "node:path";
 import {pathToFileURL} from "node:url";
-import {verifySpeech, waitForGate} from "./check_local_navigation_browser.mjs";
+import {waitForGate} from "./check_local_navigation_browser.mjs";
 
 const FIX = [103.7771, 1.2971];
 const ROUTE = {provider: "openrouteservice", profile: "foot-walking", attribution: "Explicit synthetic assist fixture",
@@ -54,9 +56,10 @@ async def run():
 asyncio.run(run())
 `;
 
-/* Functionality: Observe genuine engine submissions before page initialization without saving text.
- * Inputs: native browser engine. Outputs: body-free gesture/timing records, unchanged native calls.
- * Logic: synchronous delegation preserves user activation; Constraints: no generated calls or events. */
+/* Functionality: Observe native speech and backend TTS submissions before page initialization.
+ * Inputs: Browser SpeechSynthesis and WebSocket APIs. Outputs: Body-free request evidence and unchanged API results.
+ * Logic: Compare request text transiently with the active source formatter, then retain only match flags and metadata.
+ * Constraints: No request rewriting, generated audio/events, body retention or physical-audibility claim. */
 export function installSpeechProbe() {
   window.__assistNativeSpeechCalls = [];
   const native = window.speechSynthesis?.speak?.bind(window.speechSynthesis);
@@ -68,6 +71,38 @@ export function installSpeechProbe() {
     return native(utterance);
   }
   if (native) window.speechSynthesis.speak = observedSpeak;
+  const send = WebSocket.prototype.send;
+  /* Functionality: Inspect one backend synthesis command while preserving its original send call.
+   * Inputs: Original WebSocket and outbound frame. Outputs: Original native result and safe request evidence.
+   * Logic: Accept only same-origin TTS synthesis JSON, compare transient text against the active source policy,
+   * and retain no body. Constraints: Do not modify frames, retain credentials/audio or fabricate replies. */
+  function observedWebSocketSend(data) {
+    if (typeof data === "string") {
+      let command;
+      try { command = JSON.parse(data); } catch {}
+      const address = new URL(this.url, location.href);
+      if (command?.type === "synthesize" && address.host === location.host && address.pathname === "/ws/tts/") {
+        const controllers = window.assistControllers, probe = window.assistProbe;
+        const manager = controllers?.manager, driver = controllers?.driver, active = manager?.active.speech;
+        const request = driver?.lastRequest;
+        const activation = controllers?.activation?.describe();
+        const calibration = !active && activation?.owned_request_id === request?.id;
+        const sourceKind = active?.kind ?? (calibration ? "calibration" : null);
+        let expected = null;
+        if (active?.kind === "risk") expected = controllers.videoAlertText(active.box, command.language);
+        else if (active?.kind === "navigation") expected = controllers.navigationSpeechText(active.snapshot, command.language);
+        probe?.tts_requests.push({request_id: request?.id ?? null, source_kind: sourceKind,
+          language: command.language, configured_language: request?.language ?? null,
+          rate: command.rate, configured_rate: request?.rate ?? null,
+          text_length: typeof command.text === "string" ? [...command.text].length : 0,
+          text_matches_policy: expected === null ? ["assistant", "calibration"].includes(sourceKind) && Boolean(command.text?.trim())
+            : command.text === expected,
+          backend_voice: request?.service === "backend" && request?.voice_id === "Cherry"});
+      }
+    }
+    return send.call(this, data);
+  }
+  WebSocket.prototype.send = observedWebSocketSend;
 }
 
 /* Functionality: Install an explicit native-sensor boundary before module initialization.
@@ -119,9 +154,9 @@ function installGPS() {
   Object.defineProperty(navigator, "geolocation", {configurable: true, value: geo});
 }
 
-/* Functionality: Observe canonical controllers and genuine native speech/source events.
+/* Functionality: Observe canonical controllers and genuine backend speech/source events.
  * Inputs: Original assist page. Outputs: In-memory probes and singleton evidence.
- * Logic: Compare live utterance with its frozen source formatter without serializing either body.
+ * Logic: Compare transient TTS text with the frozen source formatter without serializing either body.
  * Constraints: No enablement, output-event fabrication, algorithm mutation or media retention. */
 async function observe() {
   const glue = await import("/assets/integration/assist-mvp.js"); await glue.assistReady;
@@ -135,28 +170,28 @@ async function observe() {
   if (glue.cameraApp !== cameraApp || glue.navigation !== navigation || glue.speechOutput !== driver ||
       manager.speech !== driver || bridge.adapter?.ingest !== manager.navPort.ingest)
     throw new Error("Assist canonical controller identity mismatch");
-  window.assistControllers = {cameraApp, navigation, driver, manager, bridge, video, activation: glue.speechActivation};
-  window.assistProbe = {speech: [], driver: [], utterances: [], frames: [], navigation: [], sources: []};
-  /* Functionality: Bind genuine native starts to original source/voice/rate. Inputs: Manager event.
-   * Outputs: Body-free lifecycle/binding evidence. Logic: source ownership and pure formatter comparisons.
+  window.assistControllers = {cameraApp, navigation, driver, manager, bridge, video, activation: glue.speechActivation,
+    navigationSpeechText, videoAlertText};
+  window.assistProbe = {speech: [], driver: [], utterances: [], tts_requests: [], frames: [], navigation: [], sources: []};
+  /* Functionality: Bind genuine Web Audio starts to original source/backend request/rate. Inputs: Manager event.
+   * Outputs: Body-free lifecycle/binding evidence. Logic: exact driver ownership and command-time policy flags.
    * Constraints: Synthetic risk and actual validated model frames remain separately labeled sessions. */
   function recordGuidance(event) {
     window.assistProbe.speech.push(structuredClone(event));
     if (event.phase !== "output_start" || event.channel !== "speech") return;
-    const active = manager.active.speech, last = driver.lastRequest, utterance = driver.current;
+    const active = manager.active.speech, last = driver.lastRequest;
     const owned = active?.requestId === event.request_id && last?.id === event.request_id;
-    const expected = active?.kind === "risk" ? videoAlertText(active.box, last.language)
-      : navigationSpeechText(active?.snapshot, last.language);
+    const command = window.assistProbe.tts_requests.find(item => item.request_id === event.request_id);
     const frame = active?.kind === "risk" && window.assistProbe.frames.find(item =>
       item.session_id === active.source.session_id && item.index === active.source.frame_index &&
       item.captured_at_ms === active.source.captured_at_ms && item.required_track_ids.includes(active.box.track_id));
     window.assistProbe.utterances.push({...event, request_owned: owned,
-      text_matches_policy: Boolean(owned && utterance?.text && utterance.text === expected),
-      local_chinese_voice: Boolean(owned && last.language === "zh-CN" && last.local_service === true &&
-        utterance?.voice?.localService === true && /^zh(?:-|$)/i.test(utterance.voice.lang)),
-      rate_matches_user_setting: Boolean(owned && utterance?.rate === last.rate &&
+      text_matches_policy: Boolean(owned && command?.text_matches_policy),
+      backend_voice: Boolean(owned && command?.backend_voice && last.service === "backend" && last.voice_id === "Cherry"),
+      rate_matches_user_setting: Boolean(owned && command?.rate === last.rate &&
         last.rate === Number(document.getElementById("speech-rate").value)),
-      configured_rate: last?.rate ?? null, engine_rate: utterance?.rate ?? null,
+      configured_rate: last?.rate ?? null, engine_rate: command?.rate ?? null,
+      language_matches_request: Boolean(owned && command?.language === last.language),
       source_matches_validated_frame: Boolean(frame)});
   }
   /* Functionality: Preserve original native driver lifecycle. Inputs: Driver event. Outputs: Detached event.
@@ -206,7 +241,7 @@ async function capture(page) {
       bridge: bridge.describe(), gps: __assistGPS.describe(), video_mode: video.mode, video_active: video.active(),
       video_stats: video.stats, camera_mode: cameraApp.mode, gps_watch_cleared: navigation.watchId === null,
       gps_deadline_cleared: navigation.timer === null, scheduler_cleared: manager.schedulerTimer === null,
-      native_utterance_cleared: driver.current === null,
+      speech_request_cleared: driver.current === null,
       speech_activation: window.assistControllers.activation.describe(),
       local_socket_closed: !video.client?.socket || video.client.socket.readyState === 3}};
   });
@@ -215,18 +250,73 @@ async function capture(page) {
 /* Functionality: Partition observations between explicit sessions. Inputs: Page. Outputs: Empty probe.
  * Logic: does not mutate controllers or clocks; Constraints: previous session must already be fully closed. */
 async function resetProbe(page) {
-  await page.evaluate(() => { window.assistProbe = {speech: [], driver: [], utterances: [], frames: [], navigation: [], sources: []}; });
+  await page.evaluate(() => { window.assistProbe = {speech: [], driver: [], utterances: [], tts_requests: [], frames: [], navigation: [], sources: []}; });
 }
 
-/* Functionality: Verify every genuine speech request and optional real-frame risk provenance.
+/* Functionality: Verify each backend TTS lifecycle and optional real-frame risk provenance.
  * Inputs: Complete evidence partition, actual-model flag/minimum risk starts. Outputs: Lifecycle counts.
- * Logic: reuse exact-ID native verifier; require each real risk start to bind a validated source frame.
- * Constraints: no aggregates substituted for per-request completion, or synthetic results accepted as inference. */
+ * Logic: correlate manager and driver phases by request ID and require backend command/source/rate agreement;
+ * require each real risk start to bind a validated source frame. Constraints: scheduled playback is not
+ * physical audibility, and aggregate counts cannot replace per-request terminal-state checks. */
 export function verifyAssistSession(session, {actualModel = false, minimumRiskStarts = 0} = {}) {
   const speech = session.speech.filter(event => event.channel === "speech");
-  const summary = verifySpeech({...session, speech});
+  const submitted = new Map(), terminal = new Map(), driverEvents = session.driver;
+  for (const event of speech.filter(item => item.phase === "output_submitted")) {
+    assert.equal(submitted.has(event.request_id), false, `Duplicate speech submission ${event.request_id}`);
+    submitted.set(event.request_id, event);
+    assert.equal(driverEvents.filter(item => item.phase === "submitted" && item.request_id === event.request_id).length, 1,
+      `Missing or duplicate driver submission ${event.request_id}`);
+  }
+  for (const event of speech.filter(item => ["output_end", "output_cancel", "output_error"].includes(item.phase))) {
+    assert.ok(submitted.has(event.request_id), `Unowned speech terminal event ${event.request_id}`);
+    assert.equal(terminal.has(event.request_id), false, `Duplicate speech terminal event ${event.request_id}`);
+    terminal.set(event.request_id, event);
+  }
+  const starts = speech.filter(item => item.phase === "output_start"), utterances = session.utterances;
+  assert.equal(starts.length, utterances.length, "Every backend start must have one source-binding record");
+  const startIds = new Set();
+  for (const event of starts) {
+    assert.ok(submitted.has(event.request_id), `Unowned backend start ${event.request_id}`);
+    assert.equal(startIds.has(event.request_id), false, `Duplicate backend start ${event.request_id}`);
+    assert.equal(event.actual_start, true, `Backend start ${event.request_id} lacks an actual-start marker`);
+    startIds.add(event.request_id);
+  }
+  const bindingIds = new Set();
+  for (const utterance of utterances) {
+    const id = utterance.request_id;
+    assert.ok(Number.isSafeInteger(id) && startIds.has(id), "Output start lacks request identity");
+    assert.equal(bindingIds.has(id), false, `Duplicate source binding ${id}`);
+    bindingIds.add(id);
+    assert.ok(utterance.request_owned && utterance.text_matches_policy && utterance.backend_voice &&
+      utterance.language_matches_request && utterance.rate_matches_user_setting,
+    `Backend source/voice/language/rate binding failed for request ${id}`);
+    assert.equal(driverEvents.filter(event => event.phase === "start" && event.request_id === id).length, 1,
+      `Missing or duplicate backend driver start ${id}`);
+  }
+  assert.equal(bindingIds.size, startIds.size, "Backend start/source binding identities differ");
+  for (const [id] of submitted) {
+    assert.equal(terminal.has(id), true, `Speech request ${id} has no terminal event`);
+    const end = terminal.get(id).phase === "output_end";
+    const driverTerminal = driverEvents.filter(item => ["end", "cancel", "error"].includes(item.phase) && item.request_id === id);
+    assert.equal(driverTerminal.length, 1, `Speech request ${id} must have one driver terminal event`);
+    assert.equal(driverTerminal[0].phase === "end", end, `Driver/manager terminal state mismatch for request ${id}`);
+    if (end) assert.ok(starts.some(event => event.request_id === id), `Completed request ${id} never started`);
+    if (terminal.get(id).phase === "output_cancel")
+      assert.equal(terminal.get(id).accepted, true, `Speech cancellation was not confirmed for request ${id}`);
+    assert.notEqual(terminal.get(id).phase, "output_error", `Backend speech failed for request ${id}`);
+  }
+  const commandIds = new Set();
+  for (const request of session.tts_requests ?? []) {
+    assert.ok(submitted.has(request.request_id), `Unowned backend TTS request ${request.request_id}`);
+    assert.equal(commandIds.has(request.request_id), false, `Duplicate backend TTS request ${request.request_id}`);
+    commandIds.add(request.request_id);
+    assert.ok(request.backend_voice && request.text_matches_policy && request.language === request.configured_language &&
+      request.rate === request.configured_rate, `Backend TTS command does not match request ${request.request_id}`);
+  }
+  for (const event of driverEvents.filter(item => ["start", "end", "cancel", "error"].includes(item.phase)))
+    assert.ok(submitted.has(event.request_id), `Unowned backend driver event ${event.phase}`);
   const risk = session.utterances.filter(event => event.kind === "risk");
-  assert.ok(risk.length >= minimumRiskStarts, "Insufficient actual risk native starts in this evidence partition");
+  assert.ok(risk.length >= minimumRiskStarts, "Insufficient actual risk backend starts in this evidence partition");
   if (actualModel) {
     assert.ok(session.frames.length > 0, "No validated model frame observed");
     assert.ok(risk.every(event => event.source_matches_validated_frame === true &&
@@ -234,9 +324,13 @@ export function verifyAssistSession(session, {actualModel = false, minimumRiskSt
       session.frames.some(frame => frame.session_id === event.session_id && frame.index === event.frame_index &&
         frame.captured_at_ms === event.captured_at_ms && frame.required_track_ids.includes(event.track_id) &&
         frame.provider === "local" && frame.model === "yolo26n" && frame.timestamp_source === "browser_capture")),
-    "Real risk native start did not bind a fresh validated model frame");
+    "Real risk backend start did not bind a fresh validated model frame");
   }
-  return {...summary, risk_started: risk.length,
+  return {submitted: submitted.size, started: starts.length,
+    completed: [...terminal.values()].filter(event => event.phase === "output_end").length,
+    cancelled: [...terminal.values()].filter(event => event.phase === "output_cancel").length,
+    errors: [...terminal.values()].filter(event => event.phase === "output_error").length,
+    hardware_verified: false, risk_started: risk.length,
     navigation_started: session.utterances.filter(event => event.kind === "navigation").length,
     actual_model_verified: actualModel};
 }
@@ -262,21 +356,21 @@ async function planRoute(page) {
     window.assistControllers.navigation.describe().state === "ready", null, {timeout: 10000});
 }
 
-/* Functionality: Explicitly choose a local Chinese voice while preserving unified default-on switches.
- * Inputs: Page/native inventory. Outputs: Unchanged2x configuration metadata.
- * Logic: existing controls; Constraints: no default/remote substitution or rate adjustment. */
+/* Functionality: Verify the fixed backend Cherry voice and unified default-on controls.
+ * Inputs: Page and initialized shared driver. Outputs: Backend voice/language/rate metadata.
+ * Logic: inspect the driver's explicit backend inventory and page configuration without querying native voices.
+ * Constraints: no output submission, voice substitution, enablement or rate adjustment. */
 async function enableSpeech(page) {
-  await page.waitForFunction(() => speechSynthesis.getVoices().length > 0, null, {timeout: 5000});
-  await page.click("#navigation-voices-refresh");
-  const voices = await page.locator("#navigation-speech-voice option").evaluateAll(options =>
-    options.filter(option => option.value && !option.disabled).map(option => option.value));
-  assert.ok(voices.length, "Installed local Chinese voice required; no substitute");
+  const voice = await page.evaluate(() => window.assistControllers.driver.voiceList());
+  assert.equal(voice.accepted, true, "Backend speech interface is unavailable");
+  assert.deepEqual(voice.voices.map(item => ({id: item.id, service: item.service, languages: item.languages})),
+    [{id: "Cherry", service: "backend", languages: ["zh-CN", "en-US"]}], "Unexpected backend voice contract");
+  assert.equal(await page.inputValue("#navigation-speech-voice"), "Cherry", "Backend voice must be selected");
   assert.equal(await page.inputValue("#navigation-speech-language"), "zh-CN");
-  await page.selectOption("#navigation-speech-voice", voices[0]);
   assert.equal(await page.isChecked("#speech-enabled"), true);
   assert.equal(await page.isChecked("#navigation-speech-enabled"), true);
   assert.equal(Number(await page.inputValue("#speech-rate")), 2);
-  return {language: "zh-CN", voice_id: voices[0], rate: 2, physical_audibility_verified: false};
+  return {language: "zh-CN", voice_id: "Cherry", service: "backend", rate: 2, physical_audibility_verified: false};
 }
 
 /* Functionality: Deliver one explicit fix through the sensor fixture. Inputs: Page.
@@ -291,39 +385,52 @@ async function waitOutput(page, phase, kind, count = 1, timeout = 15000) {
     event.phase === "paused" && event.channel === "speech" || event.phase === "output_error" && event.channel === "speech") ||
     window.assistProbe.speech.filter(event => event.channel === "speech" && event.phase === phase && event.kind === kind).length >= count,
   {phase, kind, count}, {timeout, polling: "raf"});
-  assert.equal((await capture(page)).cleanup.guidance.paused.speech, false, "Native speech channel failed");
+  const state = await capture(page);
+  assert.equal(state.cleanup.guidance.paused.speech, false,
+    `Backend speech channel failed: ${state.cleanup.guidance.reasons.speech || "unknown"}`);
 }
 
 /* Functionality: Require closed original source/output ownership. Inputs: Capture. Outputs: Assertions.
- * Logic: timers, GPS, replay/WS and native speech must agree; Constraints: no immediate external GPU-release claim. */
+ * Logic: timers, GPS, replay/WS and backend speech requests must agree; Constraints: no immediate external GPU-release claim. */
 function assertStopped(result) {
   const state = result.cleanup;
   assert.equal(state.navigation.active, false); assert.equal(state.gps.active_watch_count, 0);
   assert.ok(state.gps.max_active_watch_count <= 1); assert.equal(state.gps.one_shot_requests, 0);
-  for (const name of ["gps_watch_cleared", "gps_deadline_cleared", "scheduler_cleared", "native_utterance_cleared", "local_socket_closed"])
+  for (const name of ["gps_watch_cleared", "gps_deadline_cleared", "scheduler_cleared", "speech_request_cleared", "local_socket_closed"])
     assert.equal(state[name], true, `Cleanup incomplete: ${name}`);
   assert.equal(state.video_mode, "idle"); assert.equal(state.camera_mode, "idle");
   assert.equal(state.guidance.active.speech, null); assert.equal(state.guidance.navigation_run_id, null);
   assert.equal(state.guidance.risk_session_id, null); assert.equal(state.guidance.paused.speech, false);
 }
 
-/* Functionality: Verify independent navigation and original MCP/one-watch ownership with native speech.
+/* Functionality: Verify independent navigation and original MCP/one-watch ownership with backend speech.
  * Inputs: Page/URL/session. Outputs: Complete closed evidence.
  * Logic: original UI start, duplicate MCP start, status and MCP stop; Constraints: synthetic GPS/route only. */
 async function navigationSession(page, url, sessionId) {
   await resetProbe(page); await page.click("#navigation-start");
-  await page.waitForFunction(() => window.assistControllers.activation.describe().ready, null, {timeout: 10000});
+  await page.waitForFunction(() => {
+    const activation = window.assistControllers.activation.describe(), driver = window.assistControllers.driver;
+    return activation.ready && driver.current === null && driver.phase === "completed" &&
+      driver.lastRequest?.id === activation.request_id;
+  }, null, {timeout: 30000});
   const activation = await page.evaluate(() => ({state: window.assistControllers.activation.describe(),
-    calls: structuredClone(window.__assistNativeSpeechCalls), native: structuredClone(window.assistProbe.driver)}));
-  assert.equal(activation.calls[0]?.user_gesture_active, true, "Calibration must be submitted in the original start gesture");
-  assert.equal(activation.native.filter(event => event.phase === "start" &&
-    event.request_id === activation.state.request_id).length, 1, "Calibration must have a genuine native start");
+    native_speech_calls: window.__assistNativeSpeechCalls.length,
+    events: structuredClone(window.assistProbe.driver), requests: structuredClone(window.assistProbe.tts_requests)}));
+  const calibrationId = activation.state.request_id;
+  assert.equal(activation.native_speech_calls, 0, "Unified assist must not call native SpeechSynthesis");
+  assert.equal(activation.requests.filter(item => item.request_id === calibrationId && item.source_kind === "calibration" &&
+    item.backend_voice && item.text_matches_policy && item.language === item.configured_language &&
+    item.rate === item.configured_rate).length, 1, "Calibration must use the selected backend voice");
+  for (const phase of ["submitted", "start", "end"])
+    assert.equal(activation.events.filter(event => event.phase === phase && event.request_id === calibrationId).length, 1,
+      `Calibration requires one genuine backend ${phase} event`);
+  await resetProbe(page);
   const status = await runTool(url, sessionId, "navigation_status"); assert.equal(status.active, true);
   const duplicate = await runTool(url, sessionId, "navigation_start"); assert.equal(duplicate.reason, "already_active");
   await deliverFix(page); await waitOutput(page, "output_end", "navigation");
   assert.equal((await capture(page)).cleanup.gps.active_watch_count, 1);
   const stopped = await runTool(url, sessionId, "navigation_stop"); assert.equal(stopped.accepted, true);
-  const result = await capture(page); result.scope = "native_navigation_synthetic_GPS_and_route";
+  const result = await capture(page); result.scope = "backend_navigation_synthetic_GPS_and_route";
   result.mcp = {status, duplicate, stopped}; result.activation = activation;
   result.speech_summary = verifyAssistSession(result); assertStopped(result);
   return result;
@@ -331,7 +438,7 @@ async function navigationSession(page, url, sessionId) {
 
 /* Functionality: Deterministically verify risk priority without claiming generated risk is model output.
  * Inputs: Explicit fixture box and original navigation start. Outputs: Separately labeled native arbitration evidence.
- * Logic: inject only the manager input seam after a real navigation native start; stopRisk preserves GPS.
+ * Logic: inject only the manager input seam after a real navigation backend start; stopRisk preserves GPS.
  * Constraints: No GPU/transport inference assertion, native event mocks or production state rewrites. */
 async function syntheticSession(page, url, sessionId) {
   await resetProbe(page); await page.check("#assist-risk-enabled");
@@ -356,7 +463,7 @@ async function syntheticSession(page, url, sessionId) {
     before.speech.filter(event => event.phase === "output_submitted").length, "New output after explicit all-stop");
   assert.ok(result.speech.some(event => event.phase === "output_cancel" && event.accepted === true &&
     event.reason === "risk_preempted_navigation"), "Synthetic priority fixture did not preempt owned navigation");
-  result.scope = "explicit_synthetic_risk_arbitration_with_native_TTS_not_model_inference";
+  result.scope = "explicit_synthetic_risk_arbitration_with_backend_PCM_not_model_inference";
   result.speech_summary = verifyAssistSession(result, {minimumRiskStarts: 1}); assertStopped(result); return result;
 }
 
@@ -372,7 +479,7 @@ async function setVisibility(page, value) {
 
 /* Functionality: Verify selected local video through actual PRF2/model outputs alongside sensor fixtures.
  * Inputs: File/page/URL/session. Outputs: Real-model evidence and independent/hidden cleanup checks.
- * Logic: explicitly select video; demand3 source-bound native risk starts; navigation stop preserves streaming, video stop
+ * Logic: explicitly select video; demand3 source-bound backend speech starts; navigation stop preserves streaming, video stop
  * preserves original GPS, then explicit video restart tests hidden cleanup without seek/loop.
  * Constraints: no prediction/GPU/frame replacement, synthesized risk input, retry or physical accuracy claim. */
 async function videoSession(page, url, sessionId, videoPath) {
@@ -413,7 +520,7 @@ async function videoSession(page, url, sessionId, videoPath) {
     assert.equal(state.speech.filter(event => event.phase === "output_submitted").length,
       stopped.speech.filter(event => event.phase === "output_submitted").length, "New output after hidden boundary");
     assert.equal(state.frames.length, stopped.frames.length, "Late source output after hidden boundary");
-    state.scope = "actual_local_file_PRF2_model_native_risk_with_explicit_synthetic_GPS_route";
+    state.scope = "actual_local_file_PRF2_model_backend_risk_with_explicit_synthetic_GPS_route";
     state.independence = {navigation_stop_preserved_video: true, video_stop_preserved_navigation: true,
       hidden_invalidated_sources: true, continuous_hello: true};
     state.speech_summary = verifyAssistSession(state, {actualModel: true, minimumRiskStarts: 3});
@@ -460,18 +567,35 @@ export function validateArguments(argv, environment) {
     video: video ? resolve(video) : null, runtime: environment.PRS_PLAYWRIGHT_PATH};
 }
 
-/* Functionality: Bound failure diagnostics without sensitive source bodies.
- * Inputs: Error. Outputs: Type/first message line. Logic: omit traceback/tool payload bodies.
- * Constraints: source/utterance/coordinate values are never intentionally included. */
-function safeFailure(error) { return {type: error.name, message: String(error.message).split("\n")[0].slice(0, 300)}; }
+/* Functionality: Preserve actionable failure classification without sensitive values.
+ * Inputs: Thrown error or assertion. Outputs: Type, short message, operator/location and safe value shapes.
+ * Logic: retain primitive booleans/numbers, but reduce strings and containers to lengths/types;
+ * include only the first stack location. Constraints: never serialize utterance, coordinate, key or payload text. */
+export function safeFailure(error) {
+  const failure = error && (typeof error === "object" || typeof error === "function")
+    ? error : {name: typeof error, message: String(error)};
+  const result = {type: failure.name || "Error", message: String(failure.message).split("\n")[0].slice(0, 300)};
+  if (typeof failure.operator === "string") result.operator = failure.operator;
+  const location = String(failure.stack || "").split("\n")[1]?.trim();
+  if (location) result.location = location.slice(0, 240);
+  for (const key of ["actual", "expected"]) {
+    if (!(key in failure)) continue;
+    const value = failure[key], type = value === null ? "null" : Array.isArray(value) ? "array" : typeof value;
+    result[`${key}_type`] = type;
+    if (type === "string") result[`${key}_length`] = [...value].length;
+    else if (["number", "boolean", "null"].includes(type)) result[key] = value;
+    else if (type === "array") result[`${key}_length`] = value.length;
+  }
+  return result;
+}
 
 /* Functionality: Run one browser acceptance with failure evidence preserved.
- * Inputs: Explicit validated settings. Outputs: Report. Logic: real dependencies/WS/native engine;
+ * Inputs: Explicit validated settings. Outputs: Report. Logic: real dependencies/WS/backend PCM engine;
  * config/route/GPS fixtures declared before loading, distinct evidence partitions afterward.
  * Constraints: no services/retries, CDN fallback, GPU mocks, credentials or native-event fabrication. */
 async function run(options) {
   const report = {complete: false, actual_model_verified: false, real_gps_verified: false, real_ors_verified: false,
-    hardware_outputs_verified: false, scope: "Original unified assist UI, MCP HTTP+WS, Chrome and native Chinese TTS",
+    hardware_outputs_verified: false, scope: "Original unified assist UI, MCP HTTP+WS, Chrome and backend Cherry PCM/Web Audio",
     fixtures: {gps: "Explicit sensor callbacks and2s emitter using real Date.now; one original watch",
       ors: "Explicit configured/route HTTP response fixtures; no real ORS requests",
       synthetic_arbitration: "Explicit generated risk input in its own session, never model evidence",
@@ -523,21 +647,35 @@ async function run(options) {
       if (["https://unpkg.com", "https://tile.openstreetmap.org"].includes(address.origin))
         report.dependency_responses.push({origin: address.origin, path: address.pathname, status: response.status()});
     }
-    /* Functionality: Observe original control/model sockets and PRF2 headers only.
-     * Inputs: Browser WebSocket. Outputs: Endpoint/lifecycle/header evidence.
-     * Logic: no binary image or control-body retention; Constraints: no transport replacement. */
+    /* Functionality: Observe original control, inference and TTS sockets without retaining payload bodies.
+     * Inputs: Browser WebSocket. Outputs: Endpoint lifecycle, safe TTS metadata and PRF2 header evidence.
+     * Logic: count PCM bytes/chunks and allowlisted controls; Constraints: no transport replacement or audio retention. */
     function socketOpened(socket) {
-      const address = new URL(socket.url()), item = {path: address.pathname, closed: false, hellos: [], inputs: []};
+      const address = new URL(socket.url()), item = {path: address.pathname, closed: false, hellos: [], inputs: [],
+        tts: address.pathname === "/ws/tts/" ? {synthesis_commands: 0, audio_configurations: 0,
+          pcm_chunks: 0, pcm_bytes: 0, completions: 0, audio_bytes: 0, errors: []} : null};
       report.websockets.push(item); socket.on("close", () => { item.closed = true; });
-      /* Functionality: Read only declared handshake fields. Inputs: Received frame. Outputs: Public session evidence.
-       * Logic: discard binary payloads and other controls; Constraints: no keys/media/results serialized. */
+      /* Functionality: Read public session controls and bounded TTS stream metadata.
+       * Inputs: Original received frame. Outputs: Safe handshake/config/completion/error counts.
+       * Logic: discard text, provider payloads and PCM contents; Constraints: retain only an allowlisted error code. */
       function received(frame) {
+        if (address.pathname === "/ws/tts/" && Buffer.isBuffer(frame.payload)) {
+          item.tts.pcm_chunks++; item.tts.pcm_bytes += frame.payload.length; return;
+        }
         if (typeof frame.payload !== "string") return;
         let value; try { value = JSON.parse(frame.payload); } catch { return; }
         if (address.pathname === "/ws/control/" && value.type === "welcome") resolveWelcome(value.session_id);
         if (address.pathname === "/ws/detect/local/" && value.kind === "session")
           item.hellos.push({session_seconds: value.session_seconds, provider: value.provider,
             protocol_version: value.protocol_version, model: value.model, session_id: value.session_id});
+        if (address.pathname === "/ws/tts/") {
+          if (value.type === "audio_config" && value.format === "pcm_s16le_mono" && value.sample_rate === 24000)
+            item.tts.audio_configurations++;
+          else if (value.type === "complete" && Number.isSafeInteger(value.audio_bytes)) {
+            item.tts.completions++; item.tts.audio_bytes = value.audio_bytes;
+          } else if (value.type === "error")
+            item.tts.errors.push(/^[a-z][a-z0-9_]{0,79}$/.test(value.code) ? value.code : "unknown");
+        }
       }
       /* Functionality: Read original outbound PRF2 header evidence. Inputs: Sent frame. Outputs: Index/source time.
        * Logic: exact wire header, no image copy; Constraints: does not generate timestamps or frames. */
@@ -548,7 +686,21 @@ async function run(options) {
           report.failures.push({type: "InvalidLocalProtocol", message: "Actual local input is not PRF2"});
         else item.inputs.push({index: bytes.readUInt32BE(4), capture_time_s: bytes.readDoubleBE(8), bytes: bytes.length});
       }
-      socket.on("framereceived", received); if (address.pathname === "/ws/detect/local/") socket.on("framesent", sent);
+      /* Functionality: Count outbound TTS commands or inspect the original local frame header.
+       * Inputs: One sent frame. Outputs: Command count or PRF2 metadata.
+       * Logic: discard TTS text and image bytes; Constraints: never alter or retain payload content. */
+      function sentFrame(frame) {
+        if (address.pathname === "/ws/tts/") {
+          if (typeof frame.payload === "string") {
+            let value; try { value = JSON.parse(frame.payload); } catch { return; }
+            if (value.type === "synthesize") item.tts.synthesis_commands++;
+          }
+          return;
+        }
+        sent(frame);
+      }
+      socket.on("framereceived", received);
+      if (["/ws/detect/local/", "/ws/tts/"].includes(address.pathname)) socket.on("framesent", sentFrame);
     }
     page.on("request", requested); page.on("response", responded); page.on("websocket", socketOpened);
     page.on("pageerror", error => report.failures.push(safeFailure(error)));
@@ -565,10 +717,11 @@ async function run(options) {
     assert.equal(await waitForGate(welcome, "Original assist MCP control registration"), sessionId);
     for (const id of ["speech-enabled", "navigation-speech-enabled", "assist-risk-enabled"])
       assert.equal(await page.isChecked(`#${id}`), true, `${id} must default on in the unified entry`);
-    assert.equal(await page.inputValue("#navigation-speech-voice"), "");
+    assert.equal(await page.inputValue("#navigation-speech-voice"), "Cherry", "The unified assist page must select backend Cherry");
     report.startup = await page.evaluate(() => ({native_speech_calls: window.__assistNativeSpeechCalls.length,
       gps: __assistGPS.describe(), camera_idle: window.assistControllers.cameraApp.mode === "idle" &&
         window.assistControllers.cameraApp.stream === null, activation: window.assistControllers.activation.describe(),
+      backend_voice: window.assistControllers.driver.voiceList().voices,
       guidance: window.assistControllers.manager.describe(),
       vibration: {supported: !document.getElementById("vibration-enabled").disabled,
         checked: document.getElementById("vibration-enabled").checked}}));
@@ -589,7 +742,18 @@ async function run(options) {
     report.final = await capture(page); assertStopped(report.final);
     assert.equal(routeCalls, 1, "Unexpected automatic route planning"); report.route_calls = routeCalls;
     assert.equal(report.websockets.filter(item => item.path === "/ws/control/").length, 1, "Duplicate ai-control module/socket");
-    assert.ok(report.websockets.every(item => item.path === "/ws/control/" || item.path === "/ws/detect/local/"), "Unexpected socket provider");
+    assert.ok(report.websockets.every(item => ["/ws/control/", "/ws/detect/local/", "/ws/tts/"].includes(item.path)),
+      "Unexpected socket provider");
+    const ttsSockets = report.websockets.filter(item => item.path === "/ws/tts/");
+    assert.ok(ttsSockets.every(item => item.closed && item.tts.synthesis_commands === 1), "TTS socket did not close one request cleanly");
+    assert.ok(ttsSockets.every(item => item.tts.errors.length === 0), "Backend TTS returned an explicit synthesis error");
+    assert.ok(ttsSockets.filter(item => item.tts.completions === 1).every(item => item.tts.audio_configurations === 1 &&
+      item.tts.pcm_chunks > 0 && item.tts.pcm_bytes > 0 && item.tts.audio_bytes === item.tts.pcm_bytes),
+    "Completed backend TTS stream lacks valid PCM evidence");
+    assert.ok(ttsSockets.reduce((total, item) => total + item.tts.completions, 0) >=
+      report.sessions.reduce((total, item) => total + (item.speech_summary?.completed ?? 0), 0) +
+        report.sessions.reduce((total, item) => total + (item.activation?.events?.filter(event => event.phase === "end").length ?? 0), 0),
+      "Backend stream completions do not cover observed driver completions");
     if (options.video) {
       const sockets = report.websockets.filter(item => item.path === "/ws/detect/local/");
       assert.equal(sockets.length, 2, "Only the two explicit video starts may connect");

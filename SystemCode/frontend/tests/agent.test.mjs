@@ -1,10 +1,11 @@
-/* Responsibilities: Verify audio encoding, capture lifecycle, live-reply notification, device evidence,
+/* Responsibilities: Verify audio encoding, capture lifecycle, live/replayed reply notification, device evidence,
  * intent activity and page refusals.
  * Implementation: Node tests with explicit controller fixtures, no browser hardware.
  * Related Modules: voice-input.js, agent-client.js, agent-device.js, integration/assist-mvp.js;
  * check_agent_browser.mjs adds real UI.
- * Declaration Index: None (test callbacks are anonymous).
- * Variable Index: None; fixture state is local to each test. */
+ * Declaration Index: testLiveReplyNotifications; testLiveReplyNotifications.FixtureCustomEvent;
+ * testAgentReconnect; testAgentReconnect.FixtureCustomEvent; testAgentReconnect.FakeWebSocket.
+ * Variable Index: None; fixtures and request state are local to each test. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import {encodeWav, VoiceInput} from "../voice-input.js";
@@ -74,16 +75,22 @@ test("agent failures render as status and never as assistant messages", t => {
   assert.deepEqual(dialogue, []);
   assert.equal(status.textContent, "The assistant service is unavailable.");
 
+  AgentPanel.prototype.receive.call(owner, {type: "error", seq: 3, code: "context_limit"});
+  assert.deepEqual(dialogue, []);
+  assert.equal(status.textContent, "The conversation reached its context limit. Clear the conversation and retry.");
   document.documentElement.lang = "zh-CN";
+  AgentPanel.prototype.receive.call(owner, {type: "error", seq: 4, code: "context_limit"});
+  assert.equal(status.textContent, "对话上下文已达到上限，请清空对话后重试。");
+
   AgentPanel.prototype.receive.call(owner, {
-    type: "rejected", seq: 3, code: "agent_capacity",
+    type: "rejected", seq: 5, code: "agent_capacity",
     detail: "Untrusted backend text must not become dialogue or UI copy.",
   });
   assert.deepEqual(dialogue, []);
   assert.equal(status.textContent, "语音助手会话已达到服务容量，请稍后刷新页面。");
   document.documentElement.lang = "en-US";
   AgentPanel.prototype.receive.call(owner, {
-    type: "rejected", seq: 4, code: "agent_capacity", detail: "Untrusted backend text.",
+    type: "rejected", seq: 6, code: "agent_capacity", detail: "Untrusted backend text.",
   });
   assert.equal(status.textContent, "The assistant session capacity is reached. Refresh the page later.");
 });
@@ -92,7 +99,7 @@ test("agent failures render as status and never as assistant messages", t => {
  * Inputs: Ordered reply/ready events and an EventTarget fixture. Outputs: One body-bearing event per live reply.
  * Logic: Observe the production receive method, including ready-event replay and sequence deduplication.
  * Constraints: No WebSocket, provider request, speech engine or audible-output claim is involved. */
-test("agent reply notifications include live responses and exclude replayed history", t => {
+test("agent reply notifications include live responses and exclude replayed history", function testLiveReplyNotifications(t) {
   const previous = new Map(["window", "CustomEvent"].map(name =>
     [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
   class FixtureCustomEvent extends Event {
@@ -191,31 +198,68 @@ test("product navigation speech status is mapped from its existing output owner"
   });
 });
 
-// Functionality: Release microphone on transport loss without submitting or reconnecting.
-// Inputs: explicit EventTarget socket and recorder spies; Outputs: lifecycle assertions.
-// Logic: Exercise actual connect close handler; Constraints: no network or native media API.
-test("agent socket disconnect cancels capture and preserves offline UI", t => {
-  const socket = new EventTarget();
-  // Node builds need not expose this browser global; install and restore an explicit fixture.
-  const previousSocket = Object.getOwnPropertyDescriptor(globalThis, "WebSocket");
-  Object.defineProperty(globalThis, "WebSocket", {configurable: true, writable: true,
-    value: function () { return socket; }});
-  t.after(() => {
-    if (previousSocket) Object.defineProperty(globalThis, "WebSocket", previousSocket);
-    else delete globalThis.WebSocket;
-  });
-  Object.defineProperty(globalThis, "document", {configurable: true,
-    value: {documentElement: {dataset: {}}}});
-  Object.defineProperty(globalThis, "location", {configurable: true,
-    value: {href: "http://localhost/live/", protocol: "http:"}});
-  t.after(() => { delete globalThis.document; delete globalThis.location; });
-  let cancelled = 0, rendered = 0;
+/* Functionality: Restore an in-flight request after a mobile transport handoff.
+ * Inputs: Fake WebSockets, session fixtures and deterministic timers. Outputs: one replayed reply notification.
+ * Logic: Reconnect performs hello only, matches the pending request ID, and rejects old socket callbacks.
+ * Constraints: No real network, backend work, microphone capture or speech playback is exercised. */
+test("agent reconnect replays its pending reply once without resubmitting", function testAgentReconnect(t) {
+  const names = ["WebSocket", "document", "location", "window", "CustomEvent", "sessionStorage", "crypto",
+    "setTimeout", "clearTimeout", "setInterval", "clearInterval"];
+  const previous = new Map(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+  t.after(() => { for (const [name, descriptor] of previous) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name];
+  }});
+  const timers = new Map(), sockets = [], replies = []; let timerSequence = 0, cancelled = 0;
+  Object.defineProperty(globalThis, "setTimeout", {configurable: true, value: (callback, delay) => {
+    const id = ++timerSequence; timers.set(id, {callback, delay}); return id;
+  }});
+  Object.defineProperty(globalThis, "clearTimeout", {configurable: true, value: id => timers.delete(id)});
+  Object.defineProperty(globalThis, "setInterval", {configurable: true, value: (callback, delay) => {
+    const id = ++timerSequence; timers.set(id, {callback, delay, interval: true}); return id;
+  }});
+  Object.defineProperty(globalThis, "clearInterval", {configurable: true, value: id => timers.delete(id)});
+  class FixtureCustomEvent extends Event {
+    constructor(type, options = {}) { super(type); this.detail = options.detail; }
+  }
+  const target = new EventTarget();
+  target.addEventListener("prs-agent-reply", event => replies.push(event.detail.text));
+  Object.defineProperty(globalThis, "window", {configurable: true, value: target});
+  Object.defineProperty(globalThis, "CustomEvent", {configurable: true, value: FixtureCustomEvent});
+  Object.defineProperty(globalThis, "document", {configurable: true, value: {
+    hidden: false, documentElement: {lang: "en", dataset: {}}, createElement: () => ({textContent: ""}),
+  }});
+  Object.defineProperty(globalThis, "location", {configurable: true, value: {href: "http://localhost/live/", protocol: "http:"}});
+  Object.defineProperty(globalThis, "sessionStorage", {configurable: true, value: {getItem: () => "fixture"}});
+  Object.defineProperty(globalThis, "crypto", {configurable: true, value: {randomUUID: () => "request-1"}});
+  function FakeWebSocket() {
+    const socket = new EventTarget(); socket.readyState = 0; socket.sent = [];
+    socket.send = message => socket.sent.push(JSON.parse(message));
+    socket.open = () => { socket.readyState = 1; socket.dispatchEvent(new Event("open")); };
+    socket.message = event => socket.dispatchEvent(Object.assign(new Event("message"), {data: JSON.stringify(event)}));
+    socket.close = () => { socket.readyState = 3; socket.dispatchEvent(new Event("close")); };
+    sockets.push(socket); return socket;
+  }
+  FakeWebSocket.CONNECTING = 0; FakeWebSocket.OPEN = 1;
+  Object.defineProperty(globalThis, "WebSocket", {configurable: true, value: FakeWebSocket});
+  let rendered = 0, failures = 0;
   const owner = {recording: true, connected: true, holdActive: true, holdToken: 5,
-    activePointerId: 7, root: {dataset: {pressing: "true"}},
-    voice: {cancel: async () => { cancelled++; }},
-    render: () => { rendered++; }};
+    activePointerId: 7, root: {dataset: {pressing: "true"}}, stage: "ready", busy: false,
+    socket: null, heartbeat: null, heartbeatTimeout: null, pingPending: false,
+    connectionTimer: null, reconnectTimer: null, reconnectAttempt: 0,
+    connectionGeneration: 0, leaving: false, pendingRequestId: null, pendingReplyNotified: false,
+    voice: {cancel: async () => { cancelled++; }}, render: () => { rendered++; }, fail() { failures++; }, append() {},
+    connect() { return AgentPanel.prototype.connect.call(this); },
+    handleDisconnect(socket, generation) { return AgentPanel.prototype.handleDisconnect.call(this, socket, generation); },
+    send(message) { return AgentPanel.prototype.send.call(this, message); },
+    submit(input) { return AgentPanel.prototype.submit.call(this, input); },
+    scheduleReconnect() { return AgentPanel.prototype.scheduleReconnect.call(this); },
+    receive(event, replayed = false) { return AgentPanel.prototype.receive.call(this, event, replayed); }};
+
   AgentPanel.prototype.connect.call(owner);
-  socket.dispatchEvent(new Event("close"));
+  const first = sockets[0]; first.open();
+  first.message({type: "ready", busy: false, events: []});
+  owner.submit({text: "check status"});
+  first.close();
   assert.equal(cancelled, 1);
   assert.equal(owner.recording, false);
   assert.equal(owner.connected, false);
@@ -224,7 +268,33 @@ test("agent socket disconnect cancels capture and preserves offline UI", t => {
   assert.equal(owner.activePointerId, null);
   assert.equal(owner.root.dataset.pressing, "false");
   assert.equal(owner.stage, "offline");
-  assert.equal(rendered, 1);
+  assert.equal(rendered >= 3, true);
+
+  const retryEntry = [...timers].find(([, item]) => item.delay === 1000);
+  assert.ok(retryEntry, `disconnect schedules the first bounded retry: ${JSON.stringify([...timers])}`);
+  const [retryId, retry] = retryEntry;
+  timers.delete(retryId); retry.callback();
+  const second = sockets[1]; second.open();
+  second.message({type: "ready", busy: false, events: [
+    {type: "reply", seq: 1, request_id: "other-request", text: "old reply"},
+    {type: "reply", seq: 2, request_id: "request-1", text: "pending reply"},
+    {type: "idle", seq: 3, request_id: "request-1"},
+  ]});
+  second.message({type: "reply", seq: 2, request_id: "request-1", text: "duplicate replay"});
+  first.close();
+
+  assert.equal(owner.connected, true, "stale close from the prior socket cannot override the new connection");
+  assert.deepEqual(first.sent.map(message => message.type), ["hello", "submit"]);
+  assert.deepEqual(second.sent.map(message => message.type), ["hello"], "reconnect never resubmits the user command");
+  assert.deepEqual(replies, ["pending reply"]);
+  assert.equal(owner.pendingRequestId, null);
+  second.send = () => { throw Object.assign(new Error("fixture transport failure"), {name: "NetworkError"}); };
+  assert.equal(owner.send({type: "cancel"}), false);
+  assert.equal(owner.connected, false, "a synchronous send failure enters the same disconnect path");
+  assert.equal(owner.stage, "offline");
+  assert.equal(failures, 1);
+  clearTimeout(owner.reconnectTimer); owner.reconnectTimer = null;
+  assert.equal(timers.size, 0);
 });
 
 // Functionality: Prevent late permission grants from restarting a cancelled recording.

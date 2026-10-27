@@ -6,8 +6,8 @@
  * Variable Index: None; all socket state and error collections are test-local.
  * Declaration Index: FakeSocket; FakeSocket.constructor; FakeSocket.send; FakeSocket.close;
  * FakeSocket.open; FakeSocket.receive; makeSession; makeSession.createSocket; makeSession.onDisconnect;
- * testBinary; testMismatch; testPing; testConcurrent; testConcurrent.sendConcurrentPing; testStop; testTimeout。
- * Variable Index: None。 */
+ * testBinary; testMismatch; testPing; testConcurrent; testConcurrent.sendConcurrentPing; testStop; testTimeout.
+ * Variable Index: None. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EchoClient } from "../echo-client.js";

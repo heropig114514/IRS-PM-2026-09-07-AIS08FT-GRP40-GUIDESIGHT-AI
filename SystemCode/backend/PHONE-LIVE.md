@@ -806,8 +806,8 @@ reservation is an admission buffer for each default 60-second Blackwell task; ac
 the quota difference reported above.
 
 Raw evidence is under `benchmarks/2026-10-06/`: `browser-61frames.json`, `browser-summary.json`,
-`browser-relay-log.txt`、`public-camera-source.json`、`forward-comparison.json`、
-`forward-summary.json`、`forward-runtime-log.json`、`quota-before.json`、
+`browser-relay-log.txt`, `public-camera-source.json`, `forward-comparison.json`,
+`forward-summary.json`, `forward-runtime-log.json`, `quota-before.json`,
 `quota-after-browser.json`, `quota-after-forward.json`, and `production-after-tests.json`.
 Probe source is `tools/hf_forward_probe.py`; the entry point for single calls/quota/raw-sample
 validation is `tools/benchmark_hf_forward.py`. Original failure, creation, commit, and pause

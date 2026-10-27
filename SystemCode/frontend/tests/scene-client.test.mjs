@@ -5,7 +5,7 @@
  * jsonResponse; box; testMapping; testMapBoxAlignment; testRequestShape; testNoCameraAndQuestionLimit; testErrors;
  * testNetworkAndBusy; testUnexpected; testSpeech; testSameOrigin; testTranslations; okFetch; testDescribeSceneSuccess; testDescribeSceneErrors;
  * testDescribeSceneTimeout; testDescribeSceneInvalidImage; testDescribeSceneBlobQuestion; testDescribeSceneDefaults;
- * testDescribeCurrentScene。
+ * testDescribeCurrentScene.
  * Variable Index: JPEG — synthetic five-byte FF D8 ... FF D9 marker; other state is test-local.
  */
 import test from "node:test";

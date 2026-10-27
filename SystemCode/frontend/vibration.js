@@ -7,7 +7,7 @@
  * VibrationTester.describe; VibrationTester.testResult; VibrationTester.testPattern;
  * VibrationTester.handleTest; VibrationTester.stop; VibrationTester.handleStop;
  * VibrationTester.handleVisibility; VibrationTester.handlePageHide; VibrationTester.subscribe;
- * VibrationTester.notify; VibrationTester.stopOwned。
+ * VibrationTester.notify; VibrationTester.stopOwned.
  * Variable Index: PATTERNS — fixed millisecond patterns; tester — current-page controller.
  * Instance doc/win are browser dependencies; enabled/buttons/stopButton/status/message are independent controls.
  * supported reports API presence only; requested records an accepted request not yet successfully canceled and does not prove the motor is still vibrating.

@@ -1,5 +1,73 @@
 # PRS camera deployment
 
+## Automated Phone MVP deployment
+
+The repository can deploy the Phone MVP after a successful push to `main`. The workflow is
+`.github/workflows/backend.yml`, so deployment runs only after the existing backend and frontend
+checks pass. It uses the already isolated `prs-mvp-web.service` boundary:
+
+- source releases are stored under `/opt/prs-practice/mvp/releases/<commit-sha>`;
+- only `/opt/prs-practice/mvp/current` is switched;
+- only `prs-mvp-web.service` is restarted on `127.0.0.1:18766`;
+- `/opt/prs-practice/current`, `prs-camera.service`, Nginx, the inference tunnel, and the MVP
+  database are not changed by the workflow;
+- old releases are retained and no automatic migration, rollback, dependency installation, or
+  provider retry is performed.
+
+The upload archive keeps the `backend/` and `frontend/` release roots but omits local credentials,
+virtual environments, backend test modules, development tools, generated reports, large test datasets,
+benchmark data, the frontend test suite, and model weight files. The MVP server uses the committed
+model manifests and the separately managed inference service; it does not need those artifacts.
+
+### One-time server preparation
+
+The server must already have the MVP service, environment file, runtime and Nginx relay configured
+as described in [PHONE-MVP.md](../PHONE-MVP.md). The SSH account used by Actions must be able to
+run the following commands non-interactively with `sudo -n`:
+
+```text
+install, tar, chown, ln, mv, systemctl cat/show/restart/is-active, and rm
+```
+
+The account must be able to write `/opt/prs-practice/mvp/releases/` through the listed sudo
+commands and belong to the `prs-mvp-web` group so it can source `/etc/prs-mvp-web/app.env` for
+read-only checks as an unprivileged user. The service user is `prs-mvp-web`, and the runtime must be
+an existing directory under `/opt/prs-practice/runtimes/`. Configure a dedicated deployment account and a narrowly scoped
+sudoers rule for this project; do not grant it control over the other project's service or Nginx.
+The deployment script rejects any root, runtime or service outside these fixed MVP boundaries.
+
+The runtime path must be recorded as a GitHub Actions repository variable, for example:
+
+```text
+PRS_MVP_RUNTIME=/opt/prs-practice/runtimes/outputs-c6eb9264bd29b084
+```
+
+### GitHub configuration
+
+Add these repository **secrets**:
+
+```text
+PRS_DEPLOY_HOST       server hostname or address
+PRS_DEPLOY_USER       dedicated SSH deployment account
+PRS_DEPLOY_SSH_KEY    private key for that account
+PRS_DEPLOY_KNOWN_HOSTS
+```
+
+`PRS_DEPLOY_KNOWN_HOSTS` must contain the reviewed `known_hosts` line for the server. Add this
+repository **variable**:
+
+```text
+PRS_DEPLOY_PORT=22
+PRS_MVP_RUNTIME=/opt/prs-practice/runtimes/outputs-c6eb9264bd29b084
+```
+
+The first push to `main` runs the normal checks, then uploads only `SystemCode/backend` and
+`SystemCode/frontend` as a commit-named archive. The remote script performs Django checks and
+`pip check`, atomically switches the MVP link, restarts the one service, waits for its listener, and
+checks `/api/health/` once. A failed health check leaves the new release selected for explicit
+operator diagnosis; use the retained previous link for a manual recovery. Pull requests never
+deploy.
+
 Phone access exposes exactly [the navigation page](https://47.239.50.129/mvp/maps/) and
 [the diagnostic page](https://47.239.50.129/mvp/maps/test) through a separate public HTTPS relay; the
 bare `/mvp` and `/mvp/` mount paths return 404. Required API, asset, WebSocket, and inference tunnel

@@ -5,6 +5,7 @@ Declaration Index: FakePeer; FakePeer.__init__; FakePeer.__aenter__; FakePeer.__
 FakePeer.send; FakePeer.recv; FakeConnector; FakeConnector.__call__; BlockingPeer;
 BlockingPeer.recv; AgentTtsTests; AgentTtsTests.request;
 AgentTtsTests.test_request_validation; AgentTtsTests.test_streaming_bilingual_pcm;
+AgentTtsTests.test_stream_telemetry_omits_text_and_audio;
 AgentTtsTests.test_upstream_message_limit_covers_max_audio;
 AgentTtsTests.test_invalid_request_never_connects; AgentTtsTests.test_origin_is_required;
 AgentTtsTests.test_browser_disconnect_cancels_provider;
@@ -218,6 +219,38 @@ class AgentTtsTests(SimpleTestCase):
             self.assertEqual(peer.sent[1]["text"], text)
             self.assertEqual([event["type"] for event in peer.sent], [
                 "session.update", "input_text_buffer.append", "input_text_buffer.commit"])
+
+    async def test_stream_telemetry_omits_text_and_audio(self):
+        """Functionality: Distinguish first-audio/terminal stream metrics without retaining content.
+        Inputs: one bilingual test phrase, four PCM bytes and a deterministic provider sequence.
+        Outputs: first-audio/completion counters and unchanged protocol sends.
+        Logic: run the existing upstream bridge with a fake peer and capture only its metadata logs.
+        Constraints: no network/provider call; spoken text and PCM bytes must not appear in logs.
+        """
+        text = "private speech fixture"
+        request = tts.validate_request(self.request("en-US", text))
+        peer = FakePeer([
+            {"type": "session.created"}, {"type": "session.updated"},
+            {"type": "response.audio.delta", "delta": base64.b64encode(PCM_FIXTURE).decode()},
+            {"type": "response.done"},
+        ])
+        connector = FakeConnector(peer)
+        send = AsyncMock()
+        config = {"key": "fixture-only", "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"}
+
+        with self.assertLogs("core.agent.tts", level="INFO") as captured:
+            await tts.upstream_session(request, config, send, opener=connector)
+
+        messages = "\n".join(captured.output)
+        self.assertIn("TTS first audio request=", messages)
+        self.assertIn("chunk_bytes=4", messages)
+        self.assertIn("audio_bytes=4 audio_chunks=1", messages)
+        self.assertIn("first_audio_ms=", messages)
+        self.assertNotIn(text, messages)
+        self.assertNotIn(base64.b64encode(PCM_FIXTURE).decode(), messages)
+        self.assertTrue(any(
+            call.args[0].get("bytes") == PCM_FIXTURE for call in send.call_args_list
+        ))
 
     @override_settings(CAMERA_ALLOWED_ORIGINS={"http://127.0.0.1:8766"})
     async def test_invalid_request_never_connects(self):

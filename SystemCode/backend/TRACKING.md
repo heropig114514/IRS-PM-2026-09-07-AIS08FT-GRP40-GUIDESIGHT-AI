@@ -203,7 +203,7 @@ optical flow, association, and a small scalar history; no GPU model was added an
 not copied to the CPU—the original distance vector is still returned. These six-frame smoke-check
 measurements do not establish continuous-video FPS or compare against historical HF performance.
 Results are in `model_tests/outputs/tracking-smoke-20261010/`; the summary is
-[local-gpu.json](benchmarks/2026-10-10/tracking/local-gpu.json)。
+[local-gpu.json](benchmarks/2026-10-10/tracking/local-gpu.json).
 
 `model_tests.test_tracking` includes real-SDK ID continuity, occlusion, and translated-frame GMC
 tests, plus checks for bounded history, three motion states, insufficient samples, invalid depth,

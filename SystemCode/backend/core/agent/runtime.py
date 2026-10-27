@@ -10,7 +10,7 @@ Declaration Index: Conversation; Conversation.emit; Conversation.subscribe; Conv
 Conversation.run; Conversation.execute; Conversation.cancel; Conversation.clear;
 Conversation.task_finished; append_failure_results; tool_exception; tool_failure;
 observed_failure; AgentExplanationUnavailable; AgentExplanationUnavailable.__init__; reason_code;
-prune; public_error; history_context; selection_reply.
+prune; public_error; history_context; compact_tool_result; selection_reply.
 Variable Index: logger; conversations — bounded process-local registry;
 REASON_CODES/REASON_ALIASES — accepted failure categories and browser aliases;
 DIAGNOSTIC_CODES — safe service failure codes preserved for model analysis;
@@ -80,6 +80,10 @@ READ_ONLY_TOOLS = {
     "speech_status", "speech_voices", "vibration_status", "places_categories",
     "places_search", "places_nearby", "database_schema", "database_query",
 }
+REFRESHABLE_TOOLS = {
+    "discover_tools", "read_skill", "ui_snapshot", "maps_status", "places_categories",
+}
+CATEGORY_FIELDS = ("id", "name", "group")
 
 
 class AgentExplanationUnavailable(AgentError):
@@ -265,12 +269,11 @@ def selection_reply(items, policy, language):
 
 
 def history_context(turns):
-    """Functionality: Omit repeatedly reloadable discovery/skill bodies from model history.
+    """Functionality: Omit successful, reloadable catalogs and transient observations from history.
     Inputs: complete saved turns; Outputs: new message list with exact action/search evidence.
-    Logic: Identify control-tool result IDs from their assistant calls, replace only their
-    catalog/workflow prose with explicit loaded metadata. Original stored turns stay untouched.
-    Constraints: Every new turn must rediscover and reload skills; candidates, user input,
-    device state, failures and mutation results are never summarized or silently discarded.
+    Logic: Identify tool names from their assistant calls; replace successful discovery, skill,
+    snapshot, map-status and category results with explicit refresh markers. Original turns stay
+    untouched. Constraints: failures, candidates, user input and mutation results remain exact.
     """
     result = []
     for turn in turns:
@@ -281,15 +284,55 @@ def history_context(turns):
         }
         for message in turn:
             name = names.get(message.get("tool_call_id"))
-            if message["role"] == "tool" and name in {"discover_tools", "read_skill"}:
+            if message["role"] == "tool" and name in REFRESHABLE_TOOLS:
                 data = json.loads(message["content"])
-                metadata = {"previously_loaded": name, "refresh_required_this_turn": True}
+                failed = (
+                    isinstance(data, dict)
+                    and (
+                        data.get("outcome") in {"failed", "unavailable", "declined"}
+                        or data.get("accepted") is False
+                        or data.get("available") is False
+                        or data.get("state") in {"error", "failed"}
+                        or "error_code" in data
+                    )
+                )
+                if failed or not isinstance(data, dict):
+                    result.append(message)
+                    continue
+                metadata = {"previously_observed": name, "refresh_required_this_turn": True}
                 if name == "read_skill":
                     metadata["skill"] = data["name"]
                 result.append({**message, "content": json.dumps(metadata)})
             else:
                 result.append(message)
     return result
+
+
+def compact_tool_result(name, observed):
+    """Functionality: Serialize large live POI category catalogs without losing category values.
+    Inputs: MCP tool name and structured result; Outputs: result ready for model history.
+    Logic: Encode each category as [id, name, group] and include an explicit field-order key.
+    Constraints: Validate the provider contract before conversion; other results pass through,
+    and this compact representation is not used by the provider adapter or user UI.
+    """
+    if name != "places_categories":
+        return observed
+    categories = observed.get("categories")
+    if not isinstance(categories, list):
+        raise AgentError("invalid_tool_result", "The category catalog was malformed.")
+    rows = []
+    for item in categories:
+        if (not isinstance(item, dict) or set(item) != set(CATEGORY_FIELDS)
+                or type(item["id"]) is not int or item["id"] <= 0
+                or not isinstance(item["name"], str) or not item["name"]
+                or not isinstance(item["group"], str)):
+            raise AgentError("invalid_tool_result", "The category catalog was malformed.")
+        rows.append([item[field] for field in CATEGORY_FIELDS])
+    return {
+        **{key: value for key, value in observed.items() if key != "categories"},
+        "category_fields": list(CATEGORY_FIELDS),
+        "categories": rows,
+    }
 
 
 def public_error(error):
@@ -456,7 +499,9 @@ class Conversation:
         Pending selections survive turns: unconfirmed choices hide guarded tools; explicit numeric
         or exact-name selections bind planning arguments to returned coordinates. Accepted planning
         releases the guard; failed planning pauses actions. New searches replace pending choices.
-        History omits only rediscovered metadata bodies, retaining actual execution evidence.
+        History refreshes prior successful discovery/status/catalog observations, retaining failures
+        and actual execution evidence. Candidate records remain exact; current categories use
+        lossless compact rows.
         Constraints: 12 total model calls (including classification)/30 tools/120000 context
         characters; any failed or declined tool ends the action phase and is returned as bounded
         evidence for an agent-authored explanation; no subsequent mutation can run.
@@ -519,6 +564,8 @@ class Conversation:
                     + json.dumps(sorted(target_skills))
                     + ". Load every mapped skill before actions. Complete only the user's "
                     "requested operations; route selection does not authorize unrelated actions."
+                    "\nProvider category results encode each `categories` row in the field order "
+                    "given by `category_fields`; use every returned ID/name/group exactly."
                     "\n" + reply_language_instruction(decision.language)
                 )}, *history, *turn]
                 if self.selection:
@@ -557,8 +604,6 @@ class Conversation:
                             ),
                         }
                     )
-                if len(json.dumps(messages, ensure_ascii=False)) > 120000:
-                    raise AgentError("context_limit", "对话上下文达到上限，请清空对话后重新开始。")
                 self.emit("working", request_id=request_id, stage="thinking")
                 required = (
                     "discover_tools" if not discovered
@@ -814,7 +859,8 @@ class Conversation:
                             "role": "tool",
                             "tool_call_id": call_id,
                             "content": json.dumps(
-                                failure if failure else observed, ensure_ascii=False,
+                                failure if failure else compact_tool_result(name, observed),
+                                ensure_ascii=False,
                             ),
                         }
                     )

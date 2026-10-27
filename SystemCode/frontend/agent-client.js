@@ -2,20 +2,25 @@
  * Implementation: One bound WebSocket, ordered replay and explicit request ownership; the product
  * view uses press-and-hold voice capture with a prompt-preserving first permission request, while
  * the diagnostic view retains click-to-toggle capture. Safe DOM text rendering and in-memory audio;
- * only live assistant replies notify the speech integration; failures render as status, never dialogue.
- * Disconnect releases microphone.
- * No auto reconnect.
+ * live replies and a matching pending reply restored after reconnect notify speech integration.
+ * Failures render as status, never dialogue.
+ * Disconnect releases microphone. A visible page reconnects with bounded backoff without resubmitting
+ * an in-flight command; only a reply matching the page's pending request may speak once after replay.
  * Related Modules: ai-control.js, voice-input.js, agent.css, integration/assist-mvp.js;
  * SystemCode/backend/core/agent/transport.
  * Declaration Index: label; recordingFailure; eventNotice; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
- * AgentPanel.send; AgentPanel.submit; AgentPanel.record; AgentPanel.startRecording;
+ * AgentPanel.handleDisconnect; AgentPanel.scheduleReconnect; AgentPanel.send; AgentPanel.submit;
+ * AgentPanel.record; AgentPanel.startRecording;
  * AgentPanel.finishRecording; AgentPanel.handlePressStart; AgentPanel.handlePressEnd;
  * AgentPanel.handlePressCancel; AgentPanel.cancel;
  * AgentPanel.receive; AgentPanel.append; AgentPanel.render; AgentPanel.fail.
  * Variable Index: COPY — bilingual interface and media setup text; TOOLS — discovery/action labels;
  * panel — singleton; AgentPanel.productMode selects the formal press-to-talk interaction;
  * holdActive/holdToken/activePointerId isolate the active pointer or keyboard press from stale events;
- * prs-agent-reply notifies speech integration for live replies only, never replayed history;
+ * prs-agent-reply notifies speech integration for live replies and one matching in-flight replay;
+ * RECONNECT_BASE_MS/RECONNECT_MAX_MS/CONNECTION_TIMEOUT_MS bound transport recovery;
+ * pendingRequestId/pendingReplyNotified retain request ownership across a socket handoff;
+ * pingPending/heartbeatTimeout detect a half-open socket after the backend keepalive interval;
  * EVENT_NOTICES maps transport/runtime codes to localized, non-conversational status;
  * eventNotice resolves the visible notice from that map.
  */
@@ -35,6 +40,7 @@ const COPY = {
   system: ["已识别操作：", "Recognized operations: "], clarify: ["需要明确操作意图", "Operation needs clarification"],
   general: ["通用问答", "General question"], unsupported: ["未命中已启用的能力", "Outside enabled capabilities"],
   requestFailed: ["请求未完成，请稍后重试。", "The request did not complete. Try again later."],
+  contextLimit: ["对话上下文已达到上限，请清空对话后重试。", "The conversation reached its context limit. Clear the conversation and retry."],
   explanationUnavailable: ["助手暂时无法生成故障说明，请稍后重试。", "The assistant could not explain this failure. Try again later."],
   assistantUnavailable: ["助手服务暂时不可用。", "The assistant service is unavailable."],
   cancelledNotice: ["请求已取消。", "Request cancelled."],
@@ -42,7 +48,7 @@ const COPY = {
   recording: ["正在录音，点击结束并发送（最长20秒）", "Recording. Finish and send within 20 seconds."],
   permission: ["等待麦克风授权…", "Waiting for microphone permission…"],
   permissionReady: ["麦克风已获准，请再次按住说话。", "Microphone access was granted. Hold again to speak."],
-  offline: ["连接已断开，请刷新页面；正在执行的操作可能仍在完成。", "Disconnected. Refresh the page; dispatched operations may still be completing."],
+  offline: ["连接已断开，正在尝试恢复；正在执行的操作可能仍在完成。", "Connection lost. Reconnecting; dispatched operations may still be completing."],
   trace: ["执行记录", "Activity"], you: ["你", "You"], assistant: ["助手", "Assistant"],
 };
 const TOOLS = {
@@ -62,6 +68,7 @@ const TOOLS = {
   vibration_stop: ["停止震动", "Stopping vibration"],
 };
 const EVENT_NOTICES = {
+  context_limit: COPY.contextLimit,
   agent_explanation_unavailable: COPY.explanationUnavailable,
   agent_internal_error: COPY.assistantUnavailable,
   agent_timeout: COPY.assistantUnavailable,
@@ -77,6 +84,9 @@ const EVENT_NOTICES = {
     "The assistant session capacity is reached. Refresh the page later.",
   ],
 };
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 15000;
+const CONNECTION_TIMEOUT_MS = 12000;
 
 /* Functionality: Select UI language. Inputs: bilingual tuple and document language.
  * Outputs: text; Logic: use page's existing language choice; Constraints: user/model text untouched. */
@@ -128,7 +138,7 @@ function recordingFailure(error) {
  * Logic: Correlated events reflect actual backend work; page navigation reattaches same identity.
  * State: productMode selects the formal hold gesture; busy/connected/recording/stage drive controls;
  * holdActive/holdToken/activePointerId isolate gestures; seen deduplicates replay; voice/socket/heartbeat own resources.
- * Constraints: No unsolicited microphone access or command replay; replayed replies never request speech. */
+ * Constraints: No unsolicited microphone access or command replay; unrelated replayed replies never request speech. */
 export class AgentPanel {
   /* Functionality: Build the page-specific assistant panel and bind explicit controls.
    * Inputs: document view marker, main element and browser event targets. Outputs: inserted panel/listeners.
@@ -176,6 +186,17 @@ export class AgentPanel {
     this.activePointerId = null;
     this.seen = 0;
     this.stage = "connecting";
+    this.socket = null;
+    this.heartbeat = null;
+    this.heartbeatTimeout = null;
+    this.pingPending = false;
+    this.connectionTimer = null;
+    this.reconnectTimer = null;
+    this.reconnectAttempt = 0;
+    this.connectionGeneration = 0;
+    this.leaving = false;
+    this.pendingRequestId = null;
+    this.pendingReplyNotified = false;
     this.voice = new VoiceInput(() => this.record());
     this.handlePressStart = this.handlePressStart.bind(this);
     this.handlePressEnd = this.handlePressEnd.bind(this);
@@ -207,55 +228,131 @@ export class AgentPanel {
     this.root.querySelector("#agent-clear").addEventListener("click", () => this.send({type: "clear"}));
     window.addEventListener("prs-ai-ready", () => this.connect());
     window.addEventListener("pagehide", () => {
+      this.leaving = true;
+      clearTimeout(this.reconnectTimer); this.reconnectTimer = null;
+      clearTimeout(this.connectionTimer); this.connectionTimer = null;
       clearInterval(this.heartbeat);
+      this.heartbeat = null;
+      clearTimeout(this.heartbeatTimeout); this.heartbeatTimeout = null; this.pingPending = false;
       this.holdActive = false; this.holdToken++; this.activePointerId = null;
       this.socket?.close();
       this.voice.cancel().catch(error => console.error("Voice cleanup failed", error.name));
     });
+    window.addEventListener("pageshow", () => {
+      this.leaving = false;
+      if (this.stage === "offline") this.connect();
+    });
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && (this.holdActive || this.recording || this.stage === "permission")) this.cancel();
+      if (!document.hidden && this.stage === "offline") this.scheduleReconnect();
     });
     new MutationObserver(() => this.render()).observe(document.documentElement, {attributes: true, attributeFilter: ["lang"]});
     this.render();
     if (document.documentElement.dataset.aiConnected === "true") this.connect();
   }
-  /* Functionality: Attach to backend after control registration. Inputs: tab credentials.
-   * Outputs: one WebSocket; Logic: origin-relative URL/hello and audio cleanup on disconnect.
-   * Constraints: no retries; pending permission callbacks cannot restart capture after close. */
+  /* Functionality: Attach to backend after control registration and recover visible transports.
+   * Inputs: tab credentials and current page lifecycle. Outputs: one WebSocket and heartbeat.
+   * Logic: each socket owns a generation; stale callbacks cannot mutate a newer connection. A retry
+   * sends only hello and replays retained state, never a previously dispatched command.
+   * Constraints: pagehide disables recovery; pending permission callbacks cannot restart capture. */
   connect() {
-    if (this.socket) return;
+    if (this.leaving || this.reconnectTimer !== null) return;
+    if (this.socket && (this.socket.readyState === undefined ||
+        this.socket.readyState === WebSocket.CONNECTING || this.socket.readyState === WebSocket.OPEN)) return;
     const url = new URL("ws/agent/", new URL(document.documentElement.dataset.apiBase || "../", location.href));
     url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
-    this.socket = new WebSocket(url);
-    this.socket.addEventListener("open", () => {
-      this.send({type: "hello", session_id: sessionStorage.getItem("prs.ai.session"), token: sessionStorage.getItem("prs.agent.token")});
-      this.heartbeat = setInterval(() => { if (this.connected) this.send({type: "ping"}); }, 15000);
+    const socket = new WebSocket(url), generation = ++this.connectionGeneration;
+    this.socket = socket; this.stage = "connecting"; this.render();
+    const current = () => this.socket === socket && this.connectionGeneration === generation;
+    clearTimeout(this.connectionTimer);
+    this.connectionTimer = setTimeout(() => {
+      if (current() && !this.connected) socket.close();
+    }, CONNECTION_TIMEOUT_MS);
+    socket.addEventListener("open", () => {
+      if (!current()) return;
+      clearTimeout(this.connectionTimer); this.connectionTimer = null;
+      this.connectionTimer = setTimeout(() => {
+        if (current() && !this.connected) socket.close();
+      }, CONNECTION_TIMEOUT_MS);
+      this.pingPending = false;
+      if (!this.send({type: "hello", session_id: sessionStorage.getItem("prs.ai.session"), token: sessionStorage.getItem("prs.agent.token")})) return;
+      clearInterval(this.heartbeat);
+      this.heartbeat = setInterval(() => {
+        if (!current() || !this.connected || this.pingPending) return;
+        if (this.send({type: "ping"})) {
+          this.pingPending = true;
+          this.heartbeatTimeout = setTimeout(() => {
+            if (current() && this.pingPending) socket.close();
+          }, 30000);
+        }
+      }, 15000);
     });
-    this.socket.addEventListener("message", event => {
+    socket.addEventListener("message", event => {
+      if (!current()) return;
       try { this.receive(JSON.parse(event.data)); }
       catch (error) { this.fail("助手消息格式错误，请刷新页面。"); console.error("Agent event rejected", error.name); }
     });
-    this.socket.addEventListener("close", () => {
-      clearInterval(this.heartbeat);
-      this.connected = this.recording = this.holdActive = false;
-      this.holdToken++; this.activePointerId = null; this.root.dataset.pressing = "false";
-      this.stage = "offline";
-      this.voice.cancel().catch(error => console.error("Voice cleanup failed", error.name));
-      this.render();
+    socket.addEventListener("close", () => this.handleDisconnect(socket, generation));
+    socket.addEventListener("error", () => {
+      if (current()) console.error("Agent transport failed; waiting for reconnect");
     });
-    this.socket.addEventListener("error", () => console.error("Agent transport failed; manual refresh required"));
+  }
+  /* Functionality: Release the exact closed or failed socket and its local resources.
+   * Inputs: socket identity and connection generation. Outputs: offline state and at most one retry.
+   * Logic: Ignore stale sockets, clear all connection timers, cancel capture and schedule recovery.
+   * Constraints: Never resubmit work; pagehide and hidden-page gates suppress reconnection. */
+  handleDisconnect(socket, generation) {
+    if (this.socket !== socket || this.connectionGeneration !== generation) return;
+    this.socket = null;
+    clearTimeout(this.connectionTimer); this.connectionTimer = null;
+    clearInterval(this.heartbeat); this.heartbeat = null;
+    clearTimeout(this.heartbeatTimeout); this.heartbeatTimeout = null; this.pingPending = false;
+    this.connected = this.recording = this.holdActive = false;
+    this.holdToken++; this.activePointerId = null; this.root.dataset.pressing = "false";
+    this.stage = "offline";
+    this.voice.cancel().catch(error => console.error("Voice cleanup failed", error.name));
+    this.render(); this.scheduleReconnect();
+  }
+  /* Functionality: Schedule one visible-page transport recovery attempt.
+   * Inputs: current socket state and page visibility. Outputs: one bounded retry timer.
+   * Logic: increase delay exponentially to a fixed cap; connect replays session events without
+   * resubmitting work. Constraints: no command, recording or synthesis retry is performed. */
+  scheduleReconnect() {
+    if (this.leaving || this.reconnectTimer !== null || this.connected || document.hidden) return;
+    const delay = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** Math.min(this.reconnectAttempt, 4));
+    this.reconnectAttempt++;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (!document.hidden && !this.leaving) this.connect();
+    }, delay);
   }
   /* Functionality: Send once. Inputs: message object; Outputs: WS frame or visible failure.
-   * Logic: Check readyState; Constraints: no queue or retry. */
+   * Logic: Check the current socket's readyState and classify synchronous browser transport failures;
+   * closing the affected socket lets the normal bounded reconnect path recover the conversation.
+   * Constraints: controls are never queued or retried. */
   send(message) {
     if (this.socket?.readyState !== WebSocket.OPEN) { this.fail(label(COPY.offline)); return false; }
-    this.socket.send(JSON.stringify(message));
-    return true;
+    try {
+      this.socket.send(JSON.stringify(message));
+      return true;
+    } catch (error) {
+      console.error("Agent frame send failed", {type: message.type, error_type: error?.name});
+      this.fail(label(COPY.offline));
+      const socket = this.socket, generation = this.connectionGeneration;
+      try { socket.close(); } catch (closeError) {
+        console.error("Agent transport close failed", {error_type: closeError?.name});
+      }
+      this.handleDisconnect(socket, generation);
+      return false;
+    }
   }
   /* Functionality: Submit one explicit input. Inputs: {text} or {audio}; Outputs: pending UI.
-   * Logic: Fresh request UUID; Constraints: never resubmit after disconnect or timeout. */
+   * Logic: Retain the request UUID so matching replay can complete the active page request.
+   * Constraints: never resubmit after disconnect or timeout. */
   submit(input) {
-    if (this.send({type: "submit", request_id: crypto.randomUUID(), ...input})) {
+    const requestId = crypto.randomUUID();
+    if (this.send({type: "submit", request_id: requestId, ...input})) {
+      this.pendingRequestId = requestId; this.pendingReplyNotified = false;
       this.notice = null;
       this.busy = true; this.stage = input.audio ? "transcribing" : "thinking"; this.render();
     }
@@ -384,12 +481,23 @@ export class AgentPanel {
   /* Functionality: Apply ordered backend events.
    * Inputs: Parsed event and replayed (defaults false) history flag. Outputs: UI state and live-reply notification.
    * Logic: Ignore replay duplicates; show configured intent labels before tool activity;
-   * distinguish acknowledgement, reply, failure and idle.
-   * Constraints: Replayed history never speaks; tool events show activity, never fabricated completion. */
+   * distinguish acknowledgement, reply, failure and idle. A replayed reply is speakable only
+   * when it matches this page's still-pending request and has not already been announced.
+   * Constraints: unrelated history never speaks; tool events show activity, never fabricated completion. */
   receive(event, replayed = false) {
+    if (event.type === "pong") {
+      this.pingPending = false;
+      clearTimeout(this.heartbeatTimeout); this.heartbeatTimeout = null;
+      return;
+    }
     if (event.type === "ready") {
-      for (const previous of event.events || []) this.receive(previous, true);
+      clearTimeout(this.connectionTimer); this.connectionTimer = null;
+      this.reconnectAttempt = 0;
       this.connected = true; this.busy = event.busy; this.stage = event.busy ? "thinking" : "ready";
+      for (const previous of event.events || []) this.receive(previous, true);
+      if (!event.busy && this.pendingRequestId) {
+        this.pendingRequestId = null; this.pendingReplyNotified = false;
+      }
     }
     if (event.seq && event.seq <= this.seen) return;
     if (event.seq) this.seen = event.seq;
@@ -397,7 +505,11 @@ export class AgentPanel {
     let liveReply = null;
     if (event.type === "user" || event.type === "reply") {
       this.append(event.type === "user" ? "you" : "assistant", event.text);
-      if (event.type === "reply" && !replayed) liveReply = event.text;
+      if (event.type === "reply" && (!replayed ||
+          event.request_id === this.pendingRequestId && !this.pendingReplyNotified)) {
+        liveReply = event.text;
+        if (event.request_id === this.pendingRequestId) this.pendingReplyNotified = true;
+      }
     }
     if (event.type === "intent") {
       const item = document.createElement("li");
@@ -418,7 +530,12 @@ export class AgentPanel {
       this.notice = eventNotice(event);
       if (event.type === "rejected" && event.code !== "agent_busy") { this.busy = false; this.stage = "ready"; }
     }
-    if (event.type === "idle") { this.busy = false; this.stage = "ready"; }
+    if (event.type === "idle") {
+      this.busy = false; this.stage = "ready";
+      if (!this.pendingRequestId || event.request_id === this.pendingRequestId) {
+        this.pendingRequestId = null; this.pendingReplyNotified = false;
+      }
+    }
     if (event.type === "cleared") { this.notice = null; this.dialogue.replaceChildren(); this.activity.replaceChildren(); }
     this.root.dataset.busy = String(this.busy);
     this.render();

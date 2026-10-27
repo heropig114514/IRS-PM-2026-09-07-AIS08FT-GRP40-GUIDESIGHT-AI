@@ -20,7 +20,7 @@
  * testRearPermissionGeneration; testRearPermissionGeneration.requestCamera; testRearPermissionGeneration.registerPermission;
  * testRearPermissionGeneration.playVideo; testRearPermissionGeneration.registerPlayback;
  * testRearPermissionGeneration.oldTracks; testRearPermissionGeneration.newTracks;
- * testRearPermissionGeneration.stopOld; testRearPermissionGeneration.stopNew。
+ * testRearPermissionGeneration.stopOld; testRearPermissionGeneration.stopNew.
  * Variable Index: None; all mocks are scoped to this isolated Node test process.
  */
 import assert from "node:assert/strict";

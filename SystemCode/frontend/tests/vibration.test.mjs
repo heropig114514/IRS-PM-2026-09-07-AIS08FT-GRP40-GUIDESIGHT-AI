@@ -1,13 +1,13 @@
 /** Responsibilities: Verify manual-vibration user boundaries, rejection feedback, lifecycle cancellation, and dictionary coverage.
  * Implementation: Use EventTarget to dispatch registered callbacks and test reentrant event snapshots/observer isolation; replace only DOM and native vibration, with no hardware or network access.
- * Related Modules: vibration.js, ai-control.js, index.html, translations.js, i18n.js。
+ * Related Modules: vibration.js, ai-control.js, index.html, translations.js, i18n.js.
  * Declaration Index: TestControl; TestControl.constructor; TestDocument; TestDocument.constructor;
  * TestDocument.getElementById; TestDocument.querySelectorAll; TestWindow; TestWindow.constructor;
  * TestWindow.info; TestWindow.error; setup; enable; testManual; testManual.native;
  * testUnavailable; testActivation; testActivation.native; testFailures; testFailures.native;
- * testLifecycle; testLifecycle.native; testCancelRejected; testCancelRejected.native; testTranslations。
+ * testLifecycle; testLifecycle.native; testCancelRejected; testCancelRejected.native; testTranslations.
  * testMcpShared; testMcpShared.native; testMcpFailures; testMcpFailures.native; testGuidanceOwnership;
- * testReentrantBroadcast。
+ * testReentrantBroadcast.
  * Variable Index: None; each test's calls records fixed requests, logs stores non-sensitive diagnostics, and response controls the native fixture.
  */
 import test from "node:test";

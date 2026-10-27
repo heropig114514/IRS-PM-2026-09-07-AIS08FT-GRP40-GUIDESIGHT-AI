@@ -1,13 +1,13 @@
 /** Responsibilities: Verify shared speech API inputs, lifecycle, voice selection, and MCP dispatch boundaries.
  * Implementation: Drive native events/device APIs with EventTarget fixtures; also verify reentrant event snapshots and observer isolation; play no real audio and make no network requests.
- * Related Modules: speech-output.js, ai-control.js, index.html, translations.js, i18n.js。
+ * Related Modules: speech-output.js, ai-control.js, index.html, translations.js, i18n.js.
  * Declaration Index: Control; Control.constructor; Control.replaceChildren; Control.append;
  * SpeechDocument; SpeechDocument.constructor; SpeechDocument.getElementById;
  * SpeechDocument.querySelectorAll; SpeechDocument.createElement; Utterance; Utterance.constructor;
  * Engine; Engine.constructor; Engine.getVoices; Engine.speak; Engine.cancel; Engine.emit;
  * fixture; enable; testPrerequisites; testLifecycle; testLimits; testVoices;
  * testVoiceQuery; testCancellation; testNativeErrors; testVisibility; testMcp; testTranslations;
- * testGuidanceEvents; testLocalVoiceOnly; testReentrantBroadcast。
+ * testGuidanceEvents; testLocalVoiceOnly; testReentrantBroadcast.
  * Variable Index: VOICES — explicit local/remote test identities; other variables store only this test's controls, requests, and diagnostics.
  * Constraints: Fixtures do not prove real MCP networking, TTS engine behavior, or speaker output; browser regression is separate.
  */

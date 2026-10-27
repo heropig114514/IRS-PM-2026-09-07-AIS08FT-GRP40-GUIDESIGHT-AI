@@ -1,5 +1,6 @@
 """Responsibilities: Verify registry-driven scope enforcement and provider-driven POI discovery.
-Implementation: Real MCP registry/runtime; mock Qwen, browser and HTTP boundaries only.
+Implementation: Real MCP registry/runtime; mock Qwen, browser and HTTP boundaries only; exercise
+serialized-context accounting, lossless category compaction and a complete simulated navigation.
 Related Modules: agent.skills/runtime/tools/poi; test_agent supplies model-message fixtures.
 Declaration Index: DiscoveryTests; DiscoveryTests.setUp; DiscoveryTests.test_registry_is_source;
 DiscoveryTests.test_scope_before_side_effects; DiscoveryTests.test_selected_scope;
@@ -9,6 +10,9 @@ DiscoveryTests.test_invalid_poi_and_failure; DiscoveryTests.test_registry_is_sou
 DiscoveryTests.test_history_preserves_action_evidence.
 DiscoveryTests.test_search_limit_blocks_requery.
 DiscoveryTests.test_result_counts_end_actions.
+DiscoveryTests.test_context_limit_includes_tool_schemas.
+DiscoveryTests.test_navigation_workflow_completes_with_exact_candidate_coordinates;
+DiscoveryTests.test_navigation_workflow_completes_with_exact_candidate_coordinates.browser_call.
 Variable Index: None; all service/device evidence in this file is synthetic.
 """
 
@@ -22,7 +26,7 @@ from django.test import SimpleTestCase
 from mcp.client import Client
 
 from core.agent import poi
-from core.agent.provider import AgentError
+from core.agent.provider import AgentError, enforce_context_limit
 from core.agent.runtime import Conversation, history_context
 from core.agent.skills import fingerprint, tool_policy
 from core.agent.tools import BrowserTools, create_server
@@ -112,39 +116,186 @@ class DiscoveryTests(SimpleTestCase):
         self.assertIn("discovery_required", [event.get("code") for event in conversation.events])
 
     def test_history_preserves_action_evidence(self):
-        """Functionality: Remove duplicate reloadable metadata without losing real evidence.
-        Inputs: complete synthetic MCP groups including a destination and mutation result.
-        Outputs: compact model history, unchanged saved history and tool-call pairing.
-        Logic: Only catalog and skill body results become explicit refresh markers.
-        Constraints: Candidate coordinates and action outcomes must remain byte-identical.
+        """Functionality: Refresh repeatable observations without losing actionable history.
+        Inputs: Synthetic MCP groups with snapshots, map state, categories, candidates and outcomes.
+        Outputs: compact model history, unchanged saved history and preserved tool-call pairing.
+        Logic: Mark successful reloadable observations; preserve failures and action evidence.
+        Exact saved results remain unchanged.
+        Constraints: No real provider, browser state or place data is used.
         """
-        messages = []
+        messages, original_results = [], []
         for name, data in (
             ("discover_tools", {"tools": ["large catalog"]}),
             ("read_skill", {"name": "navigation", "instructions": "long workflow"}),
+            ("ui_snapshot", {"snapshot": {"text": "old page"}}),
+            ("maps_status", {"ready": True, "origin": [103.77, 1.3]}),
+            ("places_categories", {"categories": [{"id": 17, "name": "shop", "group": "retail"}]}),
             ("places_search", {"candidates": [{"coordinates": [103.77, 1.3]}]}),
+            ("maps_plan", {"accepted": True, "destination": [103.77, 1.3]}),
+            ("ui_snapshot", {"available": False, "error_code": "page_unavailable"}),
             ("navigation_start", {"verified": True, "state": "navigating"}),
         ):
             call = tool_message(name)
+            result_message = {
+                "role": "tool",
+                "tool_call_id": call["tool_calls"][0]["id"],
+                "content": json.dumps(data),
+            }
             messages.extend(
-                [
-                    call,
-                    {
-                        "role": "tool",
-                        "tool_call_id": call["tool_calls"][0]["id"],
-                        "content": json.dumps(data),
-                    },
-                ]
+                [call, result_message]
             )
+            original_results.append(result_message)
         original = json.dumps(messages)
         history = history_context([messages])
+        compact_results = [item for item in history if item["role"] == "tool"]
         self.assertEqual(json.dumps(messages), original)
-        self.assertEqual(history[4:], messages[4:])
-        self.assertTrue(json.loads(history[1]["content"])["refresh_required_this_turn"])
-        self.assertEqual(json.loads(history[3]["content"])["skill"], "navigation")
+        for index in range(5):
+            marker = json.loads(compact_results[index]["content"])
+            self.assertTrue(marker["refresh_required_this_turn"])
+        self.assertEqual(json.loads(compact_results[1]["content"])["skill"], "navigation")
+        for index in (5, 6, 7, 8):
+            self.assertEqual(compact_results[index], original_results[index])
         self.assertEqual(
             [item.get("tool_call_id") for item in history],
             [item.get("tool_call_id") for item in messages],
+        )
+
+    def test_context_limit_includes_tool_schemas(self):
+        """Functionality: Enforce the final request budget and keep diagnostics content-free.
+        Inputs: synthetic messages and an oversized visible tool schema. Outputs: context_limit.
+        Logic: Count the serialized payload and inspect only safe size metadata in the warning.
+        Constraints: No HTTP/provider call or original context threshold change is involved.
+        """
+        secret_text = "SENSITIVE_USER_SENTINEL"
+        payload = {
+            "model": "fixture",
+            "messages": [{"role": "user", "content": secret_text}],
+            "tools": [{"type": "function", "function": {
+                "name": "synthetic", "description": "x" * 500,
+                "parameters": {"type": "object", "properties": {}},
+            }}],
+        }
+        with patch("core.agent.provider.MAX_CONTEXT_CHARS", 200):
+            with self.assertLogs("core.agent.provider", level="WARNING") as captured:
+                with self.assertRaises(AgentError) as raised:
+                    enforce_context_limit(payload)
+        self.assertEqual(raised.exception.code, "context_limit")
+        self.assertIn("tool_schema_chars=", captured.output[0])
+        self.assertNotIn(secret_text, captured.output[0])
+        self.assertLess(
+            len(json.dumps(payload["messages"], ensure_ascii=False, separators=(",", ":"))),
+            200,
+        )
+
+    async def test_navigation_workflow_completes_with_exact_candidate_coordinates(self):
+        """Functionality: Complete category discovery, nearby search, planning and navigation.
+        Inputs: 333 synthetic categories, scripted model tool calls and mocked ORS/browser state.
+        Outputs: verified navigating state and exact candidate coordinates in maps_plan.
+        Logic: Execute the real intent validator, MCP registry, skill policy and runtime sequencing.
+        Constraints: Qwen, ORS, GPS, route rendering and physical navigation are simulated.
+        """
+        category_id = 90043
+        categories = [
+            {"id": 90000 + index, "name": f"category-{index}", "group": f"group-{index % 7}"}
+            for index in range(1, 334)
+        ]
+        categories[42] = {"id": category_id, "name": "supermarket", "group": "shopping"}
+        destination = [103.8198, 1.3521]
+        origin = [103.7764, 1.2966]
+        candidate = {
+            "name": "Synthetic Market", "label": "Synthetic Market",
+            "coordinates": destination, "distance_m": 120.0,
+            "category_ids": [category_id],
+        }
+        replies = [
+            tool_message("discover_tools"),
+            tool_message("read_skill", {"name": "navigation"}),
+            tool_message("maps_status"),
+            tool_message("places_categories"),
+            tool_message("places_nearby", {"focus": origin, "category_ids": [category_id]}),
+            tool_message("maps_plan", {"destination": destination}),
+            tool_message("navigation_start"),
+            {"role": "assistant", "content": "Navigation is active."},
+        ]
+        conversation = Conversation("navigation-fixture", "token")
+        browser_calls = []
+
+        async def browser_call(session_id, action, arguments=None, timeout=30):
+            """Functionality: Supply deterministic browser state for each MCP browser operation.
+            Inputs: session, action, arguments and timeout; Outputs: action-specific state fixture.
+            Logic: Capture plan arguments and return observed route/navigation state.
+            Constraints: No page, GPS receiver or route engine is contacted.
+            """
+            browser_calls.append((action, arguments))
+            if action == "maps_status":
+                return {"available": True, "ready": True, "origin": origin}
+            if action == "maps_plan":
+                return {
+                    "accepted": True, "state": "planned",
+                    "destination": arguments["destination"],
+                }
+            if action == "agent_navigation_status":
+                return {"available": True, "state": "navigating", "active": True}
+            raise AssertionError(f"Unexpected browser action: {action}")
+
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=replies)) as model:
+            with patch("core.agent.poi.categories", AsyncMock(return_value={
+                "categories": categories, "source": "synthetic", "coverage_verified": False,
+            })):
+                with patch("core.agent.poi.nearby", AsyncMock(return_value={
+                    "candidates": [candidate], "coverage_complete": False,
+                })) as nearby:
+                    with patch("core.ai_mcp.browser_call", side_effect=browser_call):
+                        with patch("core.ai_mcp.navigation_start", AsyncMock(return_value={
+                            "accepted": True, "state": "locating",
+                        })) as start:
+                            await conversation.run(
+                                "navigation-request", "Navigate to a nearby supermarket", None,
+                            )
+
+        nearby.assert_awaited_once_with(origin, [category_id], 2000)
+        start.assert_awaited_once_with("navigation-fixture")
+        self.assertEqual(
+            [item[0] for item in browser_calls],
+            ["maps_status", "maps_plan", "agent_navigation_status"],
+        )
+        planned = next(arguments for action, arguments in browser_calls if action == "maps_plan")
+        self.assertEqual(planned["destination"], candidate["coordinates"])
+        tool_names = [
+            event["name"] for event in conversation.events if event["type"] == "tool_start"
+        ]
+        self.assertEqual(tool_names, [
+            "discover_tools", "read_skill", "maps_status", "places_categories",
+            "places_nearby", "maps_plan", "navigation_start",
+        ])
+        self.assertEqual(
+            [event["text"] for event in conversation.events if event["type"] == "reply"],
+            ["Navigation is active."],
+        )
+        self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+
+        final_request = model.await_args_list[7].args[0]
+        start_result = next(
+            json.loads(message["content"])
+            for message in final_request if message.get("role") == "tool"
+            and message.get("content", "").startswith('{"accepted"')
+            and '"vibration_guidance"' in message["content"]
+        )
+        self.assertTrue(start_result["verified"])
+        self.assertEqual(start_result["state"], "navigating")
+
+        category_message = next(
+            message for message in model.await_args_list[4].args[0]
+            if message.get("role") == "tool" and "category_fields" in message.get("content", "")
+        )
+        compact_catalog = json.loads(category_message["content"])
+        self.assertEqual(compact_catalog["category_fields"], ["id", "name", "group"])
+        self.assertEqual(compact_catalog["categories"], [
+            [item["id"], item["name"], item["group"]] for item in categories
+        ])
+        self.assertLess(
+            len(json.dumps(compact_catalog, ensure_ascii=False, separators=(",", ":"))),
+            len(json.dumps({"categories": categories}, ensure_ascii=False, separators=(",", ":"))),
         )
 
     async def test_selected_scope(self):
@@ -167,7 +318,9 @@ class DiscoveryTests(SimpleTestCase):
                     "core.agent.poi.categories",
                     AsyncMock(
                         return_value={
-                            "categories": [{"id": 90001, "name": "test_category"}],
+                            "categories": [{
+                                "id": 90001, "name": "test_category", "group": "test_group",
+                            }],
                         }
                     ),
                 ):

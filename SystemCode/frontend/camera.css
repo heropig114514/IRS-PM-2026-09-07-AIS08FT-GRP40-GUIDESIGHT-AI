@@ -1,7 +1,7 @@
 /* Responsibilities: Style the camera workspace's mobile/desktop layouts, control states, language picker, echo, vibration/speech tests, and scene-description panels.
  * Implementation: The two-column desktop grid becomes one column on narrow screens; no external fonts or images are required.
- * Related Modules: index.html, maps.html, camera.js, i18n.js, vibration.js, speech-output.js, scene-client.js。
- * Declaration Index: None。
+ * Related Modules: index.html, maps.html, camera.js, i18n.js, vibration.js, speech-output.js, scene-client.js.
+ * Declaration Index: None.
  * Variable Index: --ink/--muted/--accent/--line are the text, muted, theme, and border colors. */
 :root {
   --ink: #183047;

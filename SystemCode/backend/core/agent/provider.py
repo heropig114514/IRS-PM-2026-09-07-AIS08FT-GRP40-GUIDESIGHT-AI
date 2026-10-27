@@ -1,10 +1,13 @@
 """Responsibilities: Bounded Qwen text/tool inference and short WAV transcription.
-Implementation: One asynchronous HTTPS request per call; explicit configuration, no retries;
-model identity logged for reproducible evaluations without prompts or credentials.
+Implementation: One asynchronous HTTPS request per call; explicit configuration, shared request
+context accounting, and no retries; model identity and size-only diagnostics exclude prompts and
+credentials.
 Related Modules: runtime, transport; SystemCode/backend/.env.example.
-Declaration Index: AgentError; AgentError.__init__; configuration; completion; transcribe.
-Variable Index: logger — metadata-only diagnostics; MAX_AUDIO_BYTES/MAX_RESPONSE_BYTES — limits;
-BASE_URLS — supported regional endpoints; MAX_AUDIO_SECONDS — recording contract.
+Declaration Index: AgentError; AgentError.__init__; configuration; enforce_context_limit;
+completion; transcribe.
+Variable Index: logger — metadata-only diagnostics; MAX_CONTEXT_CHARS — serialized text/tool
+request budget; MAX_AUDIO_BYTES/MAX_RESPONSE_BYTES — limits; BASE_URLS — supported regional
+endpoints; MAX_AUDIO_SECONDS — recording contract.
 """
 
 import base64
@@ -25,6 +28,7 @@ BASE_URLS = {
 MAX_AUDIO_SECONDS = 20
 MAX_AUDIO_BYTES = 640044
 MAX_RESPONSE_BYTES = 262144
+MAX_CONTEXT_CHARS = 120000
 
 
 class AgentError(Exception):
@@ -67,12 +71,40 @@ def configuration():
     return config
 
 
+def enforce_context_limit(payload, *, kind="agent"):
+    """Functionality: Enforce one serialized context budget and report safe size diagnostics.
+    Inputs: complete JSON-compatible text/tool request payload and a fixed request kind.
+    Outputs: None within budget; raises AgentError when the serialized request is oversized.
+    Logic: Count compact Unicode JSON for the full payload and its message/schema components.
+    Constraints: Never log payload contents, credentials, endpoint URLs or user text; audio payloads
+    use their separate byte/duration boundary and must not call this helper.
+    """
+    request_chars = len(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    message_chars = len(json.dumps(
+        payload.get("messages", []), ensure_ascii=False, separators=(",", ":"),
+    ))
+    tool_schema_chars = len(json.dumps(
+        payload.get("tools", []), ensure_ascii=False, separators=(",", ":"),
+    ))
+    if request_chars > MAX_CONTEXT_CHARS:
+        logger.warning(
+            "Qwen request context rejected kind=%s request_chars=%d message_chars=%d "
+            "tool_schema_chars=%d limit_chars=%d",
+            kind, request_chars, message_chars, tool_schema_chars, MAX_CONTEXT_CHARS,
+        )
+        raise AgentError(
+            "context_limit",
+            "The assistant request exceeds its context limit. Clear the conversation and retry.",
+        )
+
+
 async def completion(messages, tools=None, *, audio=False, required_tool=None):
     """Functionality: Make one bounded Qwen request and validate its assistant message.
     Inputs: messages, discovered tools, audio flag, optional required_tool name; environment.
     Outputs: Assistant content/tool_calls; errors have fixed safe codes.
-    Logic: Stream only transport bytes to enforce a response cap; enforce a 40s total caller
-    deadline in runtime as well as HTTP phase timeouts; disable redirects and retries.
+    Logic: Validate the complete text/tool payload against the shared context budget; stream only
+    transport bytes to enforce a response cap; enforce a 40s total caller deadline in runtime as
+    well as HTTP phase timeouts; disable redirects and retries.
     Constraints: Text/audio is sent to the configured Qwen region, never logged or persisted.
     """
     config = configuration()
@@ -95,6 +127,7 @@ async def completion(messages, tools=None, *, audio=False, required_tool=None):
                     else "auto"
                 ),
             )
+        enforce_context_limit(payload)
     started = time.monotonic()
     try:
         async with httpx2.AsyncClient(
