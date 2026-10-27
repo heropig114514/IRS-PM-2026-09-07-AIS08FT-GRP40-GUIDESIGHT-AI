@@ -1,7 +1,7 @@
 /** Responsibilities: Connect explicit local route/GPS replay to existing navigation and independent speech.
  * Implementation: File/sample loading, offline sketch, explicit run identities and native local-output controls.
  * Related Modules: navigation.html/navigation.css/navigation-replay.js/navigation-speech.js;
- * fixed /integration/navigation.js/maps-client.js aliases and /live/assets/speech-output.js.
+ * shared /assets/navigation.js, /assets/maps-client.js and /assets/speech-output.js.
  * Declaration Index: node; renderControls; renderStats; sketchPoint; renderSource; renderNavigation;
  * onReplay; onSpeech; applyVoice; readVoices; stopReplay; loadSource; loadSample; loadFile; startReplay;
  * initialize; replayGeolocation; navigation; navigationSpeech; navigationMvpReady.
@@ -10,9 +10,9 @@
  * prs-navigation-change/prs-local-navigation-replay expose original snapshots and timing metadata to local observers.
  * No real GPS, camera, video, external route planner, persistence or automatic restart is used.
  */
-import {WalkingNavigation} from "../navigation.js";
-import {turnLabel} from "../maps-client.js";
-import {speechOutput} from "/live/assets/speech-output.js";
+import {WalkingNavigation} from "/assets/navigation.js";
+import {turnLabel} from "/assets/maps-client.js";
+import {speechOutput} from "/assets/speech-output.js";
 import {ReplayGeolocation, validateNavigationReplay} from "./navigation-replay.js";
 import {NavigationSpeechAdapter} from "./navigation-speech.js";
 

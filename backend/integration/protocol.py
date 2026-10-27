@@ -7,7 +7,8 @@ is_loopback; is_stop.
 Variable Index: ROOT — backend source root; REQUEST_HEADER/REQUEST_MAGIC — PRF2 framing;
 MAX_INFLIGHT/SESSION_SECONDS/COLD_SECONDS/STEADY_SECONDS/IDLE_SECONDS — transport budgets;
 HASH_PATTERN — model fingerprint syntax; MAX_REQUEST_BYTES — header plus existing JPEG bound.
-distance_mode/depth_interval — additive explicit B/C identity; absent mode retains legacy A.
+DISTANCE_MODES — admitted strategies; distance_mode/distance_units/depth_interval — mandatory
+identity in every local session and result, with mode-specific canonical interval values.
 LOCAL_MVP_MODE — explicit offline/assist transport policy, never an algorithm setting.
 """
 
@@ -125,7 +126,8 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
                    session_seconds=SESSION_SECONDS):
     """Functionality: Declare the complete selected local pipeline without foreign validation.
     Inputs: session ID, manifest, loaded flag, mode/interval and session policy. Outputs: hello.
-    Logic: use existing native FP32 control/settings; explicit geometry replaces only depth.
+    Logic: use existing native FP32 control/settings; publish every distance mode and its
+    canonical interval (depth=1, geometry=0, temporal=the configured interval).
     Constraints: capability means selected support; loaded separately describes initialization;
     None is an explicitly selected continuous local session, not an inference timeout exemption.
     """
@@ -164,9 +166,12 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
         raise IntegrationError(
             "local_contract_invalid", "The local session timing configuration is invalid."
         )
-    if distance_mode != "depth":
-        contract.update(distance_mode=distance_mode, distance_units="m",
-                        depth_interval=depth_interval if distance_mode == "temporal_depth" else 0)
+    contract.update(
+        distance_mode=distance_mode,
+        distance_units="m",
+        depth_interval=(depth_interval if distance_mode == "temporal_depth" else
+                        1 if distance_mode == "depth" else 0),
+    )
     if distance_mode == "geometry":
         contract.pop("depth_model")
         contract.pop("depth_units")
@@ -179,17 +184,17 @@ def validate_contract(message):
     """Functionality: Admit only the local native FP32 timestamped pipeline.
     Inputs: provider hello. Outputs: same dictionary or safe error.
     Logic: compare fixed fields and check session/class/hash identity.
-    Constraints: A stays unchanged; B/C require an explicit supported distance identity;
-    no accepting HF validation, alternative precision, or missing tracking/risk.
+    Constraints: every supported mode has an explicit distance identity; no accepting HF
+    validation, alternative precision, or missing tracking/risk.
     """
     if not isinstance(message, dict):
         raise IntegrationError(
             "local_contract_invalid", "The local inference-session configuration is invalid."
         )
     names = message.get("names")
-    mode = message.get("distance_mode", "depth")
+    mode = message.get("distance_mode")
     expected = model_contract("fixture", {"names": [], "source_sha256": ""},
-                              distance_mode=mode, depth_interval=message.get("depth_interval", 3)
+                              distance_mode=mode, depth_interval=message.get("depth_interval")
                               if mode == "temporal_depth" else 3,
                               session_seconds=local_session_seconds())
     fixed = set(expected) - {"session_id", "names", "source_sha256", "loaded"}
@@ -214,7 +219,8 @@ def validate_result(metadata, contract, index, timestamp):
     """Functionality: Correlate a hash-checked result with its admitted source frame.
     Inputs: parsed metadata, hello, index and exact capture seconds. Outputs: None or safe error.
     Logic: require identity, complete pipeline and matching clock/session/sequence.
-    Constraints: preserve all algorithm values; semantic object validation stays in the client.
+    Constraints: preserve all algorithm values and require explicit mode/unit/interval identity;
+    semantic object validation stays in the client.
     """
     keys = (
         "provider",
@@ -231,11 +237,11 @@ def validate_result(metadata, contract, index, timestamp):
         "tracking_model",
         "risk_model",
     )
-    if contract.get("distance_mode") == "geometry":
+    mode = contract["distance_mode"]
+    keys += ("distance_mode", "distance_units", "depth_interval")
+    if mode == "geometry":
         keys = tuple(key for key in keys if key not in {"depth_model", "depth_units"})
-    if contract.get("distance_mode") in {"geometry", "temporal_depth"}:
-        keys += ("distance_mode", "distance_units", "depth_interval")
-    if contract.get("distance_mode") == "geometry":
+    if mode == "geometry":
         keys += ("distance_estimator",)
         if "depth_model" in metadata:
             raise IntegrationError(

@@ -10,7 +10,6 @@ LocalGateway.cleanup; LocalGateway.finish; IntegrationApplication; IntegrationAp
 IntegrationApplication.__call__; IntegrationApplication.asset; IntegrationApplication.status.
 Variable Index: logger — lifecycle diagnostics without URLs/media; ASSETS — fixed frontend
 allowlist including video alert speech and independent navigation replay;
-NAVIGATION_SHARED_ASSETS — fixed aliases for unchanged core modules, preserving relative imports;
 FRONTEND — fixed repository frontend root; input_times/incoming — twelve outstanding frames;
 submitted — attempted provider sends; forwarded — send-completed or worker-confirmed prefix;
 worker_verified — complete validated provider results; delivered — completed browser ASGI sends;
@@ -58,10 +57,6 @@ ASSETS = {
     "guidance.js": "text/javascript",
     "local-mvp.js": "text/javascript",
     "local-mvp.css": "text/css",
-}
-NAVIGATION_SHARED_ASSETS = {
-    "/integration/navigation.js": "navigation.js",
-    "/integration/maps-client.js": "maps-client.js",
 }
 LOCAL_DISABLED = {
     "code": "local_only_external_disabled",
@@ -532,7 +527,7 @@ class IntegrationApplication:
                 return await self.status(scope, send)
             if path in {"/live/", "/integration/video/", "/integration/navigation/"} or (
                 path.startswith("/integration/assets/")
-            ) or path in NAVIGATION_SHARED_ASSETS:
+            ):
                 return await self.asset(scope, send)
         await self.software(scope, receive, send)
 
@@ -566,9 +561,6 @@ class IntegrationApplication:
             elif path == "/integration/navigation/":
                 body = (FRONTEND / "integration/navigation.html").read_bytes()
                 mime = "text/html; charset=utf-8"
-            elif path in NAVIGATION_SHARED_ASSETS:
-                body = (FRONTEND / NAVIGATION_SHARED_ASSETS[path]).read_bytes()
-                mime = "text/javascript"
             else:
                 name = path.removeprefix("/integration/assets/")
                 if name not in ASSETS:

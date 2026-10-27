@@ -30,7 +30,8 @@ const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes:
   max_edge: 640, jpeg_quality: 0.8, max_inflight: 12, session_seconds: 55, cold_seconds: 55, steady_seconds: 10};
 const JPEG = Uint8Array.from([255, 216, 1, 255, 217]);
 const localContract = {...contract, provider: "local", protocol_version: 2, session_id: "1".repeat(32),
-  depth_model: "yolo26n-depth", depth_units: "m", tracking_model: "botsort", risk_model: "rules-v1",
+  depth_model: "yolo26n-depth", depth_units: "m", distance_mode: "depth", distance_units: "m",
+  depth_interval: 1, tracking_model: "botsort", risk_model: "rules-v1",
   capabilities: {detection: true, depth: true, tracking: true, risk: true}};
 delete localContract.validation;
 
@@ -71,7 +72,8 @@ test("distance strategies require explicit valid identity and selected cadence",
     distance_estimator: "pinhole-height-v1", distance_ms: 0.1};
   delete base.depth_model; delete base.depth_units; delete base.depth_ms;
   for (const changes of [{distance_mode: undefined}, {distance_mode: "unknown"},
-    {distance_estimator: undefined}, {distance_units: "cm"}, {distance_ms: -1}, {depth_model: "yolo26n-depth"}])
+    {distance_estimator: undefined}, {distance_units: "cm"}, {depth_interval: undefined},
+    {distance_ms: -1}, {depth_model: "yolo26n-depth"}])
     await assert.rejects(decodeResult(packet(0, {...base, ...changes}), 0, contract));
   const hello = {...localContract, distance_mode: "temporal_depth", distance_units: "m", depth_interval: 3};
   const temporal = {...riskMetadata(), provider: "local", session_id: hello.session_id,
@@ -86,7 +88,9 @@ test("distance strategies require explicit valid identity and selected cadence",
 test("local native hello is independent from the preserved HF COCO gate", async function testLocalHello() {
   const good = await admitted(fixture("local"), localContract); good.client.stop();
   for (const changes of [{provider: "hf"}, {protocol_version: 1}, {precision: "FP16"},
-    {validation: contract.validation}, {capabilities: {detection: true}}, {session_id: "wrong"}, {risk_model: undefined}]) {
+    {validation: contract.validation}, {capabilities: {detection: true}}, {session_id: "wrong"},
+    {risk_model: undefined}, {distance_mode: undefined}, {distance_units: undefined},
+    {depth_interval: undefined}, {depth_interval: 0}]) {
     const f = fixture("local"), waiting = assert.rejects(f.client.connect());
     f.socket.message(JSON.stringify({...localContract, ...changes})); await waiting;
     assert.equal(f.socket.sent.length, 0); assert.equal(f.state.errors.length, 1);
@@ -185,7 +189,7 @@ test("local responses bind the same session and exact source timestamp", async f
 });
 
 /** Functionality: Accept additive depth fields with finite meters or explicitly unavailable null.
- * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged legacy box.
+ * Inputs: independent packet/box fixtures. Outputs: canonical distances and unchanged detection fields.
  * Logic: actual packet/hash/client validation. Constraints: synthetic data, no depth accuracy claim. */
 test("depth metadata accepts meters and null while preserving the existing box fields", async function testDepthResult() {
   for (const distance of [2.4, null]) {
@@ -214,9 +218,9 @@ test("depth metadata rejects invalid distances and mismatched box aliases", asyn
 });
 
 /** Functionality: Support300 full-precision fused detections within the coordinated256KiB limit.
- * Inputs: maximal count with legacy/canonical aliases. Outputs: complete result above64KiB.
+ * Inputs: maximal count with the complete detection field set. Outputs: complete result above64KiB.
  * Logic: use real JSON/header/SHA checks. Constraints: no network or browser rendering assertion. */
-test("depth packets carry 300 objects retaining legacy fields", async function testDepthCapacity() {
+test("depth packets carry 300 objects with the complete detection fields", async function testDepthCapacity() {
   const xyxy = [0.12345678901234, 0.23456789012345, 8.12345678901234, 9.23456789012345];
   const box = {class_id: 9, label: manifest.names[9], score: 0.9312345678901234, xyxy,
     class_name: manifest.names[9], confidence: 0.9312345678901234, bbox: xyxy, distance_m: 2.4};
@@ -251,6 +255,7 @@ function packet(index, overrides = {}, jpeg = JPEG) {
   const metadata = {schema_version: 1, index, model: "yolo26n", backend: "PyTorch resident CUDA",
     precision: "FP32", output_precision: "FP32", classes: 80,
     confidence_threshold: 0.25, source_sha256: manifest.source_sha256,
+    distance_mode: "depth", distance_units: "m", depth_interval: 1,
     width: 10, height: 10, count: 0, boxes: [], raw_sha256: "a".repeat(64),
     jpeg_sha256: createHash("sha256").update(jpeg).digest("hex"),
     inference_ms: 1, graph_setup_ms: 0, prepare_ms: 1, gpu_stage_ms: 1, render_ms: 1, server_ms: 3,
@@ -452,7 +457,7 @@ function riskMetadata() {
   return data;
 }
 
-/** Functionality: Preserve risk fields, unknown missing depth, and legacy packet acceptance.
+/** Functionality: Preserve risk fields, unknown missing depth, and the complete current packet contract.
  * Inputs: all five levels, finite long-horizon TTC, cached motion with no current depth.
  * Outputs: complete unmodified metadata. Logic: real decoder validation.
  * Constraints: no scoring or alert delivery in browser. */
@@ -552,7 +557,7 @@ test("tracking fields accept motion and unavailable depth or IDs", async functio
 
 /** Functionality: Reject malformed IDs/motion fields, duplicated identities and disabled CMC.
  * Inputs: independently corrupted box and tracker fields. Outputs: rejection before JPEG display.
- * Logic: additive contract boundaries checked without changing legacy packet acceptance.
+ * Logic: validate every current tracking field before display.
  * Constraints: does not compare state sign during hysteresis, since switching is intentionally delayed. */
 test("tracking rejects malformed or incomplete motion data", async function testTrackingFailures() {
   for (const changes of [{track_id: 0}, {track_id: -1}, {track_id: 1.5}, {track_id: 2 ** 53},

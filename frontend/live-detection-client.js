@@ -21,7 +21,7 @@
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery;
  * provider selects hf/local explicitly; localSessionSeconds admits only55s/default or explicit null continuous local sessions;
  * HF always requires55s; cold/steady failure budgets remain55s/10s. lastCaptureTimeS enforces monotonic local source timestamps.
- * distance_mode admits explicit geometry/temporal_depth without changing legacy A admission.
+ * Local sessions and all results require an explicit distance mode, unit, and canonical interval.
  */
 import {MAX_FRAME_BYTES} from "./echo-client.js";
 
@@ -53,8 +53,9 @@ async function sha256(buffer) {
  * Inputs: parsed hello, provider and localSessionSeconds(55 or explicit null). Outputs: accepted contract copy.
  * Logic: original model/settings/budgets; explicit resident/AOT/compiled Torch backend/precision
  * and three complete COCO quality records admitted by the server; no capability/token accepted.
- * Constraints: local resident FP32 admission requires real capability identity, never HF COCO evidence;
- * HF quality checks and55s session limit remain intact; continuous local admission changes no frame budgets.
+ * Constraints: local resident FP32 admission requires real capability and distance identities,
+ * never HF COCO evidence; HF quality checks and55s session limit remain intact; continuous local
+ * admission changes no frame budgets.
  * Admission alone does not prove accuracy, hardware or performance. */
 function validateSession(message, provider, localSessionSeconds) {
   const validation = message?.validation;
@@ -69,18 +70,19 @@ function validateSession(message, provider, localSessionSeconds) {
       Object.hasOwn(message, "capability") || Object.hasOwn(message, "token"))
     throw new Error("视频会话配置无效，请检查服务端。");
   if (provider === "local") {
-    const mode = message.distance_mode ?? "depth";
+    const mode = message.distance_mode;
     const geometry = mode === "geometry";
+    const validInterval = mode === "geometry" ? message.depth_interval === 0 :
+      mode === "depth" ? message.depth_interval === 1 :
+        mode === "temporal_depth" && Number.isSafeInteger(message.depth_interval) && message.depth_interval >= 1;
     if (message.provider !== "local" || message.protocol_version !== 2 ||
         message.backend !== "PyTorch resident CUDA" || message.precision !== "FP32" ||
         typeof message.session_id !== "string" || !/^[a-f0-9]{32}$/.test(message.session_id) ||
         !["depth", "geometry", "temporal_depth"].includes(mode) ||
+        message.distance_units !== "m" || !validInterval ||
         (geometry ? (Object.hasOwn(message, "depth_model") || Object.hasOwn(message, "depth_units") ||
-          message.distance_estimator !== "pinhole-height-v1" || message.distance_units !== "m" ||
-          message.depth_interval !== 0 || message.capabilities?.distance !== true) :
+          message.distance_estimator !== "pinhole-height-v1" || message.capabilities?.distance !== true) :
           (message.depth_model !== "yolo26n-depth" || message.depth_units !== "m")) ||
-        (mode === "temporal_depth" && (message.distance_units !== "m" ||
-          !Number.isSafeInteger(message.depth_interval) || message.depth_interval < 1)) ||
         message.tracking_model !== "botsort" || message.risk_model !== "rules-v1" ||
         ["detection", "tracking", "risk"].some(name => message.capabilities?.[name] !== true) ||
         message.capabilities?.depth !== !geometry ||
@@ -106,6 +108,7 @@ function validateSession(message, provider, localSessionSeconds) {
  * Outputs: bytes/metadata/count/inferenceMs. Logic: bound header/JSON/JPEG; match admitted model,
  * compute precision/backend, FP32 output and hashes;
  * finite boxes and optional depth/tracking/TTC/risk fields checked before display; no filtering.
+ * Every result must declare a supported metric distance mode and canonical interval.
  * Temporary missing depth may retain a historical estimate; the server expires motion history.
  * Constraints: browser image decoder checks actual dimensions separately; no accuracy/mAP claim. */
 export async function decodeResult(packet, expected, contract, {captureTimeS} = {}) {
@@ -133,7 +136,9 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
       (metadata.provider !== "local" || metadata.session_id !== contract.session_id ||
        metadata.timestamp_source !== "browser_capture" || !Number.isFinite(captureTimeS) ||
        metadata.capture_time_s !== captureTimeS || metadata.depth_model !== contract.depth_model ||
-       (metadata.distance_mode ?? "depth") !== (contract.distance_mode ?? "depth") ||
+       metadata.distance_mode !== contract.distance_mode ||
+       metadata.distance_units !== contract.distance_units ||
+       metadata.depth_interval !== contract.depth_interval ||
        (contract.distance_mode === "geometry" &&
          metadata.distance_estimator !== contract.distance_estimator) ||
        (["geometry", "temporal_depth"].includes(contract.distance_mode) &&
@@ -147,9 +152,12 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
       (typeof metadata.depth_model !== "string" || !metadata.depth_model || metadata.depth_units !== "m" ||
        !Number.isFinite(metadata.depth_ms) || metadata.depth_ms < 0))
     throw new Error("视频深度模型或耗时无效。");
-  const mode = metadata.distance_mode ?? "depth";
+  const mode = metadata.distance_mode;
   const geometry = mode === "geometry";
   if (!["depth", "geometry", "temporal_depth"].includes(mode) ||
+      metadata.distance_units !== "m" ||
+      (mode === "depth" && metadata.depth_interval !== 1) ||
+      (mode === "geometry" && metadata.depth_interval !== 0) ||
       (geometry && (Object.hasOwn(metadata, "depth_model") ||
         metadata.distance_estimator !== "pinhole-height-v1" || metadata.distance_units !== "m" ||
         !Number.isFinite(metadata.distance_ms) || metadata.distance_ms < 0)) ||
