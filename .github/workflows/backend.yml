@@ -1,7 +1,7 @@
 # Responsibilities: Run dependency, Django, branch-coverage, protocol, and Ruff checks for backend and frontend.
 # Implementation: Ubuntu/Python 3.12/Node 22; unit tests use fixtures, not public network or downloaded models.
-# Related Modules: SystemCode/clips/backend/core/tests.py/test_echo.py/test_maps.py/test_ai_control.py;
-# SystemCode/clips/frontend/tests/*.test.mjs, SystemCode/clips/frontend/ai-control.js, SystemCode/clips/backend/pyproject.toml.
+# Related Modules: SystemCode/backend/core/tests.py/test_echo.py/test_maps.py/test_ai_control.py;
+# SystemCode/frontend/tests/*.test.mjs, SystemCode/frontend/ai-control.js, SystemCode/backend/pyproject.toml.
 # Declaration Index: None.
 # Variable Index: DJANGO_SECRET_KEY — ephemeral CI configuration; backend coverage fails below 85%;
 # frontend coverage fails below 85% lines, 80% branches, or 80% functions.
@@ -20,14 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: SystemCode/clips/backend
+        working-directory: SystemCode/backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: SystemCode/clips/backend/requirements*.txt
+          cache-dependency-path: SystemCode/backend/requirements*.txt
       - name: Install dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Generate temporary CI configuration
@@ -54,10 +54,10 @@ jobs:
         with:
           node-version: '22'
       - name: Test frontend with code coverage gates
-        working-directory: SystemCode/clips/frontend
+        working-directory: SystemCode/frontend
         run: npm run test:coverage
       - name: Check frontend syntax
-        working-directory: SystemCode/clips/frontend
+        working-directory: SystemCode/frontend
         run: |
           node --check camera.js
           node --check echo-client.js
