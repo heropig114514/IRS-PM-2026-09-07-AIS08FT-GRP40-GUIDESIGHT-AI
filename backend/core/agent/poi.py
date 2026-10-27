@@ -29,7 +29,10 @@ async def request_pois(payload):
     """
     key = os.environ.get("ORS_API_KEY", "").strip()
     if not key:
-        raise AgentError("ors_not_configured", "The server has no OpenRouteService API key configured.")
+        raise AgentError(
+            "ors_not_configured",
+            "The server has no OpenRouteService API key configured.",
+        )
     try:
         async with httpx2.AsyncClient(
             timeout=20, follow_redirects=False, trust_env=False
@@ -43,21 +46,31 @@ async def request_pois(payload):
                 if response.status_code != 200:
                     raise AgentError(
                         "poi_http_error",
-                        "The nearby-place service returned an unsuccessful HTTP response; no retry was attempted.",
+                        "The nearby-place service returned an unsuccessful HTTP response; "
+                        "no retry was attempted.",
                         http_status=response.status_code,
                     )
                 raw = bytearray()
                 async for chunk in response.aiter_bytes():
                     raw.extend(chunk)
                     if len(raw) > 524288:
-                        raise AgentError("poi_response_limit", "The nearby-place response exceeded the configured size limit.")
+                        raise AgentError(
+                            "poi_response_limit",
+                            "The nearby-place response exceeded the configured size limit.",
+                        )
         return json.loads(raw)
     except httpx2.HTTPError as error:
         logger.warning("POI network failed operation=%s exception_type=%s", payload["request"],
                        type(error).__name__)
-        raise AgentError("poi_network_error", "The nearby-place request failed at the network boundary; no retry was attempted.") from error
+        raise AgentError(
+            "poi_network_error",
+            "The nearby-place request failed at the network boundary; no retry was attempted.",
+        ) from error
     except ValueError as error:
-        raise AgentError("poi_invalid_response", "The nearby-place service response did not match the expected data contract.") from error
+        raise AgentError(
+            "poi_invalid_response",
+            "The nearby-place service response did not match the expected data contract.",
+        ) from error
 
 
 async def categories():
@@ -85,7 +98,10 @@ async def categories():
         return {"categories": result, "source": "ORS /pois request=list",
                 "coverage_verified": False}
     except (AttributeError, KeyError, TypeError, ValueError) as error:
-        raise AgentError("poi_invalid_catalog", "The map service category catalog did not match the expected data contract.") from error
+        raise AgentError(
+            "poi_invalid_catalog",
+            "The map service category catalog did not match the expected data contract.",
+        ) from error
 
 
 async def nearby(focus, category_ids, radius_m=2000):
@@ -105,7 +121,9 @@ async def nearby(focus, category_ids, radius_m=2000):
             raise ValueError("Invalid scope")
     except (TypeError, ValueError) as error:
         raise AgentError(
-            "invalid_poi_scope", "Provide a valid search center, service categories and a radius from 100 to 2000 meters."
+            "invalid_poi_scope",
+            "Provide a valid search center, service categories and a "
+            "radius from 100 to 2000 meters.",
         ) from error
     data = await request_pois({
         "request": "pois", "geometry": {"geojson": {"type": "Point", "coordinates": point},
@@ -143,4 +161,7 @@ async def nearby(focus, category_ids, radius_m=2000):
                 "coverage_complete": False, "opening_hours_verified": False,
                 "attribution": "openpoiservice / OpenStreetMap"}
     except (AttributeError, KeyError, TypeError, ValueError) as error:
-        raise AgentError("poi_invalid_response", "The nearby-place result violated the expected schema or geographic bounds.") from error
+        raise AgentError(
+            "poi_invalid_response",
+            "The nearby-place result violated the expected schema or geographic bounds.",
+        ) from error
