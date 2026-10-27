@@ -9,6 +9,7 @@
  * installDevices.geo.getCurrentPosition — deliver a fixture fix;
  * installDevices.geo.watchPosition — own a periodic synthetic watch;
  * installDevices.geo.clearWatch — release that watch; installDevices.geo.watchPosition.report — emit one active fix;
+ * waitForCameraStream — observe the active page controller through the page's main execution realm;
  * ask — submit one live turn, require a new assistant reply, and collect safe evidence;
  * checkAudio — verify synthetic recorded speech stops a real product camera stream;
  * main — run live-Qwen diagnostic and product interaction acceptance.
@@ -68,6 +69,34 @@ export function installDevices() {
   Object.defineProperty(navigator, "geolocation", {configurable: true, value: geo});
 }
 
+/* Functionality: Wait until the page's camera controller owns a live stream and has decoded its first frame.
+ * Inputs: Playwright page and a positive timeout in milliseconds. Outputs: bounded camera state snapshot.
+ * Logic: Poll with page.evaluate so dynamic imports resolve in the same main execution realm as the app;
+ * this avoids observing an isolated-world module instance with independent singleton state.
+ * Constraints: Read-only observation; does not request permission, start/stop capture, or retry a camera operation. */
+export async function waitForCameraStream(page, timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError("Invalid camera wait timeout");
+  const deadline = Date.now() + timeoutMs;
+  let state;
+  do {
+    state = await page.evaluate(async () => {
+      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
+      return {
+        ready: cameraApp.mode === "camera" && cameraApp.stream?.active === true &&
+          Boolean(cameraApp.frameTimings),
+        mode: cameraApp.mode,
+        phase: cameraApp.cameraPhase,
+        stream_active: cameraApp.stream?.active === true,
+        first_frame_received: Boolean(cameraApp.frameTimings),
+      };
+    });
+    if (state.ready) return state;
+    const remaining = deadline - Date.now();
+    if (remaining > 0) await page.waitForTimeout(Math.min(100, remaining));
+  } while (Date.now() < deadline);
+  throw new Error(`Camera did not reach a decoded frame before timeout: ${JSON.stringify(state)}`);
+}
+
 /* Functionality: Submit one natural-language turn and collect its corresponding UI evidence.
  * Inputs: page, text and report; Outputs: completed turn evidence with the new assistant response.
  * Logic: Record prior user/assistant counts, then require a new user message, idle state and a new reply.
@@ -104,10 +133,7 @@ export async function ask(page, text, report) {
 export async function checkAudio(page, report) {
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor();
   await page.locator("#product-camera-start").click();
-  await page.waitForFunction(async () => {
-    const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
-    return cameraApp.stream?.active && cameraApp.frameTimings;
-  });
+  await waitForCameraStream(page, 30000);
   report.toolEvents.length = 0;
   const recordButton = page.locator("#agent-record");
   await recordButton.scrollIntoViewIfNeeded();
@@ -265,14 +291,9 @@ async function main() {
      * Logic: Start once through the visible control, then issue one natural-language stop request.
      * Constraints: The captured frames are synthetic; this does not test a physical camera. */
     await page.locator("#product-camera-start").click();
-    await page.waitForFunction(async () => {
-      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
-      return cameraApp.stream?.active && cameraApp.frameTimings;
-    }, null, {timeout: 30000});
-    assert.equal(await page.evaluate(async () => {
-      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
-      return cameraApp.stream?.active === true;
-    }), true, "Direct camera gesture must own an active stream before assistant stop");
+    const cameraReady = await waitForCameraStream(page, 30000);
+    assert.equal(cameraReady.stream_active, true,
+      "Direct camera gesture must own an active stream before assistant stop");
     await ask(page, "关闭摄像头", report);
     assert.ok(report.turns.at(-1).tools.some(tool => tool.name === "camera_stop"));
     assert.deepEqual(await page.evaluate(async () => {

@@ -79,14 +79,15 @@ function completeReports() {
   }, sessions: [
     {boundary: "original_stop_button", before: {camera_mode: "camera"}, after: {...stoppedState}},
     {boundary: "explicit_track_ended_fixture", before: {camera_mode: "camera"}, after: {...stoppedState}},
-    {scope: "explicit_delayed_permission_fixture_second_hidden", hidden: {camera_mode: "idle"}, late: {
-      camera_mode: "idle", media: {streams: [{purpose: "late_permission", ...streamState}]}, camera_events: []}},
+    {scope: "explicit_delayed_permission_fixture_second_hidden", hidden: {camera_mode: "idle",
+      camera_events: [{type: "session"}]}, late: {camera_mode: "idle",
+      media: {streams: [{purpose: "late_permission", ...streamState}]}, camera_events: [{type: "session"}]}},
     {scope: "explicit_delayed_inventory_fixture_second_hidden", hidden: {selected: "synthetic-camera",
       options: ["", "synthetic-camera"], status: "idle"}, late: {camera_mode: "idle",
       selected: "synthetic-camera", options: ["", "synthetic-camera"], status: "idle"}},
     {scope: "explicit_held_metadata_cancel_second_hidden", hidden: {video_mode: "idle",
-      video_loading_cleared: true, video_file_cleared: true}, late: {video_mode: "idle",
-      video_loading_cleared: true, video_file_cleared: true, metadata_waiting: false}},
+      video_loading_cleared: true, video_file_cleared: true, metadata_boundary_held: true}, late: {video_mode: "idle",
+      video_loading_cleared: true, video_file_cleared: true, metadata_boundary_held: true}},
   ], websockets: [
     {path: "/ws/control/", closed: false},
     ...Array.from({length: 2}, () => ({path: "/ws/detect/local/", closed: true, inputs: [{}],

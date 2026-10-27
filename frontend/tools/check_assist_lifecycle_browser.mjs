@@ -20,7 +20,8 @@
  * Variable Index: SYNTHETIC_DEVICE is fixture-only, never a real camera ID; normalizeApplicationPath
  * removes only the approved /mvp mount prefix; assistLifecycle holds
  * production references and body-free observations. Media fixtures own native synthetic tracks,
- * canvas draw timers and explicit unresolved permission/inventory callbacks, not device permissions.
+ * canvas draw timers and explicit unresolved permission/inventory callbacks, not device permissions;
+ * metadata_boundary_held records whether the test-only native media boundary remains installed.
  * Constraints: No service/Git changes, production method replacements, GPU mocks, implicit retries,
  * real route/GPS calls, saved pixels/audio/text/coordinates/credentials, physical camera claim or
  * simulated successful decoder/native speech events. Metadata fixture only verifies cancelled loading.
@@ -172,7 +173,7 @@ async function captureLifecycle(page) {
       selected: document.getElementById("assist-device").value,
       options: [...document.getElementById("assist-device").options].map(option => option.value),
       status: document.getElementById("assist-status").textContent,
-      metadata_waiting: state.metadataBoundary !== null};
+      metadata_boundary_held: state.metadataBoundary !== null};
   });
 }
 
@@ -324,6 +325,7 @@ async function pendingMetadata(page) {
     await page.waitForTimeout(50); const late = await captureLifecycle(page);
     assert.equal(late.video_mode, "idle"); assert.equal(late.video_loading_cleared, true);
     assert.equal(late.video_file_cleared, true); assert.equal(late.controls["assist-video-start"].disabled, true);
+    assert.equal(hidden.metadata_boundary_held, true); assert.equal(late.metadata_boundary_held, true);
     assert.equal(late.status, hidden.status); assert.equal(late.camera_events.length, hidden.camera_events.length);
     assertUnlocked(late); await setVisibility(page, "visible"); return {scope: "explicit_held_metadata_cancel_second_hidden", hidden, late};
   } finally { await page.evaluate(() => window.assistLifecycle.metadataBoundary?.restore()); }

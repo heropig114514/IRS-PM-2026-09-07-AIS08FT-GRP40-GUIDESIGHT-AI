@@ -212,10 +212,13 @@ const SCENARIOS = [
   }},
   {id: "lifecycle.late_permission_grant_is_discarded", source: "lifecycle", verify: report => {
     const session = report.sessions?.find(item => item.scope === "explicit_delayed_permission_fixture_second_hidden");
+    const beforeEvents = session?.hidden?.camera_events, afterEvents = session?.late?.camera_events;
     return session?.hidden?.camera_mode === "idle" && session.late?.camera_mode === "idle" &&
       session.late?.media?.streams?.some(stream => stream.purpose === "late_permission" &&
         stream.tracks_ended === true && stream.draw_timer_cleared === true) === true &&
-      session.late?.camera_events?.every(event => event.type !== "session");
+      Array.isArray(beforeEvents) && Array.isArray(afterEvents) &&
+      afterEvents.filter(event => event.type === "session").length ===
+        beforeEvents.filter(event => event.type === "session").length;
   }},
   {id: "lifecycle.late_inventory_does_not_override_selection", source: "lifecycle", verify: report => {
     const session = report.sessions?.find(item => item.scope === "explicit_delayed_inventory_fixture_second_hidden");
@@ -226,9 +229,10 @@ const SCENARIOS = [
   {id: "lifecycle.pending_metadata_ignores_late_event", source: "lifecycle", verify: report => {
     const session = report.sessions?.find(item => item.scope === "explicit_held_metadata_cancel_second_hidden");
     return session?.hidden?.video_mode === "idle" && session.hidden?.video_loading_cleared === true &&
-      session.hidden?.video_file_cleared === true && session.late?.video_mode === "idle" &&
+      session.hidden?.video_file_cleared === true && session.hidden?.metadata_boundary_held === true &&
+      session.late?.video_mode === "idle" &&
       session.late?.video_loading_cleared === true && session.late?.video_file_cleared === true &&
-      session.late?.metadata_waiting === false;
+      session.late?.metadata_boundary_held === true;
   }},
   {id: "lifecycle.prf2_sockets_close_cleanly", source: "lifecycle", verify: report => {
     const local = report.websockets?.filter(item => item.path === "/ws/detect/local/");
