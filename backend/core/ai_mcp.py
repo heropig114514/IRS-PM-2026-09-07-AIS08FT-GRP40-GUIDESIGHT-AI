@@ -324,8 +324,9 @@ async def ui_navigate(
     description="Operate a DOM control with an exact CSS selector. Actions: click (optional "
     "x/y offsets for map points), fill, select, check, key, submit, scroll, wait. Values are "
     "strings except check's boolean. wait accepts text and state=visible/hidden/enabled; "
-    "it observes completion without repeating operations. Synthetic keys do not implement "
-    "browser-native typing/default actions; use fill, click or submit for those effects."
+    "it observes completion without repeating operations. Camera permission, explicit camera "
+    "selection and camera-start controls require direct user interaction. Synthetic keys do not "
+    "implement browser-native typing/default actions; use fill, click or submit for other controls."
 )
 async def ui_action(
     session_id: str,
@@ -342,7 +343,7 @@ async def ui_action(
     Inputs: session/action/selector, value, x/y pixel offsets, wait text/state, timeout (0..59s).
     Outputs: Post-dispatch DOM snapshot; async application completion must be observed separately.
     Logic: Send all explicit arguments to the browser's documented action dispatcher.
-    Constraints: Disabled/ambiguous controls fail; browser permissions/trusted-event rules apply.
+    Constraints: Disabled/ambiguous and protected camera controls fail; browser permissions apply.
     """
     if not 0 < timeout <= 59:
         raise ToolError("timeout must be greater than 0 and at most 59 seconds")

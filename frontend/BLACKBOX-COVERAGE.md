@@ -30,6 +30,7 @@ Generate fresh reports with the corresponding browser checkers, then run the agg
 ```powershell
 $env:PRS_PLAYWRIGHT_PATH = '<absolute path to the installed Playwright package>'
 $env:PRS_FAKE_CAMERA_VIDEO = '<absolute path to a caller-supplied Y4M scene>'
+$env:PYTHON = '<absolute path to the project Python executable>'
 
 node tools/check_agent_browser.mjs https://47.239.50.129/mvp/maps/test ../backend/.venv/tmp/blackbox-agent.json --live-qwen --audio=<absolute path to a caller-supplied WAV>
 node tools/check_product_browser.mjs https://47.239.50.129/mvp/maps/ ../backend/.venv/tmp/blackbox-product.json
@@ -40,4 +41,4 @@ node tools/check_phone_relay_browser.mjs https://47.239.50.129/mvp/maps/test ../
 npm run test:blackbox-coverage -- --agent ../backend/.venv/tmp/blackbox-agent.json --product ../backend/.venv/tmp/blackbox-product.json --camera ../backend/.venv/tmp/blackbox-camera.json --lifecycle ../backend/.venv/tmp/blackbox-lifecycle.json --relay ../backend/.venv/tmp/blackbox-relay.json
 ```
 
-The agent report requires a real Qwen connection; the product/camera/lifecycle reports include explicit browser fixtures; the relay report calls the deployed ORS, inference, and speech services. Keep reports from the same deployment run when combining them.
+The agent report requires a real Qwen connection and explicitly activates test-page speech through a user gesture; the lifecycle report accepts either the documented public test entry or its loopback entry and uses Python for MCP calls. The product/camera/lifecycle reports include explicit browser fixtures; the relay report calls the deployed ORS, inference, and speech services. Keep reports from the same deployment run when combining them.

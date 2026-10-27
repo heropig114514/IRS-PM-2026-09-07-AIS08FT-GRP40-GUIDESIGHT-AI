@@ -5,7 +5,20 @@
  * Variable Index: None; fixtures are scoped to individual tests. */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {navigatePage, performSpeech} from "../ai-control.js";
+import {navigatePage, performAction, performSpeech} from "../ai-control.js";
+
+// Functionality: Reject assistant-generated actions on camera acquisition controls.
+// Inputs: Fixed DOM control IDs, one synthetic DOM element/document per case.
+// Outputs: Direct-user-interaction rejection for permission, device-choice and start controls.
+// Logic: Exercise only the agent_ui_action guard; Constraints: no browser, camera or permission fixture.
+test("assistant UI actions cannot grant or initiate camera access", async () => {
+  for (const id of ["assist-devices-authorize", "assist-device", "product-camera-start", "start"]) {
+    const element = {id, closest: () => null};
+    const doc = {querySelectorAll: selector => selector === `#${id}` ? [element] : []};
+    await assert.rejects(performAction("agent_ui_action", {action: "click", selector: `#${id}`}, doc),
+      /This control requires direct user interaction/);
+  }
+});
 
 // Functionality: Focus an available embedded camera without requesting a route change.
 // Inputs: MVP document fixture and configured base URL; Outputs: same-page section result.

@@ -1,20 +1,23 @@
 /* Responsibilities: Evaluate real Qwen→MCP→browser workflows with explicit device/ORS/media fixtures.
- * Implementation: Dedicated Chrome, actual app/ASGI/WS, natural-language requests, product camera
- * user-gesture gating and user-started camera stop, automatic backend reply speech, and UI assertions.
+ * Implementation: Dedicated Chrome, actual app/ASGI/WS, natural-language requests, diagnostic route
+ * coverage, canonical product camera user-gesture gating and user-started camera stop, explicit
+ * test-page speech activation, automatic
+ * backend reply speech, and UI assertions.
  * Related Modules: backend/core/agent, agent-client/device, maps/camera controllers.
  * Declaration Index: installDevices — install explicit native-device fixtures;
  * installDevices.fix — return one synthetic NUS position; installDevices.denied — deliver a synthetic denial;
  * installDevices.geo.getCurrentPosition — deliver a fixture fix;
  * installDevices.geo.watchPosition — own a periodic synthetic watch;
  * installDevices.geo.clearWatch — release that watch; installDevices.geo.watchPosition.report — emit one active fix;
- * ask — submit one live natural-language turn and collect safe evidence;
+ * ask — submit one live turn, require a new assistant reply, and collect safe evidence;
  * checkAudio — verify synthetic recorded speech stops a real product camera stream;
- * main — run live-Qwen product interaction acceptance.
+ * main — run live-Qwen diagnostic and product interaction acceptance.
  * Variable Index: agentSpeechEvidence — body-free playback and guidance request lifecycle metadata;
  * PRS_PLAYWRIGHT_PATH/PRS_FAKE_CAMERA_VIDEO are required runtime/scene inputs;
  * PRS_TLS_SPKI optionally pins a verified
  * deployment certificate key; args/report/context belong to main.
- * Constraints: --live-qwen explicitly authorizes paid Qwen calls. GPS/ORS/camera frames are synthetic,
+ * Constraints: --live-qwen explicitly authorizes paid Qwen calls; assistant speech requires the page's
+ * explicit activation gesture. GPS/ORS/camera frames are synthetic,
  * but inference uses the actual public local-GPU relay; no deployment, physical device, real-route
  * accuracy or speaker verification. */
 import assert from "node:assert/strict";
@@ -65,18 +68,23 @@ export function installDevices() {
   Object.defineProperty(navigator, "geolocation", {configurable: true, value: geo});
 }
 
-/* Functionality: Submit a real natural-language turn and collect its UI evidence.
- * Inputs: page, text and report; Outputs: completed turn evidence.
- * Logic: Wait for a new user message and final idle across page handoffs.
- * Constraints: No model retries or response rewriting; fails visibly at the 185s outer limit. */
+/* Functionality: Submit one natural-language turn and collect its corresponding UI evidence.
+ * Inputs: page, text and report; Outputs: completed turn evidence with the new assistant response.
+ * Logic: Record prior user/assistant counts, then require a new user message, idle state and a new reply.
+ * Constraints: No model retries or response rewriting; prevents stale prior replies from passing. */
 export async function ask(page, text, report) {
   const started = Date.now();
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor();
-  const count = await page.locator(".agent-message.you").count();
+  const userCount = await page.locator(".agent-message.you").count();
+  const assistantCount = await page.locator(".agent-message.assistant").count();
   await page.locator("#agent-input").fill(text);
   await page.locator("#agent-send").click();
-  await page.waitForFunction(previous => document.querySelectorAll(".agent-message.you").length > previous, count, {timeout: 185000});
+  await page.waitForFunction(previous => document.querySelectorAll(".agent-message.you").length > previous,
+    userCount, {timeout: 185000});
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor({timeout: 185000});
+  const currentAssistantCount = await page.locator(".agent-message.assistant").count();
+  assert.ok(currentAssistantCount > assistantCount,
+    `Turn completed without a new assistant reply: ${await page.locator("#agent-status").textContent()}`);
   const entry = {input: text, elapsed_ms: Date.now() - started, url: page.url(),
     reply: await page.locator(".agent-message.assistant").last().innerText(),
     activity: await page.locator("#agent-activity").textContent(),
@@ -192,6 +200,13 @@ async function main() {
       guidanceManager.subscribe(event => evidence.guidance.push({phase: event.phase, channel: event.channel,
         kind: event.kind, request_id: event.request_id, reason: event.reason}));
     });
+    await page.locator("#assist-speech-start:not([disabled])").waitFor({timeout: 15000});
+    await page.locator("#assist-speech-start").click();
+    await page.waitForFunction(async () => {
+      const {speechActivation} = await import(new URL("../assets/integration/assist-mvp.js", location.href).href);
+      return speechActivation.describe().ready;
+    }, null, {timeout: 45000});
+    report.checks.push("explicit_user_gesture_activates_test_page_speech");
     await ask(page, "开启导航", report);
     await page.waitForFunction(() => window.agentSpeechEvidence.guidance.some(event =>
       event.phase === "output_end" && event.channel === "speech" && event.kind === "assistant"),
@@ -209,11 +224,11 @@ async function main() {
     assert.equal(assistantSpeech.request?.service, "backend"); assert.equal(assistantSpeech.request?.voice_id, "Cherry");
     assert.equal(assistantSpeech.audio_start, true); assert.equal(assistantSpeech.audio_end, true);
     report.checks.push("live_assistant_reply_auto_spoken_by_backend_stream");
-    assert.match(page.url(), /\/maps\/$/);
+    assert.equal(new URL(page.url()).pathname, "/mvp/maps/test");
     assert.equal(routeCalls, 0);
     assert.ok(!report.turns.at(-1).tools.some(tool => tool.name === "places_search"), "No invented destination searches");
     assert.match(report.turns.at(-1).reply, /哪|终点|目的地/);
-    report.checks.push("missing_destination_question_and_page_handoff");
+    report.checks.push("missing_destination_question_without_search_or_route");
     await ask(page, "终点是经度103.7735、纬度1.2991，从我的当前位置出发，请规划路线并开始导航。", report);
     assert.equal(routeCalls, 1);
     assert.ok(await page.evaluate(() => window.agentFixture.locateCalls > 0));
@@ -226,6 +241,13 @@ async function main() {
     assert.equal(await page.evaluate(async () => (await import(new URL("../assets/navigation-ui.js", location.href).href)).navigation.describe().active), false);
     report.checks.push("stop_navigation");
     await page.locator("#agent-panel").screenshot({path: output + ".maps.png"});
+    /* Functionality: Scope camera gesture checks to the canonical public product page.
+     * Inputs: Current same-origin maps test URL. Outputs: Product entry with the same browser session.
+     * Logic: Open the user-facing route explicitly; this check does not infer page handoff from a camera request.
+     * Constraints: no permissions or camera stream are acquired by navigation. */
+    const productUrl = new URL("./", page.url()).href;
+    await page.goto(productUrl);
+    await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor({timeout: 15000});
     await ask(page, "开启环境感知。", report);
     assert.match(page.url(), /\/mvp\/maps\/$/);
     assert.match(report.turns.at(-1).reply, /点击|Tap|click|Start surroundings/i);

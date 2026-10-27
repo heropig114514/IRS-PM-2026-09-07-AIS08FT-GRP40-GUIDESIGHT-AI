@@ -5,7 +5,8 @@
  * check_phone_relay_browser.mjs; ../BLACKBOX-COVERAGE.md.
  * Declaration Index: SCENARIOS — required product/diagnostic/lifecycle/relay scenarios;
  * isRecord — validate JSON object boundaries; reportReady — reject incomplete or failed reports;
- * hasChecks — require named live-agent turns; surfaceReady — validate responsive/accessibility evidence;
+ * hasChecks — require named live-agent turns; lifecycleSession — select one named camera boundary;
+ * surfaceReady — validate responsive/accessibility evidence;
  * bilingualTtsReady — validate real backend synthesis evidence in both languages;
  * cameraBoundariesReady — validate permission/cancel failure evidence;
  * realModelAlertReady — correlate one non-synthetic spoken alert to its actual model frame;
@@ -23,7 +24,7 @@ import {pathToFileURL} from "node:url";
 const INPUT_NAMES = ["agent", "product", "camera", "lifecycle", "relay"];
 const AGENT_CHECKS = [
   "live_assistant_reply_auto_spoken_by_backend_stream",
-  "missing_destination_question_and_page_handoff",
+  "missing_destination_question_without_search_or_route",
   "device_origin_route_plan_navigation_verified",
   "read_progress_without_replanning",
   "stop_navigation",
@@ -60,6 +61,13 @@ function reportReady(value) {
  * Constraints: Does not infer success from transcript text or report length. */
 function hasChecks(report, names) {
   return Array.isArray(report?.checks) && names.every(name => report.checks.includes(name));
+}
+
+/* Functionality: Select one camera lifecycle observation by its explicit boundary label.
+ * Inputs: Lifecycle report and fixed boundary name. Outputs: Matching session or null.
+ * Logic: Search only recorded sessions; Constraints: no inference from transcript or report order. */
+function lifecycleSession(report, boundary) {
+  return Array.isArray(report?.sessions) ? report.sessions.find(item => item.boundary === boundary) ?? null : null;
 }
 
 /* Functionality: Validate one viewport's observed layout and control accessibility.
@@ -179,26 +187,63 @@ const SCENARIOS = [
     report.checks.unsupported?.actionable_message === true && report.checks.unsupported?.frames === 0 &&
     report.checks.model_connections === 0},
   {id: "lifecycle.backend_voice_no_startup", source: "lifecycle", verify: report =>
-    report.checks.backend_voice?.voice?.service === "backend" && report.checks.backend_voice?.voice?.id === "Cherry" &&
-    report.checks.backend_voice?.camera_calls === 0 && report.checks.backend_voice?.speech_calls === 0},
-  {id: "lifecycle.mobile_surface", source: "lifecycle", verify: report => surfaceReady(report.checks.mobile_surface, 390)},
-  {id: "lifecycle.desktop_surface", source: "lifecycle", verify: report => surfaceReady(report.checks.desktop_surface, 1280)},
-  {id: "lifecycle.cached_page_no_autoplay", source: "lifecycle", verify: report =>
-    report.checks.cached_page?.product_copy_updates === true && report.checks.cached_page?.backend_voice_stable === true &&
-    report.checks.cached_page?.automatic_speech_calls === 0},
-  {id: "lifecycle.incomplete_route_gate", source: "lifecycle", verify: report =>
-    report.checks.incomplete_route?.route_absent === true && report.checks.incomplete_route?.speech_calls === 0 &&
-    report.checks.incomplete_route?.camera_calls === 0},
-  {id: "lifecycle.user_gesture_audio_activation", source: "lifecycle", verify: report =>
-    report.checks.activation?.audio_start_verified === true && report.checks.activation?.user_gesture_active === true},
-  {id: "lifecycle.hidden_page_releases_resources", source: "lifecycle", verify: report =>
-    report.checks.hidden?.navigation_stopped === true && report.checks.hidden?.gps_released === true &&
-    report.checks.hidden?.speech_released === true && report.checks.hidden?.timer_released === true},
-  {id: "lifecycle.return_does_not_restart", source: "lifecycle", verify: report =>
-    report.checks.returned?.navigation_stopped === true && report.checks.returned?.gps_released === true &&
-    report.checks.returned?.speech_released === true},
-  {id: "lifecycle.bilingual_backend_tts", source: "lifecycle", verify: report =>
-    bilingualTtsReady(report.checks.diagnostic_bilingual_tts?.cases, 4)},
+    report.startup?.backend_voice?.voice?.service === "backend" && report.startup?.backend_voice?.voice?.id === "Cherry" &&
+    report.startup?.backend_voice?.voice?.languages?.includes("zh-CN") &&
+    report.startup?.backend_voice?.voice?.languages?.includes("en-US") &&
+    report.startup?.backend_voice?.camera_calls === 0 && report.startup?.backend_voice?.speech_calls === 0},
+  {id: "lifecycle.default_on_outputs_are_gated_without_startup_io", source: "lifecycle", verify: report =>
+    report.startup?.guidance?.navigation_enabled === true && report.startup?.guidance?.risk_enabled === true &&
+    report.startup?.guidance?.paused?.speech === true && report.startup?.guidance?.reasons?.speech === "activation_required" &&
+    report.startup?.speech_activation?.ready === false && report.startup?.navigation?.active === false &&
+    report.startup?.navigation?.watch_active === false && report.startup?.media?.requests?.length === 0},
+  {id: "lifecycle.stop_button_releases_camera_and_prf2", source: "lifecycle", verify: report => {
+    const session = lifecycleSession(report, "original_stop_button");
+    return session?.before?.camera_mode === "camera" && session.after?.camera_mode === "idle" &&
+      session.after?.camera_stream_cleared === true && session.after?.camera_client_cleared === true &&
+      session.after?.last_socket_closed === true && session.after?.media?.streams?.every(stream =>
+        stream.tracks_ended === true && stream.draw_timer_cleared === true);
+  }},
+  {id: "lifecycle.track_end_releases_camera_and_prf2", source: "lifecycle", verify: report => {
+    const session = lifecycleSession(report, "explicit_track_ended_fixture");
+    return session?.before?.camera_mode === "camera" && session.after?.camera_mode === "idle" &&
+      session.after?.camera_stream_cleared === true && session.after?.camera_client_cleared === true &&
+      session.after?.last_socket_closed === true && session.after?.media?.streams?.every(stream =>
+        stream.tracks_ended === true && stream.draw_timer_cleared === true);
+  }},
+  {id: "lifecycle.late_permission_grant_is_discarded", source: "lifecycle", verify: report => {
+    const session = report.sessions?.find(item => item.scope === "explicit_delayed_permission_fixture_second_hidden");
+    return session?.hidden?.camera_mode === "idle" && session.late?.camera_mode === "idle" &&
+      session.late?.media?.streams?.some(stream => stream.purpose === "late_permission" &&
+        stream.tracks_ended === true && stream.draw_timer_cleared === true) === true &&
+      session.late?.camera_events?.every(event => event.type !== "session");
+  }},
+  {id: "lifecycle.late_inventory_does_not_override_selection", source: "lifecycle", verify: report => {
+    const session = report.sessions?.find(item => item.scope === "explicit_delayed_inventory_fixture_second_hidden");
+    return Boolean(session && session.late?.selected === session.hidden?.selected &&
+      JSON.stringify(session.late?.options) === JSON.stringify(session.hidden?.options) &&
+      session.late?.status === session.hidden?.status && session.late?.camera_mode === "idle");
+  }},
+  {id: "lifecycle.pending_metadata_ignores_late_event", source: "lifecycle", verify: report => {
+    const session = report.sessions?.find(item => item.scope === "explicit_held_metadata_cancel_second_hidden");
+    return session?.hidden?.video_mode === "idle" && session.hidden?.video_loading_cleared === true &&
+      session.hidden?.video_file_cleared === true && session.late?.video_mode === "idle" &&
+      session.late?.video_loading_cleared === true && session.late?.video_file_cleared === true &&
+      session.late?.metadata_waiting === false;
+  }},
+  {id: "lifecycle.prf2_sockets_close_cleanly", source: "lifecycle", verify: report => {
+    const local = report.websockets?.filter(item => item.path === "/ws/detect/local/");
+    return Array.isArray(local) && local.length === 2 && local.every(item => item.closed === true &&
+      item.inputs?.length > 0 && item.hellos?.length === 1 && item.hellos[0].session_seconds === null) &&
+      report.websockets?.filter(item => item.path === "/ws/control/").length === 1;
+  }},
+  {id: "lifecycle.final_resources_are_idle", source: "lifecycle", verify: report =>
+    report.final?.camera_mode === "idle" && report.final?.camera_stream_cleared === true &&
+    report.final?.camera_client_cleared === true && report.final?.last_socket_closed === true &&
+    report.final?.navigation?.active === false && report.final?.navigation?.watch_active === false &&
+    report.final?.video_mode === "idle" && report.final?.video_loading_cleared === true &&
+    report.final?.video_file_cleared === true && report.final?.guidance?.risk_session_id === null &&
+    report.final?.guidance?.navigation_run_id === null && report.final?.media?.streams?.every(stream =>
+      stream.tracks_ended === true && stream.draw_timer_cleared === true)},
   {id: "relay.public_tls_product_entry", source: "relay", verify: report =>
     report.target === "https://47.239.50.129/mvp/maps/test" && report.tls_validation === "enabled" &&
     report.checks.guest_http_status === 200 && report.checks.permissions_policy?.includes("camera=(self)")},

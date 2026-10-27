@@ -1,6 +1,7 @@
 /* Responsibilities: Expose live PRS DOM state, actions, device output and walking navigation to MCP.
  * Implementation: One WebSocket per page; sessionStorage identity survives explicit navigation;
  * correlated commands execute once and return snapshots/device acknowledgements/errors;
+ * agent UI dispatch protects controls that acquire cameras or request camera permission;
  * no automatic reconnect.
  * Related Modules: core.ai_bridge/ai_mcp, index.html, maps.html, camera/maps controllers,
  * vibration.js, speech-output.js, navigation-ui.js, agent-device.js, agent-client.js.
@@ -15,6 +16,7 @@
  * connectControl.onMessage — correlated command handler;
  * connectControl.startHeartbeat — idle keepalive; connectControl.stopHeartbeat — timer cleanup.
  * Variable Index: SESSION_KEY — tab identity storage key; CONTROL_SELECTOR — discoverable controls;
+ * USER_GESTURE_CONTROL_IDS — camera permission, camera choice and camera start controls reserved for users;
  * connectControl sessionId/socket/heartbeat — tab transport state; base — application mount URL;
  * AGENT_TOKEN_KEY — tab-local ownership secret, never part of a snapshot.
  */
@@ -26,6 +28,15 @@ import {performDevice} from "./agent-device.js";
 const SESSION_KEY = "prs.ai.session";
 const AGENT_TOKEN_KEY = "prs.agent.token";
 const CONTROL_SELECTOR = "button,a[href],input,select,textarea,[role=button],[contenteditable=true]";
+
+/* Functionality: Identify camera controls whose actions require direct user interaction.
+ * Inputs: None. Outputs: Fixed set of control IDs.
+ * Logic: Protect camera permission, explicit device choice and the two camera-start buttons from
+ * synthetic assistant actions while leaving status reads and unrelated controls available.
+ * Constraints: This is an agent UI-action boundary, not a substitute for browser permission policy. */
+const USER_GESTURE_CONTROL_IDS = new Set([
+  "assist-devices-authorize", "assist-device", "product-camera-start", "start",
+]);
 
 /* Functionality: Generate an exact CSS selector for a DOM element.
  * Inputs: element. Outputs: Escaped ID or ancestor/nth-of-type selector.
@@ -150,16 +161,17 @@ export async function waitForState(doc, args) {
 /* Functionality: Perform one DOM operation using the same controls as a human user.
  * Inputs: action name, args DOM/device/navigation parameters, browser document.
  * Outputs: DOM snapshot, structured device result or explicit error.
- * Logic: Vibration/speech commands use the page's shared controllers; DOM commands use native value
- * setters plus input/change events, and clicks/forms call native DOM methods.
- * Constraints: Async work may still be running; synthetic keyboard events do not type characters
- * or grant browser permissions. Disabled/read-only/hidden controls fail instead of being bypassed. */
+ * Logic: Vibration/speech commands use shared controllers; agent UI actions reject assistant-owned,
+ * output-toggle, camera-permission, device-choice and camera-start controls before dispatch.
+ * Other DOM commands use native value setters/events and clicks/forms call DOM methods.
+ * Constraints: Async work may still be running; synthetic events never grant browser permissions;
+ * disabled/read-only/hidden controls fail instead of being bypassed. */
 export async function performAction(action, args, doc = document) {
   if (["maps_status", "maps_locate", "maps_plan", "agent_navigation_status",
     "camera_status", "camera_start", "camera_stop"].includes(action)) return performDevice(action, args, doc);
   if (action === "agent_ui_action") {
     const element = uniqueElement(doc, args.selector);
-    if (element.closest("#agent-panel") ||
+    if (element.closest("#agent-panel") || USER_GESTURE_CONTROL_IDS.has(element.id) ||
         ["speech-enabled", "vibration-enabled", "navigation-speech-enabled"].includes(element.id))
       throw new Error("This control requires direct user interaction");
     return performAction(args.action, args, doc);

@@ -202,7 +202,8 @@ class BrowserTools:
     ) -> dict[str, Any]:
         """Functionality: Operate requested observed controls. Inputs: action/selector/value,
         state/text/timeout; Outputs: actual snapshot. Logic: existing control validation plus
-        agent-only protected-control check; Constraints: cannot operate assistant/output switches.
+        agent-only protected-control check; Constraints: cannot operate assistant/output switches
+        or camera permission, device-choice and start controls.
         """
         return await self.browser(
             "agent_ui_action",

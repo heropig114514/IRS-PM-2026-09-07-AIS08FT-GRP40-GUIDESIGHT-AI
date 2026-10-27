@@ -35,7 +35,7 @@ function ttsCases(count) {
  * Constraints: This fixture is not black-box or production evidence and must never be reported as such. */
 function completeReports() {
   const agentChecks = [
-    "live_assistant_reply_auto_spoken_by_backend_stream", "missing_destination_question_and_page_handoff",
+    "live_assistant_reply_auto_spoken_by_backend_stream", "missing_destination_question_without_search_or_route",
     "device_origin_route_plan_navigation_verified", "read_progress_without_replanning", "stop_navigation",
     "assistant_preserves_product_camera_user_gesture_gate", "natural_language_camera_stop_preserves_idle_resource_state",
     "language_switch", "vibration_respects_user_enable", "speech_request_respects_user_enable_and_matches_english",
@@ -67,15 +67,34 @@ function completeReports() {
     OverconstrainedError: {actionable_message: true, visible_message: true, stream_absent: true},
     unsupported: {actionable_message: true, frames: 0}, model_connections: 0,
   };
-  const lifecycleChecks = {
-    backend_voice: {voice: {id: "Cherry", service: "backend"}, camera_calls: 0, speech_calls: 0},
-    mobile_surface: surface(390), desktop_surface: surface(1280),
-    cached_page: {product_copy_updates: true, backend_voice_stable: true, automatic_speech_calls: 0},
-    incomplete_route: {route_absent: true, speech_calls: 0, camera_calls: 0},
-    activation: {audio_start_verified: true, user_gesture_active: true},
-    hidden: {navigation_stopped: true, gps_released: true, speech_released: true, timer_released: true},
-    returned: {navigation_stopped: true, gps_released: true, speech_released: true},
-    diagnostic_bilingual_tts: {cases: ttsCases(4)},
+  const streamState = {tracks_ended: true, draw_timer_cleared: true};
+  const stoppedState = {camera_mode: "idle", camera_stream_cleared: true, camera_client_cleared: true,
+    last_socket_closed: true, media: {streams: [streamState]}};
+  const lifecycle = {complete: true, failures: [], startup: {
+    backend_voice: {voice: {id: "Cherry", service: "backend", languages: ["zh-CN", "en-US"]},
+      camera_calls: 0, speech_calls: 0},
+    guidance: {navigation_enabled: true, risk_enabled: true, paused: {speech: true},
+      reasons: {speech: "activation_required"}},
+    speech_activation: {ready: false}, navigation: {active: false, watch_active: false}, media: {requests: []},
+  }, sessions: [
+    {boundary: "original_stop_button", before: {camera_mode: "camera"}, after: {...stoppedState}},
+    {boundary: "explicit_track_ended_fixture", before: {camera_mode: "camera"}, after: {...stoppedState}},
+    {scope: "explicit_delayed_permission_fixture_second_hidden", hidden: {camera_mode: "idle"}, late: {
+      camera_mode: "idle", media: {streams: [{purpose: "late_permission", ...streamState}]}, camera_events: []}},
+    {scope: "explicit_delayed_inventory_fixture_second_hidden", hidden: {selected: "synthetic-camera",
+      options: ["", "synthetic-camera"], status: "idle"}, late: {camera_mode: "idle",
+      selected: "synthetic-camera", options: ["", "synthetic-camera"], status: "idle"}},
+    {scope: "explicit_held_metadata_cancel_second_hidden", hidden: {video_mode: "idle",
+      video_loading_cleared: true, video_file_cleared: true}, late: {video_mode: "idle",
+      video_loading_cleared: true, video_file_cleared: true, metadata_waiting: false}},
+  ], websockets: [
+    {path: "/ws/control/", closed: false},
+    ...Array.from({length: 2}, () => ({path: "/ws/detect/local/", closed: true, inputs: [{}],
+      hellos: [{session_seconds: null}]})),
+  ], final: {camera_mode: "idle", camera_stream_cleared: true, camera_client_cleared: true,
+    last_socket_closed: true, navigation: {active: false, watch_active: false}, video_mode: "idle",
+    video_loading_cleared: true, video_file_cleared: true, guidance: {risk_session_id: null,
+      navigation_run_id: null}, media: {streams: [streamState]}},
   };
   const session = "session-one", requestId = 7;
   const alertFrame = {session_id: session, index: 12, captured_at_ms: 1800, alert_track_ids: [4],
@@ -113,7 +132,7 @@ function completeReports() {
   return {agent: {complete: true, errors: [], checks: agentChecks},
     product: {complete: true, failures: [], checks: productChecks},
     camera: {complete: true, failures: [], checks: cameraChecks},
-    lifecycle: {complete: true, failures: [], checks: lifecycleChecks},
+    lifecycle,
     relay: report};
 }
 
