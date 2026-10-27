@@ -26,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from threading import BoundedSemaphore
 
+from core.detection_model import PROFILES, selected_model
 from core.detector import DetectionError, decode_frame
 from integration.errors import IntegrationError
 from integration.protocol import (
@@ -52,13 +53,16 @@ logger = logging.getLogger(__name__)
 
 def load_detector(distance_config=None):
     """Functionality: Load the existing native FP32 complete pipeline and record actual assets.
-    Inputs: fixed model files, optional startup-frozen profile. Outputs: detector and fingerprints.
+    Inputs: PRS_DETECTION_MODEL-selected model files (default COCO yolo26n), optional
+    startup-frozen distance profile. Outputs: detector and fingerprints.
     Logic: preflight selected local files/CUDA; A uses original constructors/default rules;
     B does not open/hash/initialize depth weights; C wraps the same depth fusion with tracking.
     Constraints: lazy imports, no download/CPU fallback/implicit detection parameter changes;
     depth hash records supplied bytes, not independently verified calibration or provenance.
     """
-    weights, depth_weights = ROOT / "models/yolo26n.pt", ROOT / "models/yolo26n-depth.pt"
+    weights_name, manifest_name, _ = PROFILES[selected_model()]
+    weights, manifest_path = ROOT / weights_name, ROOT / manifest_name
+    depth_weights = ROOT / "models/yolo26n-depth.pt"
     distance_config = read_distance_config() if distance_config is None else distance_config
     needs_depth = distance_config.distance_mode != "geometry"
     if not weights.is_file() or (needs_depth and not depth_weights.is_file()):
@@ -75,7 +79,6 @@ def load_detector(distance_config=None):
     from realtime.depth import DepthEstimator
     from realtime.detector import ResidentDetector
 
-    manifest_path = ROOT / "models/yolo26n.json"
     manifest = read_manifest(manifest_path)
     hashes = {
         "detection_sha256": hashlib.sha256(weights.read_bytes()).hexdigest(),

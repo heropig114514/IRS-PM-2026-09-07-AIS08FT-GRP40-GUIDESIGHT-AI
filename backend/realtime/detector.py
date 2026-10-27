@@ -6,6 +6,8 @@ Declaration Index: ResidentDetector; ResidentDetector.__init__; ResidentDetector
 Variable Index: logger — count/timing diagnostics; model/manifest/tensor/runner/load_ms;
 execution_config/precision/backend — explicit execution identity, original FP32 control by default.
 roi — optional extra centre-top traffic-light pass (sequential batch-1 replays of the same Graph).
+light_rule — walk-model pedestrian-light colour rule from the manifest (None for COCO yolo26n).
+class_conf — decode thresholds: CLASS_CONF, plus the colour classes' threshold in walk mode only.
 depth_estimator — optional independent metric model; depth_ms includes inference/fusion.
 object_tracker — instance-owned BoT-SORT/history; tracking_ms covers association/history only.
 risk_config — immutable TTC/rule profile; risk_ms — separate stateless scalar scoring timer.
@@ -18,16 +20,19 @@ import json
 import logging
 import time
 
+from core.detection_model import light_rule, validate_manifest
 from core.detector import (
     CLASS_CONF,
     CONFIDENCE_THRESHOLD,
     INPUT_EDGE,
+    PEDESTRIAN_LIGHT,
     annotate,
     decode_boxes,
     decode_frame,
     letterbox,
     mark_front_light,
     merge_boxes,
+    pedestrian_lights,
     roi_crop,
 )
 from realtime.distance import DistanceStrategy
@@ -56,6 +61,8 @@ class ResidentDetector:
         load_model; declared precision/TF32-off, one CPU thread; default is original FP32 control.
         Constraints: native CUDA must exist; no downloads, random initialization or global service.
         roi=True adds one native-resolution centre-top traffic-light pass per frame.
+        The manifest may be the COCO yolo26n or the walk model (core.detection_model); a declared
+        pedestrian-light rule is applied to every frame.
         GraphRunner remains None until first JPEG; optional depth activates once on the same GPU.
         """
         import numpy as np
@@ -66,7 +73,12 @@ class ResidentDetector:
             raise RuntimeError("Native CUDA is required for the approved local validation")
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
-        self.manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.manifest = validate_manifest(json.loads(manifest_path.read_text(encoding="utf-8")))
+        self.light_rule = light_rule(self.manifest)
+        self.class_conf = dict(CLASS_CONF)
+        if self.light_rule is not None:
+            self.class_conf.update(dict.fromkeys(self.light_rule["classes"],
+                                                 self.light_rule["class_confidence"]))
         self.execution_config = {} if config is None else dict(config)
         self.precision = {"float32": "FP32", "float16": "FP16", "bfloat16": "BF16"}[
             self.execution_config.get("dtype", "float32")
@@ -130,14 +142,17 @@ class ResidentDetector:
             roi_prediction, roi_ms = self.runner(roi_tensor)
             forward_event_ms += self.runner.forward_event_ms
         inferred_at = time.perf_counter()
-        boxes = decode_boxes(prediction, image.size, (scale, left, top), self.manifest["names"])
+        class_conf = getattr(self, "class_conf", CLASS_CONF)
+        boxes = decode_boxes(prediction, image.size, (scale, left, top), self.manifest["names"],
+                             class_conf=class_conf)
         if roi:
             roi_boxes = decode_boxes(roi_prediction, crop.size, (roi_scale, roi_left, roi_top),
-                                     self.manifest["names"])
+                                     self.manifest["names"], class_conf=class_conf)
             for box in roi_boxes:
                 x1, y1, x2, y2 = box["xyxy"]
                 box["xyxy"] = [x1 + x_offset, y1 + y_offset, x2 + x_offset, y2 + y_offset]
             boxes = merge_boxes(boxes, roi_boxes)
+        boxes = pedestrian_lights(boxes, getattr(self, "light_rule", None))
         boxes = mark_front_light(boxes, image.size)
         decoded_at = time.perf_counter()
         object_tracker = getattr(self, "object_tracker", None)
@@ -168,10 +183,11 @@ class ResidentDetector:
         risk_at = time.perf_counter()
         result = annotate(image, boxes)
         finished = time.perf_counter()
-        metadata = {"schema_version": 1, "model": "yolo26n", "backend": self.backend,
-                    "precision": self.precision, "output_precision": "FP32", "classes": 80,
+        metadata = {"schema_version": 1, "model": self.manifest.get("model", "yolo26n"),
+                    "backend": self.backend, "precision": self.precision,
+                    "output_precision": "FP32", "classes": len(self.manifest["names"]),
                     "confidence_threshold": CONFIDENCE_THRESHOLD,
-                    "class_confidence_thresholds": dict(CLASS_CONF),
+                    "class_confidence_thresholds": dict(class_conf),
                     "source_sha256": self.manifest["source_sha256"], "width": image.width,
                     "height": image.height, "count": len(boxes), "boxes": boxes,
                     "raw_sha256": hashlib.sha256(prediction.tobytes()).hexdigest(),
@@ -190,6 +206,12 @@ class ResidentDetector:
                                      if getattr(self, "cache_evidence", None) else {})}}
         if roi:
             metadata.update(roi=True, roi_ms=roi_ms)
+        if getattr(self, "light_rule", None) is not None:
+            metadata.update(light_model=self.manifest["model"],
+                            light_green_threshold=self.light_rule["green_threshold"])
+            # The merged signal label inherits its colour classes' threshold for client checks.
+            metadata["class_confidence_thresholds"][PEDESTRIAN_LIGHT] = (
+                self.light_rule["class_confidence"])
         if depth_estimator is not None:
             metadata.update(depth_model=depth_estimator.model_name, depth_units="m",
                             depth_ms=((fused_at - tracked_at) + (decoded_at - inferred_at)) * 1000)

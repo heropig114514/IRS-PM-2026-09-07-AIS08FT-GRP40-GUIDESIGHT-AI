@@ -9,8 +9,9 @@
  * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
  * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity; testLocalHello; testLocalCapture; testLocalCorrelation;
  * testDistanceModes; testDistanceModeFailures; testLocalContinuous; testSessionDurationAdmission;
- * testSessionDurationOptions; testHfDurationIsolation.
- * Variable Index: manifest/contract — original public model identity; plan — current deployment's
+ * testSessionDurationOptions; testHfDurationIsolation; testWalkModel; testWalkModelFailures.
+ * Variable Index: manifest/contract — original public model identity; walkManifest/walkContract — opt-in
+ * 87-class walking-aid identity (backend models/yolo26n-walk.json); plan — current deployment's
  * compute/quality contract; localContract is independent local capability admission; JPEG — synthetic markers;
  * duration options exercise explicit continuous-local admission with virtual timers, never actual long-running inference.
  */
@@ -22,6 +23,7 @@ import {decodeResult, LiveDetectionClient} from "../live-detection-client.js";
 
 const manifest = JSON.parse(await readFile(new URL("../../backend/models/yolo26n.json", import.meta.url)));
 const plan = JSON.parse(await readFile(new URL("../../backend/models/inference-plan.json", import.meta.url)));
+const walkManifest = JSON.parse(await readFile(new URL("../../backend/models/yolo26n-walk.json", import.meta.url)));
 const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes: 80,
   backend: "PyTorch resident CUDA", output_precision: "FP32",
   validation: {images: 5000, replicates: 3, baseline_ap: 0.4, worst_ap: 0.395,
@@ -593,4 +595,54 @@ test("tracking supports 300 objects with complete motion fields", async function
   assert.ok(new DataView(input).getUint32(4) > 128 * 1024);
   const result = await decodeResult(input, 0, contract);
   assert.deepEqual(result.metadata.boxes, data.boxes);
+});
+
+const walkContract = {...contract, model: "yolo26n-walk", classes: 87, names: walkManifest.names,
+  source_sha256: walkManifest.source_sha256};
+
+/** Functionality: Admit the opt-in walk model, its neutral pedestrian-light box and lowered class thresholds.
+ * Inputs: walk hello and results with a merged signal and a 0.12 traffic light. Outputs: decoded boxes.
+ * Logic: thresholds come from the result's declared class_confidence_thresholds (never above 0.25).
+ * Constraints: synthetic protocol fixtures; no colour accuracy is established here. */
+test("walk model admits 87 classes, pedestrian-light state and declared lower thresholds", async function testWalkModel() {
+  const value = await admitted(fixture(), walkContract);
+  assert.deepEqual(value.state.errors, []);
+  const signal = {class_id: 84, label: "pedestrian light", score: 0.07, xyxy: [1, 1, 3, 8],
+    light_state: "red", light_scores: {red: 0.07, green: 0, off: 0}};
+  const light = {class_id: 9, label: "traffic light", score: 0.13, xyxy: [4, 1, 6, 8]};
+  const pole = {class_id: 80, label: "pole", score: 0.6, xyxy: [7, 0, 9, 9]};
+  const thresholds = {"traffic light": 0.12, ped_red: 0.05, ped_green: 0.05, ped_off: 0.05, "pedestrian light": 0.05};
+  const result = await decodeResult(packet(0, {model: "yolo26n-walk", classes: 87, source_sha256: walkManifest.source_sha256,
+    class_confidence_thresholds: thresholds, count: 3, boxes: [signal, light, pole]}), 0, walkContract);
+  assert.deepEqual(result.metadata.boxes.map(box => box.label), ["pedestrian light", "traffic light", "pole"]);
+  // The COCO model keeps working with its own declared traffic-light threshold.
+  const coco = await decodeResult(packet(0, {class_confidence_thresholds: {"traffic light": 0.12}, count: 1,
+    boxes: [light]}), 0, contract);
+  assert.equal(coco.metadata.boxes[0].score, 0.13);
+});
+
+/** Functionality: Reject forged model identity, signal labels outside the walk model and threshold abuse.
+ * Inputs: corrupted hello/result fixtures. Outputs: errors before display.
+ * Logic: one boundary per case. Constraints: no fallback to the COCO identity. */
+test("walk model rejects forged identities, labels and thresholds", async function testWalkModelFailures() {
+  const forged = fixture();
+  const connected = forged.client.connect();
+  forged.socket.message(JSON.stringify({...walkContract, names: manifest.names}));
+  await assert.rejects(connected);
+  const walkResult = {model: "yolo26n-walk", classes: 87, source_sha256: walkManifest.source_sha256};
+  const signal = {class_id: 84, label: "pedestrian light", score: 0.07, xyxy: [1, 1, 3, 8], light_state: "red"};
+  const cases = [
+    [contract, {class_confidence_thresholds: {"pedestrian light": 0.05}, count: 1, boxes: [signal]}],
+    [walkContract, {...walkResult, count: 1, boxes: [signal]}],
+    [walkContract, {...walkResult, class_confidence_thresholds: {"pedestrian light": 0.05}, count: 1,
+      boxes: [{...signal, light_state: "amber"}]}],
+    [walkContract, {...walkResult, class_confidence_thresholds: {"traffic light": 0.5}, count: 0, boxes: []}],
+    [walkContract, {...walkResult, count: 1, boxes: [{class_id: 87, label: "x", score: 0.9, xyxy: [0, 0, 1, 1]}]}],
+    [walkContract, {count: 0, boxes: []}],
+    [walkContract, {...walkResult, class_confidence_thresholds: {"pedestrian light": 0.05}, count: 1,
+      boxes: [{...signal, class_id: 85}]}],
+    [walkContract, {...walkResult, count: 1, boxes: [{class_id: 85, label: "ped_green", score: 0.9, xyxy: [1, 1, 3, 8]}]}],
+  ];
+  for (const [selected, overrides] of cases)
+    await assert.rejects(decodeResult(packet(0, overrides), 0, selected));
 });

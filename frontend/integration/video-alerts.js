@@ -4,7 +4,8 @@
  * Related Modules: video-mvp.js, guidance.js, catalog.js; backend/realtime/risk.py;
  * tests/integration-video-alerts.test.mjs.
  * Declaration Index: usableTtc; usableDistance; selectVideoAlert; isFastApproaching; locationText; videoAlertText.
- * Variable Index: DIRECTIONS contains camera-relative positions; ZH_LABELS translates the model's 80 class labels;
+ * Variable Index: DIRECTIONS contains camera-relative positions; ZH_LABELS translates the 80 COCO labels plus the
+ * walk model's obstacle and pedestrian-light labels;
  * PREFIXES contains existing grade words. No algorithm thresholds, scores, voice settings or cooldowns change.
  */
 import {languageOf} from "./catalog.js";
@@ -33,6 +34,8 @@ const ZH_LABELS = {
   mouse: "鼠标", remote: "遥控器", keyboard: "键盘", "cell phone": "手机", microwave: "微波炉", oven: "烤箱",
   toaster: "烤面包机", sink: "水槽", refrigerator: "冰箱", book: "书", clock: "时钟", vase: "花瓶",
   scissors: "剪刀", "teddy bear": "泰迪熊玩偶", "hair drier": "吹风机", toothbrush: "牙刷",
+  // Walking-aid model (yolo26n-walk) obstacles and its merged pedestrian-signal label.
+  pole: "柱子", bollard: "护栏柱", traffic_cone: "锥桶", stairs: "台阶", "pedestrian light": "人行信号灯",
 };
 const PREFIXES = {
   medium: ["注意", "Caution. "],

@@ -7,7 +7,7 @@
  * alertBox; fixture; fixture.frame; testServerGate; testPriority; testTtcOrdering; testUnknownTtcOrdering;
  * testDistanceTrackTies; testInvalidDistance; testNoMutation; testExactText; testDirections; testMediumDirections;
  * testNumericIndependence; testConfirmedFastApproach; testUnconfirmedMotion; testModelClassContract;
- * testObjectCategories; testUmbrellaCategory; testFutureCategory;
+ * testObjectCategories; testUmbrellaCategory; testFutureCategory; testWalkModelCategories;
  * testCriticalUserExample; testMediumUserExample; testMediumFastAttention; testUnknownDirectionMotion;
  * testEnglishVideoSpeech; testVideoInjection; testStartCooldown; testOwnUpgrade; testManualOwnership;
  * testNoAlertSpeech; testStaleFrames; testQueuedSourceExpiry; testStartedNoAlertCompletion; testStartedExpiryCompletion;
@@ -624,4 +624,15 @@ test("video stop EOF and error clear owned alerts and reject late frames", funct
     assert.equal(f.manager.history.size, 0); assert.equal(f.clock.timers.size, 0);
     f.frame(); f.clock.advance(10000); assert.equal(f.speech.requests.length, 1); f.manager.dispose();
   }
+});
+
+/** Functionality: Speak the walk model's obstacle labels and its neutral pedestrian-light label.
+ * Inputs: the four walk-model obstacle classes plus the merged signal label. Outputs: reviewed Chinese, verbatim English.
+ * Logic: colour classes (ped_red/ped_green/ped_off) never reach speech; the backend merges them into "pedestrian light".
+ * Constraints: no light-colour announcement is added here. */
+test("walk-model obstacles and the merged pedestrian light have reviewed speech", function testWalkModelCategories() {
+  const expected = {pole: "柱子", bollard: "护栏柱", traffic_cone: "锥桶", stairs: "台阶", "pedestrian light": "人行信号灯"};
+  for (const [label, zh] of Object.entries(expected))
+    assert.equal(videoAlertText(alertBox({label}), "zh-CN"), `警告，前方有${zh}靠近。`);
+  assert.equal(videoAlertText(alertBox({label: "traffic_cone"}), "en-US"), "Warning. Traffic_cone ahead is approaching.");
 });

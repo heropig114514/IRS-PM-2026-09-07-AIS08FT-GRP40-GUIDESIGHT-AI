@@ -2,11 +2,15 @@
 Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels.
 Related Modules: realtime.detector/depth/tracking/risk; zerogpu.live_worker; realtime.protocol.
 Declaration Index: DetectionError; DetectionError.__init__; decode_frame; letterbox; decode_boxes;
-roi_crop; merge_boxes; mark_front_light; label_font; annotate.
+roi_crop; merge_boxes; box_iou; pedestrian_lights; mark_front_light; label_font; annotate.
 Variable Index: INPUT_EDGE —640 model tensor edge; MAX_INPUT_EDGE —1280 accepted frame edge;
-CONFIDENCE_THRESHOLD —0.25 default; CLASS_CONF —per-class override (traffic light 0.12);
+CONFIDENCE_THRESHOLD —0.25 default; CLASS_CONF —per-class override (traffic light 0.12); the walk
+model adds its colour-class thresholds per detector (core.detection_model.light_rule);
 ROI_X_FRACTION/ROI_Y_FRACTION —centre-top crop for the extra traffic-light pass;
-MERGE_IOU —0.5; TRAFFIC_LIGHT —class label; JPEG_QUALITY —80; MAX_FRAME_BYTES —1MiB.
+MERGE_IOU —0.5; TRAFFIC_LIGHT —class label; PEDESTRIAN_LIGHT —merged walk-model light label;
+LIGHT_LABELS —every signal label admitted from the ROI pass and to front-light marking;
+LIGHT_GROUP_IOU —0.3 overlap that joins colour boxes of one lamp;
+JPEG_QUALITY —80; MAX_FRAME_BYTES —1MiB.
 No CPU model, allocator, singleton or hidden fallback is implemented here.
 ttc/ttc_label — concise high/critical annotation text; no scoring rules live in rendering.
 """
@@ -20,6 +24,9 @@ MAX_INPUT_EDGE = 1280
 CONFIDENCE_THRESHOLD = 0.25
 CLASS_CONF = {"traffic light": 0.12}
 TRAFFIC_LIGHT = "traffic light"
+PEDESTRIAN_LIGHT = "pedestrian light"
+LIGHT_LABELS = frozenset({TRAFFIC_LIGHT, PEDESTRIAN_LIGHT, "ped_red", "ped_green", "ped_off"})
+LIGHT_GROUP_IOU = 0.3
 # Extra ROI pass: horizontal middle 40% (0.3-0.7 of width), vertical top 55% (0-0.55 of height).
 ROI_X_FRACTION = (0.3, 0.7)
 ROI_Y_FRACTION = (0.0, 0.55)
@@ -162,21 +169,21 @@ def roi_crop(image):
 
 
 def merge_boxes(full_boxes, roi_boxes, iou=MERGE_IOU):
-    """Functionality: Merge full-frame boxes with ROI traffic-light boxes.
+    """Functionality: Merge full-frame boxes with ROI signal boxes.
     Inputs: full-frame boxes and ROI boxes (already in full-frame coordinates), NMS IoU.
-    Outputs: new list; only traffic lights from roi_boxes are admitted.
-    Logic: NMS runs on traffic lights only; other full-frame boxes are returned untouched in
-    order, followed by the surviving lights (descending score).
+    Outputs: new list; only LIGHT_LABELS boxes from roi_boxes are admitted.
+    Logic: class-aware NMS runs on signal boxes only; other full-frame boxes are returned untouched
+    in order, followed by the surviving signals (descending score).
     Constraints: needs torch/torchvision (GPU host); empty ROI returns full_boxes unchanged.
     """
-    roi_lights = [box for box in roi_boxes if box["label"] == TRAFFIC_LIGHT]
+    roi_lights = [box for box in roi_boxes if box["label"] in LIGHT_LABELS]
     if not roi_lights:
         return full_boxes
     import torch
     from torchvision.ops import batched_nms
 
-    others = [box for box in full_boxes if box["label"] != TRAFFIC_LIGHT]
-    lights = [*(box for box in full_boxes if box["label"] == TRAFFIC_LIGHT), *roi_lights]
+    others = [box for box in full_boxes if box["label"] not in LIGHT_LABELS]
+    lights = [*(box for box in full_boxes if box["label"] in LIGHT_LABELS), *roi_lights]
     kept = batched_nms(
         torch.tensor([box["xyxy"] for box in lights], dtype=torch.float32),
         torch.tensor([box["score"] for box in lights], dtype=torch.float32),
@@ -184,22 +191,74 @@ def merge_boxes(full_boxes, roi_boxes, iou=MERGE_IOU):
     return [*others, *(lights[index] for index in kept.tolist())]
 
 
+def box_iou(a, b):
+    """Functionality: Intersection over union of two xyxy boxes.
+    Inputs: two [x1, y1, x2, y2] lists. Outputs: float in [0, 1].
+    Logic: clipped intersection area over union area. Constraints: zero-area pairs give 0.
+    """
+    inter = (max(0.0, min(a[2], b[2]) - max(a[0], b[0])) *
+             max(0.0, min(a[3], b[3]) - max(a[1], b[1])))
+    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
+    return inter / union if union > 0 else 0.0
+
+
+def pedestrian_lights(boxes, rule):
+    """Functionality: Turn walk-model colour boxes into one neutral light box with a safe state.
+    Inputs: decoded boxes and core.detection_model.light_rule output (None = original model).
+    Outputs: new list; colour boxes are replaced by `pedestrian light` boxes carrying light_state
+    ("green" / "red" / "unknown") and light_scores {red, green, off}; other boxes are untouched.
+    Logic: colour boxes (by descending score) join the first group overlapping >= LIGHT_GROUP_IOU;
+    per group: green only if max green score >= green_threshold and > max red score, else red if
+    any red box, else unknown (the rule calibrated on ImVisible, see WALK-MODEL.md). The kept
+    geometry/score is the group's highest-score box; class_id is the rule's stable red id.
+    Constraints: class names never carry the colour downstream, so no consumer can announce green
+    without the threshold; no rule leaves boxes unchanged.
+    """
+    if rule is None:
+        return boxes
+    red, green, off = rule["classes"]
+    colour = sorted((box for box in boxes if box["label"] in rule["classes"]),
+                    key=lambda box: box["score"], reverse=True)
+    groups = []
+    for box in colour:
+        for group in groups:
+            if box_iou(group[0]["xyxy"], box["xyxy"]) >= LIGHT_GROUP_IOU:
+                group.append(box)
+                break
+        else:
+            groups.append([box])
+    merged = []
+    for group in groups:
+        scores = {name: max((box["score"] for box in group if box["label"] == name), default=0.0)
+                  for name in (red, green, off)}
+        state = ("green" if scores[green] >= rule["green_threshold"] and scores[green] > scores[red]
+                 else "red" if scores[red] > 0 else "unknown")
+        merged.append({**group[0], "label": PEDESTRIAN_LIGHT, "class_id": rule["class_id"],
+                       "light_state": state,
+                       "light_scores": {"red": scores[red], "green": scores[green],
+                                        "off": scores[off]}})
+    return [*(box for box in boxes if box["label"] not in rule["classes"]), *merged]
+
+
 def mark_front_light(boxes, image_size):
-    """Functionality: Flag the pedestrian signal straight ahead among traffic-light boxes.
-    Inputs: boxes (xyxy in frame pixels), (width,height). Outputs: new list; traffic lights get
+    """Functionality: Flag the pedestrian signal straight ahead among signal boxes.
+    Inputs: boxes (xyxy in frame pixels), (width,height). Outputs: new list; LIGHT_LABELS boxes get
     front_light True for the chosen one and False for the rest; other classes are untouched.
-    Logic: candidates are vertical (h > w); choose the smallest |box centre x - frame centre x|.
+    Logic: candidates are vertical (h > w); walk-model `pedestrian light` boxes are preferred over
+    generic traffic lights when any exists; choose the smallest |box centre x - frame centre x|.
     Constraints: nothing is deleted; with no vertical candidate every light is False.
     """
     def vertical(box):
         x1, y1, x2, y2 = box["xyxy"]
-        return box["label"] == TRAFFIC_LIGHT and (y2 - y1) > (x2 - x1)
+        return box["label"] in LIGHT_LABELS and (y2 - y1) > (x2 - x1)
 
     candidates = [index for index, box in enumerate(boxes) if vertical(box)]
+    pedestrian = [index for index in candidates if boxes[index]["label"] == PEDESTRIAN_LIGHT]
+    candidates = pedestrian or candidates
     chosen = min(candidates, key=lambda index: abs(
         (boxes[index]["xyxy"][0] + boxes[index]["xyxy"][2]) / 2 - image_size[0] / 2),
         default=None)
-    return [{**box, "front_light": index == chosen} if box["label"] == TRAFFIC_LIGHT else box
+    return [{**box, "front_light": index == chosen} if box["label"] in LIGHT_LABELS else box
             for index, box in enumerate(boxes)]
 
 
@@ -217,7 +276,8 @@ def label_font():
 def annotate(image, boxes):
     """Functionality: Draw boxes, optional depth/motion and meaningful risk into JPEG.
     Inputs: RGB image and validated boxes; Outputs: encoded JPEG bytes or 502 size error.
-    Logic: preserve previous labels when ID/depth unavailable; otherwise add ID/motion and
+    Logic: preserve previous labels when ID/depth unavailable (pedestrian lights add their state);
+    otherwise add ID/motion and
     finite signed m/s for a known motion state (unknown omits speed);
     high/critical labels replace confidence/speed with concise TTC/level; other labels stay normal;
     draw two-pixel outlines and readable backed labels, encode at explicit quality 80.
@@ -232,6 +292,8 @@ def annotate(image, boxes):
         x1, y1, x2, y2 = box["xyxy"]
         draw.rectangle((x1, y1, x2, y2), outline=(0, 255, 140), width=2)
         label = f"{box['label']} {box['score']:.2f}"
+        if "light_state" in box:
+            label = f"{box['label']} {box['light_state']} {box['score']:.2f}"
         if "distance_m" in box:
             distance = box["distance_m"]
             label += f" | {distance:.1f} m" if distance is not None else " | N/A"
