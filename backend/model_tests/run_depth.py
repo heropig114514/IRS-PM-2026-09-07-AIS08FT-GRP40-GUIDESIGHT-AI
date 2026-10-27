@@ -17,6 +17,8 @@ import sys
 import time
 from pathlib import Path
 
+from core.detection_model import model_files
+
 TEST_ROOT = Path(__file__).resolve().parent
 ROOT = TEST_ROOT.parent
 IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".bmp", ".webp"})
@@ -245,8 +247,9 @@ def main(argv=None):
     parser.add_argument("--input", type=Path, default=TEST_ROOT / "samples/bus.jpg",
                         help="Image or directory; default: bundled official bus image")
     parser.add_argument("--output", type=Path, required=True, help="New output directory")
-    parser.add_argument("--weights", type=Path, default=ROOT / "models/yolo26n.pt")
-    parser.add_argument("--manifest", type=Path, default=ROOT / "models/yolo26n.json")
+    # Defaults follow PRS_DETECTION_MODEL (COCO yolo26n unless the walk model is selected).
+    parser.add_argument("--weights", type=Path, default=model_files()[0])
+    parser.add_argument("--manifest", type=Path, default=model_files()[1])
     parser.add_argument("--depth-weights", type=Path, default=ROOT / "models/yolo26n-depth.pt")
     parser.add_argument("--distance-config", type=Path, help="Distance JSON profile")
     parser.add_argument("--distance-mode", choices=DISTANCE_MODES,

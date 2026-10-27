@@ -21,6 +21,7 @@ from ipaddress import ip_address
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from core.detection_model import PROFILES, model_files, validate_manifest
 from core.detector import MAX_FRAME_BYTES
 from realtime.distance_config import DISTANCE_MODES
 
@@ -84,25 +85,15 @@ def unpack_request(packet, expected_index, previous_timestamp=None):
 
 def read_manifest(path=None):
     """Functionality: Read detector identity without loading Torch or executing GPU work.
-    Inputs: optional explicit manifest Path. Outputs: validated original model manifest.
-    Logic: require model/class/hash/build fields. Constraints: identity is not COCO qualification.
+    Inputs: optional explicit manifest Path (default: PRS_DETECTION_MODEL's profile).
+    Outputs: validated manifest of an admitted model (COCO yolo26n or the walk model).
+    Logic: core.detection_model.validate_manifest checks model/class count/hash/build fields.
+    Constraints: identity is not COCO qualification; unknown models fail closed.
     """
     try:
-        manifest = json.loads(
-            (ROOT / "models/yolo26n.json" if path is None else path).read_text(encoding="utf-8")
-        )
-        names = manifest.get("names")
-        if (
-            manifest.get("model") != "yolo26n"
-            or not isinstance(names, list)
-            or len(names) != 80
-            or any(not isinstance(name, str) or not name for name in names)
-            or not HASH_PATTERN.fullmatch(manifest.get("source_sha256", ""))
-            or not isinstance(manifest.get("build", {}).get("ultralytics"), str)
-        ):
-            raise ValueError("Invalid manifest")
-        return manifest
-    except (OSError, ValueError, TypeError, AttributeError):
+        manifest_path = model_files()[1] if path is None else path
+        return validate_manifest(json.loads(manifest_path.read_text(encoding="utf-8")))
+    except (OSError, ValueError, TypeError, AttributeError, KeyError):
         raise IntegrationError(
             "local_manifest_invalid", "The local detection-model manifest is missing or invalid."
         ) from None
@@ -136,11 +127,11 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
         "provider": "local",
         "protocol_version": 2,
         "session_id": session_id,
-        "model": "yolo26n",
+        "model": manifest.get("model", "yolo26n"),
         "precision": "FP32",
         "backend": "PyTorch resident CUDA",
         "output_precision": "FP32",
-        "classes": 80,
+        "classes": PROFILES.get(manifest.get("model", "yolo26n"), (0, 0, 0))[2],
         "source_sha256": manifest["source_sha256"],
         "names": manifest["names"],
         "confidence_threshold": 0.25,
@@ -183,7 +174,8 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
 def validate_contract(message):
     """Functionality: Admit only the local native FP32 timestamped pipeline.
     Inputs: provider hello. Outputs: same dictionary or safe error.
-    Logic: compare fixed fields and check session/class/hash identity.
+    Logic: compare fixed fields and check session/class/hash identity; the model must be an
+    admitted profile whose class count matches its names.
     Constraints: every supported mode has an explicit distance identity; no accepting HF
     validation, alternative precision, or missing tracking/risk.
     """
@@ -193,7 +185,9 @@ def validate_contract(message):
         )
     names = message.get("names")
     mode = message.get("distance_mode")
-    expected = model_contract("fixture", {"names": [], "source_sha256": ""},
+    model = message.get("model")
+    expected = model_contract("fixture", {"model": model if model in PROFILES else "yolo26n",
+                                          "names": [], "source_sha256": ""},
                               distance_mode=mode, depth_interval=message.get("depth_interval")
                               if mode == "temporal_depth" else 3,
                               session_seconds=local_session_seconds())
@@ -201,8 +195,9 @@ def validate_contract(message):
     if (
         any(message.get(key) != expected[key] for key in fixed)
         or not re.fullmatch(r"[0-9a-f]{32}", message.get("session_id", ""))
+        or model not in PROFILES
         or not isinstance(names, list)
-        or len(names) != 80
+        or len(names) != PROFILES[model][2]
         or any(not isinstance(name, str) or not name for name in names)
         or not HASH_PATTERN.fullmatch(message.get("source_sha256", ""))
         or type(message.get("loaded")) is not bool

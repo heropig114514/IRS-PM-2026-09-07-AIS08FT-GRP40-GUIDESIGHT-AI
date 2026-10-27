@@ -13,6 +13,7 @@
  * LiveDetectionClient.end; LiveDetectionClient.stop.
  * Variable Index: MAX_INFLIGHT — twelve; MAX_METADATA_BYTES/MAX_PACKET_BYTES — fused wire bounds;
  * COLD_MS/STEADY_MS —55s/10s failure budgets, not latency targets; HASH_PATTERN — SHA256 syntax.
+ * MODEL_CLASSES — admitted model names (COCO yolo26n, walking-aid yolo26n-walk) and class counts.
  * Metadata limit is256KiB for300 fused/tracked objects retaining the existing box fields.
  * MOTION_STATES — accepted relative-motion labels; optional tracking fields remain additive.
  * RISK_LEVELS/DIRECTIONS — additive rule-result vocabularies; rule weights stay on the server.
@@ -31,6 +32,8 @@ const MAX_PACKET_BYTES = 8 + MAX_METADATA_BYTES + MAX_FRAME_BYTES;
 const COLD_MS = 55000;
 const STEADY_MS = 10000;
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
+// Admitted detection models and their class counts (backend core.detection_model.PROFILES).
+const MODEL_CLASSES = Object.freeze({"yolo26n": 80, "yolo26n-walk": 87});
 const MOTION_STATES = new Set(["unknown", "approaching", "moving_away", "stationary"]);
 const RISK_LEVELS = new Set(["unknown", "low", "medium", "high", "critical"]);
 const DIRECTIONS = new Set(["front", "front_left", "front_right", "left", "right", "behind", "unknown"]);
@@ -60,13 +63,14 @@ async function sha256(buffer) {
 function validateSession(message, provider, localSessionSeconds) {
   const validation = message?.validation;
   const sessionSeconds = provider === "local" ? localSessionSeconds : 55;
-  if (!message || message.kind !== "session" || message.model !== "yolo26n" ||
+  const classes = Object.hasOwn(MODEL_CLASSES, message?.model) ? MODEL_CLASSES[message.model] : null;
+  if (!message || message.kind !== "session" || classes === null ||
       !["FP32", "FP16", "BF16"].includes(message.precision) || message.output_precision !== "FP32" ||
       !["PyTorch resident CUDA", "PyTorch AOT CUDA", "PyTorch compiled CUDA"].includes(message.backend) ||
-      message.classes !== 80 || message.confidence_threshold !== 0.25 ||
+      message.classes !== classes || message.confidence_threshold !== 0.25 ||
       message.max_edge !== 640 || message.jpeg_quality !== 0.8 || message.max_inflight !== MAX_INFLIGHT ||
       message.session_seconds !== sessionSeconds || message.cold_seconds !== 55 || message.steady_seconds !== 10 ||
-      !HASH_PATTERN.test(message.source_sha256) || !Array.isArray(message.names) || message.names.length !== 80 ||
+      !HASH_PATTERN.test(message.source_sha256) || !Array.isArray(message.names) || message.names.length !== classes ||
       Object.hasOwn(message, "capability") || Object.hasOwn(message, "token"))
     throw new Error("视频会话配置无效，请检查服务端。");
   if (provider === "local") {
@@ -122,10 +126,10 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
   try { metadata = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(new Uint8Array(packet, 8, length))); }
   catch { throw new Error("视频结果元数据无效。"); }
   if (!metadata || metadata.schema_version !== 1 || metadata.index !== expected ||
-      !Number.isInteger(metadata.index) || metadata.model !== "yolo26n" ||
+      !Number.isInteger(metadata.index) || metadata.model !== contract.model ||
       metadata.backend !== contract.backend || metadata.precision !== contract.precision ||
       metadata.output_precision !== "FP32" ||
-      metadata.classes !== 80 || metadata.confidence_threshold !== 0.25 ||
+      metadata.classes !== contract.classes || metadata.confidence_threshold !== 0.25 ||
       metadata.source_sha256 !== contract.source_sha256 || !HASH_PATTERN.test(metadata.raw_sha256) ||
       !HASH_PATTERN.test(metadata.jpeg_sha256) || !Number.isInteger(metadata.count) ||
       metadata.count < 0 || metadata.count > 300 || !Array.isArray(metadata.boxes) || metadata.boxes.length !== metadata.count ||
@@ -180,9 +184,24 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
        !Number.isFinite(metadata.risk_ms) || metadata.risk_ms < 0)) ||
       (!hasRisk && Object.hasOwn(metadata, "risk_ms")))
     throw new Error("视频风险规则或耗时无效。");
+  // Per-class thresholds may only LOWER the 0.25 default (e.g. traffic light 0.12, walk-model signals 0.05).
+  const overrides = metadata.class_confidence_thresholds ?? {};
+  if (typeof overrides !== "object" || Array.isArray(overrides) ||
+      !Object.values(overrides).every(value => Number.isFinite(value) && value > 0 && value <= 0.25))
+    throw new Error("视频检测阈值无效。");
+  // The walk model merges colour boxes into one neutral "pedestrian light" (class id of ped_red) carrying
+  // light_state; raw colour labels must never reach display or speech.
+  const walk = contract.model === "yolo26n-walk";
+  const signalId = walk ? contract.names.indexOf("ped_red") : -1;
   for (const box of metadata.boxes) {
-    if (!box || !Number.isInteger(box.class_id) || box.class_id < 0 || box.class_id >= 80 ||
-        box.label !== contract.names[box.class_id] || !Number.isFinite(box.score) || box.score < 0.25 || box.score > 1 ||
+    const signal = walk && box?.label === "pedestrian light" && box.class_id === signalId &&
+      ["red", "green", "unknown"].includes(box.light_state);
+    if (walk && ["ped_red", "ped_green", "ped_off"].includes(box?.label))
+      throw new Error("视频检测框无效。");
+    const minScore = Object.hasOwn(overrides, box?.label) ? overrides[box.label] : 0.25;
+    if (!box || !Number.isInteger(box.class_id) || box.class_id < 0 || box.class_id >= contract.classes ||
+        (box.label !== contract.names[box.class_id] && !signal) ||
+        !Number.isFinite(box.score) || box.score < minScore || box.score > 1 ||
         !Array.isArray(box.xyxy) || box.xyxy.length !== 4)
       throw new Error("视频检测框无效。");
     const [x1, y1, x2, y2] = box.xyxy;
