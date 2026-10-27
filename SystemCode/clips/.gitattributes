@@ -1,0 +1,9 @@
+# Responsibilities: Define Git handling for source, test videos, and deployed model metadata under SystemCode/clips.
+# Implementation: Normalize text to LF, preserve videos as binary, and retain model JSON bytes with CRLF handling.
+# Related Modules: .gitignore, backend/model_tests/DATASETS.md, backend/tools/deploy_phone_live.py.
+# Declaration Index: None.
+# Variable Index: None.
+* text=auto eol=lf
+backend/model_tests/datasets/street-video/**/*.mp4 binary
+backend/models/inference-plan.json -text whitespace=cr-at-eol
+backend/models/yolo26n.json -text whitespace=cr-at-eol
