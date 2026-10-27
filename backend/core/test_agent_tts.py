@@ -5,6 +5,7 @@ Declaration Index: FakePeer; FakePeer.__init__; FakePeer.__aenter__; FakePeer.__
 FakePeer.send; FakePeer.recv; FakeConnector; FakeConnector.__call__; BlockingPeer;
 BlockingPeer.recv; AgentTtsTests; AgentTtsTests.request;
 AgentTtsTests.test_request_validation; AgentTtsTests.test_streaming_bilingual_pcm;
+AgentTtsTests.test_upstream_message_limit_covers_max_audio;
 AgentTtsTests.test_invalid_request_never_connects; AgentTtsTests.test_origin_is_required;
 AgentTtsTests.test_browser_disconnect_cancels_provider;
 AgentTtsTests.test_asgi_route_dispatches_tts.
@@ -148,6 +149,26 @@ class AgentTtsTests(SimpleTestCase):
                 with self.assertRaises(tts.AgentError):
                     tts.validate_request(value)
 
+    def test_upstream_message_limit_covers_max_audio(self):
+        """Functionality: Ensure the provider frame cap fits the maximum base64 audio event.
+        Inputs: Declared decoded-audio limit and provider event envelope. Outputs: a verified
+        relationship between encoded payload size and WebSocket maximum frame size.
+        Logic: Compute base64 length arithmetically without allocating a 20 MB fixture, then reserve
+        the independent inbound control-message bound for the JSON envelope.
+        Constraints: This validates local sizing only; it does not model WebSocket or provider I/O.
+        """
+        encoded_audio_bytes = ((tts.MAX_AUDIO_BYTES + 2) // 3) * 4
+        event_envelope_bytes = len(b'{"type":"response.audio.delta","delta":""}')
+
+        self.assertEqual(
+            tts.MAX_UPSTREAM_MESSAGE_BYTES,
+            encoded_audio_bytes + tts.MAX_MESSAGE_BYTES,
+        )
+        self.assertGreaterEqual(
+            tts.MAX_UPSTREAM_MESSAGE_BYTES,
+            encoded_audio_bytes + event_envelope_bytes,
+        )
+
     @override_settings(CAMERA_ALLOWED_ORIGINS={"http://127.0.0.1:8766"})
     async def test_streaming_bilingual_pcm(self):
         """Functionality: Verify the same-origin endpoint streams Chinese and English PCM.
@@ -188,6 +209,10 @@ class AgentTtsTests(SimpleTestCase):
                 "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"])
             self.assertEqual(connector.calls[0][1]["additional_headers"]["Authorization"],
                 "Bearer fixture-only")
+            self.assertEqual(
+                connector.calls[0][1]["max_size"], tts.MAX_UPSTREAM_MESSAGE_BYTES
+            )
+            self.assertEqual(connector.calls[0][1]["max_queue"], 1)
             self.assertEqual(peer.sent[0]["session"]["language_type"], language_type)
             self.assertEqual(peer.sent[0]["session"]["speech_rate"], 1.25)
             self.assertEqual(peer.sent[1]["text"], text)

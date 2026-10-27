@@ -5,8 +5,10 @@ browser disconnect.
 Related Modules: provider.configuration; config.asgi; integration.mobile; frontend/speech-output.js.
 Declaration Index: validate_request; upstream_url; upstream_session; wait_for_disconnect;
 tts_socket; send_json.
-Variable Index: MODEL/VOICE/SAMPLE_RATE fix the synthesis contract; MAX_TEXT_LENGTH/MAX_AUDIO_BYTES
-bound user input and forwarded output; REGIONAL_URLS maps the existing provider region to WSS;
+Variable Index: MODEL/VOICE/SAMPLE_RATE fix the synthesis contract;
+MAX_TEXT_LENGTH/MAX_MESSAGE_BYTES bound browser input;
+MAX_AUDIO_BYTES/MAX_UPSTREAM_MESSAGE_BYTES bound decoded audio and its base64 provider event;
+REGIONAL_URLS maps the existing provider region to WSS;
 logger records request IDs, lifecycle stages and exception types without text, audio or credentials.
 """
 
@@ -30,6 +32,8 @@ SAMPLE_RATE = 24000
 MAX_TEXT_LENGTH = 1000
 MAX_MESSAGE_BYTES = 8192
 MAX_AUDIO_BYTES = 20_000_000
+# Qwen sends audio as base64 inside one JSON event; allow that encoding plus the bounded envelope.
+MAX_UPSTREAM_MESSAGE_BYTES = ((MAX_AUDIO_BYTES + 2) // 3) * 4 + MAX_MESSAGE_BYTES
 REQUEST_TIMEOUT_SECONDS = 45
 REGIONAL_URLS = {
     "https://dashscope.aliyuncs.com/compatible-mode/v1":
@@ -127,8 +131,9 @@ async def upstream_session(request, config, send, *, opener=connect):
     Outputs: First-audio metadata, binary PCM chunks and one completion/error message.
     Logic: Await created/updated acknowledgements, append/commit one complete text, forward each
     decoded audio delta immediately, then stop at response.done; WebSocket closure cancels upstream.
-    Constraints: One model call, a 45-second deadline and 20 MB output cap; provider diagnostics,
-    text, binary audio and keys do not enter application logs or browser errors.
+    Constraints: One model call, a 45-second deadline, a 20 MB decoded-output cap and an upstream
+    frame bound sized for the base64 representation of that output; provider diagnostics, text,
+    binary audio and keys do not enter application logs or browser errors.
     """
     url = upstream_url(config)
     sent = 0
@@ -143,8 +148,8 @@ async def upstream_session(request, config, send, *, opener=connect):
                 proxy=None,
                 open_timeout=10,
                 close_timeout=3,
-                max_size=MAX_MESSAGE_BYTES,
-                max_queue=4,
+                max_size=MAX_UPSTREAM_MESSAGE_BYTES,
+                max_queue=1,
                 ping_interval=None,
             ) as peer:
                 stage = "session_created"
