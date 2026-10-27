@@ -14,7 +14,8 @@ Variable Index: logger; conversations — bounded process-local registry;
 REASON_CODES/REASON_ALIASES — accepted failure categories and browser aliases;
 DIAGNOSTIC_CODES — safe service failure codes preserved for model analysis;
 READ_ONLY_TOOLS — calls that cannot dispatch mutations;
-MAX_TURNS/MAX_CALLS/MAX_TOOLS/TURN_SECONDS/TTL_SECONDS/MAX_CONVERSATIONS — explicit limits.
+MAX_TURNS/MAX_CALLS/MAX_TOOLS/TURN_SECONDS/TTL_SECONDS/MAX_CONVERSATIONS — turn bounds,
+cleanup lifetime and the 64-session in-memory capacity.
 """
 
 import asyncio
@@ -35,7 +36,7 @@ from .tools import create_server
 
 logger = logging.getLogger(__name__)
 MAX_TURNS, MAX_CALLS, MAX_TOOLS = 8, 12, 30
-TURN_SECONDS, TTL_SECONDS, MAX_CONVERSATIONS = 180, 1800, 16
+TURN_SECONDS, TTL_SECONDS, MAX_CONVERSATIONS = 180, 1800, 64
 conversations = {}
 REASON_CODES = {
     "route_required", "permission_denied", "position_unavailable", "position_timeout",

@@ -17,6 +17,7 @@ AgentTests.test_geocoder_contract; AgentTests.test_start_observes_actual_state;
 AgentTests.test_skill_reference_context; AgentTests.test_geocoder_country_override;
 AgentTests.test_geocoder_contract.handler; AgentTests.test_geocoder_rejects_unknown_country;
 AgentTests.test_cancel_before_start; AgentTests.test_socket_binding_and_heartbeat;
+AgentTests.test_socket_enforces_explicit_idle_session_capacity;
 AgentTests.test_socket_rejects_wrong_owner;
 tool_message; wav_input.
 Variable Index: None; test fixtures are call-local and never access physical devices/services.
@@ -729,6 +730,77 @@ class AgentTests(SimpleTestCase):
                 )
                 await connection.send_input({"type": "websocket.disconnect"})
                 await connection.wait()
+
+    async def test_socket_enforces_explicit_idle_session_capacity(self):
+        """Functionality: Admit retained sessions to the configured limit and reject overflow.
+        Inputs: Sixty-five distinct authenticated ASGI tabs, disconnected between admissions.
+        Outputs: Sixty-four ready sessions then one typed capacity rejection; Logic: mirror the
+        30-minute idle retention boundary without removing sessions to make room.
+        Constraints: Control ownership is mocked; no provider, proxy or external network is used.
+        """
+        tokens = {f"capacity-tab-{index}": str(uuid.uuid4()) for index in range(65)}
+        scope = {
+            "type": "websocket",
+            "path": "/ws/agent/",
+            "headers": [(b"origin", b"http://127.0.0.1:8766"), (b"host", b"127.0.0.1:8766")],
+        }
+        with patch.dict(conversations, {}, clear=True):
+            with patch(
+                "core.agent.transport.hub.command",
+                AsyncMock(side_effect=lambda session_id, _command: {"token": tokens[session_id]}),
+            ):
+                for session_id, token in list(tokens.items())[:64]:
+                    connection = ApplicationCommunicator(agent_socket, scope)
+                    await connection.send_input({"type": "websocket.connect"})
+                    self.assertEqual(
+                        (await connection.receive_output())["type"], "websocket.accept"
+                    )
+                    await connection.send_input(
+                        {
+                            "type": "websocket.receive",
+                            "text": json.dumps(
+                                {"type": "hello", "session_id": session_id, "token": token}
+                            ),
+                        }
+                    )
+                    ready = json.loads((await connection.receive_output())["text"])
+                    self.assertEqual(ready, {"type": "ready", "busy": False, "events": []})
+                    await connection.send_input({"type": "websocket.disconnect"})
+                    await connection.wait()
+                self.assertEqual(len(conversations), 64)
+                overflow_session = "capacity-tab-64"
+                connection = ApplicationCommunicator(agent_socket, scope)
+                await connection.send_input({"type": "websocket.connect"})
+                self.assertEqual((await connection.receive_output())["type"], "websocket.accept")
+                with self.assertLogs("core.agent.transport", level="WARNING") as captured:
+                    await connection.send_input(
+                        {
+                            "type": "websocket.receive",
+                            "text": json.dumps(
+                                {
+                                    "type": "hello",
+                                    "session_id": overflow_session,
+                                    "token": tokens[overflow_session],
+                                }
+                            ),
+                        }
+                    )
+                    rejected = json.loads((await connection.receive_output())["text"])
+                self.assertEqual(
+                    rejected,
+                    {
+                        "type": "rejected",
+                        "code": "agent_capacity",
+                        "detail": (
+                            "The assistant session capacity is currently reached. "
+                            "Refresh the page later."
+                        ),
+                    },
+                )
+                self.assertIn("retained=64 limit=64", captured.output[0])
+                self.assertEqual((await connection.receive_output())["type"], "websocket.close")
+                await connection.wait()
+                self.assertEqual(len(conversations), 64)
 
     async def test_socket_rejects_wrong_owner(self):
         """Functionality: Refuse forged origin and mismatched tab token.

@@ -16,7 +16,8 @@
  * panel — singleton; AgentPanel.productMode selects the formal press-to-talk interaction;
  * holdActive/holdToken/activePointerId isolate the active pointer or keyboard press from stale events;
  * prs-agent-reply notifies speech integration for live replies only, never replayed history;
- * eventNotice maps non-conversational transport/runtime status by UI language.
+ * EVENT_NOTICES maps transport/runtime codes to localized, non-conversational status;
+ * eventNotice resolves the visible notice from that map.
  */
 import {VoiceInput} from "./voice-input.js";
 
@@ -71,6 +72,10 @@ const EVENT_NOTICES = {
   qwen_invalid_response: COPY.assistantUnavailable,
   qwen_empty_response: COPY.assistantUnavailable,
   agent_busy: COPY.busyNotice,
+  agent_capacity: [
+    "语音助手会话已达到服务容量，请稍后刷新页面。",
+    "The assistant session capacity is reached. Refresh the page later.",
+  ],
 };
 
 /* Functionality: Select UI language. Inputs: bilingual tuple and document language.

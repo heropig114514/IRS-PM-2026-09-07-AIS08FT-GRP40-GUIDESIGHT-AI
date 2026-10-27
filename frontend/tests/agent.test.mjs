@@ -73,6 +73,19 @@ test("agent failures render as status and never as assistant messages", t => {
   });
   assert.deepEqual(dialogue, []);
   assert.equal(status.textContent, "The assistant service is unavailable.");
+
+  document.documentElement.lang = "zh-CN";
+  AgentPanel.prototype.receive.call(owner, {
+    type: "rejected", seq: 3, code: "agent_capacity",
+    detail: "Untrusted backend text must not become dialogue or UI copy.",
+  });
+  assert.deepEqual(dialogue, []);
+  assert.equal(status.textContent, "语音助手会话已达到服务容量，请稍后刷新页面。");
+  document.documentElement.lang = "en-US";
+  AgentPanel.prototype.receive.call(owner, {
+    type: "rejected", seq: 4, code: "agent_capacity", detail: "Untrusted backend text.",
+  });
+  assert.equal(status.textContent, "The assistant session capacity is reached. Refresh the page later.");
 });
 
 /* Functionality: Notify the speech integration for live replies but never replayed history.

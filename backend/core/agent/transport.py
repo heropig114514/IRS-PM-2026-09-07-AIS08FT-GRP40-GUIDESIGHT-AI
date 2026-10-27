@@ -74,7 +74,8 @@ async def agent_socket(scope, receive, send):
     Logic: 10s hello deadline, compare secret obtained from the target tab, reconnect/replay
     on a page handoff; origin and Host must match. Session IDs alone grant no agent access.
     Constraints: No autonomous reconnect, no process sharing; disconnect does not cancel a
-    handoff's task (180s total bound). Token/audio/dialogue never appear in application logs.
+    handoff's task (180s total bound). Capacity rejection logs counts only; token/audio/dialogue
+    never appear in application logs.
     """
     conversation = queue = sender = None
     headers = dict(scope.get("headers", []))
@@ -112,7 +113,15 @@ async def agent_socket(scope, receive, send):
             raise ValueError("Conversation ownership failed")
         if conversation is None:
             if len(conversations) >= MAX_CONVERSATIONS:
-                raise AgentError("agent_capacity", "会话数量达到上限，请稍后再试。")
+                logger.warning(
+                    "Agent capacity reached retained=%d limit=%d",
+                    len(conversations),
+                    MAX_CONVERSATIONS,
+                )
+                raise AgentError(
+                    "agent_capacity",
+                    "The assistant session capacity is currently reached. Refresh the page later.",
+                )
             conversation = Conversation(session_id, token)
             conversations[session_id] = conversation
         queue = conversation.subscribe()

@@ -1,6 +1,6 @@
-/* Responsibilities: Evaluate real Qwen→MCP→browser workflows with explicit device/ORS fixtures.
+/* Responsibilities: Evaluate real Qwen→MCP→browser workflows with explicit device/ORS/media fixtures.
  * Implementation: Dedicated Chrome, actual app/ASGI/WS, natural-language requests, product camera
- * user-gesture gating, automatic backend reply speech, and UI assertions.
+ * user-gesture gating and user-started camera stop, automatic backend reply speech, and UI assertions.
  * Related Modules: backend/core/agent, agent-client/device, maps/camera controllers.
  * Declaration Index: installDevices — install explicit native-device fixtures;
  * installDevices.fix — return one synthetic NUS position; installDevices.denied — deliver a synthetic denial;
@@ -11,14 +11,15 @@
  * checkAudio — verify synthetic recorded speech stops a real product camera stream;
  * main — run live-Qwen product interaction acceptance.
  * Variable Index: agentSpeechEvidence — body-free playback and guidance request lifecycle metadata;
- * PRS_PLAYWRIGHT_PATH is required; PRS_TLS_SPKI optionally pins a verified
+ * PRS_PLAYWRIGHT_PATH/PRS_FAKE_CAMERA_VIDEO are required runtime/scene inputs;
+ * PRS_TLS_SPKI optionally pins a verified
  * deployment certificate key; args/report/context belong to main.
  * Constraints: --live-qwen explicitly authorizes paid Qwen calls. GPS/ORS/camera frames are synthetic,
  * but inference uses the actual public local-GPU relay; no deployment, physical device, real-route
  * accuracy or speaker verification. */
 import assert from "node:assert/strict";
 import {createRequire} from "node:module";
-import {mkdir, writeFile} from "node:fs/promises";
+import {mkdir, stat, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 
@@ -123,16 +124,20 @@ export async function checkAudio(page, report) {
 }
 
 /* Functionality: Run multi-turn product-page/device/UI scenarios with a real Qwen backend.
- * Inputs: URL OUTPUT --live-qwen, optional --audio=absolute WAV; Playwright package/TLS pin env.
+ * Inputs: URL OUTPUT --live-qwen, optional --audio=absolute WAV; Playwright package/Y4M scene/TLS pin env.
  * Outputs: JSON report/screenshots; Logic: assert visible state independently of model reply, verify
  * backend playback of a live assistant reply, confirm the camera user-gesture gate, and verify cleanup.
  * Constraints: Explicit synthetic device/ORS boundaries; no route handoff to legacy /live/; no retries. */
 async function main() {
   const [url, output, mode, audioArg] = process.argv.slice(2);
-  if (!url || !output || mode !== "--live-qwen" || !process.env.PRS_PLAYWRIGHT_PATH)
-    throw new Error("Supply URL OUTPUT --live-qwen and PRS_PLAYWRIGHT_PATH");
+  const cameraFile = process.env.PRS_FAKE_CAMERA_VIDEO;
+  if (!url || !output || mode !== "--live-qwen" || !process.env.PRS_PLAYWRIGHT_PATH || !cameraFile)
+    throw new Error("Supply URL OUTPUT --live-qwen and set PRS_PLAYWRIGHT_PATH/PRS_FAKE_CAMERA_VIDEO");
+  if (!cameraFile.toLowerCase().endsWith(".y4m") || !(await stat(cameraFile)).isFile())
+    throw new Error("PRS_FAKE_CAMERA_VIDEO must be an existing Y4M scene file");
   const {chromium} = createRequire(import.meta.url)(process.env.PRS_PLAYWRIGHT_PATH);
-  const args = ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"];
+  const args = ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
+    `--use-file-for-fake-video-capture=${cameraFile}`];
   if (process.env.PRS_TLS_SPKI) {
     if (!/^[A-Za-z0-9+/]{43}=$/.test(process.env.PRS_TLS_SPKI)) throw new Error("Invalid verified TLS key pin");
     args.push("--ignore-certificate-errors-spki-list=" + process.env.PRS_TLS_SPKI);
@@ -232,6 +237,20 @@ async function main() {
     });
     assert.deepEqual(beforeCameraTap, {active: false, mode: "idle"});
     report.checks.push("assistant_preserves_product_camera_user_gesture_gate");
+    /* Functionality: Test assistant stop against a camera stream started through the required direct gesture.
+     * Inputs: Current product page, synthetic Chrome camera and real public inference relay.
+     * Outputs: Active camera state followed by a tool-confirmed idle state with no retained stream.
+     * Logic: Start once through the visible control, then issue one natural-language stop request.
+     * Constraints: The captured frames are synthetic; this does not test a physical camera. */
+    await page.locator("#product-camera-start").click();
+    await page.waitForFunction(async () => {
+      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
+      return cameraApp.stream?.active && cameraApp.frameTimings;
+    }, null, {timeout: 30000});
+    assert.equal(await page.evaluate(async () => {
+      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
+      return cameraApp.stream?.active === true;
+    }), true, "Direct camera gesture must own an active stream before assistant stop");
     await ask(page, "关闭摄像头", report);
     assert.ok(report.turns.at(-1).tools.some(tool => tool.name === "camera_stop"));
     assert.deepEqual(await page.evaluate(async () => {
