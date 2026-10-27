@@ -1,9 +1,10 @@
-# Responsibilities: Run dependency, Django, media/AI-control contract, and Ruff checks for the backend and frontend.
-# Implementation: Ubuntu/Python 3.12/Node 22; tests do not use the network or download/run real models.
+# Responsibilities: Run dependency, Django, branch-coverage, protocol, and Ruff checks for backend and frontend.
+# Implementation: Ubuntu/Python 3.12/Node 22; unit tests use fixtures, not public network or downloaded models.
 # Related Modules: backend/core/tests.py/test_echo.py/test_maps.py/test_ai_control.py;
-# frontend/tests/*.test.mjs, frontend/ai-control.js。
-# Declaration Index: None。
-# Variable Index: DJANGO_SECRET_KEY — random configuration stored in GITHUB_ENV for the current job only.
+# frontend/tests/*.test.mjs, frontend/ai-control.js, backend/pyproject.toml.
+# Declaration Index: None.
+# Variable Index: DJANGO_SECRET_KEY — ephemeral CI configuration; backend coverage fails below 85%;
+# frontend coverage fails below 85% lines, 80% branches, or 80% functions.
 name: Backend checks
 
 on:
@@ -43,16 +44,18 @@ jobs:
         run: python manage.py check
       - name: Check migrations
         run: python manage.py makemigrations --check --dry-run
-      - name: Test backend
-        run: python manage.py test
+      - name: Test backend with branch coverage
+        run: python -m coverage run manage.py test
+      - name: Enforce backend code coverage
+        run: python -m coverage report
       - name: Lint backend
         run: ruff check .
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test frontend protocol
+      - name: Test frontend with code coverage gates
         working-directory: frontend
-        run: node --test tests/*.test.mjs
+        run: npm run test:coverage
       - name: Check frontend syntax
         working-directory: frontend
         run: |

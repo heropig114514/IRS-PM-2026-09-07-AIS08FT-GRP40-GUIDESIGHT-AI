@@ -3,6 +3,7 @@
  * Related Modules: ../tools/check_phone_relay_browser.mjs.
  * Declaration Index: createEvidence — construct secure synthetic stream evidence;
  * acceptsCancelledEmptySocket — preserve a valid pre-submit cancellation boundary;
+ * acceptsInterruptedStream — accept a started request with explicit cancellation;
  * rejectsMissingCompletion — fail a started request without terminal PCM metadata;
  * rejectsProviderError — fail explicit provider errors;
  * rejectsInsecureSocket — fail nonsecure transport.
@@ -29,6 +30,10 @@ function createEvidence(failure = null) {
   if (failure === "insecure_socket") sockets[0].secure = false;
   if (failure !== "no_cancelled_socket") sockets.push({secure: true, tts: []});
   const audio = submissions.map(({audio_request_id}) => ({phase: "start", request_id: audio_request_id}));
+  if (failure === "interrupted_stream") {
+    sockets[3].tts.pop();
+    audio.push({phase: "cancel", request_id: 4});
+  }
   return {sockets, audio, submissions};
 }
 
@@ -39,8 +44,19 @@ function acceptsCancelledEmptySocket() {
   const evidence = createEvidence();
   const result = verifyTtsStreamEvidence(evidence.sockets, evidence.audio, evidence.submissions);
   assert.equal(result.started_streams, 4);
-  assert.equal(result.accepted_streams, 4);
+  assert.equal(result.completed_streams, 4);
+  assert.equal(result.interrupted_streams, 0);
   assert.equal(result.cancelled_before_provider_response, 1);
+}
+
+/* Functionality: Accept an unfinished provider response only for a playback with explicit cancellation.
+ * Inputs: None. Outputs: Node test assertion. Logic: Correlate one incomplete configured stream with cancel.
+ * Constraints: The fixture makes no claim about actual service interruption policy or audible output. */
+function acceptsInterruptedStream() {
+  const evidence = createEvidence("interrupted_stream");
+  const result = verifyTtsStreamEvidence(evidence.sockets, evidence.audio, evidence.submissions);
+  assert.equal(result.completed_streams, 3);
+  assert.equal(result.interrupted_streams, 1);
 }
 
 /* Functionality: Reject a started playback whose server stream never completes.
@@ -71,6 +87,7 @@ function rejectsInsecureSocket() {
 }
 
 test("accepts a canceled secure TTS socket without submitted synthesis", acceptsCancelledEmptySocket);
+test("accepts an explicitly canceled started TTS stream", acceptsInterruptedStream);
 test("rejects a started stream without completion", rejectsMissingCompletion);
 test("rejects a provider TTS error", rejectsProviderError);
 test("rejects an insecure TTS socket", rejectsInsecureSocket);

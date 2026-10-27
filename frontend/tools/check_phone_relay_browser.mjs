@@ -20,19 +20,21 @@
  * cleanupEvidence — read released resources; waitNode — poll one bounded predicate;
  * monitorSocket — observe approved public WebSocket metadata; monitorSocket.received — retain safe server events;
  * monitorSocket.sent — retain PRF2 headers; selectSpeech — validate configured backend voice;
- * planNavigation — exercise real public ORS; startCamera — start the real local pipeline;
- * waitCameraFrames — await verified model results; waitCapacity — verify drained sessions;
+ * planNavigation — exercise real public ORS; startCamera — select the configured fake scene source;
+ * waitCameraFrames — await verified model results; waitModelAlert — await a correlated real-model alert utterance;
+ * waitCapacity — verify drained sessions;
  * stopAll — release browser resources; syntheticSpeech — exercise isolated risk speech;
  * manualBilingualTts — test explicit Chinese and English backend playback;
  * run — execute public relay acceptance; main — validate CLI and write the evidence report.
  * Variable Index: PHONE_ORIGIN/PREFIX — explicitly approved deployment target; NUS — synthetic GPS,
  * not a phone measurement; report — body-free evidence without credentials, pixels or positions;
- * ttsSubmissions — request-ID correlation metadata without utterance text.
+ * ttsSubmissions — request-ID correlation metadata without utterance text;
+ * PRS_FAKE_CAMERA_VIDEO — optional caller-supplied local Y4M scene fixture; requireModelAlert — explicit strict-mode flag.
  * Constraints: Chrome with a phone viewport is not Safari/iPhone validation. Never disable TLS,
  * start services, download fixtures, use a physical camera/microphone, mock ORS/models, retry or commit.
  */
 import {createRequire} from "node:module";
-import {access, mkdir, writeFile} from "node:fs/promises";
+import {access, mkdir, stat, writeFile} from "node:fs/promises";
 import {dirname, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 
@@ -48,11 +50,14 @@ export function requireGate(condition, code) {
 
 /* Functionality: Validate the exact public HTTPS relay and new JSON report arguments.
  * Inputs: CLI URL/report pair and runtime environment. Outputs: normalized URL and report/runtime paths.
- * Logic: pin origin/mount; no userinfo/query/fragment, credential-file input or extra arguments.
- * Constraints: no implicit local target, alternate server, TLS bypass or browser installation. */
+ * Logic: pin origin/mount; no userinfo/query/fragment or credential-file input; accept only the documented
+ * optional model-alert flag.
+ * Constraints: no implicit local target, alternate server, TLS bypass or browser installation; an optional
+ * camera scene must be an existing caller-supplied Y4M file. */
 export function validateArguments(argv, environment) {
   const [url, output, ...extra] = argv;
-  requireGate(Boolean(url && output && !extra.length && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
+  requireGate(Boolean(url && output && extra.length <= 1 &&
+    (!extra.length || extra[0] === "--require-model-alert") && environment.PRS_PLAYWRIGHT_PATH), "INVALID_ARGUMENTS");
   let address;
   try { address = new URL(url); } catch { requireGate(false, "INVALID_PHONE_URL"); }
   requireGate(address.origin === PHONE_ORIGIN && address.pathname === `${PREFIX}maps/test` &&
@@ -60,7 +65,9 @@ export function validateArguments(argv, environment) {
   const report = resolve(output);
   requireGate(report.toLowerCase().endsWith(".json"), "INVALID_REPORT_PATH");
   return {url: address.href, output: report,
-    screenshot: report.slice(0, -5) + ".png", runtime: resolve(environment.PRS_PLAYWRIGHT_PATH)};
+    screenshot: report.slice(0, -5) + ".png", runtime: resolve(environment.PRS_PLAYWRIGHT_PATH),
+    fakeCameraFile: environment.PRS_FAKE_CAMERA_VIDEO ? resolve(environment.PRS_FAKE_CAMERA_VIDEO) : null,
+    requireModelAlert: extra[0] === "--require-model-alert"};
 }
 
 /* Functionality: Preserve existing evidence and private configuration.
@@ -97,7 +104,7 @@ export function classifyRequest(url, resourceType = null) {
 /* Functionality: Correlate real validated model frames with public WSS PRF2 capture headers.
  * Inputs: saved frames and actual model socket evidence. Outputs: per-session frame counts.
  * Logic: require two explicit sessions, >=3 frames each, original FP32/depth/tracker/risk identity.
- * Constraints: fake camera pixels test transport/pipeline only; no accuracy, real camera or risk-alert claim. */
+ * Constraints: fake camera pixels test transport/pipeline only; no physical camera or detection-accuracy claim. */
 export function verifyModelEvidence(frames, sockets) {
   requireGate(sockets.length === 2 && sockets.every(socket => socket.secure && socket.hellos.length === 1), "MODEL_SESSION_COUNT");
   requireGate(frames.every(frame => sockets.some(socket => socket.hellos[0].session_id === frame.session_id)), "FOREIGN_MODEL_FRAME");
@@ -149,9 +156,10 @@ export function verifySpeechActivation(evidence) {
 
 /* Functionality: Correlate real backend TTS streams with browser playback request identities.
  * Inputs: Secure WebSocket observations, audio lifecycle events and submitted synthesis IDs.
- * Outputs: Counts and fixed PCM format for streams proven to start and complete.
- * Logic: Validate each started playback against one submitted UUID and exactly one matching 24 kHz
- * mono PCM configuration and nonempty completion; tolerate a secure socket canceled before submit.
+ * Outputs: Counts and fixed PCM format for completed, interrupted and pre-provider-canceled streams.
+ * Logic: Validate each playback against one submitted UUID and one matching 24 kHz mono PCM
+ * configuration; require completion after normal end and accept an incomplete provider stream only
+ * when the matching browser request has an explicit cancel event.
  * Constraints: A browser start proves playback scheduling only, not physical speaker audibility. */
 export function verifyTtsStreamEvidence(sockets, audioEvents, submissions) {
   const requestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -177,11 +185,19 @@ export function verifyTtsStreamEvidence(sockets, audioEvents, submissions) {
       streams.set(event.request_id, stream);
     }
   }
+  const canceledIds = new Set(audioEvents.filter(event => event.phase === "cancel" &&
+    Number.isSafeInteger(event.request_id)).map(event => event.request_id));
+  const audioIdByUuid = new Map([...submittedByUuid].map(([id, submission]) => [id, submission.audio_request_id]));
+  let completedStreams = 0, interruptedStreams = 0;
   for (const [id, stream] of streams) {
-    requireGate(stream.configs.length === 1 && stream.configs[0].sample_rate === 24000 &&
-      stream.configs[0].format === "pcm_s16le_mono" && stream.completions.length === 1 &&
-      Number.isSafeInteger(stream.completions[0].audio_bytes) && stream.completions[0].audio_bytes > 0 &&
-      submittedByUuid.has(id), "BACKEND_TTS_STREAM_INVALID");
+    const validConfig = stream.configs.length === 1 && stream.configs[0].sample_rate === 24000 &&
+      stream.configs[0].format === "pcm_s16le_mono" && submittedByUuid.has(id);
+    const completed = stream.completions.length === 1 &&
+      Number.isSafeInteger(stream.completions[0].audio_bytes) && stream.completions[0].audio_bytes > 0;
+    const interrupted = stream.completions.length === 0 && canceledIds.has(audioIdByUuid.get(id));
+    requireGate(validConfig && (completed || interrupted), "BACKEND_TTS_STREAM_INVALID");
+    if (completed) completedStreams++;
+    else interruptedStreams++;
   }
 
   const started = audioEvents.filter(event => event.phase === "start");
@@ -191,10 +207,18 @@ export function verifyTtsStreamEvidence(sockets, audioEvents, submissions) {
       !startedIds.has(event.request_id), "BACKEND_TTS_STREAM_INVALID");
     startedIds.add(event.request_id);
     const submission = submittedByAudioId.get(event.request_id);
-    requireGate(submission && streams.has(submission.request_id), "BACKEND_TTS_STREAM_INVALID");
+    requireGate(submission && streams.has(submission.request_id) &&
+      (streams.get(submission.request_id).completions.length === 1 || canceledIds.has(event.request_id)),
+    "BACKEND_TTS_STREAM_INVALID");
+  }
+  for (const event of audioEvents.filter(item => item.phase === "end")) {
+    const submission = submittedByAudioId.get(event.request_id);
+    requireGate(submission && streams.get(submission.request_id)?.completions.length === 1,
+      "BACKEND_TTS_STREAM_INVALID");
   }
   requireGate(startedIds.size >= 4, "BACKEND_TTS_STREAM_INVALID");
-  return {secure_sockets: sockets.length, started_streams: startedIds.size, accepted_streams: streams.size,
+  return {secure_sockets: sockets.length, started_streams: startedIds.size,
+    completed_streams: completedStreams, interrupted_streams: interruptedStreams,
     cancelled_before_provider_response: sockets.filter(socket => socket.tts.length === 0).length,
     sample_rate: 24000, format: "pcm_s16le_mono", physical_audibility_verified: false};
 }
@@ -519,10 +543,11 @@ async function planNavigation(page, url) {
     position_source: "explicit_synthetic_watchPosition_NUS_Date_now", real_phone_gps_verified: false};
 }
 
-/* Functionality: Explicitly select the native Chrome fake-video device and use CameraApp.start.
- * Inputs: real page controls and optional camera-permission grant flag. Outputs: actual detection session.
- * Logic: native video-only permission inventory and exact fake device ID. Constraints: no physical camera. */
-async function startCamera(page, grantCamera = false) {
+/* Functionality: Select a Chrome fake-video source and start the actual CameraApp pipeline.
+ * Inputs: public page, optional permission grant, and whether a named Y4M file is the source.
+ * Outputs: one actual detection session. Logic: select the sole fake device or exact supplied-file device.
+ * Constraints: launch always enables Chrome's fake-device flag; no physical camera is accessible. */
+async function startCamera(page, grantCamera = false, fileFixture = false) {
   await page.selectOption("#assist-source", "camera");
   if (grantCamera) {
     await page.click("#assist-devices-authorize");
@@ -530,7 +555,8 @@ async function startCamera(page, grantCamera = false) {
       [...document.querySelectorAll("#assist-device option")].some(option => option.value));
     const device = await page.locator("#assist-device option").evaluateAll(options =>
       options.filter(option => option.value).map(option => ({id: option.value, fake: /fake/i.test(option.textContent)})));
-    requireGate(device.length > 0 && device.every(item => item.fake), "FAKE_VIDEO_DEVICE_REQUIRED");
+    requireGate(device.length > 0 && (device.every(item => item.fake) ||
+      fileFixture && device.length === 1), "FAKE_VIDEO_DEVICE_REQUIRED");
     await page.selectOption("#assist-device", device[0].id);
   }
   await page.click("#start");
@@ -547,6 +573,41 @@ async function waitCameraFrames(page, minimum = 3) {
       window.__phoneProbe.frames.filter(frame => frame.session_id === camera.sessionId).length >= count;
   }, minimum, {timeout: 70000});
   return page.evaluate(() => window.__phoneControllers.cameraApp.sessionId);
+}
+
+/* Functionality: Wait for one genuine risk-alert synthesis and completed backend playback.
+ * Inputs: Active real-model camera session and bounded browser page. Outputs: Matching alert identity and latency.
+ * Logic: Require a non-synthetic risk utterance linked by session/frame/track to a server-required alert,
+ * then require its original audio request to end before camera teardown.
+ * Constraints: No generated risk event, manual speech, threshold change or physical-audibility claim. */
+async function waitModelAlert(page, sessionId) {
+  await page.waitForFunction(id => {
+    const item = window.__phoneProbe.utterances.find(value => value.kind === "risk" &&
+      !value.synthetic_risk && value.session_id === id && Number.isFinite(value.capture_to_start_ms) &&
+      value.capture_to_start_ms >= 0 && value.capture_to_start_ms < 1000 &&
+      window.__phoneProbe.frames.some(frame => frame.session_id === id && frame.index === value.frame_index &&
+        frame.captured_at_ms === value.captured_at_ms && frame.alert_track_ids.includes(value.track_id)));
+    return Boolean(item);
+  }, sessionId, {timeout: 30000});
+  await page.waitForFunction(id => {
+    const item = window.__phoneProbe.utterances.find(value => value.kind === "risk" &&
+      !value.synthetic_risk && value.session_id === id && Number.isFinite(value.capture_to_start_ms) &&
+      value.capture_to_start_ms >= 0 && value.capture_to_start_ms < 1000 &&
+      window.__phoneProbe.frames.some(frame => frame.session_id === id && frame.index === value.frame_index &&
+        frame.captured_at_ms === value.captured_at_ms && frame.alert_track_ids.includes(value.track_id)));
+    return item && window.__phoneProbe.audio.some(event => event.phase === "end" &&
+      event.request_id === item.request_id);
+  }, sessionId, {timeout: 30000});
+  return page.evaluate(id => {
+    const item = window.__phoneProbe.utterances.find(value => value.kind === "risk" &&
+      !value.synthetic_risk && value.session_id === id && Number.isFinite(value.capture_to_start_ms) &&
+      value.capture_to_start_ms >= 0 && value.capture_to_start_ms < 1000 &&
+      window.__phoneProbe.frames.some(frame => frame.session_id === id && frame.index === value.frame_index &&
+        frame.captured_at_ms === value.captured_at_ms && frame.alert_track_ids.includes(value.track_id)));
+    return {model_alert: true, frame_index: item.frame_index, track_id: item.track_id,
+      capture_to_start_ms: item.capture_to_start_ms, backend_audio_ended: true,
+      physical_audibility_verified: false};
+  }, sessionId);
 }
 
 /* Functionality: Observe real worker drain before the next separately requested camera start.
@@ -643,14 +704,17 @@ async function manualBilingualTts(page) {
 }
 
 /* Functionality: Execute one public-relay acceptance and preserve safe success/failure evidence.
- * Inputs: validated options and existing deployed relay. Outputs: report; no credential fields.
- * Logic: guest-access boundary, camera-first/no-acquisition DOM gate, real ORS/WSS/model,
- * two lifecycles and TTS.
+ * Inputs: validated options and existing deployed relay. Outputs: report with body-free source/output events;
+ * no credential, utterance, pixel or coordinate values. Logic: guest-access boundary, camera-first/no-acquisition
+ * DOM gate, real ORS/WSS/model, two lifecycles and TTS; strict model-alert mode retains the first camera session
+ * until the correlated inference alert has completed backend playback.
  * Constraints: no service launch/deployment, TLS override, HTTP/model mocks, automatic retry or phone access. */
 export async function run(options) {
   const report = {complete: false, phase: "public_guest_access", target: options.url,
+    model_alert_gate_requested: options.requireModelAlert === true,
     browser: "Chrome with phone viewport; not Safari or a real iPhone", tls_validation: "enabled",
-    fixtures: {camera: "Chrome native fake-video device; no physical camera or microphone",
+    fixtures: {camera: options.fakeCameraFile ? "explicit caller-supplied Y4M frame source" :
+      "Chrome native fake-video device; no physical camera or microphone",
       gps: "Explicit synthetic NUS watchPosition callbacks with Date.now timestamps; not native/phone GPS"},
     actual_model_verified: false, model_alert_verified: false, real_ors_verified: false,
     real_iphone_verified: false, hardware_outputs_verified: false,
@@ -658,6 +722,9 @@ export async function run(options) {
   let browser, context, page, navigationVerified = false;
   try {
     const {chromium, request} = createRequire(import.meta.url)(options.runtime);
+    if (options.fakeCameraFile)
+      requireGate(options.fakeCameraFile.toLowerCase().endsWith(".y4m") &&
+        (await stat(options.fakeCameraFile)).isFile(), "INVALID_FAKE_CAMERA_FILE");
     report.phase = "public_guest_boundary";
     const guest = await request.newContext();
     try {
@@ -667,7 +734,8 @@ export async function run(options) {
     } finally { await guest.dispose(); }
     report.phase = "browser_and_tls";
     browser = await chromium.launch({channel: "chrome", headless: true,
-      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]});
+      args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
+        ...(options.fakeCameraFile ? [`--use-file-for-fake-video-capture=${options.fakeCameraFile}`] : [])]});
     context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
     await context.grantPermissions(["geolocation"], {origin: PHONE_ORIGIN});
@@ -752,7 +820,11 @@ export async function run(options) {
       } catch (error) { report.failures.push(safeFailure(error, "navigation_backend_output")); }
     }
     report.phase = "first_real_model_session";
-    await startCamera(page, true); const firstSession = await waitCameraFrames(page);
+    await startCamera(page, true, Boolean(options.fakeCameraFile)); const firstSession = await waitCameraFrames(page);
+    if (options.requireModelAlert) {
+      report.phase = "first_model_risk_alert";
+      report.model_alert_evidence = await waitModelAlert(page, firstSession);
+    }
     report.checks.navigation_before_camera_stop = await page.evaluate(navigationEvidence);
     if (navigationVerified && !report.checks.navigation_before_camera_stop.active) {
       report.failures.push({phase: report.phase, code: "NAVIGATION_FAILED_BEFORE_CAMERA_STOP", type: "GateError"});
@@ -814,7 +886,8 @@ export async function run(options) {
     const controls = report.sockets.filter(item => item.path === `${PREFIX}ws/control/`);
     requireGate(controls.length === 1 && controls[0].welcomes.length === 1 &&
       controls[0].welcomes[0] === report.identity.control_session_id, "CONTROL_HUB_IDENTITY");
-    report.output_evidence = await page.evaluate(() => ({utterances: structuredClone(window.__phoneProbe.utterances),
+    report.output_evidence = await page.evaluate(() => ({guidance: structuredClone(window.__phoneProbe.guidance),
+      utterances: structuredClone(window.__phoneProbe.utterances),
       audio: structuredClone(window.__phoneProbe.audio),
       tts_submissions: structuredClone(window.__phoneProbe.ttsSubmissions)}));
     requireGate(report.output_evidence.utterances.every(item => item.request_owned && item.text_matches_policy &&
@@ -824,6 +897,9 @@ export async function run(options) {
       item.capture_to_start_ms < 1000 && report.frames.some(frame => frame.session_id === item.session_id &&
         frame.index === item.frame_index && frame.captured_at_ms === item.captured_at_ms &&
         frame.alert_track_ids.includes(item.track_id)));
+    if (options.requireModelAlert)
+      requireGate(report.model_alert_verified && report.model_alert_evidence?.backend_audio_ended === true,
+        "MODEL_RISK_ALERT_NOT_VERIFIED");
     requireGate(report.failures.length === 0, "OBSERVED_BROWSER_FAILURES");
     report.phase = "complete"; report.complete = true;
   } catch (error) {

@@ -1,7 +1,7 @@
 /* Responsibilities: Verify public guest-relay checker boundaries, privacy and model-clock gates offline.
  * Implementation: Pure URL/evidence fixtures and temporary report artifacts; no browser or APIs.
  * Related Modules: tools/check_phone_relay_browser.mjs; original PRF2 local model contract.
- * Declaration Index: fixture; rejectsCode.
+ * Declaration Index: fixture; rejectsCode; streamEvidenceFixture — construct complete/interrupted TTS evidence.
  * Variable Index: URL/RUNTIME are explicit synthetic test inputs; fixture metadata is never model evidence.
  * Constraints: No Chrome launch, GPU, service/deployment, external request or real secret file access.
  */
@@ -12,7 +12,8 @@ import {tmpdir} from "node:os";
 import {basename, dirname, join, resolve} from "node:path";
 import {runInNewContext} from "node:vm";
 import {validateArguments, requireNew, safeFailure,
-  classifyRequest, verifyModelEvidence, verifySpeechActivation, installGPS} from "../tools/check_phone_relay_browser.mjs";
+  classifyRequest, verifyModelEvidence, verifySpeechActivation, verifyTtsStreamEvidence,
+  installGPS} from "../tools/check_phone_relay_browser.mjs";
 
 const URL = "https://47.239.50.129/mvp/maps/test", RUNTIME = {PRS_PLAYWRIGHT_PATH: "synthetic-playwright"};
 
@@ -21,6 +22,26 @@ const URL = "https://47.239.50.129/mvp/maps/test", RUNTIME = {PRS_PLAYWRIGHT_PAT
  * Logic: inspect only code/message equality; Constraints: synthetic fixtures only, no original body dump. */
 function rejectsCode(callback, code) {
   assert.throws(callback, error => error.code === code && error.message === code);
+}
+
+/* Functionality: Construct four correlated TTS streams with one configurable terminal state.
+ * Inputs: First socket events and its playback terminal phase. Outputs: Secure sockets and request metadata.
+ * Logic: Three control streams complete; the first stream exposes the selected edge case.
+ * Constraints: All identifiers and audio bytes are synthetic, with no network or speech content. */
+function streamEvidenceFixture(first, firstLifecycle) {
+  const submissions = [], sockets = [], audio = [];
+  for (let id = 1; id <= 4; id++) {
+    const uuid = `11111111-1111-4111-8111-${String(id).padStart(12, "0")}`;
+    const configured = {type: "audio_config", request_id: uuid, sample_rate: 24000,
+      format: "pcm_s16le_mono"};
+    const complete = {type: "complete", request_id: uuid, audio_bytes: 128};
+    submissions.push({request_id: uuid, audio_request_id: id});
+    sockets.push({secure: true, tts: id === 1 ? first : [configured, complete]});
+    audio.push({phase: "start", request_id: id});
+    if (id === 1 && firstLifecycle) audio.push({phase: firstLifecycle, request_id: id});
+    else if (id > 1) audio.push({phase: "end", request_id: id});
+  }
+  return {submissions, sockets, audio};
 }
 
 /* Functionality: Construct two explicit synthetic native-WSS/model evidence partitions.
@@ -52,12 +73,21 @@ test("guest checker pins the exact approved HTTPS mount and accepts no credentia
   const options = validateArguments([URL, "new-evidence.json"], RUNTIME);
   assert.equal(options.url, URL);
   assert.equal(options.output, resolve("new-evidence.json"));
+  assert.equal(options.fakeCameraFile, null);
+  assert.equal(options.requireModelAlert, false);
+  assert.equal(validateArguments([URL, "target-evidence.json"], {
+    ...RUNTIME, PRS_FAKE_CAMERA_VIDEO: "fixtures/target.y4m",
+  }).fakeCameraFile, resolve("fixtures/target.y4m"));
+  assert.equal(validateArguments([URL, "strict-evidence.json", "--require-model-alert"], RUNTIME)
+    .requireModelAlert, true);
   assert.equal("privateEnv" in options, false);
   for (const url of ["http://47.239.50.129/mvp/maps/test", "https://other.example/mvp/maps/test",
     "https://47.239.50.129/maps/test", "https://phone:private@47.239.50.129/mvp/maps/test",
     URL + "?access=private", URL + "#private", "https://47.239.50.129:8443/mvp/maps/test", "not a URL"])
     rejectsCode(() => validateArguments([url, "new.json"], RUNTIME), "INVALID_PHONE_URL");
   rejectsCode(() => validateArguments([URL, "new.json", "unexpected-private.env"], RUNTIME), "INVALID_ARGUMENTS");
+  rejectsCode(() => validateArguments([URL, "new.json", "--require-model-alert", "extra"], RUNTIME), "INVALID_ARGUMENTS");
+  rejectsCode(() => validateArguments([URL, "new.json", "--unexpected-flag"], RUNTIME), "INVALID_ARGUMENTS");
   rejectsCode(() => validateArguments([URL, "new.json"], {}), "INVALID_ARGUMENTS");
   rejectsCode(() => validateArguments([URL, "report.txt"], RUNTIME), "INVALID_REPORT_PATH");
 });
@@ -143,6 +173,39 @@ test("speech activation needs a real matching backend audio start from the first
   rejectsCode(() => verifySpeechActivation({...evidence, audio: [{phase: "start", request_id: 8}]}), "SPEECH_ACTIVATION_NO_AUDIO_START");
   rejectsCode(() => verifySpeechActivation({activation: evidence.activation, calls: evidence.calls,
     native: [{phase: "start", request_id: 7}]}), "SPEECH_ACTIVATION_NO_AUDIO_START");
+});
+
+/* Functionality: Distinguish completed backend streams from requests canceled during risk preemption.
+ * Inputs: Explicit synthetic socket, submission and audio lifecycle evidence.
+ * Outputs: Counts or the checker's fixed rejection code.
+ * Logic: A canceled started request may lack a completion frame; a normal end may not.
+ * Constraints: Fixture data is not production playback or audibility evidence. */
+test("TTS stream verification accepts explicit interruption and rejects unexplained truncation", () => {
+  const interruptedFixture = streamEvidenceFixture([
+    {type: "audio_config", request_id: "11111111-1111-4111-8111-000000000001",
+      sample_rate: 24000, format: "pcm_s16le_mono"}], "cancel");
+  const interrupted = verifyTtsStreamEvidence(interruptedFixture.sockets,
+    interruptedFixture.audio, interruptedFixture.submissions);
+  assert.equal(interrupted.started_streams, 4);
+  assert.equal(interrupted.completed_streams, 3);
+  assert.equal(interrupted.interrupted_streams, 1);
+  const doneFixture = streamEvidenceFixture([
+    {type: "audio_config", request_id: "11111111-1111-4111-8111-000000000001",
+      sample_rate: 24000, format: "pcm_s16le_mono"},
+    {type: "complete", request_id: "11111111-1111-4111-8111-000000000001", audio_bytes: 128}], "end");
+  const done = verifyTtsStreamEvidence(doneFixture.sockets, doneFixture.audio, doneFixture.submissions);
+  assert.equal(done.completed_streams, 4);
+  assert.equal(done.interrupted_streams, 0);
+  const truncated = streamEvidenceFixture([
+    {type: "audio_config", request_id: "11111111-1111-4111-8111-000000000001",
+      sample_rate: 24000, format: "pcm_s16le_mono"}], null);
+  rejectsCode(() => verifyTtsStreamEvidence(truncated.sockets, truncated.audio, truncated.submissions),
+    "BACKEND_TTS_STREAM_INVALID");
+  const endedWithoutCompletion = streamEvidenceFixture([
+    {type: "audio_config", request_id: "11111111-1111-4111-8111-000000000001",
+      sample_rate: 24000, format: "pcm_s16le_mono"}], "end");
+  rejectsCode(() => verifyTtsStreamEvidence(endedWithoutCompletion.sockets,
+    endedWithoutCompletion.audio, endedWithoutCompletion.submissions), "BACKEND_TTS_STREAM_INVALID");
 });
 
 test("wire time, 55second contract, insecure WSS, metadata identity and reset failures are rejected", () => {

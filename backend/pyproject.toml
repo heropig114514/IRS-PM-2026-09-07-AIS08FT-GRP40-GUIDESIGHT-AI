@@ -1,12 +1,23 @@
-# Responsibilities: Configure backend Ruff checks.
-# Implementation: Check Python 3.12 syntax and import ordering; define no business parameters.
-# Related Modules: requirements-dev.txt, .github/workflows/backend.yml。
-# Declaration Index: None。
+# Responsibilities: Configure backend Ruff and production-core test coverage checks.
+# Implementation: Check Python 3.12 syntax/import ordering and enforce branch-aware core coverage.
+# Related Modules: requirements-dev.txt, .github/workflows/backend.yml.
+# Declaration Index: None.
 # Variable Index: tool.ruff.line-length — line width; target-version — Python version;
-# tool.ruff.lint.select — enabled rule set.
+# tool.ruff.lint.select — enabled rule set; tool.coverage.run.branch/source/omit — branch measurement,
+# core runtime source scope and test-file exclusions; tool.coverage.report.fail_under — minimum combined coverage.
 [tool.ruff]
 line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.coverage.run]
+branch = true
+source = ["core"]
+omit = ["core/test_*.py", "core/tests.py"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
