@@ -2,12 +2,15 @@
 Implementation: Exercise the real handler with deterministic provider/client ASGI fixtures.
 Related Modules: core.agent.tts/provider; config.asgi; integration.mobile.
 Declaration Index: FakePeer; FakePeer.__init__; FakePeer.__aenter__; FakePeer.__aexit__;
-FakePeer.send; FakePeer.recv; FakeConnector; FakeConnector.__call__; BlockingPeer; BlockingPeer.recv; AgentTtsTests;
-AgentTtsTests.request; AgentTtsTests.test_request_validation; AgentTtsTests.test_streaming_bilingual_pcm;
+FakePeer.send; FakePeer.recv; FakeConnector; FakeConnector.__call__; BlockingPeer;
+BlockingPeer.recv; AgentTtsTests; AgentTtsTests.request;
+AgentTtsTests.test_request_validation; AgentTtsTests.test_streaming_bilingual_pcm;
 AgentTtsTests.test_invalid_request_never_connects; AgentTtsTests.test_origin_is_required;
-AgentTtsTests.test_browser_disconnect_cancels_provider; AgentTtsTests.test_asgi_route_dispatches_tts.
-Variable Index: PCM_FIXTURE — two deterministic little-endian samples; FakePeer.sent/events/closed — only
-the emulated provider protocol state; no real API key, provider request, recording or speaker test.
+AgentTtsTests.test_browser_disconnect_cancels_provider;
+AgentTtsTests.test_asgi_route_dispatches_tts.
+Variable Index: PCM_FIXTURE — two deterministic little-endian samples; FakePeer.sent/events/closed
+— only the emulated provider protocol state; no real API key, provider request, recording or speaker
+test.
 """
 
 import asyncio
@@ -109,7 +112,8 @@ class FakeConnector:
 class AgentTtsTests(SimpleTestCase):
     """Functionality: Check the exact browser/server speech contract and bilingual stream.
     Logic: Run the ASGI boundary and upstream bridge in memory with a fixed provider double.
-    Constraints: Assertions prove protocol plumbing only, not TTS provider availability or audibility.
+    Constraints: Assertions prove protocol plumbing only, not TTS provider availability or
+    audibility.
     """
 
     @staticmethod
@@ -147,8 +151,10 @@ class AgentTtsTests(SimpleTestCase):
     @override_settings(CAMERA_ALLOWED_ORIGINS={"http://127.0.0.1:8766"})
     async def test_streaming_bilingual_pcm(self):
         """Functionality: Verify the same-origin endpoint streams Chinese and English PCM.
-        Inputs: two ASGI requests and provider event fixtures. Outputs: binary payload plus terminal metadata.
-        Logic: assert explicit region mapping, language/rate configuration, input text and exact bytes.
+        Inputs: two ASGI requests and provider event fixtures. Outputs: binary payload plus terminal
+        metadata.
+        Logic: assert explicit region mapping, language/rate configuration, input text and exact
+        bytes.
         Constraints: Provider, model availability and hardware speaker remain mocked/unverified.
         """
         for language, text, language_type in (("zh-CN", "你好", "Chinese"),
@@ -166,7 +172,9 @@ class AgentTtsTests(SimpleTestCase):
                 "key": "fixture-only", "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"}):
                 await app.send_input({"type": "websocket.connect"})
                 self.assertEqual((await app.receive_output())["type"], "websocket.accept")
-                await app.send_input({"type": "websocket.receive", "text": self.request(language, text)})
+                await app.send_input(
+                    {"type": "websocket.receive", "text": self.request(language, text)}
+                )
                 config = json.loads((await app.receive_output())["text"])
                 audio = await app.receive_output()
                 complete = json.loads((await app.receive_output())["text"])
@@ -189,7 +197,8 @@ class AgentTtsTests(SimpleTestCase):
     @override_settings(CAMERA_ALLOWED_ORIGINS={"http://127.0.0.1:8766"})
     async def test_invalid_request_never_connects(self):
         """Functionality: Reject malformed request before provider configuration or networking.
-        Inputs: accepted same-origin socket and invalid JSON. Outputs: explicit error and policy close.
+        Inputs: accepted same-origin socket and invalid JSON. Outputs: explicit error and policy
+        close.
         Logic: assert provider connector and config remain untouched.
         Constraints: No model request, retry or user text log.
         """
@@ -224,9 +233,12 @@ class AgentTtsTests(SimpleTestCase):
     @override_settings(CAMERA_ALLOWED_ORIGINS={"http://127.0.0.1:8766"})
     async def test_browser_disconnect_cancels_provider(self):
         """Functionality: Ensure a closed browser immediately cancels pending upstream synthesis.
-        Inputs: valid ASGI request and provider peer stalled after session setup. Outputs: closed provider context.
-        Logic: send disconnect only after request submission and audio metadata, then await handler cleanup.
-        Constraints: Provider cancellation behavior is modeled; live upstream behavior is verified separately.
+        Inputs: valid ASGI request and provider peer stalled after session setup. Outputs: closed
+        provider context.
+        Logic: send disconnect only after request submission and audio metadata, then await handler
+        cleanup.
+        Constraints: Provider cancellation behavior is modeled; live upstream behavior is verified
+        separately.
         """
         peer = BlockingPeer([{"type": "session.created"}, {"type": "session.updated"}])
         connector = FakeConnector(peer)
@@ -237,7 +249,9 @@ class AgentTtsTests(SimpleTestCase):
             "key": "fixture-only", "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"}):
             await app.send_input({"type": "websocket.connect"})
             await app.receive_output()
-            await app.send_input({"type": "websocket.receive", "text": self.request("en-US", "Turn left")})
+            await app.send_input(
+                {"type": "websocket.receive", "text": self.request("en-US", "Turn left")}
+            )
             audio_config = json.loads((await app.receive_output())["text"])
             self.assertEqual(audio_config["type"], "audio_config")
             await app.send_input({"type": "websocket.disconnect", "code": 1000})

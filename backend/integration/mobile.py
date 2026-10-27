@@ -3,7 +3,8 @@ unchanged local assist application.
 Implementation: Expose only the product and diagnostic page entries, with their required resource
 and API paths, through exact Host/Origin/path gates; canonical headers preserve Web/GPU checks.
 Public responses retain /mvp/WSS, with no account authentication.
-Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol; core.ai_bridge/ai_mcp/agent.tts;
+Related Modules: integration.mobile_asgi/assist_asgi/assist/protocol;
+core.ai_bridge/ai_mcp/agent.tts;
 deployment reverse SSH and Nginx terminate public TLS without exposing the worker or MCP.
 Declaration Index: mobile_origin; reject; MobileApplication; MobileApplication.__init__;
 MobileApplication.__call__; MobileApplication.public_path; MobileApplication.forward;

@@ -1,8 +1,10 @@
 """Responsibilities: Stream bounded bilingual text-to-speech from the configured Qwen region.
 Implementation: Admit one same-origin request, configure a short Qwen3-TTS realtime session,
-forward PCM16 chunks as binary WebSocket messages, and close upstream work when the browser leaves.
+forward PCM16 chunks as binary WebSocket messages, then close upstream work on
+browser disconnect.
 Related Modules: provider.configuration; config.asgi; integration.mobile; frontend/speech-output.js.
-Declaration Index: validate_request; upstream_url; upstream_session; wait_for_disconnect; tts_socket; send_json.
+Declaration Index: validate_request; upstream_url; upstream_session; wait_for_disconnect;
+tts_socket; send_json.
 Variable Index: MODEL/VOICE/SAMPLE_RATE fix the synthesis contract; MAX_TEXT_LENGTH/MAX_AUDIO_BYTES
 bound user input and forwarded output; REGIONAL_URLS maps the existing provider region to WSS;
 logger records request IDs, lifecycle stages and exception types without text, audio or credentials.
@@ -65,17 +67,28 @@ def validate_request(raw):
         if not isinstance(text, str) or not text.strip() or len(text) > MAX_TEXT_LENGTH:
             raise ValueError("text")
         text.encode("utf-8")
-        if language not in LANGUAGES or isinstance(rate, bool) or not isinstance(rate, (int, float)) or not 0.5 <= rate <= 2:
+        if (
+            language not in LANGUAGES
+            or isinstance(rate, bool)
+            or not isinstance(rate, (int, float))
+            or not 0.5 <= rate <= 2
+        ):
             raise ValueError("options")
     except (ValueError, TypeError, KeyError, UnicodeEncodeError, json.JSONDecodeError) as error:
         raise AgentError("invalid_speech_request", "语音文本、语言或语速无效。") from error
-    return {"request_id": request_id, "text": text, "language": LANGUAGES[language], "rate": float(rate)}
+    return {
+        "request_id": request_id,
+        "text": text,
+        "language": LANGUAGES[language],
+        "rate": float(rate),
+    }
 
 
 def upstream_url(config):
     """Functionality: Resolve the provider's already configured regional WebSocket endpoint.
     Inputs: Internal provider configuration containing URL and key. Outputs: fixed WSS URL.
-    Logic: Exact mapping prevents request-controlled host selection and preserves regional key scope.
+    Logic: Exact mapping prevents request-controlled host selection and preserves regional key
+    scope.
     Constraints: Missing or unknown region raises a fixed AgentError; credentials are not returned.
     """
     url = REGIONAL_URLS.get(config.get("url"))
@@ -95,9 +108,12 @@ async def send_json(send, message):
 
 async def wait_for_disconnect(receive):
     """Functionality: Monitor the browser while upstream synthesis is active.
-    Inputs: ASGI receive callable. Outputs: normal return on disconnect or AgentError on a second request.
-    Logic: Keep exactly one synthesis command per socket and surface browser cancellation immediately.
-    Constraints: This task is canceled when synthesis finishes; it does not accept or queue another utterance.
+    Inputs: ASGI receive callable. Outputs: normal return on disconnect or AgentError on a second
+    request.
+    Logic: Keep exactly one synthesis command per socket and surface browser cancellation
+    immediately.
+    Constraints: This task is canceled when synthesis finishes; it does not accept or queue another
+    utterance.
     """
     while True:
         event = await receive()
@@ -167,7 +183,9 @@ async def upstream_session(request, config, send, *, opener=connect):
                         try:
                             chunk = base64.b64decode(encoded, validate=True)
                         except (ValueError, binascii.Error) as error:
-                            raise AgentError("tts_upstream_protocol", "语音服务音频块无效。") from error
+                            raise AgentError(
+                                "tts_upstream_protocol", "语音服务音频块无效。"
+                            ) from error
                         if not chunk or len(chunk) % 2:
                             raise AgentError("tts_upstream_protocol", "语音服务音频块长度无效。")
                         sent += len(chunk)
@@ -175,9 +193,18 @@ async def upstream_session(request, config, send, *, opener=connect):
                             raise AgentError("tts_audio_limit", "本次语音输出超过大小限制。")
                         await send({"type": "websocket.send", "bytes": chunk})
                     elif kind == "response.done":
-                        await send_json(send, {"type": "complete", "request_id": request["request_id"],
-                            "audio_bytes": sent})
-                        logger.info("TTS completed request=%s audio_bytes=%d", request["request_id"], sent)
+                        await send_json(
+                            send,
+                            {
+                                "type": "complete",
+                                "request_id": request["request_id"],
+                                "audio_bytes": sent,
+                            },
+                        )
+                        logger.info(
+                            "TTS completed request=%s audio_bytes=%d",
+                            request["request_id"], sent,
+                        )
                         return
     except AgentError:
         raise
@@ -196,8 +223,8 @@ async def tts_socket(scope, receive, send, *, opener=connect):
     """Functionality: Admit and execute one browser-to-server TTS WebSocket request.
     Inputs: Same-origin ASGI WebSocket channels and optional injected provider connector.
     Outputs: Safe JSON lifecycle/error messages and binary PCM chunks; no HTTP response.
-    Logic: Require matching configured Host/Origin, exactly one bounded JSON request, then call
-    the provider once. A concurrent receive monitor cancels the provider context on browser disconnect.
+    Logic: Require matching configured Host/Origin, exactly one bounded JSON request, then call the
+    provider once. A concurrent receive monitor cancels the provider context on browser disconnect.
     Constraints: Same-origin is transport admission only, not user identity; no text persistence,
     authentication bypass to other routes, reconnect, provider detail leakage or hidden retry.
     """
@@ -244,7 +271,12 @@ async def tts_socket(scope, receive, send, *, opener=connect):
     except AgentError as error:
         await send_json(send, {"type": "error", "request_id": request_id,
             "code": error.code, "detail": error.detail})
-        await send({"type": "websocket.close", "code": 1011 if error.code.startswith("tts_") else 1008})
+        await send(
+            {
+                "type": "websocket.close",
+                "code": 1011 if error.code.startswith("tts_") else 1008,
+            }
+        )
     except TimeoutError:
         await send_json(send, {"type": "error", "request_id": request_id,
             "code": "request_timeout", "detail": "语音请求等待超时。"})

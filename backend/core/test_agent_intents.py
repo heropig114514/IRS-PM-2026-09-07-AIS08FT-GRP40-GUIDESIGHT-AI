@@ -93,7 +93,9 @@ class IntentTests(SimpleTestCase):
             "route": "system", "intent_ids": ["navigation.start"], "language": "en",
         })
         with patch("core.agent.intents.completion", AsyncMock(return_value=reply)) as model:
-            decision = await intents.classify("I want to go to the nearest supermarket now.", history)
+            decision = await intents.classify(
+                "I want to go to the nearest supermarket now.", history,
+            )
         classifier_prompt = model.await_args.args[0][0]["content"]
         self.assertIn("current user message", classifier_prompt)
         self.assertIn("page locale, device locale", classifier_prompt)

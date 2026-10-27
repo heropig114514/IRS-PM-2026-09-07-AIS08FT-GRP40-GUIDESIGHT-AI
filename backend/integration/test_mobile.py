@@ -368,7 +368,8 @@ class MobileTests(SimpleTestCase):
             self.assertEqual((await http_call(app, path, method))[0]["status"], 405)
 
     async def test_public_websocket_admission(self):
-        """Functionality: Admit exact same-origin control, assistant, inference, echo and TTS sockets.
+        """Functionality: Admit exact same-origin control, assistant, inference, echo and TTS
+        sockets.
         Inputs: five explicitly allowed sockets and hostile/absent-origin/foreign-path variants.
         Outputs: preserved acceptance/normalized headers or 1008. Logic: original hub remains a
         singleton.
