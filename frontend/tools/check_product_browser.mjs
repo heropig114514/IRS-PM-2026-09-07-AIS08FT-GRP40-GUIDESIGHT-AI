@@ -3,14 +3,28 @@
  * rear constraints, permission results, route and GPS use explicit fixtures; model frames are genuine.
  * Related Modules: integration/assist-product.html, product-ui.js, assist-mvp.js, speech-activation.js;
  * check_phone_relay_browser.mjs provides shared evidence privacy helpers.
- * Declaration Index: validateArguments; verifyInitial; verifyProductSurface; verifyCameraRequest;
- * verifyCameraDisplay; installProbe; installProbe.supportedConstraints;
- * installProbe.checkedVideo; installProbe.getCurrentPosition;
- * installProbe.watchPosition; installProbe.watchPosition.emit; installProbe.clearWatch; observe; observe.recordFrame;
- * observe.recordAudio; surfaceEvidence; initialEvidence; waitVoice; manualBilingualTts; run; installProbe.observedWebSocket;
- * setSyntheticVisibility; installCameraBoundary; installCameraBoundary.checkedVideo;
- * installCameraBoundary.supportedConstraints; installCameraBoundary.resolvePermission;
- * installCameraBoundary.rejectPermission; runCameraBoundaries; runBoundaries; main.
+ * Declaration Index: validateArguments — pin the public product URL and new artifact paths;
+ * verifyInitial — enforce default preferences and activation gates; verifyProductSurface — enforce accessible product layout;
+ * verifyCameraRequest — validate one user-gesture rear-camera request; verifyCameraDisplay — validate a decoded model result;
+ * installProbe — install synthetic sensor and browser observation boundaries;
+ * installProbe.observedWebSocket — observe TTS connection metadata;
+ * installProbe.supportedConstraints — advertise the explicit synthetic rear-camera capability;
+ * installProbe.checkedVideo — delegate a rear-camera request to Chrome fake video;
+ * installProbe.getCurrentPosition — deliver one synthetic location; installProbe.watchPosition — own periodic location callbacks;
+ * installProbe.watchPosition.emit — deliver an active fix; installProbe.clearWatch — release its timer;
+ * observe — import canonical controllers and subscribe to real output events;
+ * observe.recordFrame — retain actual model frame metadata; observe.recordAudio — retain backend playback lifecycle;
+ * surfaceEvidence — inspect responsive visible controls; initialEvidence — inspect startup state without side effects;
+ * waitVoice — wait for the backend bilingual voice inventory; manualBilingualTts — verify four explicit backend PCM samples;
+ * run — execute formal and diagnostic page acceptance; setSyntheticVisibility — simulate page visibility boundaries;
+ * installCameraBoundary — construct permission-resolution fixtures;
+ * installCameraBoundary.checkedVideo — count explicit camera requests;
+ * installCameraBoundary.supportedConstraints — report fixture rear-camera support;
+ * installCameraBoundary.resolvePermission — resolve a pending synthetic permission;
+ * installCameraBoundary.rejectPermission — reject it with a fixed browser error;
+ * runCameraBoundaries — test camera permission cleanup and failure states;
+ * runBoundaries — test synthetic lifecycle, route and visibility boundaries;
+ * main — validate the CLI, run the selected acceptance and write its report.
  * Variable Index: ORIGIN/PREFIX — approved relay; ROUTE/POINT — explicit synthetic fixtures;
  * report — body-free evidence without login credentials, pixels or positions.
  * Constraints: No device/route/model changes, physical camera/GPS, fabricated audio start/end, retries,
@@ -257,7 +271,8 @@ async function waitVoice(page) {
 
 /* Functionality: Verify real backend PCM playback for fixed English, Chinese and auto-detected samples.
  * Inputs: diagnostic page with the fixed backend voice. Outputs: body-free request and lifecycle evidence.
- * Logic: enable only by an explicit click, submit each sample from a real click, and await the owned audio end.
+ * Logic: preserve an already-enabled user preference, enable it only if off, submit each sample from a real
+ * click, and await the owned audio end.
  * Constraints: no text is returned or recorded; checks browser scheduling, not physical audibility or speech quality. */
 async function manualBilingualTts(page) {
   const cases = [
@@ -266,7 +281,8 @@ async function manualBilingualTts(page) {
     {language: "auto", text: "Turn left at the next street."},
     {language: "auto", text: "前方路口左转。"},
   ], results = [];
-  await page.click("#speech-enabled");
+  if (!await page.locator("#speech-enabled").isChecked()) await page.click("#speech-enabled");
+  requireGate(await page.locator("#speech-enabled").isChecked(), "DIAGNOSTIC_SPEECH_DISABLED");
   for (const item of cases) {
     const previous = await page.evaluate(() => window.__productControllers.speechOutput.lastRequest?.id ?? 0);
     await page.fill("#speech-text", item.text);

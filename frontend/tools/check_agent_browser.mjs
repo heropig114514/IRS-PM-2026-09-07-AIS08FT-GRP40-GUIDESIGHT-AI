@@ -1,13 +1,21 @@
 /* Responsibilities: Evaluate real Qwen→MCP→browser workflows with explicit device/ORS fixtures.
- * Implementation: Dedicated Chrome, actual app/ASGI/WS, natural-language requests and UI assertions.
+ * Implementation: Dedicated Chrome, actual app/ASGI/WS, natural-language requests, product camera
+ * user-gesture gating, automatic backend reply speech, and UI assertions.
  * Related Modules: backend/core/agent, agent-client/device, maps/camera controllers.
- * Declaration Index: installDevices; installDevices.fix; installDevices.denied;
- * installDevices.geo.getCurrentPosition/watchPosition/clearWatch;
- * installDevices.geo.watchPosition.report; ask; checkAudio; main.
- * Variable Index: None; PRS_PLAYWRIGHT_PATH is required; PRS_TLS_SPKI optionally pins a verified
+ * Declaration Index: installDevices — install explicit native-device fixtures;
+ * installDevices.fix — return one synthetic NUS position; installDevices.denied — deliver a synthetic denial;
+ * installDevices.geo.getCurrentPosition — deliver a fixture fix;
+ * installDevices.geo.watchPosition — own a periodic synthetic watch;
+ * installDevices.geo.clearWatch — release that watch; installDevices.geo.watchPosition.report — emit one active fix;
+ * ask — submit one live natural-language turn and collect safe evidence;
+ * checkAudio — verify synthetic recorded speech stops a real product camera stream;
+ * main — run live-Qwen product interaction acceptance.
+ * Variable Index: agentSpeechEvidence — body-free playback and guidance request lifecycle metadata;
+ * PRS_PLAYWRIGHT_PATH is required; PRS_TLS_SPKI optionally pins a verified
  * deployment certificate key; args/report/context belong to main.
- * Constraints: --live-qwen explicitly authorizes paid Qwen calls. GPS/ORS/camera are synthetic;
- * no GPU, deployment, physical device, real-route accuracy or speaker verification. */
+ * Constraints: --live-qwen explicitly authorizes paid Qwen calls. GPS/ORS/camera frames are synthetic,
+ * but inference uses the actual public local-GPU relay; no deployment, physical device, real-route
+ * accuracy or speaker verification. */
 import assert from "node:assert/strict";
 import {createRequire} from "node:module";
 import {mkdir, writeFile} from "node:fs/promises";
@@ -81,36 +89,44 @@ export async function ask(page, text, report) {
 /* Functionality: Verify recorded speech actually closes a running camera.
  * Inputs: connected page, evidence report, Chrome configured with explicit fake audio.
  * Outputs: transcript, tool evidence and independent released-stream assertion.
- * Logic: User starts Echo through the real button, records 4s, then ASR/agent must stop it.
- * Constraints: Synthetic Chinese voice/camera; no physical microphone or recognition-rate claim. */
+ * Logic: User starts the existing product camera through its real button, holds the actual pointer for
+ * four seconds while recording, then ASR/agent must stop it.
+ * Constraints: Synthetic Chinese voice and fake camera; actual local inference; no physical microphone or recognition-rate claim. */
 export async function checkAudio(page, report) {
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor();
-  await page.locator("#processing").selectOption("echo");
-  await page.locator("#start").click();
+  await page.locator("#product-camera-start").click();
   await page.waitForFunction(async () => {
-    const {cameraApp} = await import(new URL("./assets/camera.js", location.href).href);
+    const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
     return cameraApp.stream?.active && cameraApp.frameTimings;
   });
   report.toolEvents.length = 0;
-  await page.locator("#agent-record").click();
-  await page.waitForFunction(() => /Finish|结束/.test(document.querySelector("#agent-record").textContent));
-  await page.waitForTimeout(4000);
-  await page.locator("#agent-record").click();
+  const recordButton = page.locator("#agent-record");
+  await recordButton.scrollIntoViewIfNeeded();
+  const bounds = await recordButton.boundingBox();
+  assert.ok(bounds, "Voice button must be visible before recording");
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down();
+  try {
+    await page.waitForFunction(() => /Release to send|松开发送|Finish.*send|结束并发送/.test(
+      document.querySelector("#agent-record").textContent));
+    await page.waitForTimeout(4000);
+  } finally { await page.mouse.up(); }
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor({timeout: 185000});
   const transcript = await page.locator(".agent-message.you").last().innerText();
   assert.match(transcript, /关闭|摄像头/);
   assert.ok(report.toolEvents.some(tool => tool.name === "camera_stop"));
-  assert.equal(await page.evaluate(async () => (await import(new URL("./assets/camera.js", location.href).href)).cameraApp.stream), null);
+  assert.equal(await page.evaluate(async () => (await import(new URL("../assets/camera.js", location.href).href)).cameraApp.stream), null);
   report.audio = {transcript, reply: await page.locator(".agent-message.assistant").last().innerText(),
     tools: report.toolEvents.splice(0), camera_released: true,
-    source: "Windows synthetic Chinese speech via Chrome fake microphone; actual running Echo camera released"};
+    source: "Windows synthetic Chinese speech via Chrome fake microphone; actual product local camera stream released"};
   report.checks.push("microphone_worklet_wav_qwen_asr_camera_stop");
 }
 
-/* Functionality: Run multi-turn/cross-page/device/UI scenarios with a real Qwen backend.
+/* Functionality: Run multi-turn product-page/device/UI scenarios with a real Qwen backend.
  * Inputs: URL OUTPUT --live-qwen, optional --audio=absolute WAV; Playwright package/TLS pin env.
- * Outputs: JSON report/screenshots; Logic: assert visible state independently of model reply.
- * Constraints: Explicit synthetic device/ORS boundaries; no retries after failed assertions. */
+ * Outputs: JSON report/screenshots; Logic: assert visible state independently of model reply, verify
+ * backend playback of a live assistant reply, confirm the camera user-gesture gate, and verify cleanup.
+ * Constraints: Explicit synthetic device/ORS boundaries; no route handoff to legacy /live/; no retries. */
 async function main() {
   const [url, output, mode, audioArg] = process.argv.slice(2);
   if (!url || !output || mode !== "--live-qwen" || !process.env.PRS_PLAYWRIGHT_PATH)
@@ -154,7 +170,40 @@ async function main() {
     });
     page.on("pageerror", error => report.errors.push(error.message));
     await page.goto(url);
+    await page.evaluate(async () => {
+      const asset = new URL("../assets/", location.href);
+      const {guidanceManager, assistReady} = await import(new URL("integration/assist-mvp.js", asset));
+      await assistReady;
+      const {speechOutput} = await import(new URL("speech-output.js", asset));
+      const evidence = window.agentSpeechEvidence = {requests: [], driver: [], guidance: []};
+      speechOutput.subscribe(event => {
+        if (event.phase === "submitted") {
+          const request = speechOutput.lastRequest;
+          evidence.requests.push({request_id: request.id, text_length: request.text_length,
+            language: request.language, voice_id: request.voice_id, service: request.service});
+        }
+        evidence.driver.push({phase: event.phase, request_id: event.request_id, reason: event.reason});
+      });
+      guidanceManager.subscribe(event => evidence.guidance.push({phase: event.phase, channel: event.channel,
+        kind: event.kind, request_id: event.request_id, reason: event.reason}));
+    });
     await ask(page, "开启导航", report);
+    await page.waitForFunction(() => window.agentSpeechEvidence.guidance.some(event =>
+      event.phase === "output_end" && event.channel === "speech" && event.kind === "assistant"),
+    null, {timeout: 45000});
+    const assistantSpeech = await page.evaluate(() => {
+      const events = window.agentSpeechEvidence, start = events.guidance.find(event =>
+        event.phase === "output_start" && event.channel === "speech" && event.kind === "assistant");
+      const end = events.guidance.find(event => event.phase === "output_end" &&
+        event.channel === "speech" && event.kind === "assistant" && event.request_id === start?.request_id);
+      const request = events.requests.find(event => event.request_id === start?.request_id);
+      const audio = events.driver.filter(event => event.request_id === start?.request_id).map(event => event.phase);
+      return {start: Boolean(start), end: Boolean(end), request, audio_start: audio.includes("start"), audio_end: audio.includes("end")};
+    });
+    assert.equal(assistantSpeech.start, true); assert.equal(assistantSpeech.end, true);
+    assert.equal(assistantSpeech.request?.service, "backend"); assert.equal(assistantSpeech.request?.voice_id, "Cherry");
+    assert.equal(assistantSpeech.audio_start, true); assert.equal(assistantSpeech.audio_end, true);
+    report.checks.push("live_assistant_reply_auto_spoken_by_backend_stream");
     assert.match(page.url(), /\/maps\/$/);
     assert.equal(routeCalls, 0);
     assert.ok(!report.turns.at(-1).tools.some(tool => tool.name === "places_search"), "No invented destination searches");
@@ -172,27 +221,42 @@ async function main() {
     assert.equal(await page.evaluate(async () => (await import(new URL("../assets/navigation-ui.js", location.href).href)).navigation.describe().active), false);
     report.checks.push("stop_navigation");
     await page.locator("#agent-panel").screenshot({path: output + ".maps.png"});
-    await ask(page, "打开摄像头，使用原样回传模式。", report);
-    assert.match(page.url(), /\/live\/$/);
-    const media = await page.evaluate(async () => {
-      const {cameraApp} = await import(new URL("./assets/camera.js", location.href).href);
-      return {active: cameraApp.stream?.active, frames: cameraApp.frameTimings?.steadyFrames};
+    await ask(page, "开启环境感知。", report);
+    assert.match(page.url(), /\/mvp\/maps\/$/);
+    assert.match(report.turns.at(-1).reply, /点击|Tap|click|Start surroundings/i);
+    assert.ok(!report.turns.at(-1).tools.some(tool => tool.name === "camera_start"),
+      "Product camera start must remain a direct browser gesture");
+    const beforeCameraTap = await page.evaluate(async () => {
+      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
+      return {active: Boolean(cameraApp.stream?.active), mode: cameraApp.mode};
     });
-    assert.equal(media.active, true); assert.ok(media.frames >= 0);
-    report.checks.push("camera_echo_live_frames_and_page_handoff");
+    assert.deepEqual(beforeCameraTap, {active: false, mode: "idle"});
+    report.checks.push("assistant_preserves_product_camera_user_gesture_gate");
     await ask(page, "关闭摄像头", report);
-    assert.equal(await page.evaluate(async () => (await import(new URL("./assets/camera.js", location.href).href)).cameraApp.stream), null);
-    report.checks.push("camera_stop_releases_track");
+    assert.ok(report.turns.at(-1).tools.some(tool => tool.name === "camera_stop"));
+    assert.deepEqual(await page.evaluate(async () => {
+      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
+      return {active: Boolean(cameraApp.stream?.active), mode: cameraApp.mode, stream_cleared: cameraApp.stream === null};
+    }), {active: false, mode: "idle", stream_cleared: true});
+    report.checks.push("natural_language_camera_stop_preserves_idle_resource_state");
     await ask(page, "把界面切换成英文", report);
     assert.equal(await page.locator("#language").inputValue(), "en");
     assert.equal(await page.locator("#agent-send").innerText(), "Send");
     report.checks.push("language_switch");
+    const vibrationEnabled = await page.locator("#vibration-enabled").isChecked();
     await ask(page, "让手机短震一下", report);
-    assert.equal(await page.locator("#vibration-enabled").isChecked(), false);
+    assert.equal(await page.locator("#vibration-enabled").isChecked(), vibrationEnabled);
+    assert.ok(report.turns.at(-1).tools.some(tool => tool.name === "vibration_status"));
+    assert.equal(report.turns.at(-1).tools.some(tool => tool.name === "vibration_test"), vibrationEnabled);
     report.checks.push("vibration_respects_user_enable");
-    await ask(page, "朗读你好", report);
-    assert.equal(await page.locator("#speech-enabled").isChecked(), false);
-    report.checks.push("speech_respects_user_enable");
+    const speechEnabled = await page.locator("#speech-enabled").isChecked();
+    await ask(page, "Please say the word Hello aloud in English.", report);
+    assert.equal(await page.locator("#speech-enabled").isChecked(), speechEnabled);
+    assert.ok(report.turns.at(-1).tools.some(tool => tool.name === "speech_status"));
+    assert.equal(report.turns.at(-1).tools.some(tool => tool.name === "speech_speak"), speechEnabled);
+    if (speechEnabled) assert.ok(report.turns.at(-1).tools.some(tool => tool.name === "speech_speak" &&
+      tool.arguments.language === "en-US" && tool.arguments.text === "Hello"));
+    report.checks.push("speech_request_respects_user_enable_and_matches_english");
     if (audioArg) await checkAudio(page, report);
     for (const width of [320, 390, 1280]) {
       await page.setViewportSize({width, height: 900});

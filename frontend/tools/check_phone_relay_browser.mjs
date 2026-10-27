@@ -4,16 +4,30 @@
  * then a genuine start-click/backend-PCM activation before automatic guidance.
  * Related Modules: integration/assist-mvp.js, camera.js, navigation-ui.js, ai-control.js, speech-output.js;
  * backend/integration/assist.py and the separately deployed /mvp/ reverse proxy.
- * Declaration Index: requireGate; validateArguments; requireNew; safeFailure;
- * classifyRequest; verifyModelEvidence; verifySpeechActivation; guardMedia;
- * guardMedia.checkedVideo; guardMedia.observedWebSocket; installGPS;
- * installGPS.emit; installGPS.describe; installGPS.watchPosition; installGPS.clearWatch;
- * installGPS.getCurrentPosition; observe; observe.recordFrame; observe.recordGuidance;
- * observe.recordAudio; observe.recordNavigation; navigationEvidence; cleanupEvidence; waitNode;
- * monitorSocket; monitorSocket.received; monitorSocket.sent; selectSpeech; planNavigation;
- * startCamera; waitCameraFrames; waitCapacity; stopAll; syntheticSpeech; manualBilingualTts; run; main.
+ * Declaration Index: requireGate — apply fixed acceptance failures; validateArguments — pin public target and outputs;
+ * requireNew — prohibit artifact overwrite; safeFailure — redact exceptions; classifyRequest — constrain resources;
+ * verifyModelEvidence — correlate genuine frames and model sockets; verifySpeechActivation — validate first PCM start;
+ * verifyTtsStreamEvidence — correlate server stream IDs with playback; guardMedia — wrap native media and WebSocket boundaries;
+ * guardMedia.checkedVideo — preserve native video while rejecting microphone access;
+ * guardMedia.observedWebSocket — observe trusted speech gestures;
+ * guardMedia.observedWebSocket.send — correlate synthesis UUIDs with playback IDs;
+ * installGPS — inject labeled synthetic sensor callbacks; installGPS.emit — deliver one owned fix;
+ * installGPS.describe — report fixture counters; installGPS.watchPosition — register one synthetic watch;
+ * installGPS.clearWatch — release that watch; installGPS.getCurrentPosition — reject unexpected one-shot GPS;
+ * observe — load canonical controllers and evidence listeners; observe.recordFrame — retain frame metadata;
+ * observe.recordGuidance — correlate owned guidance with request policy; observe.recordAudio — retain output lifecycle;
+ * observe.recordNavigation — retain navigation state; navigationEvidence — read controller state;
+ * cleanupEvidence — read released resources; waitNode — poll one bounded predicate;
+ * monitorSocket — observe approved public WebSocket metadata; monitorSocket.received — retain safe server events;
+ * monitorSocket.sent — retain PRF2 headers; selectSpeech — validate configured backend voice;
+ * planNavigation — exercise real public ORS; startCamera — start the real local pipeline;
+ * waitCameraFrames — await verified model results; waitCapacity — verify drained sessions;
+ * stopAll — release browser resources; syntheticSpeech — exercise isolated risk speech;
+ * manualBilingualTts — test explicit Chinese and English backend playback;
+ * run — execute public relay acceptance; main — validate CLI and write the evidence report.
  * Variable Index: PHONE_ORIGIN/PREFIX — explicitly approved deployment target; NUS — synthetic GPS,
- * not a phone measurement; report — body-free evidence without credentials, pixels or positions.
+ * not a phone measurement; report — body-free evidence without credentials, pixels or positions;
+ * ttsSubmissions — request-ID correlation metadata without utterance text.
  * Constraints: Chrome with a phone viewport is not Safari/iPhone validation. Never disable TLS,
  * start services, download fixtures, use a physical camera/microphone, mock ORS/models, retry or commit.
  */
@@ -133,6 +147,58 @@ export function verifySpeechActivation(evidence) {
     source: "original_user_gesture_backend_stream", physical_audibility_verified: false};
 }
 
+/* Functionality: Correlate real backend TTS streams with browser playback request identities.
+ * Inputs: Secure WebSocket observations, audio lifecycle events and submitted synthesis IDs.
+ * Outputs: Counts and fixed PCM format for streams proven to start and complete.
+ * Logic: Validate each started playback against one submitted UUID and exactly one matching 24 kHz
+ * mono PCM configuration and nonempty completion; tolerate a secure socket canceled before submit.
+ * Constraints: A browser start proves playback scheduling only, not physical speaker audibility. */
+export function verifyTtsStreamEvidence(sockets, audioEvents, submissions) {
+  const requestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  requireGate(sockets.length >= 4 && sockets.every(socket => socket.secure), "BACKEND_TTS_STREAM_INVALID");
+  const submittedByUuid = new Map(), submittedByAudioId = new Map();
+  for (const submission of submissions) {
+    requireGate(requestIdPattern.test(submission.request_id) && Number.isSafeInteger(submission.audio_request_id) &&
+      submission.audio_request_id > 0 && !submittedByUuid.has(submission.request_id) &&
+      !submittedByAudioId.has(submission.audio_request_id), "BACKEND_TTS_STREAM_INVALID");
+    submittedByUuid.set(submission.request_id, submission);
+    submittedByAudioId.set(submission.audio_request_id, submission);
+  }
+
+  const streams = new Map();
+  for (const socket of sockets) {
+    for (const event of socket.tts) {
+      requireGate(["audio_config", "complete", "error"].includes(event.type) &&
+        requestIdPattern.test(event.request_id) && submittedByUuid.has(event.request_id) &&
+        event.type !== "error", "BACKEND_TTS_STREAM_INVALID");
+      const stream = streams.get(event.request_id) ?? {configs: [], completions: []};
+      if (event.type === "audio_config") stream.configs.push(event);
+      if (event.type === "complete") stream.completions.push(event);
+      streams.set(event.request_id, stream);
+    }
+  }
+  for (const [id, stream] of streams) {
+    requireGate(stream.configs.length === 1 && stream.configs[0].sample_rate === 24000 &&
+      stream.configs[0].format === "pcm_s16le_mono" && stream.completions.length === 1 &&
+      Number.isSafeInteger(stream.completions[0].audio_bytes) && stream.completions[0].audio_bytes > 0 &&
+      submittedByUuid.has(id), "BACKEND_TTS_STREAM_INVALID");
+  }
+
+  const started = audioEvents.filter(event => event.phase === "start");
+  const startedIds = new Set();
+  for (const event of started) {
+    requireGate(Number.isSafeInteger(event.request_id) && event.request_id > 0 &&
+      !startedIds.has(event.request_id), "BACKEND_TTS_STREAM_INVALID");
+    startedIds.add(event.request_id);
+    const submission = submittedByAudioId.get(event.request_id);
+    requireGate(submission && streams.has(submission.request_id), "BACKEND_TTS_STREAM_INVALID");
+  }
+  requireGate(startedIds.size >= 4, "BACKEND_TTS_STREAM_INVALID");
+  return {secure_sockets: sockets.length, started_streams: startedIds.size, accepted_streams: streams.size,
+    cancelled_before_provider_response: sockets.filter(socket => socket.tts.length === 0).length,
+    sample_rate: 24000, format: "pcm_s16le_mono", physical_audibility_verified: false};
+}
+
 /* Functionality: Observe native video tracks while preventing any microphone request before it occurs.
  * Inputs: pre-module Chrome page. Outputs: body-free native calls and retained track cleanup handles.
  * Logic: delegate all video requests unchanged to Chrome's explicit fake-video launch device.
@@ -145,7 +211,8 @@ function guardMedia() {
   /* Functionality: Observe backend speech requests without retaining utterance bodies in reports.
    * Inputs: same-origin socket URL and optional protocols. Outputs: original WebSocket instance.
    * Logic: record the trusted gesture; keep command text transiently in memory until the lifecycle
-   * observer compares it with expected guidance. Constraints: never export request text. */
+   * observer compares it with expected guidance, and retain UUID-to-playback-ID metadata for TTS checks.
+   * Constraints: never export request text. */
   function observedWebSocket(url, protocols) {
     const socket = protocols === undefined ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
     const address = new URL(String(url), location.href);
@@ -153,12 +220,21 @@ function guardMedia() {
       window.__phoneSpeechCalls.push({at: performance.now(), user_gesture_active: navigator.userActivation?.isActive === true,
         secure: address.protocol === "wss:"});
       const send = socket.send.bind(socket);
+      /* Functionality: Correlate one transmitted synthesis request without changing its payload.
+       * Inputs: Original WebSocket data. Outputs: Same data sent once.
+       * Logic: Retain only UUID, current playback ID, language and rate; text stays in the existing
+       * transient matcher for its policy comparison. Constraints: Never export utterance text. */
       socket.send = data => {
         if (typeof data === "string" && window.__phoneProbe) {
           try {
             const command = JSON.parse(data);
-            if (command.type === "synthesize") window.__phoneProbe.synthesisRequests.push({request_id: command.request_id,
-              text: command.text, language: command.language, rate: command.rate});
+            if (command.type === "synthesize") {
+              const audioRequestId = window.__phoneControllers?.driver.current?.id ?? null;
+              window.__phoneProbe.synthesisRequests.push({request_id: command.request_id,
+                text: command.text, language: command.language, rate: command.rate});
+              window.__phoneProbe.ttsSubmissions.push({request_id: command.request_id,
+                audio_request_id: audioRequestId, language: command.language, rate: command.rate});
+            }
           } catch { window.__phoneProbe.synthesisRequests.push({invalid_command: true}); }
         }
         return send(data);
@@ -249,7 +325,7 @@ async function observe() {
   const {videoAlertText} = await import(new URL("integration/video-alerts.js", asset));
   window.__phoneControllers = {glue, cameraApp, navigation, driver, ai};
   window.__phoneProbe = {frames: [], sources: [], guidance: [], audio: [], utterances: [],
-    synthesisRequests: [], navigation: []};
+    synthesisRequests: [], ttsSubmissions: [], navigation: []};
   /* Functionality: Observe validated camera frames and original source identity.
    * Inputs: production source event. Outputs: bounded public metadata.
    * Logic: select actual metadata fields only on genuine frame events; Constraints: no image retention. */
@@ -373,9 +449,10 @@ function monitorSocket(socket, report) {
       ![`${PREFIX}ws/control/`, `${PREFIX}ws/agent/`, `${PREFIX}ws/detect/local/`, `${PREFIX}ws/tts/`].includes(address.pathname))
     report.failures.push({phase: report.phase, code: "UNEXPECTED_SOCKET", type: "GateError"});
   socket.on("close", () => { item.closed = true; });
-  /* Functionality: Read only fixed public handshake and control heartbeat fields.
-   * Inputs: received frame. Outputs: hello/welcome/pong evidence. Logic: ignore binary results.
-   * Constraints: no control command, result body or private header retention. */
+  /* Functionality: Read allowlisted handshake, heartbeat and TTS lifecycle metadata.
+   * Inputs: received frame. Outputs: model hello, control welcome/pong and body-free PCM events.
+   * Logic: Parse text control messages only; binary model results are ignored.
+   * Constraints: No utterance text, binary results, control command or private header retention. */
   function received(frame) {
     if (typeof frame.payload !== "string") return;
     let value; try { value = JSON.parse(frame.payload); } catch { return; }
@@ -387,7 +464,8 @@ function monitorSocket(socket, report) {
     if (value.type === "welcome") item.welcomes.push(value.session_id);
     if (value.type === "pong") item.pongs++;
     if (address.pathname === `${PREFIX}ws/tts/`)
-      item.tts.push({type: value.type, code: value.code ?? null, sample_rate: value.sample_rate ?? null,
+      item.tts.push({type: value.type, request_id: value.request_id ?? null, code: value.code ?? null,
+        sample_rate: value.sample_rate ?? null,
         format: value.format ?? null, audio_bytes: value.audio_bytes ?? null});
   }
   /* Functionality: Retain PRF2 wire header identity while discarding JPEG bytes immediately.
@@ -726,9 +804,10 @@ export async function run(options) {
     await waitNode(() => report.sockets.filter(item => item.path === `${PREFIX}ws/tts/`).every(item => item.closed),
       15000, "TTS_SOCKET_NOT_CLOSED");
     const ttsSockets = report.sockets.filter(item => item.path === `${PREFIX}ws/tts/`);
-    requireGate(ttsSockets.length >= 4 && ttsSockets.every(item => item.secure &&
-      item.tts.some(event => event.type === "audio_config") && item.tts.some(event => event.type === "complete") &&
-      item.tts.every(event => event.type !== "error")), "BACKEND_TTS_STREAM_INVALID");
+    const ttsEvidence = await page.evaluate(() => ({audio: structuredClone(window.__phoneProbe.audio),
+      submissions: structuredClone(window.__phoneProbe.ttsSubmissions)}));
+    report.checks.backend_tts_streams = verifyTtsStreamEvidence(ttsSockets, ttsEvidence.audio,
+      ttsEvidence.submissions);
     report.phase = "control_hub_and_backend_audio";
     await waitNode(() => report.sockets.some(item => item.path === `${PREFIX}ws/control/` && item.pongs > 0),
       20000, "CONTROL_HEARTBEAT_MISSING");
@@ -736,7 +815,8 @@ export async function run(options) {
     requireGate(controls.length === 1 && controls[0].welcomes.length === 1 &&
       controls[0].welcomes[0] === report.identity.control_session_id, "CONTROL_HUB_IDENTITY");
     report.output_evidence = await page.evaluate(() => ({utterances: structuredClone(window.__phoneProbe.utterances),
-      audio: structuredClone(window.__phoneProbe.audio)}));
+      audio: structuredClone(window.__phoneProbe.audio),
+      tts_submissions: structuredClone(window.__phoneProbe.ttsSubmissions)}));
     requireGate(report.output_evidence.utterances.every(item => item.request_owned && item.text_matches_policy &&
       item.backend_voice && item.configured_rate === 2 && item.server_rate === 2), "BACKEND_SPEECH_IDENTITY");
     report.model_alert_verified = report.output_evidence.utterances.some(item => item.kind === "risk" &&
@@ -753,6 +833,9 @@ export async function run(options) {
         const probe = structuredClone(window.__phoneProbe ?? null);
         if (probe?.synthesisRequests) probe.synthesisRequests = probe.synthesisRequests.map(item => ({
           request_id: item.request_id ?? null, language: item.language ?? null, rate: item.rate ?? null}));
+        if (probe?.ttsSubmissions) probe.ttsSubmissions = probe.ttsSubmissions.map(item => ({
+          request_id: item.request_id ?? null, audio_request_id: item.audio_request_id ?? null,
+          language: item.language ?? null, rate: item.rate ?? null}));
         return probe;
       }); } catch {}
       try { report.partial_cleanup = await page.evaluate(cleanupEvidence); } catch {}
