@@ -15,12 +15,10 @@ import base64
 import binascii
 import json
 import logging
-import os
 import uuid
 from urllib.parse import urlsplit
 
 from django.conf import settings
-
 from websockets.asyncio.client import connect
 
 from .provider import AgentError, configuration

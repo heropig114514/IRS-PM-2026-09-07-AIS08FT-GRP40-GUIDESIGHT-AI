@@ -15,9 +15,9 @@ test.
 
 import asyncio
 import base64
-from functools import partial
 import json
 import uuid
+from functools import partial
 from unittest.mock import AsyncMock, patch
 
 from asgiref.testing import ApplicationCommunicator
