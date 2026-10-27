@@ -10,10 +10,13 @@
  * installDevices.geo.watchPosition — own a periodic synthetic watch;
  * installDevices.geo.clearWatch — release that watch; installDevices.geo.watchPosition.report — emit one active fix;
  * waitForCameraStream — observe the active page controller through the page's main execution realm;
- * ask — submit one live turn, require a new assistant reply, and collect safe evidence;
+ * observeSpeech — capture bounded backend playback lifecycle metadata;
+ * waitForSpeechIdle — wait for direct and guidance-owned audio to release the shared driver;
+ * ask — submit one live turn after prior speech ends, require a new assistant reply, and collect safe evidence;
  * checkAudio — verify synthetic recorded speech stops a real product camera stream;
  * main — run live-Qwen diagnostic and product interaction acceptance.
  * Variable Index: agentSpeechEvidence — body-free playback and guidance request lifecycle metadata;
+ * report.audioCaptureFailure/speechToolPlayback — bounded capture or backend-audio evidence;
  * PRS_PLAYWRIGHT_PATH/PRS_FAKE_CAMERA_VIDEO are required runtime/scene inputs;
  * PRS_TLS_SPKI optionally pins a verified
  * deployment certificate key; args/report/context belong to main.
@@ -97,11 +100,52 @@ export async function waitForCameraStream(page, timeoutMs) {
   throw new Error(`Camera did not reach a decoded frame before timeout: ${JSON.stringify(state)}`);
 }
 
+/* Functionality: Observe one page's backend speech and guidance lifecycle without capturing utterance text.
+ * Inputs: A loaded Playwright page. Outputs: Empty bounded request/driver/guidance evidence buffers.
+ * Logic: Subscribe to the exact page-realm controllers after their initialization completes.
+ * Constraints: Read-only; records request metadata and phases, never audio, text or hardware audibility. */
+export async function observeSpeech(page) {
+  await page.evaluate(async () => {
+    const asset = new URL("../assets/", location.href);
+    const {assistReady, guidanceManager} = await import(new URL("integration/assist-mvp.js", asset));
+    await assistReady;
+    const {speechOutput} = await import(new URL("speech-output.js", asset));
+    const evidence = window.agentSpeechEvidence = {requests: [], driver: [], guidance: []};
+    speechOutput.subscribe(event => {
+      if (event.phase === "submitted") {
+        const request = speechOutput.lastRequest;
+        evidence.requests.push({request_id: request.id, text_length: request.text_length,
+          language: request.language, voice_id: request.voice_id, service: request.service});
+      }
+      evidence.driver.push({phase: event.phase, request_id: event.request_id, reason: event.reason});
+    });
+    guidanceManager.subscribe(event => evidence.guidance.push({phase: event.phase, channel: event.channel,
+      kind: event.kind, request_id: event.request_id, reason: event.reason}));
+  });
+}
+
+/* Functionality: Wait until the shared speech driver and automatic-reply queue own no active work.
+ * Inputs: Loaded page and positive timeout. Outputs: True once both controllers report idle.
+ * Logic: Observe page-realm controller state; bounded polling lets PCM playback finish naturally.
+ * Constraints: Does not stop, enqueue, retry or alter speech; does not claim physical audibility. */
+export async function waitForSpeechIdle(page, timeoutMs = 60000) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError("Invalid speech wait timeout");
+  await page.waitForFunction(async () => {
+    const asset = new URL("../assets/", location.href);
+    const {assistReady, guidanceManager} = await import(new URL("integration/assist-mvp.js", asset));
+    await assistReady;
+    const {speechOutput} = await import(new URL("speech-output.js", asset));
+    const output = speechOutput.describe(), guidance = guidanceManager.describe();
+    return !output.active_request && !guidance.active.speech && guidance.queued_assistant_replies === 0;
+  }, null, {timeout: timeoutMs});
+}
+
 /* Functionality: Submit one natural-language turn and collect its corresponding UI evidence.
  * Inputs: page, text and report; Outputs: completed turn evidence with the new assistant response.
- * Logic: Record prior user/assistant counts, then require a new user message, idle state and a new reply.
- * Constraints: No model retries or response rewriting; prevents stale prior replies from passing. */
+ * Logic: Wait for shared speech to finish, record prior user/assistant counts, then require a new user message,
+ * idle state and a new reply. Constraints: No model retries or response rewriting; prevents overlap and stale replies. */
 export async function ask(page, text, report) {
+  await waitForSpeechIdle(page);
   const started = Date.now();
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor();
   const userCount = await page.locator(".agent-message.you").count();
@@ -126,15 +170,17 @@ export async function ask(page, text, report) {
 
 /* Functionality: Verify recorded speech actually closes a running camera.
  * Inputs: connected page, evidence report, Chrome configured with explicit fake audio.
- * Outputs: transcript, tool evidence and independent released-stream assertion.
- * Logic: User starts the existing product camera through its real button, holds the actual pointer for
- * four seconds while recording, then ASR/agent must stop it.
+ * Outputs: transcript, tool evidence and independent released-stream assertion; capture state on missing transcript.
+ * Logic: Wait for shared speech to finish, start the existing product camera through its real button, hold the
+ * actual pointer for six seconds, and require a new ASR/agent turn before reading its transcript.
  * Constraints: Synthetic Chinese voice and fake camera; actual local inference; no physical microphone or recognition-rate claim. */
 export async function checkAudio(page, report) {
+  await waitForSpeechIdle(page);
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor();
   await page.locator("#product-camera-start").click();
   await waitForCameraStream(page, 30000);
   report.toolEvents.length = 0;
+  const userCount = await page.locator(".agent-message.you").count();
   const recordButton = page.locator("#agent-record");
   await recordButton.scrollIntoViewIfNeeded();
   const bounds = await recordButton.boundingBox();
@@ -144,8 +190,23 @@ export async function checkAudio(page, report) {
   try {
     await page.waitForFunction(() => /Release to send|松开发送|Finish.*send|结束并发送/.test(
       document.querySelector("#agent-record").textContent));
-    await page.waitForTimeout(4000);
+    await page.waitForTimeout(6000);
   } finally { await page.mouse.up(); }
+  try {
+    await page.waitForFunction(previous => document.querySelectorAll(".agent-message.you").length > previous,
+      userCount, {timeout: 45000});
+  } catch {
+    report.audioCaptureFailure = await page.evaluate(async () => {
+      const {cameraApp} = await import(new URL("../assets/camera.js", location.href).href);
+      const record = document.querySelector("#agent-record"), panel = document.querySelector("#agent-panel");
+      return {status: document.querySelector("#agent-status")?.textContent ?? null,
+        record_label: record?.textContent ?? null, record_disabled: record?.disabled ?? null,
+        panel_connected: panel?.dataset.connected === "true", panel_busy: panel?.dataset.busy === "true",
+        user_message_count: document.querySelectorAll(".agent-message.you").length,
+        camera_stream_active: cameraApp.stream?.active === true};
+    });
+    throw error;
+  }
   await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor({timeout: 185000});
   const transcript = await page.locator(".agent-message.you").last().innerText();
   assert.match(transcript, /关闭|摄像头/);
@@ -209,23 +270,7 @@ async function main() {
     });
     page.on("pageerror", error => report.errors.push(error.message));
     await page.goto(url);
-    await page.evaluate(async () => {
-      const asset = new URL("../assets/", location.href);
-      const {guidanceManager, assistReady} = await import(new URL("integration/assist-mvp.js", asset));
-      await assistReady;
-      const {speechOutput} = await import(new URL("speech-output.js", asset));
-      const evidence = window.agentSpeechEvidence = {requests: [], driver: [], guidance: []};
-      speechOutput.subscribe(event => {
-        if (event.phase === "submitted") {
-          const request = speechOutput.lastRequest;
-          evidence.requests.push({request_id: request.id, text_length: request.text_length,
-            language: request.language, voice_id: request.voice_id, service: request.service});
-        }
-        evidence.driver.push({phase: event.phase, request_id: event.request_id, reason: event.reason});
-      });
-      guidanceManager.subscribe(event => evidence.guidance.push({phase: event.phase, channel: event.channel,
-        kind: event.kind, request_id: event.request_id, reason: event.reason}));
-    });
+    await observeSpeech(page);
     await page.locator("#assist-speech-start:not([disabled])").waitFor({timeout: 15000});
     await page.locator("#assist-speech-start").click();
     await page.waitForFunction(async () => {
@@ -274,6 +319,7 @@ async function main() {
     const productUrl = new URL("./", page.url()).href;
     await page.goto(productUrl);
     await page.locator("#agent-panel[data-connected=true][data-busy=false]").waitFor({timeout: 15000});
+    await observeSpeech(page);
     await ask(page, "开启环境感知。", report);
     assert.match(page.url(), /\/mvp\/maps\/$/);
     assert.match(report.turns.at(-1).reply, /点击|Tap|click|Start surroundings/i);
@@ -285,6 +331,7 @@ async function main() {
     });
     assert.deepEqual(beforeCameraTap, {active: false, mode: "idle"});
     report.checks.push("assistant_preserves_product_camera_user_gesture_gate");
+    if (audioArg) await checkAudio(page, report);
     /* Functionality: Test assistant stop against a camera stream started through the required direct gesture.
      * Inputs: Current product page, synthetic Chrome camera and real public inference relay.
      * Outputs: Active camera state followed by a tool-confirmed idle state with no retained stream.
@@ -318,8 +365,20 @@ async function main() {
     assert.equal(report.turns.at(-1).tools.some(tool => tool.name === "speech_speak"), speechEnabled);
     if (speechEnabled) assert.ok(report.turns.at(-1).tools.some(tool => tool.name === "speech_speak" &&
       tool.arguments.language === "en-US" && tool.arguments.text === "Hello"));
+    if (speechEnabled) {
+      await waitForSpeechIdle(page);
+      const playback = await page.evaluate(() => {
+        const evidence = window.agentSpeechEvidence;
+        const request = evidence.requests.find(item => item.text_length === 5 && item.language === "en-US" &&
+          item.service === "backend" && item.voice_id === "Cherry");
+        const phases = evidence.driver.filter(item => item.request_id === request?.request_id).map(item => item.phase);
+        return {request, started: phases.includes("start"), ended: phases.includes("end")};
+      });
+      report.speechToolPlayback = playback;
+      assert.ok(playback.request && playback.started && playback.ended,
+        "Agent-requested English speech must start and complete through backend audio");
+    }
     report.checks.push("speech_request_respects_user_enable_and_matches_english");
-    if (audioArg) await checkAudio(page, report);
     for (const width of [320, 390, 1280]) {
       await page.setViewportSize({width, height: 900});
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

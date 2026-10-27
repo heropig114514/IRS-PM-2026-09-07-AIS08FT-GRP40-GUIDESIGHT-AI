@@ -16,10 +16,10 @@
  * hiddenPrelude; cameraSession; pendingPermission; pendingInventory; pendingMetadata;
  * pendingMetadata.installMetadataBoundary; pendingMetadata.installMetadataBoundary.ignoreLoad;
  * pendingMetadata.installMetadataBoundary.restore; requireNew; screenshot; run; run.socketOpened;
- * run.socketOpened.sent; run.socketOpened.received; main.
+ * run.socketOpened.sent; run.socketOpened.received — retain admission or allowlisted failure codes; main.
  * Variable Index: SYNTHETIC_DEVICE is fixture-only, never a real camera ID; normalizeApplicationPath
  * removes only the approved /mvp mount prefix; assistLifecycle holds
- * production references and body-free observations. Media fixtures own native synthetic tracks,
+ * production references and body-free observations; WebSocket errors retain only safe codes. Media fixtures own native synthetic tracks,
  * canvas draw timers and explicit unresolved permission/inventory callbacks, not device permissions;
  * metadata_boundary_held records whether the test-only native media boundary remains installed.
  * Constraints: No service/Git changes, production method replacements, GPU mocks, implicit retries,
@@ -118,7 +118,7 @@ function installMediaFixture() {
 /* Functionality: Observe unchanged actual entry and original camera events.
  * Inputs: Page modules. Outputs: Body-free probe and original object references.
  * Logic: resolve canonical assets through the page's configured API base and keep client reference
- * across CameraApp.stop so actual socket closure remains observable.
+ * across CameraApp.stop so actual socket closure and server admission errors remain observable.
  * Constraints: no output enablement, GPU result mutation, image/body/location retention. */
 async function observeLifecycle() {
   const base = new URL(document.documentElement.dataset.apiBase || "../", location.href);
@@ -129,12 +129,13 @@ async function observeLifecycle() {
   const state = window.assistLifecycle = {glue, camera: cameraApp, lastClient: null,
     frames: [], cameraEvents: [], guidance: [], metadataBoundary: null};
   /* Functionality: Preserve original camera admission/frame/terminal identity.
-   * Inputs: Camera event. Outputs: Finite evidence. Logic: no body/boxes retained.
+   * Inputs: Camera event. Outputs: lifecycle IDs, provider and safe error class. Logic: no body/boxes/error details retained.
    * Constraints: metadata comes only from actual validated local model responses. */
   function recordCamera(event) {
     if (event.type === "session") state.lastClient = cameraApp.client;
     state.cameraEvents.push({type: event.type, session_id: event.sessionId ?? null,
-      session_seconds: event.contract?.session_seconds, provider: event.provider ?? null});
+      session_seconds: event.contract?.session_seconds, provider: event.provider ?? null,
+      error_type: event.errorType ?? null});
     if (event.type === "frame") state.frames.push({index: event.result.metadata.index,
       model: event.result.metadata.model, provider: event.result.metadata.provider,
       timestamp_source: event.result.metadata.timestamp_source, capture_time_s: event.result.metadata.capture_time_s,
@@ -377,19 +378,21 @@ async function run(options) {
      * Outputs: Public header/lifecycle records. Logic: discard media/control bodies.
      * Constraints: no transport or prediction replacement. */
     function socketOpened(socket) {
-      const path = normalizeApplicationPath(new URL(socket.url()).pathname), entry = {path, closed: false, inputs: [], hellos: []};
+      const path = normalizeApplicationPath(new URL(socket.url()).pathname), entry = {path, closed: false, inputs: [], hellos: [], errors: []};
       report.websockets.push(entry); socket.on("close", () => { entry.closed = true; });
       /* Functionality: Inspect original local input header only. Inputs: Sent frame. Outputs: PRF2 metadata.
        * Logic: keep index/source time; Constraints: never retain JPEG pixels. */
       function sent(frame) { if (!Buffer.isBuffer(frame.payload)) return;
         assert.ok(frame.payload.length >= 16 && frame.payload.readUInt32BE(0) === 0x50524632, "Local frame must be PRF2");
         entry.inputs.push({index: frame.payload.readUInt32BE(4), capture_time_s: frame.payload.readDoubleBE(8), bytes: frame.payload.length}); }
-      /* Functionality: Inspect public session hello only. Inputs: Received control. Outputs: Continuous contract.
-       * Logic: discard every binary/result/private body; Constraints: no generated admission. */
+      /* Functionality: Inspect public admission and safe error codes. Inputs: Received control.
+       * Outputs: Session contract or allowlisted failure identifier. Logic: discard binary/result/error detail.
+       * Constraints: no generated admission or retained media/body text. */
       function received(frame) { if (typeof frame.payload !== "string") return;
         let value; try { value = JSON.parse(frame.payload); } catch { return; }
         if (value.kind === "session") entry.hellos.push({provider: value.provider, protocol_version: value.protocol_version,
-          session_seconds: value.session_seconds, model: value.model}); }
+          session_seconds: value.session_seconds, model: value.model});
+        else if (value.kind === "error") entry.errors.push({code: /^[a-z][a-z0-9_]{0,79}$/.test(value.code) ? value.code : "unknown"}); }
       if (path === "/ws/detect/local/") { socket.on("framesent", sent); socket.on("framereceived", received); }
     }
     page.on("websocket", socketOpened);

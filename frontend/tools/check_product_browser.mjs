@@ -15,7 +15,8 @@
  * observe — import canonical controllers and subscribe to real output events;
  * observe.recordFrame — retain actual model frame metadata; observe.recordAudio — retain backend playback lifecycle;
  * surfaceEvidence — inspect responsive visible controls; initialEvidence — inspect startup state without side effects;
- * waitVoice — wait for the backend bilingual voice inventory; manualBilingualTts — verify four explicit backend PCM samples;
+ * waitVoice — wait for the backend bilingual voice inventory;
+ * manualBilingualTts — verify four backend PCM samples and retain bounded failure state;
  * run — execute formal and diagnostic page acceptance; setSyntheticVisibility — simulate page visibility boundaries;
  * installCameraBoundary — construct permission-resolution fixtures;
  * installCameraBoundary.checkedVideo — count explicit camera requests;
@@ -270,11 +271,12 @@ async function waitVoice(page) {
 }
 
 /* Functionality: Verify real backend PCM playback for fixed English, Chinese and auto-detected samples.
- * Inputs: diagnostic page with the fixed backend voice. Outputs: body-free request and lifecycle evidence.
+ * Inputs: diagnostic page with the fixed backend voice and mutable report.
+ * Outputs: body-free request/lifecycle evidence or a bounded failure snapshot.
  * Logic: preserve an already-enabled user preference, enable it only if off, submit each sample from a real
  * click, and await the owned audio end.
  * Constraints: no text is returned or recorded; checks browser scheduling, not physical audibility or speech quality. */
-async function manualBilingualTts(page) {
+async function manualBilingualTts(page, report) {
   const cases = [
     {language: "en-US", text: "Turn left at the next street."},
     {language: "zh-CN", text: "前方路口左转。"},
@@ -288,10 +290,24 @@ async function manualBilingualTts(page) {
     await page.fill("#speech-text", item.text);
     await page.selectOption("#speech-language", item.language);
     await page.click("#speech-play");
-    await page.waitForFunction(previousId => {
-      const driver = window.__productControllers.speechOutput;
-      return driver.lastRequest?.id > previousId && driver.phase === "completed" && driver.current === null;
-    }, previous, {timeout: 30000});
+    try {
+      await page.waitForFunction(previousId => {
+        const driver = window.__productControllers.speechOutput;
+        return driver.lastRequest?.id > previousId && driver.phase === "completed" && driver.current === null;
+      }, previous, {timeout: 30000});
+    } catch {
+      report.checks.diagnostic_bilingual_tts_failure = await page.evaluate(() => {
+        const driver = window.__productControllers.speechOutput, request = driver.lastRequest;
+        const socket = window.__productProbe.speech.at(-1);
+        return {state: driver.phase, active_request: driver.current !== null, last_error: driver.lastError,
+          request: request ? {id: request.id, language: request.language, voice_id: request.voice_id,
+            service: request.service, text_length: request.text_length} : null,
+          socket: socket ? {secure: socket.secure, path: socket.path,
+            user_gesture_active: socket.user_gesture_active} : null,
+          message_code: document.getElementById("speech-message")?.dataset.kind ?? null};
+      });
+      throw error;
+    }
     const evidence = await page.evaluate(({language, textLength, previousId}) => {
       const driver = window.__productControllers.speechOutput, request = driver.lastRequest;
       const events = window.__productEvents.audio.filter(event => event.request_id === request.id);
@@ -417,7 +433,7 @@ export async function run(options) {
     requireGate(await page.locator("#speech-play").isVisible() && await page.locator("#navigation-speech-voice").isVisible() &&
       await page.locator("#example").isVisible() && await page.locator("#assist-source").isVisible(), "DIAGNOSTIC_CONTROLS_MISSING");
     report.phase = "diagnostic_bilingual_tts";
-    report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page);
+    report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page, report);
     await page.selectOption("#assist-source", "video");
     requireGate(await page.locator("#assist-video-file").isVisible(), "DIAGNOSTIC_VIDEO_MISSING");
     report.checks.diagnostics = {page_status: diagnostic.status(), backend_voice_visible: true, test_inputs_visible: true,
@@ -645,7 +661,7 @@ export async function runBoundaries(options) {
     await page.evaluate(observe);
     requireGate(await page.locator("#speech-play").isVisible() && await page.locator("#speech-enabled").isVisible(),
       "DIAGNOSTIC_TTS_CONTROLS_MISSING");
-    report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page);
+    report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page, report);
     requireGate(report.failures.length === 0, "BROWSER_PAGE_ERRORS"); report.complete = true; report.phase = "complete";
   } catch (error) { report.failures.push(safeFailure(error, report.phase)); }
   finally {
