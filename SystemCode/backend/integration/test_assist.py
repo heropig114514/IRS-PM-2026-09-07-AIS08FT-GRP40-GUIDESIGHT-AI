@@ -109,11 +109,12 @@ class AssistTests(SimpleTestCase):
     async def test_combined_page_and_permissions(self):
         """Functionality: Preserve original controller controls on both explicitly owned views.
         Inputs: actual product/test templates and GET/HEAD/invalid host/method scopes.
-        Outputs: stable controls, same-origin microphone allowance for both voice-enabled views,
-        media/GPS policy,
-        and safe errors without original file edits.
+        Outputs: stable controls, no explicit voice-alert module on the product page, same-origin
+        microphone allowance for both voice-enabled views, media/GPS policy, and safe errors
+        without original file edits.
         Logic: verify SRI and nonce continuity; independent manager scripts never enter this page.
-        Constraints: no actual browser permissions, CDN availability or audible output verification.
+        Constraints: hidden product bindings remain available to the controller; no actual browser
+        permissions, CDN availability or audible output verification.
         """
         original = (FRONTEND / "maps.html").read_bytes()
         app = AssistApplication(AsyncMock())
@@ -124,6 +125,10 @@ class AssistTests(SimpleTestCase):
         self.assertIn(b'data-assist="true"', body)
         self.assertIn(b'id="navigation-speech-enabled"', body)
         self.assertIn(b'id="speech-enabled"', body)
+        self.assertNotIn(b'class="product-card product-speech"', body)
+        self.assertNotIn(b'id="product-speech-heading"', body)
+        self.assertIn(b'id="product-driver-bindings" hidden', body)
+        self.assertIn(b'id="assist-speech-start"', body)
         self.assertIn(b'/assets/integration/assist-mvp.js', body)
         self.assertNotIn(b'src="../assets/integration/maps-navigation-speech.js"', body)
         self.assertNotIn(b'src="../integration/assets/local-mvp.js"', body)
