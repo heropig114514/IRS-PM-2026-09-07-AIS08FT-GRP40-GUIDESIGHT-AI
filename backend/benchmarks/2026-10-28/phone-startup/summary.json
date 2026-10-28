@@ -35,17 +35,48 @@
     "status": "Interrupted after early progress stalled in the restricted invocation. The completed run explicitly set project offline library options and used native execution access; no exact hang cause is claimed."
   },
   "startup": {
-    "state": "awaiting_operator_ssh_password",
+    "state": "password-waiting terminal closed after operator clarified existing remote inference",
     "terminal_pid": 16016,
     "old_owned_demo_stop_requested": true,
     "old_listeners_released": true,
     "runtime_directory": ".venv/tmp/phone-mvp-manual/20261028-130111-073dbee3",
     "ssh_tunnel_verified": false,
-    "phone_inference_verified": false
+    "phone_inference_verified": true,
+    "verification_scope": "Existing public phone backend; no new tunnel or remote deployment was created",
+    "temporary_terminal_closed": true
   },
   "constraints": [
-    "No credentials discovered in the project or copied to logs/chat. Interactive password input is required.",
+    "No SSH credentials used or copied. The unused password-waiting terminal was closed after verifying its ownership and absence of a GPU listener.",
     "No model or camera-policy changes; no implicit fallback, retry or remote deployment.",
     "Physical phone camera, networking and audio remain unverified."
-  ]
+  ],
+  "existing_phone_backend": {
+    "direct_wss_report": "remote-probe.json",
+    "explicit_system_proxy_report": "remote-probe-proxy.json",
+    "successful_static_frames": 1,
+    "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "model": "yolo26n",
+    "classes": 80,
+    "precision": "FP32",
+    "depth_backend_declared": false,
+    "depth_fusion_declared": false,
+    "git_revision_declared": false,
+    "ready_after": true,
+    "busy_after": false,
+    "host_location": "Unknown: device identity does not establish whether the worker is on the Web server or another host",
+    "fixture_roundtrip_ms": 2070.179199999984,
+    "server_frame_ms": 151.6080999863334,
+    "timing_scope": "One static fixture through the laptop HTTP proxy; not a throughput benchmark or physical-phone latency measurement"
+  },
+  "local_demo_restore": {
+    "state_directory": ".venv/tmp/local-demo-20261028-restored",
+    "configuration": "Original yolo26n / TensorRT FP32 / host fusion / offline video service",
+    "reason": "Phone already uses an independent GPU backend; restore the prior local workspace demo",
+    "report": "local-restored.json",
+    "complete": true,
+    "ready": true,
+    "busy": false,
+    "probe_frames": 3,
+    "independent_sessions": 2
+  }
 }
