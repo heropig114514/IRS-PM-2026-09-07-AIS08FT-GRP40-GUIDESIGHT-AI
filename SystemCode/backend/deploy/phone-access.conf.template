@@ -1,0 +1,54 @@
+# Responsibilities: Admit one explicitly approved temporary HTTPS phone hostname on loopback.
+# Implementation: Validate Host/Origin before translating them to the original guest relay;
+# preserve CSP directives except the exact public WSS authority. No upstream retries or buffering.
+# Related Modules: tools.render_phone_access; integration.mobile; phone-relay.locations.conf.
+# Declaration Index: None.
+# Variable Index: @HOST@ is one validated trycloudflare hostname; prs_access_origin/csp retain exact boundaries.
+map $http_origin $prs_access_origin {
+    default "REJECT";
+    "" "";
+    "~^https://@ORIGIN_PATTERN@$" "https://47.239.50.129";
+}
+map $upstream_http_content_security_policy $prs_access_csp {
+    default $upstream_http_content_security_policy;
+    "~^(?<prs_access_csp_prefix>.*)wss://47[.]239[.]50[.]129(?<prs_access_csp_suffix>.*)$"
+        "${prs_access_csp_prefix}wss://@HOST@${prs_access_csp_suffix}";
+}
+server {
+    listen 127.0.0.1:18770;
+    server_name @HOST@;
+    if ($http_host != "@HOST@") { return 421; }
+    if ($prs_access_origin = "REJECT") { return 403; }
+    location = /mvp { return 404; }
+    location = /mvp/ { return 404; }
+    location = /mvp/mcp { return 404; }
+    location = /mvp/mcp/ { return 404; }
+    location = /mvp/admin { return 404; }
+    location ^~ /mvp/admin/ { return 404; }
+    location ^~ /mvp/api/ { return 404; }
+    location ^~ /mvp/ {
+        proxy_pass http://127.0.0.1:18766/;
+        proxy_http_version 1.1;
+        proxy_set_header Host 47.239.50.129;
+        proxy_set_header Origin $prs_access_origin;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-PRS-Relay "1";
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For "";
+        proxy_set_header X-Forwarded-Host "";
+        proxy_set_header Forwarded "";
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        proxy_hide_header Content-Security-Policy;
+        add_header Content-Security-Policy $prs_access_csp always;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_next_upstream off;
+        proxy_read_timeout 75s;
+        proxy_send_timeout 30s;
+        client_max_body_size 2m;
+        access_log /var/log/nginx/prs-phone-access.log combined;
+    }
+    location / { return 404; }
+}

@@ -1,0 +1,78 @@
+{
+  "at": "2026-10-28T13:08:12.457515+00:00",
+  "hostname": "noble-treatment-canyon-garmin.trycloudflare.com",
+  "url": "https://noble-treatment-canyon-garmin.trycloudflare.com/mvp/maps/",
+  "nginx_config": "/etc/nginx/conf.d/prs-phone-access.conf",
+  "sha256": "a8da2959200b558a9cd4dbe49387976de968d8669328ae07e79a912e4343123a",
+  "admission_checks": [
+    {
+      "route": "/mvp/maps/",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 200
+    },
+    {
+      "route": "/mvp/maps/test",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 200
+    },
+    {
+      "route": "/mvp/maps/",
+      "host_valid": true,
+      "origin_valid": false,
+      "status": 403
+    },
+    {
+      "route": "/mvp/maps/",
+      "host_valid": false,
+      "origin_valid": true,
+      "status": 421
+    },
+    {
+      "route": "/mvp/mcp",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 404
+    },
+    {
+      "route": "/mvp/admin/",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 404
+    },
+    {
+      "route": "/mvp/api/private/",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 404
+    },
+    {
+      "route": "/prs/",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 404
+    },
+    {
+      "route": "/mcp",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 404
+    },
+    {
+      "route": "/mvp/integration/status/",
+      "host_valid": true,
+      "origin_valid": true,
+      "status": 200
+    }
+  ],
+  "services": [
+    "active",
+    "active",
+    "active"
+  ],
+  "original_gpu_route": "ws://127.0.0.1:18767/ws/infer/",
+  "worker_listening": true,
+  "original_public_entry_preserved": true,
+  "gpu_requests": 0
+}
