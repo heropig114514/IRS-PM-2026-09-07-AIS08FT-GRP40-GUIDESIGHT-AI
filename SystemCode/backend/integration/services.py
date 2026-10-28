@@ -1,5 +1,6 @@
 """Responsibilities: Bridge local UI to the independent inference process without algorithm work.
-Implementation: Same-origin bounded PRF2/PRS1 WS relay; explicit status/assets/local-only routing.
+Implementation: Same-origin bounded PRF2/PRS1 relay with opt-in metadata-only PRM1 responses;
+explicit status/assets/local-only routing.
 Related Modules: integration.asgi/protocol/errors; integration.inference; config.asgi;
 SystemCode/frontend/integration. Existing software/algorithm implementation files remain
 untouched here.
@@ -11,20 +12,24 @@ LocalGateway.cleanup; LocalGateway.finish; IntegrationApplication; IntegrationAp
 IntegrationApplication.__call__; IntegrationApplication.asset; IntegrationApplication.status.
 Variable Index: logger — lifecycle diagnostics without URLs/media; ASSETS — fixed frontend
 allowlist including video alert speech and independent navigation replay;
-FRONTEND — fixed repository frontend root; input_times/incoming — twelve outstanding frames;
+FRONTEND — fixed repository frontend root;
+input_times/input_hashes/incoming — twelve outstanding frames;
+METADATA_PROTOCOL — explicit browser-only subprotocol; metadata_only never changes the worker link;
 submitted — attempted provider sends; forwarded — send-completed or worker-confirmed prefix;
 worker_verified — complete validated provider results; delivered — completed browser ASGI sends;
 LOCAL_DISABLED — explicit external-feature error, not provider fallback.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
+import struct
 import urllib.request
 from threading import BoundedSemaphore
 from urllib.parse import urlsplit
 
-from realtime.protocol import MAX_PACKET_BYTES, unpack_result
+from realtime.protocol import MAX_METADATA_BYTES, MAX_PACKET_BYTES, unpack_result
 
 from .errors import IntegrationError
 from .protocol import (
@@ -41,6 +46,7 @@ from .protocol import (
 )
 
 logger = logging.getLogger(__name__)
+METADATA_PROTOCOL = "prs.metadata.v1"
 FRONTEND = ROOT.parent / "frontend"
 ASSETS = {
     "navigation-mvp.js": "text/javascript",
@@ -113,7 +119,13 @@ def read_health(url):
 
 
 async def http_response(
-    send, status, body, content_type="application/json", *, head=False, camera_access=True,
+    send,
+    status,
+    body,
+    content_type="application/json",
+    *,
+    head=False,
+    camera_access=True,
     deny_geolocation=False,
 ):
     """Functionality: Return a bounded no-store integration response with same-origin assets policy.
@@ -151,13 +163,16 @@ class GatewaySession:
     Logic: queue/counters/clock map plus stop/disconnect flags. Constraints: media stays in memory.
     """
 
-    def __init__(self):
+    def __init__(self, metadata_only=False):
         """Functionality: Initialize an unconnected relay.
-        Inputs: asyncio state. Outputs: bounded session. Logic: no provider work.
+        Inputs: asyncio state and explicit metadata-only selection. Outputs: bounded session.
+        Logic: no provider work.
         Constraints: source timestamp is forwarded exactly rather than inferred from server timing.
         """
         self.incoming = asyncio.Queue(MAX_INFLIGHT)
         self.input_times = {}
+        self.input_hashes = {}
+        self.metadata_only = metadata_only
         self.received = self.submitted = self.forwarded = self.worker_verified = self.delivered = 0
         self.worker_received = None
         self.previous_timestamp = self.contract = None
@@ -190,19 +205,27 @@ class LocalGateway:
         headers = dict(scope.get("headers", []))
         origin = headers.get(b"origin", b"").decode("ascii", "replace")
         host = headers.get(b"host", b"").decode("ascii", "replace")
+        protocols = scope.get("subprotocols", [])
         if (
             first["type"] != "websocket.connect"
             or scope.get("query_string")
             or origin not in web_origins()
             or host != urlsplit(origin).netloc
+            or protocols not in ([], [METADATA_PROTOCOL])
         ):
             return await send({"type": "websocket.close", "code": 1008})
-        await send({"type": "websocket.accept"})
+        metadata_only = protocols == [METADATA_PROTOCOL]
+        await send(
+            {
+                "type": "websocket.accept",
+                **({"subprotocol": METADATA_PROTOCOL} if metadata_only else {}),
+            }
+        )
         if not self.admission.acquire(blocking=False):
             return await self.finish(
                 send, None, IntegrationError("local_busy", "Local inference is busy.")
             )
-        session, reader, provider, error = GatewaySession(), None, None, None
+        session, reader, provider, error = GatewaySession(metadata_only), None, None, None
         try:
             reader = asyncio.create_task(self.read_browser(session, receive))
             provider = asyncio.create_task(self.bridge(session, send, origin))
@@ -290,7 +313,9 @@ class LocalGateway:
                 if is_stop(message.get("text")):
                     return
                 packet = message.get("bytes")
-                timestamp, _ = unpack_request(packet, session.received, session.previous_timestamp)
+                timestamp, jpeg = unpack_request(
+                    packet, session.received, session.previous_timestamp
+                )
                 if session.received - session.delivered >= MAX_INFLIGHT:
                     raise IntegrationError(
                         "local_capacity",
@@ -298,6 +323,8 @@ class LocalGateway:
                         400,
                     )
                 session.input_times[session.received] = timestamp
+                if session.metadata_only:
+                    session.input_hashes[session.received] = hashlib.sha256(jpeg).hexdigest()
                 session.incoming.put_nowait(packet)
                 session.received += 1
                 session.previous_timestamp = timestamp
@@ -339,7 +366,11 @@ class LocalGateway:
                     )
                 session.contract = validate_contract(hello)
                 if not session.disconnected:
-                    await send({"type": "websocket.send", "text": json.dumps(session.contract)})
+                    browser_contract = {
+                        **session.contract,
+                        **({"result_transport": "metadata-v1"} if session.metadata_only else {}),
+                    }
+                    await send({"type": "websocket.send", "text": json.dumps(browser_contract)})
                 upload = asyncio.create_task(self.forward(session, peer))
                 download = asyncio.create_task(self.return_results(session, peer, send))
                 stopping = asyncio.create_task(self.stop_provider(session, peer, upload))
@@ -382,7 +413,7 @@ class LocalGateway:
 
     async def return_results(self, session, peer, send):
         """Functionality: Validate complete results and worker terminal counts before delivery.
-        Inputs: peer/session/send. Outputs: unchanged PRS1 frames or terminal completion.
+        Inputs: peer/session/send. Outputs: PRS1 or explicitly selected source-bound PRM1 metadata.
         Logic: hash/order/session/source-time/algorithm identity; source map bounds unsolicited
         output.
         Constraints: stop/disconnect suppresses display while continuing worker drain
@@ -432,6 +463,21 @@ class LocalGateway:
                 )
             validate_result(metadata, session.contract, index, timestamp)
             session.input_times.pop(index)
+            if session.metadata_only:
+                # The worker's complete JPEG was verified above. Only the explicitly selected
+                # browser leg omits it; retain its hash and bind local rendering to the input JPEG.
+                compact = {
+                    **metadata,
+                    "result_transport": "metadata-v1",
+                    "source_jpeg_sha256": session.input_hashes.pop(index),
+                    "worker_packet_bytes": len(packet),
+                }
+                raw = json.dumps(compact, separators=(",", ":"), allow_nan=False).encode()
+                if len(raw) > MAX_METADATA_BYTES:
+                    raise IntegrationError(
+                        "local_result_invalid", "Compact result metadata is too large."
+                    )
+                packet = struct.pack("!4sI", b"PRM1", len(raw)) + raw
             session.worker_verified += 1
             session.forwarded = max(session.forwarded, session.worker_verified)
             if not session.disconnected and not session.stopped.is_set():
@@ -568,7 +614,11 @@ class IntegrationApplication:
                     return await http_response(send, 404, {"code": "not_found"})
                 body, mime = (FRONTEND / "integration" / name).read_bytes(), ASSETS[name]
             await http_response(
-                send, 200, body, mime, head=scope.get("method") == "HEAD",
+                send,
+                200,
+                body,
+                mime,
+                head=scope.get("method") == "HEAD",
                 camera_access=path not in {"/integration/video/", "/integration/navigation/"},
                 deny_geolocation=path == "/integration/navigation/",
             )

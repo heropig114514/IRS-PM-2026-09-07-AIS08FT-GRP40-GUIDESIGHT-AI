@@ -14,7 +14,7 @@
  * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide.
- * Variable Index: CAPTURE_PROFILES contains immutable standard and low-latency-1 settings; cameraProfile is explicit page policy; sessionCaptureProfile freezes it before permission; MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
+ * Variable Index: resultTransport selects an explicit annotated or source-bound compact result; annotationCanvas draws server boxes on the exact retained frame; CAPTURE_PROFILES contains immutable standard and low-latency-1 settings; cameraProfile is explicit page policy; sessionCaptureProfile freezes it before permission; MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
  * PROCESSING_PATHS — the three explicit WebSocket modes; app — page controller; frameTimings — first-frame and bounded aggregate statistics;
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs and creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
  * aggregate only steady-state frames with pipeline scheduling observations; serial Echo frames without observations are not counted as zero;
@@ -109,6 +109,8 @@ export class CameraApp {
     this.localFacingMode = null;
     this.cameraProfile = document.documentElement?.dataset?.cameraProfile || "standard";
     this.sessionCaptureProfile = captureProfile("standard");
+    this.resultTransport = document.documentElement?.dataset?.cameraResultTransport || "annotated-jpeg";
+    this.annotationCanvas = null;
     this.localOnly = document.documentElement?.dataset?.localMvp === "true";
     this.localSessionSeconds = 55;
     this.sessionId = null;
@@ -208,6 +210,8 @@ export class CameraApp {
       const processing = this.processing.value;
       const path = processingPath(processing);
       this.sessionCaptureProfile = captureProfile(processing === "local" ? this.cameraProfile : "standard");
+      const resultTransport = processing === "local" ? this.resultTransport : "annotated-jpeg";
+      if (!["annotated-jpeg", "metadata-v1"].includes(resultTransport)) throw new Error("视频结果传输配置无效。");
       if (this.localOnly && processing === "hf") throw new Error("本地 MVP 不允许调用 Hugging Face。");
       if (processing === "local" && this.localFacingMode !== null && this.localFacingMode !== "environment")
         throw new Error("本地摄像头方向配置无效，仅支持明确指定后置摄像头。");
@@ -246,7 +250,7 @@ export class CameraApp {
       url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const client = processing !== "echo"
         ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd,
-          {provider: processing, ...(processing === "local" ? {localSessionSeconds: this.localSessionSeconds} : {})})
+          {provider: processing, resultTransport, ...(processing === "local" ? {localSessionSeconds: this.localSessionSeconds} : {})})
         : new EchoClient(url.href, this.handleDisconnect);
       this.client = client;
       this.cameraPhase = "connect";
@@ -257,7 +261,7 @@ export class CameraApp {
       this.setStatus(processing !== "echo" ? "正在检测" : "正在回传", "live");
       this.image.alt =
         processing !== "echo"
-          ? "服务端 YOLO26 标注的摄像头图像"
+          ? "基于服务端 YOLO26 检测结果标注的摄像头图像"
           : "服务端原样返回的摄像头图像";
       document.getElementById("verified").textContent =
         processing !== "echo" ? "YOLO26 标注" : "字节一致 ✓";
@@ -437,6 +441,30 @@ export class CameraApp {
       if (dimensions && (this.image.naturalWidth !== dimensions.width ||
           this.image.naturalHeight !== dimensions.height))
         throw new Error("视频图像尺寸与检测结果不匹配。");
+        if (dimensions?.result_transport === "metadata-v1") {
+          this.annotationCanvas ??= document.createElement("canvas");
+          const canvas = this.annotationCanvas;
+          canvas.width = dimensions.width; canvas.height = dimensions.height;
+          const context = canvas.getContext("2d");
+          context.drawImage(this.image, 0, 0);
+          context.lineWidth = 2; context.font = "14px sans-serif";
+          for (const box of dimensions.boxes) {
+            const [x1, y1, x2, y2] = box.xyxy;
+            context.strokeStyle = box.alert_required ? "#ff7043" : "#00ff8c";
+            context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            const label = `${box.label}${Number.isFinite(box.distance_m) ? ` ${box.distance_m.toFixed(1)} m` : ""}`;
+            const top = Math.max(0, y1 - 18);
+            context.fillStyle = "#102019"; context.fillRect(x1, top, Math.min(canvas.width - x1, context.measureText(label).width + 6), 18);
+            context.fillStyle = "#ffffff"; context.fillText(label, x1 + 3, top + 14, canvas.width - x1 - 3);
+          }
+          const annotation = await encodeJpeg(canvas);
+          if (token !== this.generation) return;
+          const sourceUrl = this.objectUrl;
+          this.objectUrl = URL.createObjectURL(annotation); this.image.src = this.objectUrl;
+          URL.revokeObjectURL(sourceUrl);
+          await this.image.decode();
+          if (token !== this.generation) return;
+        }
       this.image.hidden = false;
       document.getElementById("echo-placeholder").hidden = true;
       document.getElementById("verified").hidden = false;

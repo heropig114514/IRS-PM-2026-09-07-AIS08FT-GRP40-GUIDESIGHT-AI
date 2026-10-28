@@ -102,3 +102,21 @@ model/session contracts. Close phone detection during this comparison; resume te
 The speech regression additionally feeds clearly labeled synthetic required/non-required/expired
 metadata into the real output owner. This isolates playback from actual model classification and
 network latency; it is not proof that a real scene produced an audible warning on a phone.
+
+## Compact phone results
+
+`data-camera-result-transport="metadata-v1"` explicitly requests WebSocket subprotocol
+`prs.metadata.v1` for the local camera route. An absent selector retains `annotated-jpeg`.
+The relay verifies the worker's full PRS1 response, including its JPEG hash and exact source time,
+then returns a bounded PRM1 envelope containing the unchanged model metadata, original annotation
+hash, original response size and SHA-256 of the corresponding input JPEG. It never changes the
+worker's request, model, thresholds or input quality. The browser verifies the retained input hash,
+source time and complete model/risk contract before drawing boxes on that exact frame. The rendered
+labels are client-side presentation; the image is not claimed to match the omitted server annotation
+pixel for pixel. No metadata mode is silently selected or retried, and an incompatible hello fails.
+
+The phone's one-frame profile limits retained input memory and prioritizes fresh results. Other
+profiles remain bounded by the original 12-frame capacity. Legacy PRS1 clients retain their exact
+wire format. Compact mode only removes the returned JPEG on the relay-to-browser leg; original
+camera uploads and the relay-to-GPU link remain unchanged. Measure whether the remaining uplink
+fits the one-second deadline before claiming real-time risk speech is available.

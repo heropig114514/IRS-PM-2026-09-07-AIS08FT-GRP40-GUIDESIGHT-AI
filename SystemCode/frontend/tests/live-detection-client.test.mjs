@@ -646,3 +646,42 @@ test("walk model rejects forged identities, labels and thresholds", async functi
   for (const [selected, overrides] of cases)
     await assert.rejects(decodeResult(packet(0, overrides), 0, selected));
 });
+
+
+function compactPacket(overrides = {}) {
+  const full = packet(0, {...riskMetadata(), provider:"local", session_id:localContract.session_id,
+    capture_time_s:2, timestamp_source:"browser_capture"});
+  const size = new DataView(full).getUint32(4);
+  const metadata = JSON.parse(new TextDecoder().decode(new Uint8Array(full,8,size)));
+  const encoded = new TextEncoder().encode(JSON.stringify({...metadata,result_transport:"metadata-v1",
+    source_jpeg_sha256:createHash("sha256").update(JPEG).digest("hex"),worker_packet_bytes:full.byteLength,...overrides}));
+  const result=new Uint8Array(encoded.length+8),header=new DataView(result.buffer);
+  header.setUint32(0,0x50524d31);header.setUint32(4,encoded.length);result.set(encoded,8);return result.buffer;
+}
+
+test("compact results retain risk metadata and verify the locally retained JPEG", async function testCompactResults() {
+  const selected={...localContract,result_transport:"metadata-v1"};
+  const result=await decodeResult(compactPacket(),0,selected,{captureTimeS:2,sourceBytes:JPEG.slice().buffer});
+  assert.deepEqual(result.metadata.boxes,riskMetadata().boxes);assert.deepEqual(new Uint8Array(result.bytes),JPEG);
+  assert.equal(result.metadata.capture_time_s,2);
+  for(const options of [{captureTimeS:2},{captureTimeS:3,sourceBytes:JPEG.slice().buffer},
+    {captureTimeS:2,sourceBytes:new Uint8Array([255,216,9,255,217]).buffer}])
+    await assert.rejects(decodeResult(compactPacket(),0,selected,options));
+  for(const overrides of [{source_jpeg_sha256:"f".repeat(64)},{result_transport:"annotated-jpeg"},{worker_packet_bytes:0}])
+    await assert.rejects(decodeResult(compactPacket(overrides),0,selected,{captureTimeS:2,sourceBytes:JPEG.slice().buffer}));
+  await assert.rejects(decodeResult(compactPacket(),0,localContract,{captureTimeS:2,sourceBytes:JPEG.slice().buffer}));
+  const extra=new Uint8Array(compactPacket().byteLength+1);extra.set(new Uint8Array(compactPacket()));
+  await assert.rejects(decodeResult(extra.buffer,0,selected,{captureTimeS:2,sourceBytes:JPEG.slice().buffer}));
+});
+
+test("compact transport requires explicit admission and freezes the input bytes", async function testCompactAdmission() {
+  const f=fixture("local",{resultTransport:"metadata-v1"});
+  await admitted(f,{...localContract,result_transport:"metadata-v1"});
+  try {
+    const input=JPEG.slice();const result=f.client.sendFrame(input.buffer,{capturedAt:2000});input[2]=9;
+    f.socket.message(compactPacket());assert.deepEqual(new Uint8Array((await result).bytes),JPEG);
+  } finally {f.client.stop();}
+  const mismatch=fixture("local",{resultTransport:"metadata-v1"});
+  await assert.rejects(admitted(mismatch,localContract),/传输配置/);mismatch.client.stop();
+  assert.throws(()=>fixture("hf",{resultTransport:"metadata-v1"}),/传输配置/);
+});

@@ -11,7 +11,7 @@
  * LiveDetectionClient.handleMessage.ended; LiveDetectionClient.handleClose;
  * LiveDetectionClient.handleClose.closed; LiveDetectionClient.rejectPending; LiveDetectionClient.fail;
  * LiveDetectionClient.end; LiveDetectionClient.stop.
- * Variable Index: MAX_INFLIGHT — twelve; MAX_METADATA_BYTES/MAX_PACKET_BYTES — fused wire bounds;
+ * Variable Index: resultTransport selects annotated-jpeg or local metadata-v1 without fallback; pending.sourceBytes retains bounded exact input JPEGs only for compact rendering; MAX_INFLIGHT — twelve; MAX_METADATA_BYTES/MAX_PACKET_BYTES — fused wire bounds;
  * COLD_MS/STEADY_MS —55s/10s failure budgets, not latency targets; HASH_PATTERN — SHA256 syntax.
  * MODEL_CLASSES — admitted model names (COCO yolo26n, walking-aid yolo26n-walk) and class counts.
  * Metadata limit is256KiB for300 fused/tracked objects retaining the existing box fields.
@@ -40,7 +40,7 @@ const DIRECTIONS = new Set(["front", "front_left", "front_right", "left", "right
 
 /** Functionality: Construct a native same-origin socket. Inputs: url. Outputs: WebSocket.
  * Logic: caller validates destination. Constraints: browser only; tests inject a factory. */
-function browserSocket(url) { return new WebSocket(url); }
+function browserSocket(url, protocols = []) { return new WebSocket(url, protocols); }
 
 /** Functionality: Hash full returned JPEG bytes. Inputs: ArrayBuffer. Outputs: lowercase SHA256.
  * Logic: native WebCrypto digest, hexadecimal encoding. Constraints: HTTPS required, no media logs;
@@ -60,7 +60,9 @@ async function sha256(buffer) {
  * never HF COCO evidence; HF quality checks and55s session limit remain intact; continuous local
  * admission changes no frame budgets.
  * Admission alone does not prove accuracy, hardware or performance. */
-function validateSession(message, provider, localSessionSeconds) {
+function validateSession(message, provider, localSessionSeconds, resultTransport) {
+  if ((message?.result_transport ?? "annotated-jpeg") !== resultTransport)
+    throw new Error("视频结果传输配置不匹配。");
   const validation = message?.validation;
   const sessionSeconds = provider === "local" ? localSessionSeconds : 55;
   const classes = Object.hasOwn(MODEL_CLASSES, message?.model) ? MODEL_CLASSES[message.model] : null;
@@ -108,23 +110,28 @@ function validateSession(message, provider, localSessionSeconds) {
 }
 
 /** Functionality: Decode and verify a complete ordered annotated result.
- * Inputs: packet ArrayBuffer, expected uint32 index, contract and optional original local captureTimeS.
- * Outputs: bytes/metadata/count/inferenceMs. Logic: bound header/JSON/JPEG; match admitted model,
+ * Inputs: packet, sequence, contract, original captureTimeS and retained sourceBytes for metadata-v1.
+ * Outputs: display bytes/metadata/count/timings. Compact output uses hash-bound original input, not the omitted server annotation. Logic: bound header/JSON/JPEG; match admitted model,
  * compute precision/backend, FP32 output and hashes;
  * finite boxes and optional depth/tracking/TTC/risk fields checked before display; no filtering.
  * Every result must declare a supported metric distance mode and canonical interval.
  * Temporary missing depth may retain a historical estimate; the server expires motion history.
  * Constraints: browser image decoder checks actual dimensions separately; no accuracy/mAP claim. */
-export async function decodeResult(packet, expected, contract, {captureTimeS} = {}) {
+export async function decodeResult(packet, expected, contract, {captureTimeS, sourceBytes} = {}) {
+  const compact = contract.result_transport === "metadata-v1";
+  if (compact && contract.provider !== "local") throw new Error("结果元数据传输仅支持本地服务。");
   if (!(packet instanceof ArrayBuffer) || packet.byteLength <= 8 || packet.byteLength > MAX_PACKET_BYTES)
     throw new Error("视频结果包大小无效。");
   const header = new DataView(packet);
   const length = header.getUint32(4);
-  if (header.getUint32(0) !== 0x50525331 || !length || length > MAX_METADATA_BYTES || 8 + length >= packet.byteLength)
+  if (header.getUint32(0) !== (compact ? 0x50524d31 : 0x50525331) || !length || length > MAX_METADATA_BYTES ||
+      (compact ? 8 + length !== packet.byteLength : 8 + length >= packet.byteLength))
     throw new Error("视频结果包协议无效。");
   let metadata;
   try { metadata = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(new Uint8Array(packet, 8, length))); }
   catch { throw new Error("视频结果元数据无效。"); }
+  if ((metadata?.result_transport ?? "annotated-jpeg") !== (compact ? "metadata-v1" : "annotated-jpeg"))
+    throw new Error("视频结果传输身份不匹配。");
   if (!metadata || metadata.schema_version !== 1 || metadata.index !== expected ||
       !Number.isInteger(metadata.index) || metadata.model !== contract.model ||
       metadata.backend !== contract.backend || metadata.precision !== contract.precision ||
@@ -266,15 +273,19 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
       throw new Error("视频目标风险缺少规则标识。");
     }
   }
-  const bytes = packet.slice(8 + length), jpeg = new Uint8Array(bytes);
+  if (compact && (!(sourceBytes instanceof ArrayBuffer) || !sourceBytes.byteLength || sourceBytes.byteLength > MAX_FRAME_BYTES ||
+      !HASH_PATTERN.test(metadata.source_jpeg_sha256) || await sha256(sourceBytes) !== metadata.source_jpeg_sha256 ||
+      !Number.isSafeInteger(metadata.worker_packet_bytes) || metadata.worker_packet_bytes < 9 || metadata.worker_packet_bytes > MAX_PACKET_BYTES))
+    throw new Error("本地保留图像与检测结果不匹配。");
+  const bytes = compact ? sourceBytes : packet.slice(8 + length), jpeg = new Uint8Array(bytes);
   if (!jpeg.length || jpeg.length > MAX_FRAME_BYTES || jpeg[0] !== 255 || jpeg[1] !== 216 ||
-      jpeg.at(-2) !== 255 || jpeg.at(-1) !== 217 || await sha256(bytes) !== metadata.jpeg_sha256)
+      jpeg.at(-2) !== 255 || jpeg.at(-1) !== 217 || !compact && await sha256(bytes) !== metadata.jpeg_sha256)
     throw new Error("视频回传 JPEG 完整性校验失败。");
-  return {bytes, metadata, detections: metadata.count, inferenceMs: metadata.inference_ms};
+  return {bytes, metadata, wireBytes: packet.byteLength, detections: metadata.count, inferenceMs: metadata.inference_ms};
 }
 
 /** Functionality: Manage one twelve-request binary video session.
- * Logic: Map owns per-frame timers; messageChain preserves async hashing order; errors reject all.
+ * Logic: Explicit subprotocol admits compact local results; Map owns per-frame timers; messageChain preserves async hashing order; errors reject all.
  * Constraints: caller holds additional admission through display, no automatic reconnect/retry. */
 export class LiveDetectionClient {
   /** Functionality: Initialize transport and lifecycle callbacks.
@@ -282,11 +293,15 @@ export class LiveDetectionClient {
    * Outputs: instance. Logic: bind events and bounded counters; no immediate network or camera.
    * Constraints: only explicit null opts local into continuous sessions; HF stays55s regardless this option.
    * Callbacks do not receive credentials; no arbitrary destination from query parameters. */
-  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, provider = "hf", localSessionSeconds = 55} = {}) {
+  constructor(url, onDisconnect, onEnd, {socketFactory = browserSocket, provider = "hf", localSessionSeconds = 55,
+    resultTransport = "annotated-jpeg"} = {}) {
     if (!["hf", "local"].includes(provider)) throw new Error("未知视频服务类型。");
     if (localSessionSeconds !== 55 && localSessionSeconds !== null)
       throw new Error("本地视频会话时长必须为 55 或 null。");
     this.provider = provider;
+    if (!["annotated-jpeg", "metadata-v1"].includes(resultTransport) || resultTransport === "metadata-v1" && provider !== "local")
+      throw new Error("视频结果传输配置无效。");
+    this.resultTransport = resultTransport;
     this.localSessionSeconds = localSessionSeconds;
     this.lastCaptureTimeS = -1;
     this.url = url;
@@ -310,7 +325,7 @@ export class LiveDetectionClient {
    * Constraints: no GPU dispatch by browser, capability or HF token. */
   connect() {
     if (this.socket || this.stopped) throw new Error("视频连接不能重复启动。");
-    this.socket = this.socketFactory(this.url);
+    this.socket = this.socketFactory(this.url, this.resultTransport === "metadata-v1" ? ["prs.metadata.v1"] : []);
     this.socket.binaryType = "arraybuffer";
     this.socket.onmessage = this.handleMessage;
     this.socket.onerror = this.handleError;
@@ -354,6 +369,7 @@ export class LiveDetectionClient {
      * Logic: monotonic send timestamp and bounded timer. Constraints: synchronous registration before send. */
     function register(resolve, reject) {
       client.pending.set(index, {resolve, reject, captureTimeS, started: performance.now(),
+        sourceBytes: client.resultTransport === "metadata-v1" ? buffer.slice(0) : null,
         timer: setTimeout(deadline, index === 0 ? COLD_MS : STEADY_MS)});
     }
     const result = new Promise(register);
@@ -386,7 +402,7 @@ export class LiveDetectionClient {
           return;
         }
         if (!this.connectWait || this.contract) throw new Error("非预期视频控制消息。");
-        this.contract = validateSession(message, this.provider, this.localSessionSeconds);
+        this.contract = validateSession(message, this.provider, this.localSessionSeconds, this.resultTransport);
         const waiting = this.connectWait;
         this.connectWait = null;
         clearTimeout(waiting.timer);
@@ -404,7 +420,8 @@ export class LiveDetectionClient {
           if (client.stopped) return;
           const pending = client.pending.get(client.expected);
           if (!pending) throw new Error("收到未请求的视频帧。");
-          const result = await decodeResult(packet, client.expected, client.contract, {captureTimeS: pending.captureTimeS});
+          const result = await decodeResult(packet, client.expected, client.contract,
+            {captureTimeS: pending.captureTimeS, sourceBytes: pending.sourceBytes});
           if (client.stopped) return;
           client.pending.delete(client.expected++);
           clearTimeout(pending.timer);
