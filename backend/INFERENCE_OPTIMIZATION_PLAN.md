@@ -8,6 +8,22 @@
 
 ## 执行顺序
 
+### Reproducible teammate local deployment
+
+1. Audit clone layout, dependency pins, checkpoint provisioning, process ownership and local/LAN
+   entry contracts. Keep the existing optimization branch's root backend/frontend layout and
+   provide explicit branch download instructions rather than mixing it with relocated main.
+2. Add a standard-library bootstrap with explicit preparation, read-only preflight and foreground
+   startup. Provide baseline, low-queue Torch and target-built TensorRT profiles without private
+   paths, credentials, automatic backend fallback or changes to model/codec/deadline policy.
+3. Reuse existing Web/GPU and LAN supervisors. Align LAN canonical origin with the locally started
+   continuous worker, document iPhone HTTPS trust and separate offline perception from online APIs.
+4. Verify clean-copy dependencies/configuration, complete checkpoint checksums, profile isolation,
+   failure/cancellation ownership and required repository checks. Preserve the existing pause on
+   local inference benchmarks; do not claim other GPUs or phone networks have been tested.
+5. Commit implementation, tests, reproducible instructions and structured validation together;
+   push the optimization branch and provide the exact teammate clone/download and startup commands.
+
 ### General transport latency: fresh capture and immediate TCP forwarding
 
 1. Inspect the browser admission queue, binary protocol, gateway and SSH relay. Preserve

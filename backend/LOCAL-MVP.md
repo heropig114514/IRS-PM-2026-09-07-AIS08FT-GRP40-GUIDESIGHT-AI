@@ -1,5 +1,9 @@
 # Local MVP Integration and Deployment
 
+For a fresh teammate setup, start with [Local low-latency quickstart](LOCAL-QUICKSTART.md).
+Its `tools/local_demo.py` entry prepares explicit environments/checkpoints and reuses the
+supervisors below; it does not require this author's environment paths or a public relay.
+
 When the phone and computer are not on the same local network, the phone can reach the same local unified entry through the existing public HTTPS guest relay. See [Phone MVP](PHONE-MVP.md) for preparation, startup, and shutdown.
 
 ## Unified Navigation and Perception Entry
@@ -98,7 +102,7 @@ $localPython = 'C:\Users\Kolosin\.cache\codex-runtimes\codex-primary-runtime\dep
 .\.venv-inference\Scripts\python.exe -m pip check
 ```
 
-`requirements-inference.txt` separately pins native inference dependencies. Do not mix it with `requirements-vision-build.txt` (Torch 2.5.1/Torchvision 0.20.1), which is used for offline export. `requirements-depth.txt` remains for existing combined-model tests and is not the dependency manifest for the new pure-GPU service environment. See [PyTorch previous versions](https://pytorch.org/get-started/previous-versions/) for official installation commands. The local GPU is an NVIDIA RTX 5070 Ti Laptop GPU with 12 GB VRAM; capacity alone does not prove model throughput or latency.
+`requirements-inference.txt` separately pins native inference dependencies. Do not mix it with `requirements-vision-build.txt` (Torch 2.5.1/Torchvision 0.20.1), which is used for offline export. `requirements-depth.txt` remains for existing combined-model tests and is not the dependency manifest for the new pure-GPU service environment. See [PyTorch previous versions](https://pytorch.org/get-started/previous-versions/) for official installation commands. Inspect the actual target GPU during preflight; hardware and measurements belong in each run's report, not a shared machine-specific assumption.
 
 Place the explicitly downloaded official `v8.4.0` weights in `backend/models/`. The service never downloads or switches models automatically.
 

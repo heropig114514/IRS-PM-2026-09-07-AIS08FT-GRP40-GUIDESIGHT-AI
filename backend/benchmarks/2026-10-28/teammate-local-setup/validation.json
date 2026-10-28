@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "date": "2026-10-28",
+  "base_revision": "96b4279",
+  "scope": "Reproducible teammate local setup and low-queue comparison profiles",
+  "delivery_branch": "codex/resident-inference-optimization",
+  "implementation": {
+    "entry": "backend/tools/local_demo.py",
+    "configuration": "backend/deploy/local-demo.toml",
+    "guide": "backend/LOCAL-QUICKSTART.md",
+    "operations": ["prepare", "models", "check", "run", "lan"],
+    "default_profile": "low-latency: Torch FP32, host depth reduction, bounded-2 camera admission",
+    "controls": "baseline retains Torch/GPU reduction/12-frame camera window; TensorRT requires an explicit target-built manifest",
+    "supervision": "Existing local Web/GPU and LAN supervisors retain ownership and no-retry behavior; run replaces the wrapper process",
+    "lan_contract": "Canonical Web port follows the local worker origin; LAN configures only its camera window and cannot change a running worker backend",
+    "isolation": "No committed credentials, machine paths, compiled engines, venvs or cloud inference routes; inherited model strategy and optional API keys are cleared"
+  },
+  "required_checks": {
+    "django_check": "passed",
+    "makemigrations_check_dry_run": "passed: no changes detected",
+    "ruff_check": "passed",
+    "django_tests": {"run": 563, "skipped": 8, "failed": 0, "duration_s": 29.101},
+    "frontend_tests": {"run": 423, "passed": 423, "failed": 0},
+    "new_bootstrap_tests": 14,
+    "manual_review": "Reviewed implemented declarations, variable indexes, function contracts, source-only staging and absence of author-specific credentials/paths"
+  },
+  "clean_copy_validation": {
+    "os": "Windows",
+    "python": "3.12",
+    "source_files_copied": 1336,
+    "source_bytes_copied": 1055867464,
+    "source_scope": "Git-visible backend/frontend candidate files only, including new implementation; no private ignored files or original virtual environments copied",
+    "fresh_web_environment_created": true,
+    "fresh_web_dependencies_installed_from_public_pypi": true,
+    "fresh_web_pip_check": "passed",
+    "fresh_web_django_check": "passed",
+    "fresh_web_migration_check": "passed: no changes detected",
+    "checkpoint_downloads": {
+      "yolo26n.pt": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "yolo26n-depth.pt": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+    },
+    "checkpoint_source": "Two actual complete downloads from the manifest's official GitHub release; SHA256 matched before publication",
+    "network_condition": "Explicit process-only existing HTTP/HTTPS proxy for installation/download verification; not embedded in delivered code",
+    "readonly_check": "passed from clean source/Web interpreter with explicit existing GPU interpreter",
+    "gpu_identity": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "cuda_runtime": "12.6",
+    "gpu_environment_freshly_installed": false,
+    "existing_gpu_dependency_dry_run": "passed; requirements already satisfied",
+    "private_django_key_created_by_preflight": false,
+    "web_service_started": false,
+    "gpu_inference_started": false,
+    "public_server_changed": false
+  },
+  "verified_contracts": [
+    "Bootstrap needs only Python standard library before preparation",
+    "Explicit CUDA wheel installation precedes pinned inference dependencies",
+    "Existing unrelated environment directories and mismatched model files are preserved and rejected",
+    "Missing models publish through an exclusive file link only after bounded complete download and SHA256 verification",
+    "Partial, oversized and bad-hash downloads clean only their owned temporary file; no retry",
+    "Versioned bootstrap model hashes match independent runtime model identities",
+    "Local profiles isolate inherited distance/depth strategy and preserve the parent environment",
+    "Only TensorRT profile accepts/requires an explicit engine manifest; no discovery or fallback",
+    "Read-only checks do not prepare packages, models, keys or services",
+    "LAN endpoint uses the local worker's canonical Web port and never selects a public SSH launcher"
+  ],
+  "initial_failures_and_corrections": [
+    {
+      "stage": "Restricted temporary-file tests",
+      "result": "Windows sandbox temporary-directory cleanup produced PermissionError",
+      "correction": "Ran native temporary-file/hard-link tests with execution permission; all 14 passed"
+    },
+    {
+      "stage": "Ruff",
+      "result": "New long lines exceeded the configured 100-character limit",
+      "correction": "Wrapped source and test lines; complete Ruff check passes"
+    },
+    {
+      "stage": "Initial GPU dependency dry-run",
+      "result": "Default .venv-inference interpreter is absent on this existing workstation",
+      "correction": "Used the explicitly prepared interpreter already validated by preflight; fresh teammate preparation creates the documented default venv"
+    },
+    {
+      "stage": "Proposed clean-copy Web service smoke test",
+      "result": "Automatic approval review rejected starting a local Web demo child because the earlier pause on local demo/GPU services remains in force",
+      "correction": "Removed all service startup code and completed the accepted safer alternative: clean copy, new Web venv, checkpoint downloads and read-only checks only"
+    }
+  ],
+  "limitations": [
+    "No local Web/GPU service startup or new end-to-end inference performance test in this task",
+    "No fresh GPU-stack installation; native GPU preflight and package consistency used an explicitly identified existing environment",
+    "Linux and other teammates' GPU/driver combinations require their own preparation and acceptance",
+    "TensorRT dependencies, engine export and numerical acceptance remain explicit per-host work",
+    "iPhone LAN capture still needs trusted HTTPS; no certificate trust or firewall changes were made",
+    "No guaranteed FPS or latency on every machine; compare identical inputs/models and include failures and first-frame cost"
+  ]
+}

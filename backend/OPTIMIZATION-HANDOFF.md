@@ -82,6 +82,10 @@ first-frame latency and early termination; this package does not certify a stabl
 
 ## Preparing the actual GPU host
 
+For teammate-owned local testing without this Web relay, follow
+[LOCAL-QUICKSTART.md](LOCAL-QUICKSTART.md). It provides standard-library preparation, explicit
+Torch comparison profiles and the same checked native supervisors on Windows/Linux.
+
 Use the exact trusted checkpoints and verify them against `manifest.json` and repository model
 manifests before loading them. Copy the separately delivered `weights/yolo26n.pt` and
 `weights/yolo26n-depth.pt` into the selected checkout's `backend/models/` directory. Do not replace
@@ -162,10 +166,9 @@ timestamps, depth resolution, precision, quality and deadlines fixed. Validate a
 separately. Street-video consistency does not replace held-out distance truth or87-class quality
 data supplied by the modeling colleague.
 
-The last implementation checks passed: Django check, migration dry-run,545 backend tests
-(8 skipped),416 frontend tests and Ruff. This transfer introduces operating documentation only;
-the user requested no additional local inference tests. Delivery checksum verification is not a
-new model benchmark or successful remote GPU deployment.
+Exact source revisions, automated checks, clean-copy preparation and deployment receipts belong
+in the structured reports under `benchmarks/`. Preflight and checksum verification do not establish
+inference speed, physical-phone behavior or successful GPU deployment on another machine.
 
 The phone previously could not reach the public IP from either Wi-Fi or cellular, while proxy
 HTTPS and the host Web services were healthy. Restoring the original GPU route does not resolve

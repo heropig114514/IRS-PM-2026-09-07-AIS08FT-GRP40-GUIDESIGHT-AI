@@ -18,6 +18,8 @@ The [`Video/`](Video/README.md) directory is reserved for the project demonstrat
 
 ## SECTION 5 : USER GUIDE
 
+- [Teammate local low-latency quickstart](backend/LOCAL-QUICKSTART.md) — explicit branch download,
+  one preparation entry, portable Torch profiles and optional target-built TensorRT/LAN operation.
 - [System code index](SystemCode/README.md)
 - [Backend setup and checks](backend/README.md)
 - [Frontend guide](frontend/README.md)
