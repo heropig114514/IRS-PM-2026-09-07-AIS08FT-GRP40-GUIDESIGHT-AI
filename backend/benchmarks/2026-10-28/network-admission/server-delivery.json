@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "source_revision": "72f370b1b1fe3821c292b4113a6c04bd83ccd16c",
+  "before": {
+    "release": "/opt/prs-practice/mvp/releases/35f7b755b38ffc7b7088463f8e0cbe44a57b030f",
+    "source": "/opt/prs-practice/mvp/releases/35f7b755b38ffc7b7088463f8e0cbe44a57b030f",
+    "route": {
+      "LOCAL_INFERENCE_URL": "ws://127.0.0.1:18767/ws/infer/",
+      "PRS_CAMERA_PROFILE": "bounded-2"
+    },
+    "files": {
+      "camera.js": {
+        "sha256": "da041d9c98b11a56133c7609619216b2290c3e719aa41707a73cca7841566280",
+        "bytes": 35034
+      },
+      "frame-pipeline.js": {
+        "sha256": "c6fc7ef8e740649b2357111c9ccae90c306d14becfe959ea52cae2cff53b79ad",
+        "bytes": 14173
+      },
+      "live-detection-client.js": {
+        "sha256": "b0fc354e7568154cc5fb0ad7bb6ba521a3736b584002fbbdf3ae90f4037df8be",
+        "bytes": 32270
+      }
+    },
+    "services": [
+      "active",
+      "active"
+    ],
+    "page_status": 200,
+    "bounded_profile": false,
+    "worker_listening": false,
+    "release_label": "35f7b755b38ffc7b7088463f8e0cbe44a57b030f"
+  },
+  "delivery": {
+    "at_utc": "2026-10-28T18:36:28.32404+08:00",
+    "destination": "/opt/prs-practice/mvp/optimization-handoffs/72f370b-20261028-network",
+    "revision": "72f370b1b1fe3821c292b4113a6c04bd83ccd16c",
+    "verified_source_files": 1339,
+    "verified_weights": 2,
+    "verified_overlay_files": 4,
+    "bundle_kind": "incremental Git bundle",
+    "bundle_bytes": 17316,
+    "source_checkout": "Independent local clone with complete history plus incremental update",
+    "gpu_started": false,
+    "route_changed": false
+  },
+  "activation": {
+    "at_utc": "2026-10-28T18:36:36.589137+08:00",
+    "release": "/opt/prs-practice/mvp/releases/35f7b755b38ffc7b7088463f8e0cbe44a57b030f",
+    "source_revision": "72f370b1b1fe3821c292b4113a6c04bd83ccd16c",
+    "route": "ws://127.0.0.1:18767/ws/infer/",
+    "environment_changed": false,
+    "pages": {
+      "/maps/": {
+        "status": 200,
+        "profile": "bounded-2"
+      },
+      "/maps/test": {
+        "status": 200,
+        "profile": "bounded-2"
+      }
+    },
+    "assets": {
+      "/assets/camera.js": {
+        "sha256": "d5394ffe76c78a673fc31cdbb796d2b0435a84c5732d73665826a30ea12215a2",
+        "cache_control": "no-store"
+      },
+      "/assets/frame-pipeline.js": {
+        "sha256": "b0b45cdb6c9b3bff2c9c350873bf9a0fece4fa9bc5a52a6d42b1a065217fa748",
+        "cache_control": "no-store"
+      },
+      "/assets/live-detection-client.js": {
+        "sha256": "07b4d57ce9b83ca8bbcae139d42ff8d9827f46c46499daeecfbd3e6169738140",
+        "cache_control": "no-store"
+      }
+    },
+    "prepared_audio_preserved": true,
+    "prepared_audio_clips": 66,
+    "backup": "/opt/prs-practice/mvp/optimization-handoffs/72f370b-20261028-network/web-backup",
+    "overlay_files": [
+      {
+        "path": "frontend/camera.js",
+        "before_sha256": "da041d9c98b11a56133c7609619216b2290c3e719aa41707a73cca7841566280",
+        "after_sha256": "d5394ffe76c78a673fc31cdbb796d2b0435a84c5732d73665826a30ea12215a2"
+      },
+      {
+        "path": "frontend/frame-pipeline.js",
+        "before_sha256": "c6fc7ef8e740649b2357111c9ccae90c306d14becfe959ea52cae2cff53b79ad",
+        "after_sha256": "b0b45cdb6c9b3bff2c9c350873bf9a0fece4fa9bc5a52a6d42b1a065217fa748"
+      },
+      {
+        "path": "frontend/live-detection-client.js",
+        "before_sha256": "b0fc354e7568154cc5fb0ad7bb6ba521a3736b584002fbbdf3ae90f4037df8be",
+        "after_sha256": "07b4d57ce9b83ca8bbcae139d42ff8d9827f46c46499daeecfbd3e6169738140"
+      },
+      {
+        "path": "backend/integration/assist.py",
+        "before_sha256": "ef480805936e7f04fa57a22aeb5c0d734c52d991595cd0efa266d06e463fa391",
+        "after_sha256": "2b0baaf0c0b9690320a09da73e5c17328c3eb634070c58c94724164aaff6933c"
+      }
+    ],
+    "services": [
+      "active",
+      "active"
+    ],
+    "worker_listening": false,
+    "gpu_started": false,
+    "tcp_settings_active_on_colleague_worker": "Not verified; requires owner integration/restart",
+    "phone_wan_performance": "Not measured"
+  },
+  "limitations": [
+    "Internal HTTP/source verification only; public mobile reachability and WAN latency were not tested.",
+    "The original GPU route remains offline; no local GPU or temporary inference tunnel was started.",
+    "TCP_NODELAY changes were delivered as source and require the colleague tunnel owner to integrate and restart."
+  ],
+  "rollback": "Guard current release and overlay hashes, restore the four files from web-backup and restart only prs-mvp-web; the environment and inference route were not changed."
+}
