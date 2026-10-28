@@ -114,8 +114,11 @@ nearby category result also ends the action phase.
    destination=null uses the map destination. Omit origin to use the origin filled by maps_locate;
    supply origin only when the user explicitly provided coordinates. Check accepted/error for the
    planning outcome; do not infer an ORS failure cause merely from a short distance.
-8. After successful planning, continue navigation requests with navigation_start; planning-only
-   requests end here. navigation_start includes at most 12 seconds of read-only observation.
+8. After successful planning, continue navigation requests with navigation_start; the executor
+   requires this as the next tool action for `navigation.start`, so do not ask the user to click
+   the map's Start button. `navigation.plan` ends after planning and is never auto-started.
+   Browser location permission remains user-controlled. navigation_start includes at most 12 seconds
+   of read-only observation.
    Report state/verified: navigating/verified=true means turn-by-turn navigation is running; locating
    means the accepted location watch is waiting for a usable fix; off_route with active=true means
    the watch is running but its latest fix is outside the planned route tolerance, so it is not a

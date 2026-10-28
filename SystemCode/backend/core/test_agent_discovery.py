@@ -12,6 +12,7 @@ DiscoveryTests.test_history_preserves_action_evidence.
 DiscoveryTests.test_search_limit_blocks_requery.
 DiscoveryTests.test_result_counts_end_actions.
 DiscoveryTests.test_context_limit_includes_tool_schemas.
+DiscoveryTests.test_navigation_plan_does_not_force_start;
 DiscoveryTests.test_navigation_workflow_completes_with_exact_candidate_coordinates;
 DiscoveryTests.test_navigation_workflow_completes_with_exact_candidate_coordinates.browser_call.
 Variable Index: None; all service/device evidence in this file is synthetic.
@@ -311,6 +312,13 @@ class DiscoveryTests(SimpleTestCase):
             ["Navigation is active."],
         )
         self.assertFalse(any(event["type"] == "error" for event in conversation.events))
+        self.assertEqual(
+            model.await_args_list[7].kwargs["required_tool"], "navigation_start",
+        )
+        self.assertEqual(
+            [schema["function"]["name"] for schema in model.await_args_list[7].args[1]],
+            ["navigation_start"],
+        )
 
         final_request = model.await_args_list[8].args[0]
         start_result = next(
@@ -335,6 +343,44 @@ class DiscoveryTests(SimpleTestCase):
             len(json.dumps(compact_catalog, ensure_ascii=False, separators=(",", ":"))),
             len(json.dumps({"categories": categories}, ensure_ascii=False, separators=(",", ":"))),
         )
+
+    async def test_navigation_plan_does_not_force_start(self):
+        """Functionality: Keep explicit planning-only requests from starting GPS navigation.
+        Inputs: navigation.plan intent and a synthetic successfully planned route.
+        Outputs: route-planning reply with navigation_start left optional and unused.
+        Logic: Verify the executor's automatic-start requirement is scoped to navigation.start.
+        Constraints: The route and browser controller are fixtures; no device location is read.
+        """
+        decision = tool_message("route_intent", {
+            "route": "system", "intent_ids": ["navigation.plan"], "language": "en",
+        })
+        destination = [103.82, 1.35]
+        replies = [
+            tool_message("discover_tools"),
+            tool_message("read_skill", {"name": "navigation"}),
+            tool_message("maps_status"),
+            tool_message("maps_plan", {"destination": destination}),
+            {"role": "assistant", "content": "The route is planned."},
+        ]
+        with patch("core.agent.intents.completion", AsyncMock(return_value=decision)):
+            with patch("core.agent.runtime.completion", AsyncMock(side_effect=replies)) as model:
+                with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                    "accepted": True, "state": "planned", "destination": destination,
+                })) as browser:
+                    conversation = Conversation("plan-only", "token")
+                    await conversation.run("plan-only", "Plan a route without starting", None)
+
+        self.assertIsNone(model.await_args_list[4].kwargs["required_tool"])
+        self.assertIn(
+            "navigation_start",
+            {tool["function"]["name"] for tool in model.await_args_list[4].args[1]},
+        )
+        self.assertEqual(
+            [call.args[1] for call in browser.await_args_list], ["maps_status", "maps_plan"],
+        )
+        self.assertFalse(any(
+            event.get("name") == "navigation_start" for event in conversation.events
+        ))
 
     async def test_selected_scope(self):
         """Functionality: Limit model schemas to discovered tools in the loaded skill.

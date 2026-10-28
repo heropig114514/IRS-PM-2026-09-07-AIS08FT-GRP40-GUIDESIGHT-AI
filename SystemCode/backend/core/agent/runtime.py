@@ -504,8 +504,9 @@ class Conversation:
         releases the guard; failed planning pauses actions. New searches replace pending choices.
         History refreshes prior successful discovery/status/catalog observations, retaining failures
         and actual execution evidence. Candidate records remain exact; current categories use
-        lossless compact rows. Rejected calls log the attempted tool and unmet prerequisites without
-        recording model arguments.
+        lossless compact rows. Navigation-start intents force navigation_start immediately after a
+        successful maps_plan, while plan-only intents do not. Rejected calls log the attempted tool
+        and unmet prerequisites without recording model arguments.
         Constraints: 12 total model calls (including classification)/30 tools and the configured
         provider context-character budget; any failed or declined tool ends the action phase and is
         returned as bounded evidence for an agent-authored explanation; no subsequent mutation can
@@ -612,7 +613,14 @@ class Conversation:
                 self.emit("working", request_id=request_id, stage="thinking")
                 required = (
                     "discover_tools" if not discovered
-                    else "read_skill" if target_skills - loaded else None
+                    else "read_skill" if target_skills - loaded
+                    else "navigation_start" if (
+                        "navigation.start" in decision.ids
+                        and "maps_plan" in completed
+                        and "navigation_start" not in completed
+                        and not pause_reason
+                        and not self.selection
+                    ) else None
                 )
                 permitted = {
                     name
@@ -670,8 +678,12 @@ class Conversation:
                 turn.append(message)
                 if not calls:
                     if required and not pause_reason:
+                        if required in {"discover_tools", "read_skill"}:
+                            raise AgentError(
+                                "discovery_required", "模型未完成工具发现与技能加载，已停止。"
+                            )
                         raise AgentError(
-                            "discovery_required", "模型未完成工具发现与技能加载，已停止。"
+                            "invalid_tool_call", "模型未调用要求的工具，已停止。",
                         )
                     if failed_outcome and not message.get("content", "").strip():
                         raise AgentExplanationUnavailable(

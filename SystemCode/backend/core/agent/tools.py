@@ -64,7 +64,9 @@ DESCRIPTIONS = {
                      "observed GPS. Defaults to 2000m; returns up to five points by straight-line "
                      "distance, not shortest walking route. Empty results do not prove absence.",
     "navigation_status": "Read actual navigation state; optionally wait up to 12s while locating.",
-    "navigation_start": "Start existing route and observe GPS for up to12s; returns actual state.",
+    "navigation_start": "Start the planned route through the shared navigation controller and "
+                         "observe GPS for up to12s. Navigation-start requests call this after "
+                         "successful planning; browser location permission still applies.",
     "navigation_stop": "Stop navigation and release GPS; verify actual state.",
     "camera_status": "Read media track, processing mode, errors and decoded frame count.",
     "camera_start": "Start current mode or echo/hf; observe up to12s; permission required. "
