@@ -5,7 +5,8 @@
  * Declaration Index: fixture; fixture.fetch; owner; rejectCode; testRealPack; testUnsupported;
  * testConcurrent; testManifest; testIntegrity; testWav; testPcmHash; testReadBoundaries;
  * testDispose; testTimeout; testConfiguration; testMissingCapability.
- * Variable Index: ROOT/BASE/ORIGIN locate fixed public fixtures; manifest and WAV bytes are test-owned copies.
+ * Variable Index: ROOT/BASE/ORIGIN locate fixed public fixtures; manifest and WAV bytes are test-owned copies;
+ * fixture barrier state synchronizes the first four clip reads for deterministic concurrency checks.
  * Constraints: Assertions establish resource/protocol integrity, not pronunciation or physical audibility.
  */
 import assert from "node:assert/strict";
@@ -18,13 +19,21 @@ const ROOT = new URL("../assets/risk-audio/", import.meta.url);
 const ORIGIN = "http://127.0.0.1:8766", BASE = `${ORIGIN}/mvp/assets/risk-audio/`;
 
 /* Functionality: Serve only test-owned copies of the real local warning resource pack.
- * Inputs: Optional descriptor/body mutations. Outputs: Fetch fixture and observable attempt counters.
- * Logic: An asynchronous boundary exposes actual four-worker concurrency without a network connection.
+ * Inputs: Optional descriptor/body mutations and a four-clip synchronization option.
+ * Outputs: Fetch fixture and observable attempt/concurrency counters.
+ * Logic: The optional barrier makes the four-worker concurrency assertion independent of crypto scheduling.
  * Constraints: Paths are resolved only after asserting exact expected base; no upload or provider call. */
-function fixture({changeManifest = null, changeBody = null} = {}) {
+function fixture({changeManifest = null, changeBody = null, synchronizeClipWorkers = false} = {}) {
   const manifest = JSON.parse(readFileSync(new URL("manifest.json", ROOT), "utf8"));
   changeManifest?.(manifest);
-  const state = {manifest, calls: [], active: 0, maximum: 0};
+  const state = {manifest, calls: [], active: 0, maximum: 0, clipBarrierArrivals: 0,
+    clipBarrierTimedOut: false};
+  let releaseClipBarrier;
+  const clipBarrier = synchronizeClipWorkers ? new Promise(resolve => { releaseClipBarrier = resolve; }) : null;
+  let clipBarrierTimeout;
+  if (clipBarrier) clipBarrierTimeout = setTimeout(() => {
+    state.clipBarrierTimedOut = true; releaseClipBarrier();
+  }, 1000);
   /* Functionality: Return one explicit local resource response and record concurrency.
    * Inputs: Requested URL/options. Outputs: Standard Response. Logic: Yield once before reading fixtures.
    * Constraints: The fixture never falls through to native fetch or obeys arbitrary absolute paths. */
@@ -34,6 +43,13 @@ function fixture({changeManifest = null, changeBody = null} = {}) {
     const path = url.slice(BASE.length);
     assert.ok(path === "manifest.json" || state.manifest.clips.some(clip => clip.path === path));
     state.calls.push(path); state.active++; state.maximum = Math.max(state.maximum, state.active);
+    if (clipBarrier && path !== "manifest.json" && state.clipBarrierArrivals < 4) {
+      state.clipBarrierArrivals++;
+      if (state.clipBarrierArrivals === 4) {
+        clearTimeout(clipBarrierTimeout); releaseClipBarrier();
+      }
+      await clipBarrier;
+    }
     await new Promise(resolve => setImmediate(resolve)); state.active--;
     if (options.signal.aborted) throw new DOMException("Aborted", "AbortError");
     let body = path === "manifest.json" ? Buffer.from(JSON.stringify(state.manifest)) :
@@ -63,10 +79,11 @@ function rejectCode(promise, code) {
  * Inputs: All real source WAVs and manifest. Outputs: Exact ordered PCM and isolated consumer buffers.
  * Logic: Compare the entire corpus, not a formatter imitation. Constraints: No speaker or TTS call. */
 test("prepared pack loads 66 verified WAVs and composes all 144 exact warnings", async function testRealPack() {
-  const transport = fixture(), resources = owner(transport);
+  const transport = fixture({synchronizeClipWorkers: true}), resources = owner(transport);
   assert.equal(resources.describe().state, "idle");
   await resources.load();
-  assert.equal(transport.calls.length, 67); assert.equal(transport.maximum, 4);
+  assert.equal(transport.calls.length, 67); assert.equal(transport.clipBarrierTimedOut, false);
+  assert.equal(transport.maximum, 4);
   assert.deepEqual(resources.describe(), {state: "ready", loaded_clips: 66, total_clips: 66,
     ready_bytes: transport.manifest.clips.reduce((sum, clip) => sum + clip.pcm_byte_length, 0),
     compositions: 0, failure: null});
