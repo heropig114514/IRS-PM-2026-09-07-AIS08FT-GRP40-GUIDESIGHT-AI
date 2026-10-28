@@ -1,0 +1,51 @@
+{
+  "scope": "Prepare the existing phone inference launcher for the verified TensorRT interpreter",
+  "configuration": {
+    "detection_model": "yolo26n",
+    "distance_mode": "depth",
+    "depth_backend": "tensorrt",
+    "depth_fusion": "host",
+    "inference_python": ".venv/depth-export/Scripts/python.exe",
+    "final_port": 8767,
+    "public_url": "https://47.239.50.129/mvp/maps/"
+  },
+  "preflight": {
+    "passed": true,
+    "checked_port": 8777,
+    "reason": "The original owned offline demo still occupied 8767 during read-only preflight. No service was started on 8777.",
+    "log": "preflight.log"
+  },
+  "checks": {
+    "django_check": true,
+    "migrations_check": true,
+    "ruff": true,
+    "tests": 538,
+    "skipped": 8,
+    "passed": true,
+    "logs": [
+      "check.log",
+      "migrations.log",
+      "ruff.log",
+      "tests.log"
+    ],
+    "manual_docs_review": "Reviewed changed code headers, actual declarations, function contracts and unchanged authentication/session defaults."
+  },
+  "initial_test_attempt": {
+    "log": "tests-interrupted.log",
+    "status": "Interrupted after early progress stalled in the restricted invocation. The completed run explicitly set project offline library options and used native execution access; no exact hang cause is claimed."
+  },
+  "startup": {
+    "state": "awaiting_operator_ssh_password",
+    "terminal_pid": 16016,
+    "old_owned_demo_stop_requested": true,
+    "old_listeners_released": true,
+    "runtime_directory": ".venv/tmp/phone-mvp-manual/20261028-130111-073dbee3",
+    "ssh_tunnel_verified": false,
+    "phone_inference_verified": false
+  },
+  "constraints": [
+    "No credentials discovered in the project or copied to logs/chat. Interactive password input is required.",
+    "No model or camera-policy changes; no implicit fallback, retry or remote deployment.",
+    "Physical phone camera, networking and audio remain unverified."
+  ]
+}

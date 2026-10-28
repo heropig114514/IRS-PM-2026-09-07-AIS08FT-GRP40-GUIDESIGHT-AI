@@ -1,0 +1,4 @@
+Creating test database for alias 'default'...
+
+.....2026-10-28 12:56:50,782 ERROR django.request Service Unavailable: /api/health/
+..2026-10-28 12:56:50,785 WARNING django.request Method Not Allowed: /api/health/

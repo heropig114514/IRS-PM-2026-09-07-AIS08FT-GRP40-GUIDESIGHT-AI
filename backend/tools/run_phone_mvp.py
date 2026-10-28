@@ -8,7 +8,7 @@ verify_inference_port; supervise; run; main.
 Variable Index: ROOT/STOP_REQUESTED and child helpers are reused from the local launcher;
 WEB_PORT/INFERENCE_REMOTE_PORT separate the permanent app-server Web listener from the laptop
 inference tunnel; client/relay/children/log_handles own only this run's resources; secrets stay in
-memory.
+memory; inference_python optionally selects an already prepared GPU interpreter.
 """
 
 import argparse
@@ -173,13 +173,19 @@ def supervise(relay, children):
 
 def run(args):
     """Functionality: Preflight or supervise laptop inference through the app-server tunnel.
-    Inputs: Local check flag, inference port and log path. Outputs: bounded readiness then service
+    Inputs: Local check flag, optional inference interpreter, port and log path.
+    Outputs: bounded readiness then service
     until explicit stop, child exit or SSH failure.
     Logic: Verify the Web unit first, launch only the CUDA worker, bind remote loopback 18767, and
     validate tunneled health plus the already-running public page.
     Constraints: No local Web process, Nginx changes, ORS transfer, GPU fallback, retry or restart.
     """
-    web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
+    web_python = python_path(".venv")
+    selected_python = getattr(args, "inference_python", None)
+    inference_python = (Path(selected_python).resolve() if selected_python is not None
+                        else python_path(".venv-inference"))
+    if selected_python is not None and not inference_python.is_file():
+        raise StartupError(f"Missing explicit inference interpreter: {inference_python}")
     inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0"})
     inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
     verify_models()
@@ -274,7 +280,8 @@ def run(args):
 
 def main():
     """Functionality: Parse the laptop inference supervisor CLI and report safe failures.
-    Inputs: Explicit local flags and a hidden SSH password prompt. Outputs: process exit status.
+    Inputs: Local flags, optional inference interpreter and hidden SSH password prompt.
+    Outputs: process exit status.
     Logic: The check mode performs preflight only; normal mode owns one worker and one tunnel.
     Constraints: No password argument, Nginx installer, public Web process or automatic restart.
     """
@@ -283,6 +290,8 @@ def main():
     )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--inference-port", type=int, default=8767)
+    parser.add_argument("--inference-python", type=Path,
+                        help="Explicit prepared inference interpreter; default is .venv-inference")
     parser.add_argument("--log-dir", type=Path, default=ROOT / ".venv/tmp/phone-mvp")
     args = parser.parse_args()
     try:

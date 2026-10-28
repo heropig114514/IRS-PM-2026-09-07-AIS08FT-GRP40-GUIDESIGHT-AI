@@ -8,6 +8,19 @@
 
 ## 执行顺序
 
+### Phone camera inference startup
+
+1. Inspect the active local service and phone launcher's session/environment contract. Add an
+   explicit prepared GPU interpreter option while preserving dependency, CUDA and model checks.
+2. Complete launcher regression checks and preflight without interrupting the current demo.
+3. Obtain the operator's existing SSH authentication through a local terminal or an explicitly
+   identified private credential file; never record credentials in reports or chat output.
+4. Stop only the owned offline demo before replacing its GPU listener with the continuous phone
+   worker. Establish the pinned, loopback-only reverse SSH tunnel to the existing Web service.
+5. Verify actual public handshake/inference and idle readiness, record the selected model/backend,
+   and leave the worker/tunnel running for physical-phone acceptance. Do not treat local video
+   latency, HTTPS availability or synthetic camera inputs as physical-phone validation.
+
 ### Local browser-to-GPU demo validation
 
 1. Verify the current local Web/GPU services and browser entry. Keep the original detector as

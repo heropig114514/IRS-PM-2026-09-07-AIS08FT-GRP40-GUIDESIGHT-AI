@@ -49,6 +49,26 @@ The depth checkpoint must have SHA-256 `befed1b8561d8b2eaa66274b070cdfc9c44853bd
 
 The permanent Web port is 18766 on the application server. The laptop worker defaults to `127.0.0.1:8767`; the pinned SSH connection maps that worker to server loopback port 18767. An occupied local port fails explicitly. The launcher does not kill processes, start a Web service, edit Nginx, or select another port.
 
+An existing verified GPU interpreter can be selected explicitly with `--inference-python`.
+The default remains `.venv-inference`; an invalid explicit path fails without substitution.
+This option preserves package/CUDA/checkpoint/port checks and interactive SSH authentication.
+For the prepared local TensorRT environment, use the following from `backend` after stopping
+the owned offline demo launcher to release port 8767:
+
+```powershell
+$env:PRS_DETECTION_MODEL = 'yolo26n'
+$env:PRS_DISTANCE_MODE = 'depth'
+$env:PRS_DEPTH_BACKEND = 'tensorrt'
+$env:PRS_DEPTH_ENGINE_MANIFEST = 'models/experiments/depth-serving-fp32/manifest.json'
+$env:PRS_DEPTH_FUSION = 'host'
+.\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --inference-python .venv/depth-export/Scripts/python.exe --check
+.\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --inference-python .venv/depth-export/Scripts/python.exe
+```
+
+The engine bundle must match this worker's weights/runtime/GPU and cover the phone's actual
+preprocessed input shapes. Unsupported shapes fail explicitly. This configuration does not
+change the camera's admission policy or establish phone/network latency from local-video results.
+
 After `prs-mvp-web.service` is active, run the following on the laptop to start inference and connect it to the app server:
 
 ```powershell

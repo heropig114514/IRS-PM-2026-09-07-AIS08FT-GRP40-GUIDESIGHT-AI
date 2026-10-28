@@ -10,6 +10,7 @@ DepthBackendTests.test_model_and_fusion_are_frozen;
 DepthBackendTests.test_host_fusion_mode_boundary.
 DepthBackendTests.test_launcher_verifies_selected_weights.
 DepthBackendTests.test_launcher_explicit_interpreter.
+DepthBackendTests.test_phone_launcher_explicit_interpreter.
 Variable Index: None. No checkpoint or engine is loaded by these contract tests.
 """
 
@@ -177,6 +178,37 @@ class DepthBackendTests(SimpleTestCase):
                 self.assertEqual(probe.call_args.args[0], interpreter.resolve())
                 self.assertTrue(probe.call_args.kwargs["cuda"])
                 key.assert_not_called()
+                args.inference_python = Path(directory) / "missing.exe"
+                probe.reset_mock()
+                with self.assertRaises(StartupError):
+                    run(args)
+                probe.assert_not_called()
+
+    def test_phone_launcher_explicit_interpreter(self):
+        """Functionality: Preflight a selected phone GPU runtime before any SSH authentication.
+        Inputs: existing inert interpreter then a missing path. Outputs: probe or early failure.
+        Logic: execute real check-mode orchestration with dependency and port seams.
+        Constraints: no CUDA or SSH calls; no fallback to the default interpreter.
+        """
+        from tools.run_phone_mvp import ROOT, StartupError, run
+
+        with tempfile.TemporaryDirectory() as directory:
+            interpreter = Path(directory) / "python.exe"
+            interpreter.write_bytes(b"inert interpreter fixture")
+            args = SimpleNamespace(inference_python=interpreter, check=True,
+                                   inference_port=8767, log_dir=ROOT / ".venv/tmp/phone-mvp")
+            with patch("tools.run_phone_mvp.python_path", return_value=interpreter) as default, \
+                    patch("tools.run_phone_mvp.inspect_environment") as probe, \
+                    patch("tools.run_phone_mvp.verify_models"), \
+                    patch("tools.run_phone_mvp.verify_inference_port"), \
+                    patch("tools.run_phone_mvp.getpass.getpass") as password, \
+                    patch("tools.run_phone_mvp.connect_server") as connect:
+                run(args)
+                default.assert_called_once_with(".venv")
+                self.assertEqual(probe.call_args.args[0], interpreter.resolve())
+                self.assertTrue(probe.call_args.kwargs["cuda"])
+                password.assert_not_called()
+                connect.assert_not_called()
                 args.inference_python = Path(directory) / "missing.exe"
                 probe.reset_mock()
                 with self.assertRaises(StartupError):
