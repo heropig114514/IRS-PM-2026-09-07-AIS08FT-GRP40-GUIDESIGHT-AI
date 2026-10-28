@@ -8,6 +8,23 @@
 
 ## 执行顺序
 
+### Server handoff and removal of the temporary laptop route
+
+1. Inspect the public server's current inference route, original private route backup, available
+   worker health and service ownership. Do not submit any local inference tests.
+2. Package all tracked optimization source, dependencies, operating methods and benchmark
+   evidence with an exact revision and file hashes. Exclude credentials, local environments,
+   datasets and device-specific engines; document reproducible export on the actual target GPU.
+3. Upload the versioned package to an independent server handoff directory and verify every file.
+   Preserve the colleague's current Web release and features rather than replacing it wholesale.
+4. Restore the explicitly requested original server-side inference route, retain the validated
+   Web capture policy, then stop only the two owned temporary laptop relays and GPU supervisor.
+   If the original worker is offline, report that fact and obtain its endpoint/startup information;
+   do not silently keep using the laptop or substitute CPU/HF inference.
+5. Verify page/configuration state, archive integrity and owned-process cleanup without local
+   inference. Record server readiness separately from successful code delivery and publish the
+   handoff location and remaining target-GPU deployment constraints.
+
 ### Phone latency: bounded capture and trusted public access
 
 1. Preserve the running public relay and record its twelve-frame control. Inspect the phone

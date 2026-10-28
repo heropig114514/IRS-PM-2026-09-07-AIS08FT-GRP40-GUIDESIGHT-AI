@@ -1,0 +1,16 @@
+{
+  "at_utc": "2026-10-28T08:55:11.930202+00:00",
+  "public_route_restored_separately_to": "ws://127.0.0.1:18767/ws/infer/",
+  "local_inference_tests_submitted": false,
+  "gpu_supervisor_pid": 34496,
+  "gpu_child_pid": 7788,
+  "candidate_relay_pid": 21052,
+  "named_processes_absent": true,
+  "local_port8767_listening": false,
+  "cleanup_methods": [
+    "candidate relay owned stop.request",
+    "GPU supervisor owned terminal Ctrl+C"
+  ],
+  "supervisor_state": "stopped_without_route_restore",
+  "state_explanation": "The independent server route restoration completed first. The GPU supervisor did not restore the route itself; its cached route_activated flag is stale and is not current server state."
+}

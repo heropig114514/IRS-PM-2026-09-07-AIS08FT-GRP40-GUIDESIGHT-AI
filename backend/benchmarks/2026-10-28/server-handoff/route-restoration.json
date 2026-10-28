@@ -1,0 +1,16 @@
+{
+  "at_utc": "2026-10-28T08:50:07.500081+00:00",
+  "route": "ws://127.0.0.1:18767/ws/infer/",
+  "previous_route": "ws://127.0.0.1:18769/ws/infer/",
+  "private_backup": "/etc/prs-mvp-web/app.env.pre-server-handoff-20261028",
+  "user_explicitly_accepts_original_worker_offline": true,
+  "web_active": true,
+  "current_release": "/opt/prs-practice/mvp/releases/0cafb69a93e3768d9626240ee816dbf53f30d253",
+  "inference_submitted": false,
+  "page_status": 200,
+  "bounded_profile_retained": true,
+  "original_worker": {
+    "ready": false,
+    "connection_error": "URLError"
+  }
+}
