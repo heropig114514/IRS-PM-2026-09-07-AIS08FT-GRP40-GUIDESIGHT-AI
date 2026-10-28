@@ -1,0 +1,12 @@
+E501 Line too long (104 > 100)
+   --> tools\run_local_mvp.py:522:101
+    |
+520 | def main():
+521 |     """Functionality: Parse the explicit local supervisor command and report safe failures.
+522 |     Inputs: CLI --check/ports/log directory/--assist/--ors-env/--inference-python. Outputs: exit status.
+    |                                                                                                     ^^^^
+523 |     Logic: Default runs until Ctrl+C; errors return 1 without private values or child log dumps.
+524 |     Constraints: no background PID registry, implicit installation or remote actions.
+    |
+
+Found 1 error.

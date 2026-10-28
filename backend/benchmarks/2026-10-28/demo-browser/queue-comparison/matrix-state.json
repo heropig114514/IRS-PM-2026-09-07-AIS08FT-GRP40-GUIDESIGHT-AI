@@ -1,0 +1,230 @@
+[
+  {
+    "model": "yolo26n",
+    "video": "07",
+    "phase": "before",
+    "limit": 12,
+    "report": "yolo26n-mot07-before.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 407,
+      "delivered_fps": 23.922317282990278,
+      "steady_p95_ms": 663.6999999997206,
+      "steady_max_ms": 793.2000000001863,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 407,
+    "delivered": 407
+  },
+  {
+    "model": "yolo26n",
+    "video": "07",
+    "phase": "low-latency",
+    "limit": 3,
+    "report": "yolo26n-mot07-low-latency.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 330,
+      "delivered_fps": 19.81104239803948,
+      "steady_p95_ms": 172.60000000009313,
+      "steady_max_ms": 217.6999999997206,
+      "meets_existing_performance_gate": true
+    },
+    "sent": 330,
+    "delivered": 330
+  },
+  {
+    "model": "yolo26n",
+    "video": "07",
+    "phase": "after",
+    "limit": 12,
+    "report": "yolo26n-mot07-after.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 334,
+      "delivered_fps": 19.34022534556859,
+      "steady_p95_ms": 754.5,
+      "steady_max_ms": 855.5,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 334,
+    "delivered": 334
+  },
+  {
+    "model": "yolo26n",
+    "video": "10",
+    "phase": "before",
+    "limit": 12,
+    "report": "yolo26n-mot10-before.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 460,
+      "delivered_fps": 20.670368418919292,
+      "steady_p95_ms": 665.2000000001863,
+      "steady_max_ms": 734.6999999997206,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 460,
+    "delivered": 460
+  },
+  {
+    "model": "yolo26n",
+    "video": "10",
+    "phase": "low-latency",
+    "limit": 3,
+    "report": "yolo26n-mot10-low-latency.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 484,
+      "delivered_fps": 22.215782864870278,
+      "steady_p95_ms": 155.3000000002794,
+      "steady_max_ms": 315,
+      "meets_existing_performance_gate": true
+    },
+    "sent": 484,
+    "delivered": 484
+  },
+  {
+    "model": "yolo26n",
+    "video": "10",
+    "phase": "after",
+    "limit": 12,
+    "report": "yolo26n-mot10-after.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 552,
+      "delivered_fps": 25.012142918749333,
+      "steady_p95_ms": 618,
+      "steady_max_ms": 718.1000000000931,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 552,
+    "delivered": 552
+  },
+  {
+    "model": "yolo26n-walk",
+    "video": "07",
+    "phase": "before",
+    "limit": 12,
+    "report": "yolo26n-walk-mot07-before.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 388,
+      "delivered_fps": 22.775691804282314,
+      "steady_p95_ms": 736.2000000001863,
+      "steady_max_ms": 926.9000000003725,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 388,
+    "delivered": 388
+  },
+  {
+    "model": "yolo26n-walk",
+    "video": "07",
+    "phase": "low-latency",
+    "limit": 3,
+    "report": "yolo26n-walk-mot07-low-latency.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 357,
+      "delivered_fps": 21.27532420964561,
+      "steady_p95_ms": 164.10000000009313,
+      "steady_max_ms": 186.89999999990687,
+      "meets_existing_performance_gate": true
+    },
+    "sent": 357,
+    "delivered": 357
+  },
+  {
+    "model": "yolo26n-walk",
+    "video": "07",
+    "phase": "after",
+    "limit": 12,
+    "report": "yolo26n-walk-mot07-after.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 371,
+      "delivered_fps": 21.66542724808097,
+      "steady_p95_ms": 592.8999999999069,
+      "steady_max_ms": 635.7999999998137,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 371,
+    "delivered": 371
+  },
+  {
+    "model": "yolo26n-walk",
+    "video": "10",
+    "phase": "before",
+    "limit": 12,
+    "report": "yolo26n-walk-mot10-before.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 535,
+      "delivered_fps": 23.99924496757385,
+      "steady_p95_ms": 673,
+      "steady_max_ms": 762.3999999999069,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 535,
+    "delivered": 535
+  },
+  {
+    "model": "yolo26n-walk",
+    "video": "10",
+    "phase": "low-latency",
+    "limit": 3,
+    "report": "yolo26n-walk-mot10-low-latency.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 518,
+      "delivered_fps": 23.745005281771,
+      "steady_p95_ms": 151.10000000009313,
+      "steady_max_ms": 207,
+      "meets_existing_performance_gate": true
+    },
+    "sent": 518,
+    "delivered": 518
+  },
+  {
+    "model": "yolo26n-walk",
+    "video": "10",
+    "phase": "after",
+    "limit": 12,
+    "report": "yolo26n-walk-mot10-after.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "summary": {
+      "unique_source_frames": 541,
+      "delivered_fps": 24.47603161940688,
+      "steady_p95_ms": 653.3999999999069,
+      "steady_max_ms": 779.2000000001863,
+      "meets_existing_performance_gate": false
+    },
+    "sent": 541,
+    "delivered": 541
+  }
+]

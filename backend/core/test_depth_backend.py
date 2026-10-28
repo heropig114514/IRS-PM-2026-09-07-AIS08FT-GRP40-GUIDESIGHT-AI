@@ -9,6 +9,7 @@ DepthBackendTests.test_comparison_does_not_hide_decision_changes.
 DepthBackendTests.test_model_and_fusion_are_frozen;
 DepthBackendTests.test_host_fusion_mode_boundary.
 DepthBackendTests.test_launcher_verifies_selected_weights.
+DepthBackendTests.test_launcher_explicit_interpreter.
 Variable Index: None. No checkpoint or engine is loaded by these contract tests.
 """
 
@@ -151,6 +152,36 @@ class DepthBackendTests(SimpleTestCase):
                 weights.write_bytes(b"changed weights")
                 with self.assertRaises(StartupError):
                     verify_models()
+
+    def test_launcher_explicit_interpreter(self):
+        """Functionality: Keep runtime verification when selecting a prepared GPU interpreter.
+        Inputs: explicit interpreter then a missing path. Outputs: selected probe or early failure.
+        Logic: exercise actual preflight with I/O seams; missing selection never uses a default.
+        Constraints: inert file is never executed; this is not CUDA readiness evidence.
+        """
+        from tools.run_local_mvp import StartupError, run
+
+        with tempfile.TemporaryDirectory() as directory:
+            interpreter = Path(directory) / "python.exe"
+            interpreter.write_bytes(b"inert interpreter fixture")
+            args = SimpleNamespace(inference_python=interpreter, check=True,
+                                   web_port=8766, inference_port=8767)
+            with patch("tools.run_local_mvp.python_path", return_value=interpreter) as default, \
+                    patch("tools.run_local_mvp.inspect_environment",
+                          return_value={"device": "fixture", "cuda_runtime": "fixture"}) as probe, \
+                    patch("tools.run_local_mvp.verify_models"), \
+                    patch("tools.run_local_mvp.verify_ports"), \
+                    patch("tools.run_local_mvp.read_or_create_key") as key:
+                run(args)
+                default.assert_called_once_with(".venv")
+                self.assertEqual(probe.call_args.args[0], interpreter.resolve())
+                self.assertTrue(probe.call_args.kwargs["cuda"])
+                key.assert_not_called()
+                args.inference_python = Path(directory) / "missing.exe"
+                probe.reset_mock()
+                with self.assertRaises(StartupError):
+                    run(args)
+                probe.assert_not_called()
 
     def test_precision_policy_rejected_before_model_load(self):
         """Functionality: Reject unsupported precision or ambiguous artifacts before checkpoint I/O.

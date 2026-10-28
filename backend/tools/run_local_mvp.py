@@ -1,5 +1,6 @@
 """Responsibilities: Supervise the isolated web and local CUDA inference processes.
-Implementation: Check fixed environments/weights, prepare a private local key, start once on
+Implementation: Check default or explicitly selected inference environment/weights, prepare a
+private key, start once on
 loopback, observe listeners then health once, and terminate only owned Popen children on exit.
 Related Modules: integration.asgi/assist_asgi; integration.inference.asgi; config.base;
 requirements.txt/requirements-inference.txt; LOCAL-MVP.md.
@@ -12,6 +13,7 @@ PRS_DISTANCE_* — inherited explicit strategy profile; B preflights only detect
 STOP_REQUESTED — foreground supervisor shutdown event; children — owned process handles only;
 log_handles — optional owned log files; key — private local Django key, never logged.
 assist/ors_key — explicit maps-enabled transport mode and web-only ORS credential.
+inference_python — optional operator-selected interpreter; default .venv-inference is unchanged.
 """
 
 import argparse
@@ -411,7 +413,8 @@ def handle_signal(signum, frame):
 
 def run(args):
     """Functionality: Check prerequisites or supervise the two independent local services.
-    Inputs: parsed CLI flags, optional explicit assist/ORS file. Outputs: normal stop or failure.
+    Inputs: CLI flags, optional explicit inference interpreter and assist/ORS file.
+    Outputs: normal stop or failure.
     Logic: Check all prerequisites before private-key creation; start GPU then web once; observe
     health and wait for user stop or child failure; finally stop only owned children.
     Constraints: --check never writes configuration or starts services; no install/download/GPU
@@ -422,7 +425,12 @@ def run(args):
     if ors_env is not None and not assist:
         raise StartupError("--ors-env requires the explicit --assist mode.")
     ors_key = read_ors_key(ors_env) if assist else ""
-    web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
+    web_python = python_path(".venv")
+    selected_python = getattr(args, "inference_python", None)
+    inference_python = (Path(selected_python).resolve() if selected_python is not None
+                        else python_path(".venv-inference"))
+    if selected_python is not None and not inference_python.is_file():
+        raise StartupError(f"Missing explicit inference interpreter: {inference_python}")
     inspect_environment(web_python, WEB_PACKAGES)
     runtime = inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
     verify_models()
@@ -511,7 +519,8 @@ def run(args):
 
 def main():
     """Functionality: Parse the explicit local supervisor command and report safe failures.
-    Inputs: CLI --check/ports/log directory/--assist/explicit --ors-env. Outputs: exit status.
+    Inputs: CLI --check/ports/log directory/--assist/--ors-env/--inference-python.
+    Outputs: exit status.
     Logic: Default runs until Ctrl+C; errors return 1 without private values or child log dumps.
     Constraints: no background PID registry, implicit installation or remote actions.
     """
@@ -523,6 +532,8 @@ def main():
     )
     parser.add_argument("--web-port", type=int, default=8766)
     parser.add_argument("--inference-port", type=int, default=8767)
+    parser.add_argument("--inference-python", type=Path,
+                        help="Explicit prepared inference interpreter; default is .venv-inference")
     parser.add_argument("--log-dir", type=Path, help="Optional log parent directory inside backend")
     parser.add_argument("--assist", action="store_true",
                         help="Enable same-page maps with local continuous perception; HF stays off")

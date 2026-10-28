@@ -1,0 +1,1033 @@
+{
+  "complete": false,
+  "scope": "native continuous file video / Chrome / local dual-model GPU",
+  "hardware_outputs_verified": false,
+  "external_requests": [],
+  "camera_module_requests": [],
+  "failures": [
+    "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#video-stop')\u001b[22m\n\u001b[2m    - locator resolved to <button disabled id=\"video-stop\" class=\"button secondary\">停止</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    59 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not enabled\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+  ],
+  "sessions": [],
+  "browser": {
+    "version": "155.0.8059.86",
+    "headed": false,
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  "speech_configuration": {
+    "enabled": true,
+    "voice_id": "Microsoft Huihui - Chinese (Simplified, PRC)",
+    "rate": 2,
+    "hardware_verified": false
+  },
+  "interrupted_session": {
+    "frames": [
+      {
+        "type": "frame",
+        "generation": 1,
+        "sessionId": "1c7326a504a747709d9e9c9125ee267f",
+        "provider": "local",
+        "source": "local_video",
+        "result": {
+          "metadata": {
+            "schema_version": 1,
+            "model": "yolo26n",
+            "backend": "PyTorch resident CUDA",
+            "precision": "FP32",
+            "output_precision": "FP32",
+            "classes": 80,
+            "confidence_threshold": 0.25,
+            "class_confidence_thresholds": {
+              "traffic light": 0.12
+            },
+            "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+            "width": 640,
+            "height": 360,
+            "count": 17,
+            "boxes": [
+              {
+                "xyxy": [
+                  504.8844299316406,
+                  120.15057373046875,
+                  603.1443481445312,
+                  357.1021728515625
+                ],
+                "score": 0.9118810296058655,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 1,
+                "class_name": "person",
+                "confidence": 0.9118810296058655,
+                "bbox": [
+                  504.8844299316406,
+                  120.15057373046875,
+                  603.1443481445312,
+                  357.1021728515625
+                ],
+                "distance_m": 3.6104917526245117,
+                "smoothed_distance_m": 3.6104917526245117,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_right",
+                "ttc_sec": null,
+                "risk_score": 27,
+                "risk_level": "medium",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front_right",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  449.4071044921875,
+                  117.18093872070312,
+                  462.9969482421875,
+                  152.19189453125
+                ],
+                "score": 0.8592272400856018,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 2,
+                "class_name": "person",
+                "confidence": 0.8592272400856018,
+                "bbox": [
+                  449.4071044921875,
+                  117.18093872070312,
+                  462.9969482421875,
+                  152.19189453125
+                ],
+                "distance_m": 24.84526824951172,
+                "smoothed_distance_m": 24.84526824951172,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_right",
+                "ttc_sec": null,
+                "risk_score": 12,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front_right",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  304.1294860839844,
+                  109.78633117675781,
+                  330.2274475097656,
+                  193.63177490234375
+                ],
+                "score": 0.7851366400718689,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 3,
+                "class_name": "person",
+                "confidence": 0.7851366400718689,
+                "bbox": [
+                  304.1294860839844,
+                  109.78633117675781,
+                  330.2274475097656,
+                  193.63177490234375
+                ],
+                "distance_m": 13.584185600280762,
+                "smoothed_distance_m": 13.584185600280762,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front",
+                "ttc_sec": null,
+                "risk_score": 15,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  0.21290969848632812,
+                  190.3875732421875,
+                  91.09545135498047,
+                  233.65969848632812
+                ],
+                "score": 0.7726782560348511,
+                "class_id": 13,
+                "label": "bench",
+                "track_id": 4,
+                "class_name": "bench",
+                "confidence": 0.7726782560348511,
+                "bbox": [
+                  0.21290969848632812,
+                  190.3875732421875,
+                  91.09545135498047,
+                  233.65969848632812
+                ],
+                "distance_m": 6.456542015075684,
+                "smoothed_distance_m": 6.456542015075684,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_left",
+                "ttc_sec": null,
+                "risk_score": 13,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_10",
+                  "unknown",
+                  "direction_front_left",
+                  "class_bench"
+                ]
+              },
+              {
+                "xyxy": [
+                  394.36090087890625,
+                  110.5977783203125,
+                  442.513671875,
+                  228.42001342773438
+                ],
+                "score": 0.7363954186439514,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 5,
+                "class_name": "person",
+                "confidence": 0.7363954186439514,
+                "bbox": [
+                  394.36090087890625,
+                  110.5977783203125,
+                  442.513671875,
+                  228.42001342773438
+                ],
+                "distance_m": 9.10395336151123,
+                "smoothed_distance_m": 9.10395336151123,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front",
+                "ttc_sec": null,
+                "risk_score": 20,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_10",
+                  "unknown",
+                  "direction_front",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  327.42706298828125,
+                  104.88273620605469,
+                  374.2449645996094,
+                  222.0352783203125
+                ],
+                "score": 0.7310522198677063,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 6,
+                "class_name": "person",
+                "confidence": 0.7310522198677063,
+                "bbox": [
+                  327.42706298828125,
+                  104.88273620605469,
+                  374.2449645996094,
+                  222.0352783203125
+                ],
+                "distance_m": 10.739824295043945,
+                "smoothed_distance_m": 10.739824295043945,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front",
+                "ttc_sec": null,
+                "risk_score": 15,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  578.127197265625,
+                  115.78622436523438,
+                  608.3665771484375,
+                  184.6553955078125
+                ],
+                "score": 0.5889830589294434,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 7,
+                "class_name": "person",
+                "confidence": 0.5889830589294434,
+                "bbox": [
+                  578.127197265625,
+                  115.78622436523438,
+                  608.3665771484375,
+                  184.6553955078125
+                ],
+                "distance_m": 4.489706039428711,
+                "smoothed_distance_m": 4.489706039428711,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_right",
+                "ttc_sec": null,
+                "risk_score": 27,
+                "risk_level": "medium",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front_right",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  115.70609283447266,
+                  166.9232177734375,
+                  188.4047088623047,
+                  199.5078125
+                ],
+                "score": 0.5388026833534241,
+                "class_id": 13,
+                "label": "bench",
+                "track_id": 8,
+                "class_name": "bench",
+                "confidence": 0.5388026833534241,
+                "bbox": [
+                  115.70609283447266,
+                  166.9232177734375,
+                  188.4047088623047,
+                  199.5078125
+                ],
+                "distance_m": 9.781997680664062,
+                "smoothed_distance_m": 9.781997680664062,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_left",
+                "ttc_sec": null,
+                "risk_score": 13,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_10",
+                  "unknown",
+                  "direction_front_left",
+                  "class_bench"
+                ]
+              },
+              {
+                "xyxy": [
+                  503.23114013671875,
+                  165.58831787109375,
+                  537.2854614257812,
+                  251.62359619140625
+                ],
+                "score": 0.4915159344673157,
+                "class_id": 26,
+                "label": "handbag",
+                "track_id": 9,
+                "class_name": "handbag",
+                "confidence": 0.4915159344673157,
+                "bbox": [
+                  503.23114013671875,
+                  165.58831787109375,
+                  537.2854614257812,
+                  251.62359619140625
+                ],
+                "distance_m": 4.160325527191162,
+                "smoothed_distance_m": 4.160325527191162,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_right",
+                "ttc_sec": null,
+                "risk_score": 27,
+                "risk_level": "medium",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front_right",
+                  "class_default"
+                ]
+              },
+              {
+                "xyxy": [
+                  508.83465576171875,
+                  113.31724548339844,
+                  551.9326782226562,
+                  200.028076171875
+                ],
+                "score": 0.490220844745636,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 10,
+                "class_name": "person",
+                "confidence": 0.490220844745636,
+                "bbox": [
+                  508.83465576171875,
+                  113.31724548339844,
+                  551.9326782226562,
+                  200.028076171875
+                ],
+                "distance_m": 4.961071014404297,
+                "smoothed_distance_m": 4.961071014404297,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_right",
+                "ttc_sec": null,
+                "risk_score": 27,
+                "risk_level": "medium",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_5",
+                  "unknown",
+                  "direction_front_right",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  114.95259094238281,
+                  106.99324035644531,
+                  129.10040283203125,
+                  151.49063110351562
+                ],
+                "score": 0.4595594108104706,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 11,
+                "class_name": "person",
+                "confidence": 0.4595594108104706,
+                "bbox": [
+                  114.95259094238281,
+                  106.99324035644531,
+                  129.10040283203125,
+                  151.49063110351562
+                ],
+                "distance_m": 16.304698944091797,
+                "smoothed_distance_m": 16.304698944091797,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_left",
+                "ttc_sec": null,
+                "risk_score": 12,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front_left",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  389.6140441894531,
+                  132.2149658203125,
+                  416.53662109375,
+                  183.9842529296875
+                ],
+                "score": 0.3543318510055542,
+                "class_id": 26,
+                "label": "handbag",
+                "track_id": 12,
+                "class_name": "handbag",
+                "confidence": 0.3543318510055542,
+                "bbox": [
+                  389.6140441894531,
+                  132.2149658203125,
+                  416.53662109375,
+                  183.9842529296875
+                ],
+                "distance_m": 10.537775039672852,
+                "smoothed_distance_m": 10.537775039672852,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front",
+                "ttc_sec": null,
+                "risk_score": 15,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front",
+                  "class_default"
+                ]
+              },
+              {
+                "xyxy": [
+                  83.85823059082031,
+                  112.24459838867188,
+                  101.86433410644531,
+                  160.50802612304688
+                ],
+                "score": 0.2856121063232422,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 13,
+                "class_name": "person",
+                "confidence": 0.2856121063232422,
+                "bbox": [
+                  83.85823059082031,
+                  112.24459838867188,
+                  101.86433410644531,
+                  160.50802612304688
+                ],
+                "distance_m": 15.636306762695312,
+                "smoothed_distance_m": 15.636306762695312,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_left",
+                "ttc_sec": null,
+                "risk_score": 12,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front_left",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  154.95068359375,
+                  110.46144104003906,
+                  165.43846130371094,
+                  145.33901977539062
+                ],
+                "score": 0.28306812047958374,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 14,
+                "class_name": "person",
+                "confidence": 0.28306812047958374,
+                "bbox": [
+                  154.95068359375,
+                  110.46144104003906,
+                  165.43846130371094,
+                  145.33901977539062
+                ],
+                "distance_m": 18.56236457824707,
+                "smoothed_distance_m": 18.56236457824707,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_left",
+                "ttc_sec": null,
+                "risk_score": 12,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front_left",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  389.4071350097656,
+                  153.80661010742188,
+                  415.376953125,
+                  183.2987060546875
+                ],
+                "score": 0.2764790952205658,
+                "class_id": 26,
+                "label": "handbag",
+                "track_id": 15,
+                "class_name": "handbag",
+                "confidence": 0.2764790952205658,
+                "bbox": [
+                  389.4071350097656,
+                  153.80661010742188,
+                  415.376953125,
+                  183.2987060546875
+                ],
+                "distance_m": 9.132397651672363,
+                "smoothed_distance_m": 9.132397651672363,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front",
+                "ttc_sec": null,
+                "risk_score": 20,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "distance_m_le_10",
+                  "unknown",
+                  "direction_front",
+                  "class_default"
+                ]
+              },
+              {
+                "xyxy": [
+                  494.5177917480469,
+                  113.43536376953125,
+                  506.4093933105469,
+                  143.21688842773438
+                ],
+                "score": 0.2740916311740875,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 16,
+                "class_name": "person",
+                "confidence": 0.2740916311740875,
+                "bbox": [
+                  494.5177917480469,
+                  113.43536376953125,
+                  506.4093933105469,
+                  143.21688842773438
+                ],
+                "distance_m": 25.846172332763672,
+                "smoothed_distance_m": 25.846172332763672,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_right",
+                "ttc_sec": null,
+                "risk_score": 12,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front_right",
+                  "class_person"
+                ]
+              },
+              {
+                "xyxy": [
+                  130.64564514160156,
+                  109.47232055664062,
+                  144.41378784179688,
+                  150.4132080078125
+                ],
+                "score": 0.266034334897995,
+                "class_id": 0,
+                "label": "person",
+                "track_id": 17,
+                "class_name": "person",
+                "confidence": 0.266034334897995,
+                "bbox": [
+                  130.64564514160156,
+                  109.47232055664062,
+                  144.41378784179688,
+                  150.4132080078125
+                ],
+                "distance_m": 17.1481990814209,
+                "smoothed_distance_m": 17.1481990814209,
+                "relative_speed_mps": null,
+                "motion_state": "unknown",
+                "direction": "front_left",
+                "ttc_sec": null,
+                "risk_score": 12,
+                "risk_level": "low",
+                "alert_priority": 0,
+                "alert_required": false,
+                "risk_reasons": [
+                  "unknown",
+                  "direction_front_left",
+                  "class_person"
+                ]
+              }
+            ],
+            "raw_sha256": "cd722a8a86dd3f08cc50d6736099a24a76d052f7112157e245c5a5b179ec9574",
+            "jpeg_sha256": "42590d516fb6b31994340629c37e46d3e6f81107a8b4e318b1d82cd317319049",
+            "inference_ms": 6.192599999849335,
+            "graph_setup_ms": 1182.434700000158,
+            "prepare_ms": 5.823899999995774,
+            "gpu_stage_ms": 1188.7455000000955,
+            "render_ms": 69.86510000024282,
+            "server_ms": 6205.76630000005,
+            "forward_event_ms": 4.701504230499268,
+            "execution": {
+              "compute_dtype": "torch.float32",
+              "forward_dtype": "torch.float32",
+              "input_stride": [
+                1228800,
+                409600,
+                640,
+                1
+              ],
+              "pinned_input": true,
+              "graph_captured": true,
+              "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+              "capability": [
+                8,
+                6
+              ],
+              "torch": "2.8.0+cu126",
+              "cuda": "12.6",
+              "cpu_threads": 1,
+              "cpu_interop_threads": 1,
+              "tf32_matmul": false,
+              "tf32_cudnn": false,
+              "cudnn_benchmark": false
+            },
+            "depth_model": "yolo26n-depth",
+            "depth_units": "m",
+            "depth_backend": "torch",
+            "depth_fusion": "gpu",
+            "decode_boxes_ms": 0.7470999998986372,
+            "depth_predict_ms": 4844.943600000079,
+            "depth_fusion_ms": 74.17020000002594,
+            "depth_ms": 4919.860900000003,
+            "tracking_model": "botsort",
+            "tracking_status": "active",
+            "tracking_epoch": 0,
+            "gmc_method": "sparseOptFlow",
+            "with_reid": false,
+            "tracking_ms": 21.189199999753328,
+            "tracking_timestamp_s": 1.6607999999998138,
+            "risk_model": "rules-v1",
+            "risk_ms": 0.2816999999595282,
+            "distance_mode": "depth",
+            "distance_units": "m",
+            "depth_frame": true,
+            "depth_interval": 1,
+            "detection_ms": 1195.31649999999,
+            "distance_ms": 4919.113800000105,
+            "end_to_end_ms": 6205.76630000005,
+            "fps": 0.16114045416115524,
+            "performance": {
+              "total_frames": 1,
+              "depth_model_calls": 1,
+              "actual_depth_inference_ratio": 1,
+              "average_detection_ms": 1195.31649999999,
+              "average_distance_ms": 4919.113800000105,
+              "average_end_to_end_ms": 6205.76630000005,
+              "fps": 0.16114045416115524,
+              "depth_frame_count": 1,
+              "non_depth_frame_count": 0,
+              "average_depth_frame_ms": 6205.76630000005,
+              "average_non_depth_frame_ms": null
+            },
+            "index": 0,
+            "provider": "local",
+            "session_id": "1c7326a504a747709d9e9c9125ee267f",
+            "capture_time_s": 1.6607999999998138,
+            "timestamp_source": "browser_capture"
+          }
+        },
+        "capturedAt": 1660.7999999998137,
+        "sourceMediaTime": 0.033333,
+        "presentedFrames": 2,
+        "timing": {
+          "admissionAt": 1660.3999999999069,
+          "sourceMediaTime": 0.033333,
+          "presentedFrames": 2,
+          "presentationCallbackAt": 1659.7,
+          "scheduledCaptureAt": 1660.3999999999069,
+          "capturedAt": 1660.7999999998137,
+          "ordinal": 1,
+          "encodedAt": 1716.5,
+          "inputBytes": 44339,
+          "receivedAt": 20636.799999999814,
+          "renderStartedAt": 20636.899999999907,
+          "decodedAt": 20640.5,
+          "captureMs": 55.700000000186265,
+          "transportMs": 18920.299999999814,
+          "renderQueueMs": 0.10000000009313226,
+          "decodeMs": 3.6000000000931323,
+          "captureToResultMs": 18976,
+          "captureToDecodedMs": 18979.700000000186,
+          "completedAt": 20640.5,
+          "sent": 1,
+          "received": 1
+        },
+        "stats": {
+          "source": "local_video",
+          "sourceCallbacks": 498,
+          "observedPresentedFrames": 499,
+          "callbackGaps": 1,
+          "skippedCadence": 0,
+          "skippedCredit": 0,
+          "skippedFirstFrame": 497,
+          "admitted": 1,
+          "encoded": 1,
+          "sent": 1,
+          "delivered": 1,
+          "cancelledBeforeSend": 0,
+          "maxInFlight": 1,
+          "firstSourceMediaTime": 0.033333,
+          "lastSourceMediaTime": 16.633333,
+          "lastPresentedFrames": 500
+        }
+      }
+    ],
+    "events": [
+      {
+        "type": "loaded",
+        "generation": 0,
+        "source": "local_video",
+        "name": "MOT17-07-FRCNN-browser-h264.mp4",
+        "duration": 16.666667
+      },
+      {
+        "type": "session",
+        "generation": 1,
+        "sessionId": "1c7326a504a747709d9e9c9125ee267f",
+        "provider": "local",
+        "source": "local_video",
+        "contract": {
+          "kind": "session",
+          "provider": "local",
+          "protocol_version": 2,
+          "session_id": "1c7326a504a747709d9e9c9125ee267f",
+          "model": "yolo26n",
+          "precision": "FP32",
+          "backend": "PyTorch resident CUDA",
+          "output_precision": "FP32",
+          "classes": 80,
+          "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+          "names": [
+            "person",
+            "bicycle",
+            "car",
+            "motorcycle",
+            "airplane",
+            "bus",
+            "train",
+            "truck",
+            "boat",
+            "traffic light",
+            "fire hydrant",
+            "stop sign",
+            "parking meter",
+            "bench",
+            "bird",
+            "cat",
+            "dog",
+            "horse",
+            "sheep",
+            "cow",
+            "elephant",
+            "bear",
+            "zebra",
+            "giraffe",
+            "backpack",
+            "umbrella",
+            "handbag",
+            "tie",
+            "suitcase",
+            "frisbee",
+            "skis",
+            "snowboard",
+            "sports ball",
+            "kite",
+            "baseball bat",
+            "baseball glove",
+            "skateboard",
+            "surfboard",
+            "tennis racket",
+            "bottle",
+            "wine glass",
+            "cup",
+            "fork",
+            "knife",
+            "spoon",
+            "bowl",
+            "banana",
+            "apple",
+            "sandwich",
+            "orange",
+            "broccoli",
+            "carrot",
+            "hot dog",
+            "pizza",
+            "donut",
+            "cake",
+            "chair",
+            "couch",
+            "potted plant",
+            "bed",
+            "dining table",
+            "toilet",
+            "tv",
+            "laptop",
+            "mouse",
+            "remote",
+            "keyboard",
+            "cell phone",
+            "microwave",
+            "oven",
+            "toaster",
+            "sink",
+            "refrigerator",
+            "book",
+            "clock",
+            "vase",
+            "scissors",
+            "teddy bear",
+            "hair drier",
+            "toothbrush"
+          ],
+          "confidence_threshold": 0.25,
+          "max_edge": 640,
+          "jpeg_quality": 0.8,
+          "max_inflight": 12,
+          "session_seconds": 55,
+          "cold_seconds": 55,
+          "steady_seconds": 10,
+          "depth_model": "yolo26n-depth",
+          "depth_units": "m",
+          "tracking_model": "botsort",
+          "risk_model": "rules-v1",
+          "loaded": false,
+          "capabilities": {
+            "detection": true,
+            "depth": true,
+            "tracking": true,
+            "risk": true
+          },
+          "distance_mode": "depth",
+          "distance_units": "m",
+          "depth_interval": 1,
+          "depth_backend": "torch",
+          "depth_fusion": "gpu"
+        }
+      },
+      {
+        "type": "submitted",
+        "generation": 1,
+        "sessionId": "1c7326a504a747709d9e9c9125ee267f",
+        "source": "local_video",
+        "admissionAt": 1660.3999999999069,
+        "sourceMediaTime": 0.033333,
+        "presentedFrames": 2,
+        "presentationCallbackAt": 1659.7,
+        "scheduledCaptureAt": 1660.3999999999069,
+        "capturedAt": 1660.7999999998137,
+        "stats": {
+          "source": "local_video",
+          "sourceCallbacks": 1,
+          "observedPresentedFrames": 1,
+          "callbackGaps": 0,
+          "skippedCadence": 0,
+          "skippedCredit": 0,
+          "skippedFirstFrame": 0,
+          "admitted": 1,
+          "encoded": 1,
+          "sent": 1,
+          "delivered": 0,
+          "cancelledBeforeSend": 0,
+          "maxInFlight": 1,
+          "firstSourceMediaTime": 0.033333,
+          "lastSourceMediaTime": 0.033333,
+          "lastPresentedFrames": 2
+        }
+      },
+      {
+        "type": "ended",
+        "generation": 1,
+        "reason": "eof",
+        "sessionId": "1c7326a504a747709d9e9c9125ee267f",
+        "source": "local_video",
+        "stats": {
+          "source": "local_video",
+          "sourceCallbacks": 498,
+          "observedPresentedFrames": 499,
+          "callbackGaps": 1,
+          "skippedCadence": 0,
+          "skippedCredit": 0,
+          "skippedFirstFrame": 497,
+          "admitted": 1,
+          "encoded": 1,
+          "sent": 1,
+          "delivered": 1,
+          "cancelledBeforeSend": 0,
+          "maxInFlight": 1,
+          "firstSourceMediaTime": 0.033333,
+          "lastSourceMediaTime": 16.633333,
+          "lastPresentedFrames": 500
+        }
+      }
+    ],
+    "guidance": [
+      {
+        "phase": "new_session",
+        "session_id": null,
+        "enabled": true,
+        "paused": {
+          "speech": false,
+          "vibration": false
+        },
+        "reasons": {
+          "speech": null,
+          "vibration": null
+        },
+        "at": 1628.5
+      },
+      {
+        "phase": "session",
+        "session_id": "1c7326a504a747709d9e9c9125ee267f",
+        "enabled": true,
+        "paused": {
+          "speech": false,
+          "vibration": false
+        },
+        "reasons": {
+          "speech": null,
+          "vibration": null
+        },
+        "at": 1629
+      },
+      {
+        "phase": "stale",
+        "session_id": "1c7326a504a747709d9e9c9125ee267f",
+        "enabled": true,
+        "paused": {
+          "speech": false,
+          "vibration": false
+        },
+        "reasons": {
+          "speech": null,
+          "vibration": null
+        },
+        "at": 20640.69999999972,
+        "frame_index": 0,
+        "age_ms": 18979.899999999907
+      },
+      {
+        "phase": "eof",
+        "session_id": null,
+        "enabled": true,
+        "paused": {
+          "speech": false,
+          "vibration": false
+        },
+        "reasons": {
+          "speech": null,
+          "vibration": null
+        },
+        "at": 20641.69999999972
+      }
+    ],
+    "alert_speech": []
+  },
+  "source_file": {
+    "name": "MOT17-07-FRCNN-browser-h264.mp4",
+    "bytes": 14086307,
+    "sha256": "1f2cc539f810d069b26d67e0d9025e5f72b9929f3f837b0df074705ef51e2a33"
+  }
+}

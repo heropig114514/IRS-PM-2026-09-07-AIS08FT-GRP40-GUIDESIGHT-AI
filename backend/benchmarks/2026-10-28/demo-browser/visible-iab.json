@@ -1,0 +1,38 @@
+{
+  "image": {
+    "complete": true,
+    "height": 360,
+    "width": 640
+  },
+  "mode": "3",
+  "resultRows": 12,
+  "speech": "请求 12 · 12 个字符 · zh-CN · 语速 2× · 音量 100%",
+  "stats": {
+    "admitted": 410,
+    "callbackGaps": 1,
+    "cancelledBeforeSend": 0,
+    "currentInFlight": 0,
+    "delivered": 410,
+    "encoded": 410,
+    "firstSourceMediaTime": 0,
+    "lastPresentedFrames": 501,
+    "lastSourceMediaTime": 16.633333,
+    "maxInFlight": 3,
+    "observedPresentedFrames": 500,
+    "pendingLimit": 3,
+    "sent": 410,
+    "skippedCadence": 62,
+    "skippedCredit": 23,
+    "skippedFirstFrame": 4,
+    "source": "local_video",
+    "sourceCallbacks": 499,
+    "uncapturedObservedFrames": 90
+  },
+  "status": "会话结束（eof），已发送/交付 410/410；需手动开始。",
+  "url": "http://127.0.0.1:8766/integration/video/",
+  "video": {
+    "ended": true,
+    "paused": true,
+    "playbackRate": 1
+  }
+}

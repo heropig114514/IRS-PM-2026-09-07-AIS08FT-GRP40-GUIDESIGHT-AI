@@ -1,0 +1,21 @@
+[
+  {
+    "model": "yolo26n",
+    "profile": "torch-before",
+    "video": "07",
+    "report": "yolo26n-torch-before-mot07.json",
+    "returncode": 1,
+    "complete": false,
+    "failures": [
+      "Local inference is busy."
+    ],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      }
+    ]
+  }
+]

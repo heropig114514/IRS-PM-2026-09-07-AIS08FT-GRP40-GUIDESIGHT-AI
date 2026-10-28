@@ -8,6 +8,30 @@
 
 ## 执行顺序
 
+### Local browser-to-GPU demo validation
+
+1. Verify the current local Web/GPU services and browser entry. Keep the original detector as
+   the demo default; test the optional walk detector as a separate same-model comparison group.
+2. Exercise the real file picker, native 1x video playback, canvas JPEG encoding, PRF2 WebSocket,
+   local detection/depth/tracking/risk, returned JPEG decoding and rendered result panel. Use the
+   existing day/night browser-compatible videos, with no simulated inference or cloud endpoint.
+3. Compare Torch/GPU fusion, TensorRT/GPU fusion and TensorRT/host fusion, then repeat the original
+   control. Keep input files, cadence, pending-frame bound, precision and algorithm rules fixed.
+   Record cold first frame, every steady frame, delivered FPS, latency percentiles, source skips,
+   server phases, speech-engine events, stop/EOF cleanup and isolated session identities.
+4. Treat native playback sampling as an observed variable: retain source timestamps and admission
+   counters rather than claiming identical captured frames across wall-clock browser runs. Reuse
+   the separate complete-frame numerical evidence for exact-output claims. Capture actual result
+   panels and inspect a visible local demo session; distinguish JPEG decode from physical display.
+5. Fix any reproducible demo-blocking defect and rerun the affected checks with original failure
+   evidence retained. Restore the verified original-model optimized local service, document demo
+   operation and limitations, and report measured browser effects without changing acceptance gates.
+6. If the full browser results reveal queue-bound latency, evaluate an explicitly selected
+   three-job local-video admission limit against the original twelve-job limit on the same
+   TensorRT/host service. Preserve the original default and all admitted frames; skip only before
+   capture, retain source-coverage counters, and keep this policy experiment separate from model
+   Forward claims. Check the original latency/FPS gates and complete EOF delivery in both modes.
+
 ### Optional walk model and native fusion optimization
 
 1. Merge the published optional 87-class model and verify its checkpoint/manifest identity.

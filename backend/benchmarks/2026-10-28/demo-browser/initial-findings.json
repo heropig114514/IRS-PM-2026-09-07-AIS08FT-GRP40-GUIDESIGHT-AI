@@ -1,0 +1,17 @@
+{
+  "initial_cold_eof": {
+    "report": "yolo26n-torch-before-mot07.json",
+    "first_capture_to_decode_ms": 18979.700000000186,
+    "source_frames_presented": 499,
+    "delivered": 1,
+    "finding": "Cold initialization outlasted the16.67-second video. Test then incorrectly tried to click an already disabled stop button. Original video policy intentionally continued playback; no model inference failure."
+  },
+  "second_busy_session": {
+    "report": "verified/yolo26n-torch-before-mot07.json",
+    "failures": [
+      "Local inference is busy."
+    ],
+    "finding": "Immediate test restart raced uncancellable native completion after browser stop. Require observed ready/idle health before each new independent session."
+  },
+  "changes": "Record startup separately, handle natural EOF explicitly, retain its cold latency and all skips, then bound read-only health observations to ten seconds. No inference resend, cold timeout extension, model fallback or automatic restart."
+}

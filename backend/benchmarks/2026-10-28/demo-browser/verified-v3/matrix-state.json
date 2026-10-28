@@ -1,0 +1,466 @@
+[
+  {
+    "model": "yolo26n",
+    "profile": "torch-before",
+    "video": "07",
+    "report": "yolo26n-torch-before-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 10.660980810255712,
+        "steady_p95_ms": 66.60000000009313,
+        "steady_max_ms": 66.60000000009313
+      },
+      {
+        "unique_source_frames": 317,
+        "delivered_fps": 18.403871801890173,
+        "steady_p95_ms": 718.5,
+        "steady_max_ms": 841.7999999998137
+      }
+    ]
+  },
+  {
+    "model": "yolo26n",
+    "profile": "torch-before",
+    "video": "10",
+    "report": "yolo26n-torch-before-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 15.22070015216385,
+        "steady_p95_ms": 62.700000000186265,
+        "steady_max_ms": 62.700000000186265
+      },
+      {
+        "unique_source_frames": 442,
+        "delivered_fps": 19.894437677628908,
+        "steady_p95_ms": 678.2999999998137,
+        "steady_max_ms": 753.1999999997206
+      }
+    ]
+  },
+  {
+    "model": "yolo26n",
+    "profile": "trt-gpu",
+    "video": "07",
+    "report": "yolo26n-trt-gpu-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 13.333333333333334,
+        "steady_p95_ms": 65.20000000018626,
+        "steady_max_ms": 65.20000000018626
+      },
+      {
+        "unique_source_frames": 323,
+        "delivered_fps": 18.744578916423322,
+        "steady_p95_ms": 724.7999999998137,
+        "steady_max_ms": 760.5
+      }
+    ]
+  },
+  {
+    "model": "yolo26n",
+    "profile": "trt-gpu",
+    "video": "10",
+    "report": "yolo26n-trt-gpu-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 11.520737327213663,
+        "steady_p95_ms": 85.6999999997206,
+        "steady_max_ms": 85.6999999997206
+      },
+      {
+        "unique_source_frames": 408,
+        "delivered_fps": 18.2862174936652,
+        "steady_p95_ms": 729.7999999998137,
+        "steady_max_ms": 752.2000000001863
+      }
+    ]
+  },
+  {
+    "model": "yolo26n",
+    "profile": "trt-host",
+    "video": "07",
+    "report": "yolo26n-trt-host-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 15.037593984962406,
+        "steady_p95_ms": 48.3000000002794,
+        "steady_max_ms": 48.3000000002794
+      },
+      {
+        "unique_source_frames": 408,
+        "delivered_fps": 23.953575968736494,
+        "steady_p95_ms": 537.2999999998137,
+        "steady_max_ms": 714.6999999997206
+      }
+    ]
+  },
+  {
+    "model": "yolo26n",
+    "profile": "trt-host",
+    "video": "10",
+    "report": "yolo26n-trt-host-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 14.556040756874655,
+        "steady_p95_ms": 51,
+        "steady_max_ms": 51
+      },
+      {
+        "unique_source_frames": 565,
+        "delivered_fps": 25.80597930031033,
+        "steady_p95_ms": 515.8000000002794,
+        "steady_max_ms": 580.0999999996275
+      }
+    ]
+  },
+  {
+    "model": "yolo26n",
+    "profile": "torch-after",
+    "video": "07",
+    "report": "yolo26n-torch-after-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 10.57082452430249,
+        "steady_p95_ms": 56.60000000009313,
+        "steady_max_ms": 56.60000000009313
+      },
+      {
+        "unique_source_frames": 324,
+        "delivered_fps": 18.86527970843516,
+        "steady_p95_ms": 669.6000000000931,
+        "steady_max_ms": 696.2999999998137
+      }
+    ]
+  },
+  {
+    "model": "yolo26n",
+    "profile": "torch-after",
+    "video": "10",
+    "report": "yolo26n-torch-after-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 15.384615384615385,
+        "steady_p95_ms": 61.5,
+        "steady_max_ms": 61.5
+      },
+      {
+        "unique_source_frames": 428,
+        "delivered_fps": 19.24212177063539,
+        "steady_p95_ms": 727.7999999998137,
+        "steady_max_ms": 1121.8999999999069
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "torch-before",
+    "video": "07",
+    "report": "yolo26n-walk-torch-before-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 13.908205841374391,
+        "steady_p95_ms": 63.60000000009313,
+        "steady_max_ms": 63.60000000009313
+      },
+      {
+        "unique_source_frames": 295,
+        "delivered_fps": 17.132268102513805,
+        "steady_p95_ms": 732.4000000003725,
+        "steady_max_ms": 886.9000000003725
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "torch-before",
+    "video": "10",
+    "report": "yolo26n-walk-torch-before-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 11.325028312594672,
+        "steady_p95_ms": 60,
+        "steady_max_ms": 60
+      },
+      {
+        "unique_source_frames": 425,
+        "delivered_fps": 19.138755980861244,
+        "steady_p95_ms": 677.6999999997206,
+        "steady_max_ms": 808.5
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "trt-gpu",
+    "video": "07",
+    "report": "yolo26n-walk-trt-gpu-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 14.164305948989814,
+        "steady_p95_ms": 62,
+        "steady_max_ms": 62
+      },
+      {
+        "unique_source_frames": 338,
+        "delivered_fps": 19.682050203829267,
+        "steady_p95_ms": 664.2999999998137,
+        "steady_max_ms": 760.2000000001863
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "trt-gpu",
+    "video": "10",
+    "report": "yolo26n-walk-trt-gpu-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 14.880952380911134,
+        "steady_p95_ms": 49.10000000009313,
+        "steady_max_ms": 49.10000000009313
+      },
+      {
+        "unique_source_frames": 501,
+        "delivered_fps": 22.672960680551395,
+        "steady_p95_ms": 608.3999999999069,
+        "steady_max_ms": 677
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "trt-host",
+    "video": "07",
+    "report": "yolo26n-walk-trt-host-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 15.527950310581462,
+        "steady_p95_ms": 51.39999999990687,
+        "steady_max_ms": 51.39999999990687
+      },
+      {
+        "unique_source_frames": 384,
+        "delivered_fps": 22.59760335600936,
+        "steady_p95_ms": 600.8999999999069,
+        "steady_max_ms": 702.8999999999069
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "trt-host",
+    "video": "10",
+    "report": "yolo26n-walk-trt-host-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 14.577259475198868,
+        "steady_p95_ms": 42.10000000009313,
+        "steady_max_ms": 42.10000000009313
+      },
+      {
+        "unique_source_frames": 560,
+        "delivered_fps": 25.271361986265866,
+        "steady_p95_ms": 550.1000000000931,
+        "steady_max_ms": 609
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "torch-after",
+    "video": "07",
+    "report": "yolo26n-walk-torch-after-mot07.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 13.736263736211018,
+        "steady_p95_ms": 67.8000000002794,
+        "steady_max_ms": 67.8000000002794
+      },
+      {
+        "unique_source_frames": 294,
+        "delivered_fps": 17.038747157786148,
+        "steady_p95_ms": 745,
+        "steady_max_ms": 779.7000000001863
+      }
+    ]
+  },
+  {
+    "model": "yolo26n-walk",
+    "profile": "torch-after",
+    "video": "10",
+    "report": "yolo26n-walk-torch-after-mot10.json",
+    "returncode": 0,
+    "complete": true,
+    "failures": [],
+    "sessions": [
+      {
+        "unique_source_frames": 1,
+        "delivered_fps": null,
+        "steady_p95_ms": null,
+        "steady_max_ms": null
+      },
+      {
+        "unique_source_frames": 2,
+        "delivered_fps": 14.880952380911134,
+        "steady_p95_ms": 59.10000000009313,
+        "steady_max_ms": 59.10000000009313
+      },
+      {
+        "unique_source_frames": 407,
+        "delivered_fps": 18.29471616153408,
+        "steady_p95_ms": 817.9000000003725,
+        "steady_max_ms": 1026.5
+      }
+    ]
+  }
+]
