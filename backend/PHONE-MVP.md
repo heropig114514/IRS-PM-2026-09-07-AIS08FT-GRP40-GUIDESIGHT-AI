@@ -69,6 +69,32 @@ The engine bundle must match this worker's weights/runtime/GPU and cover the pho
 preprocessed input shapes. Unsupported shapes fail explicitly. This configuration does not
 change the camera's admission policy or establish phone/network latency from local-video results.
 
+### Temporary GPU replacement
+
+When another operator already owns the server's port 18767, keep that tunnel running. Validate
+the selected replacement worker on its local port, allocate a separate server loopback binding
+(18768 for the temporary RTX 3060 setup), and verify health through that binding before changing
+only `LOCAL_INFERENCE_URL` in `/etc/prs-mvp-web/app.env`. Preserve a private backup of the
+original route and all other environment values. Restart only `prs-mvp-web`, then wait for its
+18766 listener and routed worker health; a systemd `active` state alone is insufficient.
+An inference-source archive can be stored separately under
+`/opt/prs-practice/mvp/inference-releases/`; uploading it does not activate GPU execution.
+
+Acceptance must check the public WSS contract and real returned frames for the selected GPU,
+model, precision, depth backend and fusion mode. Use one fixed image geometry per session and
+the browser's bounded streaming admission. A sequential request/response test can exhaust the
+worker's five-second input-idle budget when WAN round-trip time exceeds that budget. Preserve
+such failures as network/test evidence; do not extend deadlines or claim a model speedup from
+changing the input schedule. Actual phone camera and mobile-network acceptance remain separate.
+
+The replacement's supervisor owns only its GPU child and independent SSH binding. Keep the
+laptop powered, awake and connected while the phone uses it. To restore the original target,
+first check that the previous worker is available, restore the original inference URL, restart
+the named Web service and verify the routed health, then stop the replacement's owned resources.
+Do not terminate the colleague's tunnel. A lost replacement tunnel does not silently switch
+providers; recover or restore explicitly. Runtime process identities, source hashes, selected
+proxy paths and private-backup locations belong in the structured deployment report.
+
 After `prs-mvp-web.service` is active, run the following on the laptop to start inference and connect it to the app server:
 
 ```powershell

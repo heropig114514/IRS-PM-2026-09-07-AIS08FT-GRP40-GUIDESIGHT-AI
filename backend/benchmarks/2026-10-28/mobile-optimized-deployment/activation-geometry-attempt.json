@@ -1,0 +1,16 @@
+{
+  "state": "failed",
+  "pid": 34592,
+  "remote_port": 18768,
+  "local_port": 8767,
+  "compute_target": "operator-selected local RTX 3060",
+  "source_revision": "c99936e03a0b7a05794c1ca72dfd0528fb2e6542",
+  "existing_colleague_tunnel_preserved": true,
+  "route_activated": false,
+  "before": {
+    "candidate_port_available": true,
+    "old_ready": true,
+    "old_busy": false
+  },
+  "failure_type": "RuntimeError"
+}

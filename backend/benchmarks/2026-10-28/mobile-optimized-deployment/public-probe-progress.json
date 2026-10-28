@@ -1,0 +1,2378 @@
+{
+  "frames": [
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 3867.821499999991,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "unknown",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "158122a56b8d9b71d44e6dce8c706438ad3e74122e9ca209c61924e62ad402e9",
+        "inference_ms": 6.08009999996284,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.689900000608759,
+        "gpu_stage_ms": 6.12600000022212,
+        "render_ms": 3.2291999996232335,
+        "server_ms": 27.588299999479204,
+        "forward_event_ms": 4.6072001457214355,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.2282999994349666,
+        "depth_predict_ms": 10.075500000311877,
+        "depth_fusion_ms": 1.237599999512895,
+        "depth_ms": 11.541399999259738,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 2.894900000683265,
+        "tracking_timestamp_s": 15017.5381002,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.10689999908208847,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 10.044200000265846,
+        "distance_ms": 11.313099999824772,
+        "end_to_end_ms": 27.588299999479204,
+        "fps": 36.247249740610236,
+        "performance": {
+          "total_frames": 1,
+          "depth_model_calls": 1,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 10.044200000265846,
+          "average_distance_ms": 11.313099999824772,
+          "average_end_to_end_ms": 27.588299999479204,
+          "fps": 36.247249740610236,
+          "depth_frame_count": 1,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 27.588299999479204,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 0,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15017.5381002,
+        "timestamp_source": "browser_capture"
+      }
+    },
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 4379.677299999457,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "unknown",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": null,
+            "motion_state": "unknown",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "158122a56b8d9b71d44e6dce8c706438ad3e74122e9ca209c61924e62ad402e9",
+        "inference_ms": 5.751900000177557,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.619000001184759,
+        "gpu_stage_ms": 5.8066999990842305,
+        "render_ms": 3.3421000007365365,
+        "server_ms": 35.81060000033176,
+        "forward_event_ms": 4.312704086303711,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.23090000104275532,
+        "depth_predict_ms": 12.917899999592919,
+        "depth_fusion_ms": 1.2258000006113434,
+        "depth_ms": 14.374600001247018,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 7.557899998573703,
+        "tracking_timestamp_s": 15017.6442255,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.11029999950551428,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 10.656600001311745,
+        "distance_ms": 14.143700000204262,
+        "end_to_end_ms": 35.81060000033176,
+        "fps": 27.924692688498258,
+        "performance": {
+          "total_frames": 2,
+          "depth_model_calls": 2,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 10.350400000788795,
+          "average_distance_ms": 12.728400000014517,
+          "average_end_to_end_ms": 31.699449999905482,
+          "fps": 31.54628865809917,
+          "depth_frame_count": 2,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 31.699449999905482,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 1,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15017.6442255,
+        "timestamp_source": "browser_capture"
+      }
+    },
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 4724.852599998485,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": 0.0,
+            "motion_state": "unknown",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": 0.0,
+            "motion_state": "unknown",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "unknown",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": 0.0,
+            "motion_state": "unknown",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": 0.0,
+            "motion_state": "unknown",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": 0.0,
+            "motion_state": "unknown",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "unknown",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "158122a56b8d9b71d44e6dce8c706438ad3e74122e9ca209c61924e62ad402e9",
+        "inference_ms": 77.06440000038128,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.250899999533431,
+        "gpu_stage_ms": 77.13569999941683,
+        "render_ms": 3.2683000008546514,
+        "server_ms": 205.35519999975804,
+        "forward_event_ms": 73.25145721435547,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.25400000049558,
+        "depth_predict_ms": 110.02089999965392,
+        "depth_fusion_ms": 1.2688999995589256,
+        "depth_ms": 111.54379999970843,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 9.053100000528502,
+        "tracking_timestamp_s": 15017.754188,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.10339999971620273,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 81.64059999944584,
+        "distance_ms": 111.28979999921285,
+        "end_to_end_ms": 205.35519999975804,
+        "fps": 4.869611288154273,
+        "performance": {
+          "total_frames": 3,
+          "depth_model_calls": 3,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 34.11380000034114,
+          "average_distance_ms": 45.582199999747296,
+          "average_end_to_end_ms": 89.58469999985634,
+          "fps": 11.162620402832221,
+          "depth_frame_count": 3,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 89.58469999985634,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 2,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15017.754188,
+        "timestamp_source": "browser_capture"
+      }
+    },
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 5667.450999999346,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "stationary",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "1ba56585c5c3c1793328bb7f9f9cc0f58e19ccf8d234cd804e910d64ec91eef9",
+        "inference_ms": 6.63170000007085,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.711900000984315,
+        "gpu_stage_ms": 6.744199999957345,
+        "render_ms": 4.102200000488665,
+        "server_ms": 38.87650000069698,
+        "forward_event_ms": 5.146175861358643,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.2826999989338219,
+        "depth_predict_ms": 14.268199998696218,
+        "depth_fusion_ms": 1.469900002120994,
+        "depth_ms": 16.020799999751034,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 7.178199999543722,
+        "tracking_timestamp_s": 15017.8631291,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.11919999997189734,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 11.738799999875482,
+        "distance_ms": 15.738100000817212,
+        "end_to_end_ms": 38.87650000069698,
+        "fps": 25.72248016107602,
+        "performance": {
+          "total_frames": 4,
+          "depth_model_calls": 4,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 28.520050000224728,
+          "average_distance_ms": 38.12117500001477,
+          "average_end_to_end_ms": 76.9076500000665,
+          "fps": 13.002607672957572,
+          "depth_frame_count": 4,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 76.9076500000665,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 3,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15017.8631291,
+        "timestamp_source": "browser_capture"
+      }
+    },
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 6571.132700000817,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "stationary",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "1ba56585c5c3c1793328bb7f9f9cc0f58e19ccf8d234cd804e910d64ec91eef9",
+        "inference_ms": 5.57690000096045,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.492499999993015,
+        "gpu_stage_ms": 5.62290000016219,
+        "render_ms": 4.00420000005397,
+        "server_ms": 32.122299999173265,
+        "forward_event_ms": 4.469344139099121,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.1809999994293321,
+        "depth_predict_ms": 11.373699999239761,
+        "depth_fusion_ms": 1.315400000748923,
+        "depth_ms": 12.870099999418017,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 6.011999999827822,
+        "tracking_timestamp_s": 15017.9689872,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.12059999971825164,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 9.296399999584537,
+        "distance_ms": 12.689099999988684,
+        "end_to_end_ms": 32.122299999173265,
+        "fps": 31.131021129425264,
+        "performance": {
+          "total_frames": 5,
+          "depth_model_calls": 5,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 24.67532000009669,
+          "average_distance_ms": 33.034760000009555,
+          "average_end_to_end_ms": 67.95057999988785,
+          "fps": 14.716577842332626,
+          "depth_frame_count": 5,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 67.95057999988785,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 4,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15017.9689872,
+        "timestamp_source": "browser_capture"
+      }
+    },
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 7579.839199999697,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "stationary",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "1ba56585c5c3c1793328bb7f9f9cc0f58e19ccf8d234cd804e910d64ec91eef9",
+        "inference_ms": 5.836899999849265,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.077100000358769,
+        "gpu_stage_ms": 5.928799999310286,
+        "render_ms": 4.072499999892898,
+        "server_ms": 33.269199999267585,
+        "forward_event_ms": 4.578080177307129,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.19880000036209822,
+        "depth_predict_ms": 11.327700000038021,
+        "depth_fusion_ms": 1.3029999990976648,
+        "depth_ms": 12.829499999497784,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 6.2527000009140465,
+        "tracking_timestamp_s": 15018.0768001,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.10859999929380137,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 10.204700000031153,
+        "distance_ms": 12.630699999135686,
+        "end_to_end_ms": 33.269199999267585,
+        "fps": 30.057831268020117,
+        "performance": {
+          "total_frames": 6,
+          "depth_model_calls": 6,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 22.26355000008577,
+          "average_distance_ms": 29.634083333197243,
+          "average_end_to_end_ms": 62.17034999978447,
+          "fps": 16.084837868911254,
+          "depth_frame_count": 6,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 62.17034999978447,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 5,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15018.0768001,
+        "timestamp_source": "browser_capture"
+      }
+    },
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 8308.031500000652,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "stationary",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": -1.5162028716476844e-31,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "124c36606c7456f0de603ff8977d5d5b056ec85ba2b618c087dc1036ef593742",
+        "inference_ms": 5.852999998751329,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 4.561100000501028,
+        "gpu_stage_ms": 5.93739999931131,
+        "render_ms": 4.234500000166008,
+        "server_ms": 40.98270000031334,
+        "forward_event_ms": 4.55785608291626,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.21440000091388356,
+        "depth_predict_ms": 17.23110000057204,
+        "depth_fusion_ms": 1.739100000122562,
+        "depth_ms": 19.184600001608487,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 6.866199999421951,
+        "tracking_timestamp_s": 15018.183925,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.19889999930455815,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 10.712900000726222,
+        "distance_ms": 18.970200000694604,
+        "end_to_end_ms": 40.98270000031334,
+        "fps": 24.40053973975249,
+        "performance": {
+          "total_frames": 7,
+          "depth_model_calls": 7,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 20.613457143034402,
+          "average_distance_ms": 28.11067142855401,
+          "average_end_to_end_ms": 59.143542857002885,
+          "fps": 16.908016525452283,
+          "depth_frame_count": 7,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 59.143542857002885,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 6,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15018.183925,
+        "timestamp_source": "browser_capture"
+      }
+    },
+    {
+      "input": "model_tests/samples/bus.jpg",
+      "size": [
+        480,
+        640
+      ],
+      "fixture_roundtrip_ms": 9250.965700000961,
+      "metadata": {
+        "schema_version": 1,
+        "model": "yolo26n",
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "output_precision": "FP32",
+        "classes": 80,
+        "confidence_threshold": 0.25,
+        "class_confidence_thresholds": {
+          "traffic light": 0.12
+        },
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "width": 480,
+        "height": 640,
+        "count": 5,
+        "boxes": [
+          {
+            "xyxy": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "score": 0.9219965934753418,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 1,
+            "class_name": "person",
+            "confidence": 0.9219965934753418,
+            "bbox": [
+              27.39661407470703,
+              236.33428955078125,
+              140.17491149902344,
+              534.8912353515625
+            ],
+            "distance_m": 3.6929049491882324,
+            "smoothed_distance_m": 3.6929049491882324,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "score": 0.9208865761756897,
+            "class_id": 5,
+            "label": "bus",
+            "track_id": 2,
+            "class_name": "bus",
+            "confidence": 0.9208865761756897,
+            "bbox": [
+              5.0020904541015625,
+              135.73362731933594,
+              478.90411376953125,
+              441.444580078125
+            ],
+            "distance_m": 5.252254486083984,
+            "smoothed_distance_m": 5.252254486083984,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 33,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_10",
+              "stationary",
+              "direction_front",
+              "class_bus"
+            ]
+          },
+          {
+            "xyxy": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "score": 0.8978857398033142,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 3,
+            "class_name": "person",
+            "confidence": 0.8978857398033142,
+            "bbox": [
+              131.9596405029297,
+              239.75405883789062,
+              204.85903930664062,
+              511.1187744140625
+            ],
+            "distance_m": 3.8947572708129883,
+            "smoothed_distance_m": 3.8947572708129883,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front",
+            "ttc_sec": null,
+            "risk_score": 30,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "score": 0.8511683344841003,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 4,
+            "class_name": "person",
+            "confidence": 0.8511683344841003,
+            "bbox": [
+              396.9395751953125,
+              232.5069580078125,
+              480.0,
+              520.54248046875
+            ],
+            "distance_m": 4.9984025955200195,
+            "smoothed_distance_m": 4.9984025955200195,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_right",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_right",
+              "class_person"
+            ]
+          },
+          {
+            "xyxy": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "score": 0.4718460738658905,
+            "class_id": 0,
+            "label": "person",
+            "track_id": 5,
+            "class_name": "person",
+            "confidence": 0.4718460738658905,
+            "bbox": [
+              0.0,
+              330.20849609375,
+              39.95008087158203,
+              518.1463012695312
+            ],
+            "distance_m": 3.7949304580688477,
+            "smoothed_distance_m": 3.7949304580688477,
+            "relative_speed_mps": 0.0,
+            "motion_state": "stationary",
+            "direction": "front_left",
+            "ttc_sec": null,
+            "risk_score": 27,
+            "risk_level": "medium",
+            "alert_priority": 0,
+            "alert_required": false,
+            "risk_reasons": [
+              "distance_m_le_5",
+              "stationary",
+              "direction_front_left",
+              "class_person"
+            ]
+          }
+        ],
+        "raw_sha256": "52adb44f79322ec82657d5bd56b499783a7404cbcda73d24cf1063b4054627bd",
+        "jpeg_sha256": "1ba56585c5c3c1793328bb7f9f9cc0f58e19ccf8d234cd804e910d64ec91eef9",
+        "inference_ms": 18.232300000818213,
+        "graph_setup_ms": 0.0,
+        "prepare_ms": 3.6987000003136927,
+        "gpu_stage_ms": 18.309700000827434,
+        "render_ms": 4.265300000042771,
+        "server_ms": 65.26389999999083,
+        "forward_event_ms": 16.949600219726562,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        },
+        "depth_model": "yolo26n-depth",
+        "depth_units": "m",
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "decode_boxes_ms": 0.2021000000240747,
+        "depth_predict_ms": 31.417900001542876,
+        "depth_fusion_ms": 1.3742999981332105,
+        "depth_ms": 32.99429999970016,
+        "tracking_model": "botsort",
+        "tracking_status": "active",
+        "tracking_epoch": 2,
+        "gmc_method": "sparseOptFlow",
+        "with_reid": false,
+        "tracking_ms": 5.887999999686144,
+        "tracking_timestamp_s": 15018.2934646,
+        "risk_model": "rules-v1",
+        "risk_ms": 0.10789999942062423,
+        "distance_mode": "depth",
+        "distance_units": "m",
+        "depth_frame": true,
+        "depth_interval": 1,
+        "detection_ms": 22.2105000011652,
+        "distance_ms": 32.792199999676086,
+        "end_to_end_ms": 65.26389999999083,
+        "fps": 15.322406414574376,
+        "performance": {
+          "total_frames": 8,
+          "depth_model_calls": 8,
+          "actual_depth_inference_ratio": 1.0,
+          "average_detection_ms": 20.813087500300753,
+          "average_distance_ms": 28.69586249994427,
+          "average_end_to_end_ms": 59.908587499876376,
+          "fps": 16.692097773162548,
+          "depth_frame_count": 8,
+          "non_depth_frame_count": 0,
+          "average_depth_frame_ms": 59.908587499876376,
+          "average_non_depth_frame_ms": null
+        },
+        "index": 7,
+        "provider": "local",
+        "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+        "capture_time_s": 15018.2934646,
+        "timestamp_source": "browser_capture"
+      }
+    }
+  ],
+  "camera_verified": false,
+  "contract": {
+    "kind": "session",
+    "provider": "local",
+    "protocol_version": 2,
+    "session_id": "6faf426e9d8d4fda8e83c84ab5db0f79",
+    "model": "yolo26n",
+    "precision": "FP32",
+    "backend": "PyTorch resident CUDA",
+    "output_precision": "FP32",
+    "classes": 80,
+    "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+    "names": [
+      "person",
+      "bicycle",
+      "car",
+      "motorcycle",
+      "airplane",
+      "bus",
+      "train",
+      "truck",
+      "boat",
+      "traffic light",
+      "fire hydrant",
+      "stop sign",
+      "parking meter",
+      "bench",
+      "bird",
+      "cat",
+      "dog",
+      "horse",
+      "sheep",
+      "cow",
+      "elephant",
+      "bear",
+      "zebra",
+      "giraffe",
+      "backpack",
+      "umbrella",
+      "handbag",
+      "tie",
+      "suitcase",
+      "frisbee",
+      "skis",
+      "snowboard",
+      "sports ball",
+      "kite",
+      "baseball bat",
+      "baseball glove",
+      "skateboard",
+      "surfboard",
+      "tennis racket",
+      "bottle",
+      "wine glass",
+      "cup",
+      "fork",
+      "knife",
+      "spoon",
+      "bowl",
+      "banana",
+      "apple",
+      "sandwich",
+      "orange",
+      "broccoli",
+      "carrot",
+      "hot dog",
+      "pizza",
+      "donut",
+      "cake",
+      "chair",
+      "couch",
+      "potted plant",
+      "bed",
+      "dining table",
+      "toilet",
+      "tv",
+      "laptop",
+      "mouse",
+      "remote",
+      "keyboard",
+      "cell phone",
+      "microwave",
+      "oven",
+      "toaster",
+      "sink",
+      "refrigerator",
+      "book",
+      "clock",
+      "vase",
+      "scissors",
+      "teddy bear",
+      "hair drier",
+      "toothbrush"
+    ],
+    "confidence_threshold": 0.25,
+    "max_edge": 640,
+    "jpeg_quality": 0.8,
+    "max_inflight": 12,
+    "session_seconds": null,
+    "cold_seconds": 55,
+    "steady_seconds": 10,
+    "depth_model": "yolo26n-depth",
+    "depth_units": "m",
+    "tracking_model": "botsort",
+    "risk_model": "rules-v1",
+    "loaded": true,
+    "capabilities": {
+      "detection": true,
+      "depth": true,
+      "tracking": true,
+      "risk": true
+    },
+    "distance_mode": "depth",
+    "distance_units": "m",
+    "depth_interval": 1,
+    "depth_backend": "tensorrt",
+    "depth_fusion": "host"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "diagnostics": {
+    "unit": "MainPID=573754\nActiveState=active\nSubState=running\n",
+    "listener": "LISTEN 0      2048   127.0.0.1:18766 0.0.0.0:* users:((\"python\",pid=573754,fd=6))\n",
+    "recent_service_log": "Stopping PRS phone MVP public Web service...\nINFO:     Shutting down\n2026-10-28 05:41:55,790 INFO core.ai_bridge browser disconnected session=c088af3c-23e5-46df-981f-4319beb1b136 pending=0\n2026-10-28 05:41:55,791 INFO core.ai_bridge browser disconnected session=b611785e-47bb-4325-bcb1-9dec5e6d3414 pending=0\n2026-10-28 05:41:55,792 INFO core.agent.transport Agent disconnected session=b611785e-47bb-4325-bcb1-9dec5e6d3414\n2026-10-28 05:41:55,792 INFO core.agent.transport Agent disconnected session=c088af3c-23e5-46df-981f-4319beb1b136\nINFO:     Waiting for application shutdown.\nINFO:     Application shutdown complete.\nINFO:     Finished server process [570414]\nprs-mvp-web.service: Deactivated successfully.\nStopped PRS phone MVP public Web service.\nprs-mvp-web.service: Consumed 28.010s CPU time.\nStarted PRS phone MVP public Web service.\nINFO:     Started server process [573160]\nINFO:     Waiting for application startup.\nINFO:     Application startup complete.\nINFO:     Uvicorn running on http://127.0.0.1:18766 (Press CTRL+C to quit)\nINFO:     127.0.0.1:51510 - \"WebSocket /ws/agent/\" [accepted]\nINFO:     connection open\n2026-10-28 05:42:03,249 WARNING core.agent.transport Agent socket rejected exception_type=ValueError\nINFO:     127.0.0.1:51514 - \"WebSocket /ws/agent/\" [accepted]\nINFO:     connection open\n2026-10-28 05:42:03,388 WARNING core.agent.transport Agent socket rejected exception_type=ValueError\nINFO:     127.0.0.1:51528 - \"WebSocket /ws/agent/\" [accepted]\nINFO:     connection open\n2026-10-28 05:42:11,454 WARNING core.agent.transport Agent socket rejected exception_type=ValueError\nINFO:     127.0.0.1:51538 - \"WebSocket /ws/agent/\" [accepted]\nINFO:     connection open\n2026-10-28 05:42:11,608 WARNING core.agent.transport Agent socket rejected exception_type=ValueError\nINFO:     127.0.0.1:39206 - \"WebSocket /ws/agent/\" [accepted]\n"
+  },
+  "restoration": {
+    "route": "ws://127.0.0.1:18767/ws/infer/",
+    "web_active": true,
+    "web_listener_ready": true,
+    "routed_health": {
+      "mode": "assist",
+      "external_services": "explicit_maps_only",
+      "status": "ok",
+      "provider": "local",
+      "loaded": true,
+      "ready": true,
+      "busy": false,
+      "accept_available": true,
+      "last_inference": {
+        "session_id": "d04dc09dcd14466289fd06e8e958a27d",
+        "index": 0,
+        "completed_at_unix_s": 1793164132.973265,
+        "capture_time_s": 11834.0393701,
+        "server_ms": 151.6080999863334
+      },
+      "error_code": null,
+      "models": {
+        "detection": {
+          "present": true,
+          "expected_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+          "verified_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+        },
+        "depth": {
+          "present": true,
+          "sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+        }
+      },
+      "distance_mode": "depth",
+      "session_seconds": null,
+      "depth_interval": 3,
+      "capabilities": {
+        "detection": true,
+        "depth": true,
+        "tracking": true,
+        "risk": true
+      }
+    },
+    "private_backup": "/etc/prs-mvp-web/app.env.pre-optimized-c99936e-20261028-v5",
+    "old_config_sha256": "84af0ec6cb399ca964b857f602204d1f28ac2586bcdb167453eae59a5bc48b01",
+    "new_config_sha256": "c6f3e42019492a6ada7c6127d7fc5652805bc6c8b9b15ff7c723575be46564a5",
+    "restored": true
+  }
+}

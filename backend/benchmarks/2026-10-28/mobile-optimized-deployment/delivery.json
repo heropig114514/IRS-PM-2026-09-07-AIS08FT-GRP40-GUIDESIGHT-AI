@@ -1,0 +1,197 @@
+{
+  "recorded_at": "2026-10-28T06:16:12.749990+00:00",
+  "state": "ready_for_phone",
+  "operator_choice": "Temporary local RTX 3060 optimized worker",
+  "entry": "https://47.239.50.129/mvp/maps/",
+  "diagnostic_entry": "https://47.239.50.129/mvp/maps/test",
+  "deployment_source_revision": "c99936e03a0b7a05794c1ca72dfd0528fb2e6542",
+  "uploaded_source": {
+    "state": "uploaded_and_verified_not_activated",
+    "revision": "c99936e03a0b7a05794c1ca72dfd0528fb2e6542",
+    "target": "/opt/prs-practice/mvp/inference-releases/c99936e-tensorrt-20261028",
+    "files": 415,
+    "archive_sha256": "f752adb9be21a030b072c0e1b1da8c949ebcdeed03fb8002730ecc11a4f17a84",
+    "archive_bytes": 1526035,
+    "activated": false,
+    "before": {
+      "active_release": "/opt/prs-practice/mvp/releases/4557f7e03175be473b38395b23350e654244f960"
+    },
+    "after": {
+      "verified_files": 415,
+      "revision": "c99936e03a0b7a05794c1ca72dfd0528fb2e6542",
+      "active_release": "/opt/prs-practice/mvp/releases/4557f7e03175be473b38395b23350e654244f960"
+    }
+  },
+  "topology": {
+    "web_server": "47.239.50.129",
+    "web_gpu": false,
+    "web_port": 18766,
+    "active_worker_tunnel": 18768,
+    "original_colleague_tunnel": 18767,
+    "local_worker_port": 8767,
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "depth_backend": "tensorrt",
+    "depth_fusion": "host",
+    "detection_model": "yolo26n",
+    "classes": 80,
+    "precision": "FP32",
+    "ssh_route": "Explicit HTTP CONNECT through local 127.0.0.1:7897"
+  },
+  "process_control": {
+    "supervisor_pid": 34496,
+    "state_file": "E:\\AI_map\\backend\\.venv\\tmp\\optimized-phone-c99936e-v6\\state.json",
+    "restore_and_stop_request": "E:\\AI_map\\backend\\.venv\\tmp\\optimized-phone-c99936e-v6\\restore-and-stop.request",
+    "private_remote_backup": "/etc/prs-mvp-web/app.env.pre-optimized-c99936e-20261028-v6",
+    "stop_requires_route_restoration_first": true,
+    "credential_saved": false
+  },
+  "checks": {
+    "django_check": "passed",
+    "migration_drift": "none",
+    "django_tests": {
+      "run": 538,
+      "skipped": 8,
+      "passed": true
+    },
+    "ruff": "passed",
+    "changed_tracked_code": "No application-code changes in this deployment; operational documentation and reports only",
+    "docs_review": "Manual review; no tools/check_docs.py exists"
+  },
+  "public_http": [
+    {
+      "path": "/mvp/maps/",
+      "http_status": 200,
+      "tls_verified": true,
+      "bytes": 13173
+    },
+    {
+      "path": "/mvp/maps/test",
+      "http_status": 200,
+      "tls_verified": true,
+      "bytes": 19126
+    },
+    {
+      "path": "/mvp/integration/status/",
+      "http_status": 200,
+      "tls_verified": true,
+      "bytes": 1048,
+      "health": {
+        "ready": true,
+        "busy": false,
+        "status": "ok",
+        "models": {
+          "detection": {
+            "model": "yolo26n",
+            "classes": 80,
+            "present": true,
+            "expected_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+            "verified_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+          },
+          "depth": {
+            "present": true,
+            "sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+            "backend": "tensorrt",
+            "fusion": "host",
+            "engine_shapes": [
+              [
+                1,
+                3,
+                768,
+                576
+              ],
+              [
+                1,
+                3,
+                768,
+                608
+              ],
+              [
+                1,
+                3,
+                576,
+                768
+              ],
+              [
+                1,
+                3,
+                608,
+                768
+              ],
+              [
+                1,
+                3,
+                448,
+                768
+              ]
+            ]
+          }
+        },
+        "session_seconds": null
+      }
+    }
+  ],
+  "inference_acceptance": {
+    "public_probe": {
+      "passed": true,
+      "frames": 24,
+      "size": [
+        480,
+        640
+      ],
+      "client_location": "authorized Web server public TLS entry",
+      "first_frame_exclusive": true,
+      "max_pending": 12,
+      "server_ms_median": 40.73495000011462,
+      "fixture_roundtrip_ms_median": 6932.580867083743,
+      "fixture_roundtrip_ms_max": 7671.573234722018,
+      "complete_end": {
+        "kind": "ended",
+        "frames": 24,
+        "received": 24,
+        "forwarded": 24,
+        "worker_received": 24,
+        "worker_verified": 24,
+        "delivered": 24
+      }
+    },
+    "public_landscape": {
+      "passed": true,
+      "frames": 24,
+      "size": [
+        640,
+        478
+      ],
+      "client_location": "authorized Web server public TLS entry",
+      "first_frame_exclusive": true,
+      "max_pending": 12,
+      "server_ms_median": 41.508799999974144,
+      "fixture_roundtrip_ms_median": 7544.746455736458,
+      "fixture_roundtrip_ms_max": 8463.175820186734,
+      "complete_end": {
+        "kind": "ended",
+        "frames": 24,
+        "received": 24,
+        "forwarded": 24,
+        "worker_received": 24,
+        "worker_verified": 24,
+        "delivered": 24
+      }
+    }
+  },
+  "limits": [
+    "The two public inference sessions originated on the authorized server and included its real HTTPS/WSS public entry, Web bridge, reverse SSH tunnel and local GPU.",
+    "Physical phone camera, mobile network and audible output are not verified by these static-fixture sessions.",
+    "Laptop-origin public streaming through its additional proxy path failed the unchanged ten-second browser deadline. This failure remains recorded and is not counted as passed.",
+    "No service idle budget, frame deadline, precision, pixels, weights or camera admission settings were relaxed.",
+    "No new speedup comparison is claimed from deployment availability checks.",
+    "Keep the laptop awake, powered and network-connected; the source archive on the relay server cannot perform GPU inference by itself.",
+    "Server-origin 24-frame streams passed the unchanged 10-second deadline, but median returned-frame age including network and queueing was 6.9-7.5 seconds. This is connectivity acceptance, not smooth-demo latency acceptance."
+  ],
+  "failed_attempts": [
+    "activation-geometry-attempt.json",
+    "activation-web-ready-attempt.json",
+    "activation-contract-attempt.json",
+    "activation-idle-attempt.json",
+    "activation-stream-deadline-attempt.json"
+  ]
+}

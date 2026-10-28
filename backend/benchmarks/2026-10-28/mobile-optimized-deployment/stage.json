@@ -1,0 +1,17 @@
+{
+  "state": "uploaded_and_verified_not_activated",
+  "revision": "c99936e03a0b7a05794c1ca72dfd0528fb2e6542",
+  "target": "/opt/prs-practice/mvp/inference-releases/c99936e-tensorrt-20261028",
+  "files": 415,
+  "archive_sha256": "f752adb9be21a030b072c0e1b1da8c949ebcdeed03fb8002730ecc11a4f17a84",
+  "archive_bytes": 1526035,
+  "activated": false,
+  "before": {
+    "active_release": "/opt/prs-practice/mvp/releases/4557f7e03175be473b38395b23350e654244f960"
+  },
+  "after": {
+    "verified_files": 415,
+    "revision": "c99936e03a0b7a05794c1ca72dfd0528fb2e6542",
+    "active_release": "/opt/prs-practice/mvp/releases/4557f7e03175be473b38395b23350e654244f960"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "bytes_per_echo": 65536,
+  "ssh": [
+    {
+      "tcp_nodelay": false,
+      "index": 0,
+      "milliseconds": 2524.843499999406,
+      "exact_echo": true
+    },
+    {
+      "tcp_nodelay": false,
+      "index": 1,
+      "milliseconds": 2195.9219000000303,
+      "exact_echo": true
+    },
+    {
+      "tcp_nodelay": false,
+      "index": 2,
+      "milliseconds": 2205.6002999997872,
+      "exact_echo": true
+    },
+    {
+      "tcp_nodelay": true,
+      "index": 0,
+      "milliseconds": 1899.4516000002477,
+      "exact_echo": true
+    },
+    {
+      "tcp_nodelay": true,
+      "index": 1,
+      "milliseconds": 2164.0077000010933,
+      "exact_echo": true
+    },
+    {
+      "tcp_nodelay": true,
+      "index": 2,
+      "milliseconds": 2377.7474999988044,
+      "exact_echo": true
+    }
+  ],
+  "server": {
+    "python": "/opt/prs-practice/python/bin/python3.12",
+    "cgroup_cpu": "usage_usec 1830152\nuser_usec 1680007\nsystem_usec 150145\nnr_periods 584\nnr_throttled 51\nthrottled_usec 3519936\n"
+  },
+  "public_echo": [
+    {
+      "index": 0,
+      "milliseconds": 1515.395599999465,
+      "exact_echo": true
+    },
+    {
+      "index": 1,
+      "milliseconds": 1248.3100999997987,
+      "exact_echo": true
+    },
+    {
+      "index": 2,
+      "milliseconds": 1629.9452999992354,
+      "exact_echo": true
+    }
+  ]
+}

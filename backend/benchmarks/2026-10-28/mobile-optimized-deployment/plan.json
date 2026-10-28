@@ -1,0 +1,19 @@
+{
+  "objective": "Make the verified optimized inference available through the existing phone entry",
+  "sequence": [
+    "Package the clean optimized source and record every deployed file hash",
+    "Upload to a new isolated release on the authorized Web relay server",
+    "Verify the remote source inventory and preserve the existing active service",
+    "Resolve the required GPU execution target with the operator",
+    "Prepare the selected GPU runtime and matching FP32 engines",
+    "Validate the candidate before switching the phone inference route",
+    "Verify actual public inference and leave the selected service ready for the phone"
+  ],
+  "constraints": [
+    "The authorized Ubuntu Web server has no observed NVIDIA GPU",
+    "The existing RTX 4060 worker is reachable for inference through SSH but its administration credentials are not available",
+    "Source upload alone is not activation or proof of optimized phone inference",
+    "Do not reuse RTX 3060 TensorRT engines as RTX 4060 deployment artifacts",
+    "Preserve the existing source release and colleague-owned tunnel; no implicit target or provider substitution"
+  ]
+}
