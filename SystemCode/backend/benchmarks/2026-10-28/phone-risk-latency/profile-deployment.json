@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-28T13:47:54.166134+00:00",
+  "release": "/opt/prs-practice/mvp/releases/faa6383572c7e1a22e2c0ee81941f6333b2ea638",
+  "handoff": "/opt/prs-practice/mvp/optimization-handoffs/phone-frame-profile-20261028-9b7b0df",
+  "files": [
+    {
+      "path": "frontend/camera.js",
+      "before": "da041d9c98b11a56133c7609619216b2290c3e719aa41707a73cca7841566280",
+      "after": "0c62f2e0cc5f9c43e3dd1f299a589037dddccd32b2325fac2ae10d9c6613ae7f"
+    },
+    {
+      "path": "frontend/integration/assist-product.html",
+      "before": "57516f6d14129197c4574da469c6a9c5ad65c326d6218b02a6c0c2b3d834ce3a",
+      "after": "519fd074d14eeaf2aaa2613e0143603e0d8b5140d44cdb49aafc613794b0b6b9"
+    }
+  ],
+  "pages": {
+    "/maps/": 200,
+    "/maps/test": 200
+  },
+  "environment_unchanged": true,
+  "prepared_audio_unchanged": true,
+  "web_restarted": false,
+  "web_pid_unchanged": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "worker_listening": true,
+  "gpu_requests": 0,
+  "physical_phone_audio_verified": false
+}

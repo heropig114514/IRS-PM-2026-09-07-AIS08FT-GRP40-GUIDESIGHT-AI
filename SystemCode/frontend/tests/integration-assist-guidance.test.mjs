@@ -25,6 +25,7 @@
  * testIndependentSwitches; testForeignSpeech; testForeignVibration; testSynchronous;
  * testChannelFailure; testCancellationFailure; testExternalFailure; testUserCancel;
  * testVoice; testEpochReset; testSessionIsolation; testGlobalStop; testPort; testMetadata;
+ * testRiskSpeechReasons; testRiskSpeechDeadlines; testRiskSpeechOwnership; testRiskSpeechTransition;
  * testTerminalNavigation; testVibrationFailure.
  * Variable Index: None. Driver utterance bodies remain only in test memory; all sources are synthetic.
  * Constraints: Passing tests does not verify actual cameras, GPS, GPU, browser TTS or physical motors.
@@ -844,4 +845,49 @@ test("vibration cancellation failure retains ownership and cannot pause or repla
   f.clock.advance(1200); f.risk(); assert.deepEqual(f.vibration.attempts, [1]);
   f.manager.resume("vibration"); assert.equal(f.manager.paused.vibration, true);
   f.vibration.cancelFailure = false; f.manager.stopRisk(); f.manager.resume("vibration"); f.manager.dispose();
+});
+
+
+// Functionality: Distinguish grade labels from required output. Inputs: Existing flags. Outputs: Honest reason.
+// Logic: Inspect without scheduling. Constraints: No invented medium-risk announcement.
+test("risk speech diagnostics distinguish grade, alert flag and session", function testRiskSpeechReasons() {
+  const f=fixture(); assert.equal(f.manager.riskSpeechStatus().state,"idle");
+  f.manager.beginRisk("risk-session"); assert.equal(f.manager.riskSpeechStatus().state,"waiting");
+  f.risk([box({risk_level:"medium",alert_required:false})]);
+  assert.equal(f.manager.riskSpeechStatus().state,"no_alert");
+  assert.equal(f.manager.riskSpeechStatus().alert_count,0); assert.equal(f.speech.requests.length,0);
+  f.manager.setRiskEnabled(false); assert.equal(f.manager.riskSpeechStatus().state,"disabled"); f.manager.dispose();
+});
+
+// Functionality: Preserve exact capture freshness. Inputs: Expired/future/fresh timestamps. Outputs: Reasons.
+// Logic: No receipt-time refresh. Constraints: Diagnostics never submit or grant playback.
+test("risk speech diagnostics preserve one-second and future capture rejection", function testRiskSpeechDeadlines() {
+  const f=fixture(); f.risk([box()],f.clock.now()-1000);
+  assert.equal(f.manager.riskSpeechStatus().state,"stale"); assert.equal(f.manager.riskSpeechStatus().alert_count,1);
+  assert.equal(f.manager.riskSpeechStatus().capture_age_ms,1000); assert.equal(f.speech.requests.length,0);
+  f.risk([box()],f.clock.now()+1); assert.equal(f.manager.riskSpeechStatus().state,"stale");
+  f.risk([box()],f.clock.now()-999); assert.equal(f.manager.riskSpeechStatus().state,"preparing");
+  f.clock.advance(1); assert.equal(f.manager.riskSpeechStatus().state,"stale"); f.manager.dispose();
+});
+
+// Functionality: Distinguish scheduled/completed/paused speech. Inputs: Driver lifecycle. Outputs: Current state.
+// Logic: Respect sentence completion and start-based cooldown. Constraints: No audible-device claim.
+test("risk speech diagnostics track playback, cooldown and explicit pause", function testRiskSpeechOwnership() {
+  const f=fixture(); f.risk(); f.speech.start(); assert.equal(f.manager.riskSpeechStatus().state,"playing");
+  f.clock.advance(1100); assert.equal(f.manager.riskSpeechStatus().state,"playing");
+  f.risk(); f.speech.end(); assert.equal(f.manager.riskSpeechStatus().state,"cooldown");
+  f.manager.pause("speech","audio_context_interrupted");
+  assert.equal(f.manager.riskSpeechStatus().state,"paused");
+  assert.equal(f.manager.riskSpeechStatus().pause_reason,"audio_context_interrupted"); f.manager.dispose();
+});
+
+// Functionality: Publish expiry even when frames stop arriving. Inputs: One source and timer. Outputs: One transition.
+// Logic: Deduplicate by finite reason. Constraints: No repeated per-frame diagnostic event or capture rewrite.
+test("risk speech reason updates on expiry without flooding repeated frames", function testRiskSpeechTransition() {
+  const f=fixture(); f.risk([box({alert_required:false})]); f.risk([box({alert_required:false})]);
+  const notices=()=>f.events.filter(e=>e.phase==="risk_speech_state");
+  assert.equal(notices().filter(e=>e.reason==="no_alert").length,1);
+  f.clock.advance(1000); assert.equal(notices().at(-1).reason,"stale");
+  const prior=f.speech.requests.length; f.manager.describe(); f.manager.riskSpeechStatus();
+  assert.equal(f.speech.requests.length,prior); f.manager.dispose();
 });

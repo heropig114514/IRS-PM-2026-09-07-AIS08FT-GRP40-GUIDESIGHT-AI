@@ -1,7 +1,7 @@
 /** Responsibilities: Verify explicit rear-camera/device selection, cancellation, canvas reuse, capture parameters, and first-frame/steady-state timing boundaries.
  * Implementation: Use explicit page, media-permission, track, canvas, and image-decoding fixtures; do not access a real camera or network.
  * Related Modules: camera.js; real-device permissions and browser behavior require separate verification.
- * Declaration Index: FakeElement; FakeElement.constructor; FakeElement.addEventListener;
+ * Declaration Index: testCaptureProfiles; testInvalidCaptureProfile; FakeElement; FakeElement.constructor; FakeElement.addEventListener;
  * FakeElement.removeAttribute; FakeDocument; FakeDocument.constructor; FakeDocument.getElementById;
  * FakeDocument.createElement; FakeDocument.addEventListener; ignoreWindowEvent; makeApp;
  * FakeCanvas; FakeCanvas.constructor; FakeCanvas.width; FakeCanvas.height;
@@ -136,7 +136,7 @@ globalThis.window = {
   isSecureContext: true,
   addEventListener: ignoreWindowEvent,
 };
-const { CameraApp, processingPath } = await import("../camera.js");
+const { CameraApp, processingPath, captureProfile } = await import("../camera.js");
 
 /** Functionality: Verify explicit Echo/HF/local endpoints and retired modes stay rejected.
  * Inputs: actual mode mapping and retired/unknown enums. Outputs: fixed paths or explicit errors.
@@ -563,4 +563,23 @@ test("Separate slow startup frame and include stalls in steady-state metrics", f
   assert.equal(app.frameTimings.pacingLateMaxMs, 20);
   assert.equal(app.frameTimings.creditWaitTotalMs, 90);
   assert.equal(app.frameTimings.creditWaitFrames, 1);
+});
+
+/** Functionality: Preserve explicit camera policy bounds. Inputs: Valid/invalid names. Outputs: Settings/errors.
+ * Logic: Original image/cadence remain unchanged; the new policy bounds only admitted work.
+ * Constraints: Unit checks do not establish actual network latency. */
+test("camera profiles retain original throughput and explicitly bound phone work", function testCaptureProfiles() {
+  assert.deepEqual(captureProfile("standard"), {rate:30,maxPending:12});
+  assert.deepEqual(captureProfile("low-latency-1"), {rate:30,maxPending:1});
+  assert.throws(()=>{captureProfile("low-latency-1").maxPending=12;},TypeError);
+  for(const value of ["", "auto", "__proto__", null, undefined]) assert.throws(()=>captureProfile(value),/采样配置无效/);
+});
+
+/** Functionality: Reject invalid local profiles before sensor access. Inputs: Unknown profile. Outputs: Visible failure.
+ * Logic: Start validates policy synchronously. Constraints: No automatic fallback or device request. */
+test("invalid local camera profile never acquires media", async function testInvalidCaptureProfile() {
+  let acquisitions=0;const app=makeApp(async()=>{acquisitions++;throw new Error("Unexpected camera access");});
+  app.processing.value="local";app.cameraProfile="invalid";
+  await app.start();assert.equal(acquisitions,0);assert.equal(app.mode,"idle");
+  assert.match(app.message.textContent,/采样配置无效/);
 });

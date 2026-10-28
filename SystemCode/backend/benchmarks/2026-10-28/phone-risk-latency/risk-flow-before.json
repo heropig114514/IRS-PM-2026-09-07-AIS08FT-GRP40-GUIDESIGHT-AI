@@ -1,0 +1,195 @@
+{
+  "source": "public detection-sample.jpg canvas camera; real remote GPU",
+  "physical_phone": false,
+  "errors": [],
+  "evidence": {
+    "frames": [
+      {
+        "index": 0,
+        "capture_age_ms": 2375.7000000029802,
+        "server_ms": 194.91170000401326,
+        "inference_ms": 62.999999994644895,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 1,
+        "capture_age_ms": 1836.5,
+        "server_ms": 79.86989998607896,
+        "inference_ms": 32.00000000651926,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 2,
+        "capture_age_ms": 2694.5,
+        "server_ms": 100.23539999383502,
+        "inference_ms": 16.00000000325963,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 3,
+        "capture_age_ms": 3577.5,
+        "server_ms": 155.31040000496432,
+        "inference_ms": 30.999999988125637,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 4,
+        "capture_age_ms": 5320.10000000149,
+        "server_ms": 123.85199998971075,
+        "inference_ms": 47.0000000204891,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 5,
+        "capture_age_ms": 6815.69999999553,
+        "server_ms": 179.6600999950897,
+        "inference_ms": 46.999999991385266,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 6,
+        "capture_age_ms": 7761.10000000149,
+        "server_ms": 95.13100000913255,
+        "inference_ms": 32.00000000651926,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 7,
+        "capture_age_ms": 8883.39999999851,
+        "server_ms": 95.49079998396337,
+        "inference_ms": 15.999999974155799,
+        "count": 5,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      }
+    ],
+    "events": [
+      {
+        "phase": "camera_error"
+      }
+    ],
+    "manager": {
+      "risk_enabled": true,
+      "navigation_enabled": true,
+      "risk_session_id": null,
+      "navigation_run_id": null,
+      "queued_assistant_replies": 0,
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "reasons": {
+        "speech": null,
+        "vibration": null
+      },
+      "navigation_state": null,
+      "navigation_pending": false,
+      "active": {
+        "speech": null,
+        "vibration": null
+      },
+      "hardware_outputs_verified": false,
+      "disposed": false
+    },
+    "speech": {
+      "available": true,
+      "supported": true,
+      "enabled": true,
+      "visible": true,
+      "user_activated": true,
+      "state": "completed",
+      "active_request": false,
+      "engine_speaking": false,
+      "engine_pending": false,
+      "engine_paused": false,
+      "audio_context_state": "running",
+      "voice_count": 1,
+      "voice_query_failed": false,
+      "last_request": {
+        "id": 1,
+        "text_length": 8,
+        "language": "zh-CN",
+        "voice_id": "Cherry",
+        "rate": 2,
+        "volume": 1,
+        "service": "backend",
+        "local_service": false,
+        "audio_transport": "websocket"
+      },
+      "last_error": null,
+      "audio_output_verified": false,
+      "speech_service": "backend"
+    },
+    "status": "检测已停止；保留最后画面和识别结果。"
+  }
+}

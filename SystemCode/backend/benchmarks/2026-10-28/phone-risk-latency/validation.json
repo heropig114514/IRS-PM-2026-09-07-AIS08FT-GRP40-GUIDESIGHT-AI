@@ -1,0 +1,48 @@
+{
+  "scope": "Visible risk-speech reasons and explicit single-in-flight local camera profile",
+  "phone_confirmation": {
+    "entry_reachable": true,
+    "calibration_audible": true,
+    "risk_output_suppressed_reason": "capture age exceeds one second",
+    "single_frame_followup": "Still lagging and no risk speech"
+  },
+  "checks": {
+    "frontend_tests": 496,
+    "frontend_pass": 496,
+    "backend_tests": 487,
+    "backend_skipped": 20,
+    "backend_pass": true,
+    "django_check": true,
+    "migration_check": true,
+    "ruff": true,
+    "public_speech_browser_checks": 6,
+    "public_speech_browser_errors": 0,
+    "live_one_frame_inference_completed": 8
+  },
+  "comparison": {
+    "profile-standard": {
+      "frames": 8,
+      "median_ms": 2292.7000000029802,
+      "p95_ms": 3763.635000003502,
+      "fresh_under_1s": 0
+    },
+    "profile-one": {
+      "frames": 8,
+      "median_ms": 1290.8500000014901,
+      "p95_ms": 1787.20000000149,
+      "fresh_under_1s": 0
+    },
+    "profile-live": {
+      "frames": 8,
+      "median_ms": 1522.800000000745,
+      "p95_ms": 1887.1950000040233,
+      "fresh_under_1s": 0
+    }
+  },
+  "limits": [
+    "Eight-frame sequential desktop controls are not a phone benchmark.",
+    "Models, input dimensions/JPEG quality and capture TTL were preserved.",
+    "Single in-flight improved latency but did not achieve sub-second results.",
+    "Actual phone risk speech remains unresolved; next action reduces return-image bandwidth."
+  ]
+}

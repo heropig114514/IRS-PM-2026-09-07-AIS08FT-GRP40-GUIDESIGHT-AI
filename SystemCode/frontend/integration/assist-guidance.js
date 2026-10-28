@@ -9,7 +9,7 @@
  * Declaration Index: splitAssistantReply; AssistGuidanceManager; AssistGuidanceManager.constructor;
  * AssistGuidanceManager.navPort.begin; AssistGuidanceManager.navPort.ingest;
  * AssistGuidanceManager.navPort.stop; AssistGuidanceManager.navPort.describe;
- * AssistGuidanceManager.subscribe; AssistGuidanceManager.describe; AssistGuidanceManager.context;
+ * AssistGuidanceManager.subscribe; AssistGuidanceManager.riskSpeechStatus; AssistGuidanceManager.describe; AssistGuidanceManager.context;
  * AssistGuidanceManager.report; AssistGuidanceManager.configure; AssistGuidanceManager.pause;
  * AssistGuidanceManager.suppress; AssistGuidanceManager.resume; AssistGuidanceManager.setRiskEnabled;
  * AssistGuidanceManager.setNavigationEnabled; AssistGuidanceManager.beginRisk;
@@ -25,7 +25,7 @@
  * AssistGuidanceManager.submitSpeech; AssistGuidanceManager.submitVibration;
  * AssistGuidanceManager.outputEvent; AssistGuidanceManager.armTimer;
  * AssistGuidanceManager.pump; AssistGuidanceManager.stop; AssistGuidanceManager.dispose.
- * Variable Index: RISK_TTL_MS/COOLDOWN_MS retain existing output policies; PATTERNS retains
+ * Variable Index: riskSpeechState bounds public diagnostic transitions without changing scheduling; RISK_TTL_MS/COOLDOWN_MS retain existing output policies; PATTERNS retains
  * existing driver pattern names/durations. latestRisk/latestNavigation are bounded sources;
  * active/pendingSubmission preserve ownership; pumpRequested coalesces synchronous lifecycle reentry;
  * histories separate speech/vibration actual starts;
@@ -84,7 +84,7 @@ export class AssistGuidanceManager {
     this.riskSessionId = this.navigationRunId = null;
     this.latestRisk = this.latestNavigation = null;
     this.riskGeneration = this.navigationGeneration = 0;
-    this.trackingEpoch = null;
+    this.trackingEpoch = null; this.riskSpeechState = null;
     this.histories = {speech: new Map(), vibration: new Map()};
     this.active = {speech: null, vibration: null};
     this.paused = {speech: false, vibration: false};
@@ -117,12 +117,36 @@ export class AssistGuidanceManager {
    * Logic: Local event stream. Constraints: No source replay or browser/device acquisition. */
   subscribe(listener) { return this.events.subscribe(listener); }
 
+  /* Functionality: Explain current risk speech eligibility without changing output decisions.
+   * Inputs: Original capture clock, server alert flags, ownership and driver state.
+   * Outputs: Finite reason, frame age/count and pause code without objects, media or utterance text.
+   * Logic: Preserve one-second freshness, algorithm-required selection and per-track cooldown;
+   * distinguish completion of already-started speech from admission of a new warning.
+   * Constraints: Read-only; no risk reclassification, timestamp refresh, retry or physical-audio claim. */
+  riskSpeechStatus() {
+    const input = this.latestRisk, age = input ? this.now() - input.capturedAt : null;
+    const boxes = input?.metadata.boxes ?? [], box = selectVideoAlert(boxes);
+    const active = this.active.speech, driver = this.speech?.describe();
+    const state = !this.riskEnabled ? "disabled" : !this.riskSessionId ? "idle" : !input ? "waiting"
+      : this.paused.speech ? "paused" : active?.kind === "risk" && active.started ? "playing"
+      : !this.riskFresh() ? "stale" : !box ? "no_alert"
+      : !driver?.supported || !driver.enabled || driver.visible === false || driver.user_activated === false ? "unavailable"
+      : active?.kind === "risk" ? "preparing"
+      : !this.eligible(box, "speech") ? "cooldown"
+      : driver.active_request || driver.engine_speaking || driver.engine_pending || driver.engine_paused ? "busy" : "ready";
+    return {state, frame_index: input?.metadata.index ?? null,
+      capture_age_ms: Number.isFinite(age) ? age : null,
+      alert_count: boxes.filter(item => item.alert_required === true && item.alert_priority > 0).length,
+      pause_reason: this.paused.speech ? this.reasons.speech : null};
+  }
+
   /* Functionality: Describe independent sources and unified ownership. Inputs: Instance state.
    * Outputs: JSON-compatible metadata, including queued reply count but no reply text.
    * Logic: Distinguish enabled sources, queued assistant replies and paused channels.
    * Constraints: No utterance, coordinates, images or hardware-success claim. */
   describe() {
     return {risk_enabled: this.riskEnabled, navigation_enabled: this.navigationEnabled,
+      risk_speech: this.riskSpeechStatus(),
       risk_session_id: this.riskSessionId, navigation_run_id: this.navigationRunId,
       queued_assistant_replies: this.assistantReplies.length,
       paused: {...this.paused}, reasons: {...this.reasons},
@@ -643,6 +667,11 @@ export class AssistGuidanceManager {
           this.completedNavigation !== this.navigation.revision)
         this.submitSpeech(this.navigation, navigationSpeechText(this.navigation.snapshot, this.language));
     } finally {
+      const riskState = this.riskSpeechStatus().state;
+      if (riskState !== this.riskSpeechState) {
+        this.riskSpeechState = riskState;
+        this.report("risk_speech_state", {reason: riskState});
+      }
       this.pumping = false; this.armTimer();
       if (this.pumpRequested) { this.pumpRequested = false; this.pump(); }
     }

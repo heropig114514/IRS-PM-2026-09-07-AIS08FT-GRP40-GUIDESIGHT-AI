@@ -1,10 +1,10 @@
 /**
  * Responsibilities: Manage camera permission, explicit Echo/HF/local-CUDA transport, phase timing, and observable lifecycle.
- * Implementation: 640-pixel maximum edge and JPEG 0.8; after the first HF/local frame completes, capture at up to 30 FPS with a 12-frame limit and ordered display; any error stops processing and retains its browser error name for semantic status reporting.
+ * Implementation: 640-pixel maximum edge and JPEG 0.8; explicit page profiles retain the original 30 FPS/12-frame ceiling or admit one local camera frame at a time; ordered display and capture quality remain unchanged; any error stops processing and retains its browser error name for semantic status reporting.
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
  * frame-pipeline.js, scene-client.js, integration/local-mvp.js; core.echo/hf_video_relay/integration.asgi;
  * tools/benchmark_phone_browser.mjs validates the real page; fixture input is not physical phone-camera evidence.
- * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
+ * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; captureProfile; processingPath; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.apiUrl; CameraApp.setStatus; CameraApp.handleDisconnect;
  * CameraApp.handleProcessingChange; CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
@@ -14,7 +14,7 @@
  * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide.
- * Variable Index: MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
+ * Variable Index: CAPTURE_PROFILES contains immutable standard and low-latency-1 settings; cameraProfile is explicit page policy; sessionCaptureProfile freezes it before permission; MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
  * PROCESSING_PATHS — the three explicit WebSocket modes; app — page controller; frameTimings — first-frame and bounded aggregate statistics;
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs and creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
  * aggregate only steady-state frames with pipeline scheduling observations; serial Echo frames without observations are not counted as zero;
@@ -35,6 +35,20 @@ const JPEG_QUALITY = 0.8;
 const METRICS_LOG_INTERVAL_MS = 5000;
 export const SCENE_MAX_AGE_MS = 1000;
 const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/", local: "./ws/detect/local/"};
+
+const CAPTURE_PROFILES = Object.freeze({
+  standard: Object.freeze({rate: 30, maxPending: 12}),
+  "low-latency-1": Object.freeze({rate: 30, maxPending: 1}),
+});
+
+/** Functionality: Resolve an explicit camera admission profile before acquiring media.
+ * Inputs: Exact profile name. Outputs: Frozen cadence and in-flight bound, or an error.
+ * Logic: Preserve standard throughput; one-slot local capture waits for the previous result before sampling.
+ * Constraints: No automatic downgrade, discarded submitted frame, model/image change or relaxed risk deadline. */
+export function captureProfile(name) {
+  if (!Object.hasOwn(CAPTURE_PROFILES, name)) throw new Error("摄像头采样配置无效。");
+  return CAPTURE_PROFILES[name];
+}
 
 /** Functionality: Resolve one of the three explicitly supported processing modes.
  * Inputs: processing enum. Outputs: fixed relative WS path; unknown values throw.
@@ -93,6 +107,8 @@ export class CameraApp {
     this.listeners = new Set();
     this.localDeviceId = "";
     this.localFacingMode = null;
+    this.cameraProfile = document.documentElement?.dataset?.cameraProfile || "standard";
+    this.sessionCaptureProfile = captureProfile("standard");
     this.localOnly = document.documentElement?.dataset?.localMvp === "true";
     this.localSessionSeconds = 55;
     this.sessionId = null;
@@ -191,6 +207,7 @@ export class CameraApp {
     try {
       const processing = this.processing.value;
       const path = processingPath(processing);
+      this.sessionCaptureProfile = captureProfile(processing === "local" ? this.cameraProfile : "standard");
       if (this.localOnly && processing === "hf") throw new Error("本地 MVP 不允许调用 Hugging Face。");
       if (processing === "local" && this.localFacingMode !== null && this.localFacingMode !== "environment")
         throw new Error("本地摄像头方向配置无效，仅支持明确指定后置摄像头。");
@@ -324,7 +341,7 @@ export class CameraApp {
      * Logic: stopped/older operations cannot update this camera session. Constraints: no auto-resume. */
     function active() { return token === app.generation; }
     this.pipeline = new FramePipeline({client, capture: this.capture.bind(this), display,
-      onFrame: frame, onSent: sent, isActive: active, onFailure: this.handleDisconnect});
+      onFrame: frame, onSent: sent, isActive: active, onFailure: this.handleDisconnect, ...this.sessionCaptureProfile});
     this.cameraPhase = "pipeline";
     await this.pipeline.run();
   }

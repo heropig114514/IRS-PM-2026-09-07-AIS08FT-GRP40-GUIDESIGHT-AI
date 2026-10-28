@@ -1,7 +1,7 @@
 /* Responsibilities: Validate phone speech recovery against actual public TTS.
  * Implementation: Use an isolated Chromium context and trusted calibration clicks on an already deployed page.
  * Related Modules: speech-output, speech-activation, assist-mvp and public same-origin TTS.
- * Declaration Index: snapshot; play; playRiskFixture. Variable Index: target/output/browser/page/report own this bounded check;
+ * Declaration Index: snapshot; play; playRiskFixture; checkRiskEligibility. Variable Index: target/output/browser/page/report own this bounded check;
  * PRS_PLAYWRIGHT_PATH selects the browser runtime; optional PRS_BROWSER_PROXY is explicit transport.
  * Constraints: No local server, GPU inference, permissions, TLS bypass or physical-audibility claim. */
 import assert from 'node:assert/strict';
@@ -68,6 +68,42 @@ async function playRiskFixture(language) {
     report.checks.push({label:"Prepared risk phrase "+language,synthetic_risk:true,tts_sockets:ttsSockets,...result});
   } finally {page.off("websocket",observe);}
 }
+/* Functionality: Exercise visible eligibility using labeled synthetic detection metadata.
+ * Inputs: Fresh, expired and non-alert fixtures. Outputs: Visible reasons and actual cached PCM completion.
+ * Logic: Use the deployed manager rather than direct speech submission; retain original capture deadlines.
+ * Constraints: No GPU, physical camera, threshold changes or claim that fixtures are model results. */
+async function checkRiskEligibility() {
+  const prior=(await snapshot()).driver.last_request.id;
+  await page.evaluate(async()=>{
+    const {guidanceManager}=await import('/mvp/assets/integration/assist-mvp.js');
+    const box={track_id:17,label:'person',direction:'front',risk_level:'high',alert_priority:3,alert_required:true,
+      ttc_sec:null,distance_m:2,motion_state:'stationary',relative_speed_mps:0,risk_reasons:[]};
+    window.__riskFixture={box,guidanceManager};guidanceManager.beginRisk('synthetic-browser-risk');
+    guidanceManager.ingestRisk({sessionId:'synthetic-browser-risk',capturedAt:performance.now()-1500,
+      metadata:{index:0,tracking_epoch:1,boxes:[box]}});
+  });
+  assert.match(await page.locator('#assist-risk-status').textContent(),/one-second/);
+  assert.equal((await snapshot()).driver.last_request.id,prior);
+  await page.evaluate(()=>{
+    const {box,guidanceManager}=window.__riskFixture;
+    guidanceManager.ingestRisk({sessionId:'synthetic-browser-risk',capturedAt:performance.now(),
+      metadata:{index:1,tracking_epoch:1,boxes:[{...box,risk_level:'medium',alert_required:false}]}});
+  });
+  assert.match(await page.locator('#assist-risk-status').textContent(),/does not meet/);
+  assert.equal((await snapshot()).driver.last_request.id,prior);
+  await page.evaluate(()=>{
+    const {box,guidanceManager}=window.__riskFixture;
+    guidanceManager.ingestRisk({sessionId:'synthetic-browser-risk',capturedAt:performance.now(),
+      metadata:{index:2,tracking_epoch:1,boxes:[box]}});
+  });
+  await page.waitForFunction(previous=>window.__speechUnderTest.lastRequest?.id>previous &&
+    ['completed','error','stopped'].includes(window.__speechUnderTest.phase),prior,{timeout:20000});
+  const result=await snapshot();assert.equal(result.driver.state,'completed',JSON.stringify(result));
+  assert.equal(result.driver.last_request.audio_transport,'risk_cache');
+  report.checks.push({label:'Manager rejects expired/non-alert input; fresh required risk completes',synthetic_risk:true,...result});
+  await page.evaluate(()=>window.__riskFixture.guidanceManager.stopRisk('synthetic_check_completed'));
+}
+
 try {
   await page.goto(target,{waitUntil:'domcontentloaded',timeout:45000});
   await page.locator('#assist-speech-start').waitFor({state:'visible',timeout:20000});
@@ -85,6 +121,7 @@ try {
   await play('English recovery after AudioContext close');
   await playRiskFixture('zh-CN');
   await playRiskFixture('en-US');
+  await checkRiskEligibility();
   await page.screenshot({path:output+'.png',fullPage:false});
 } catch(error) {report.failure={name:error.name,message:error.message.slice(0,1600)};process.exitCode=1;}
 finally {await browser.close();await writeFile(output,JSON.stringify(report,null,2)+'\n',{flag:'wx'});}

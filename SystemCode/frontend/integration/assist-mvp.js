@@ -9,7 +9,7 @@
  * devices.js/video-replay.js/catalog.js/voice-preferences.js/risk-speech-cache.js/risk-audio-resources.js;
  * original camera/navigation/speech/vibration singletons.
  * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; renderDiagnostics; guidanceDiagnostic; onGuidance; applyVoice;
- * renderSpeechActivation; activateSpeech; testSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
+ * renderRiskSpeechStatus; renderSpeechActivation; activateSpeech; testSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; requestEntryMediaPermissions; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
  * onBoundary; speakAssistantReply; prepareRiskAudio; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
  * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
@@ -62,6 +62,7 @@ const GUIDANCE_PHASE_LABELS = {
   resumed: ["输出已恢复", "Output resumed"],
   risk_enabled: ["风险提醒设置已更新", "Risk alert setting updated"],
   navigation_enabled: ["导航播报设置已更新", "Navigation announcement setting updated"],
+  risk_speech_state: ["风险语音状态已更新", "Risk speech state updated"],
   risk_session: ["风险检测会话已启动", "Risk detection session started"],
   risk_stopped: ["风险检测已停止", "Risk detection stopped"],
   navigation_run: ["导航播报已启动", "Navigation announcements started"],
@@ -217,6 +218,7 @@ function renderResults(event) {
       ? productText(`检测到 ${metadata.count} 个目标，详情见下方。`, `${metadata.count} objects detected. See details below.`)
       : productText("本帧暂未识别到目标；这不代表道路安全。", "No objects detected in this frame; this does not establish road safety.");
   setStatusText("assist-result-status", status);
+  renderRiskSpeechStatus();
 }
 
 /* Functionality: Connect original source events to the independent risk input only.
@@ -315,11 +317,39 @@ function onGuidance(event) {
   renderSpeechActivation(speechActivation.describe());
 }
 
+/* Functionality: Explain silent detections on the product and diagnostic pages.
+ * Inputs: Read-only manager eligibility and original capture age. Outputs: Localized reason and counts.
+ * Logic: Show one reason from the actual output owner; keep changing timing outside the live region.
+ * Constraints: No hidden risk threshold change, timestamp substitution, automatic recovery or safety claim. */
+function renderRiskSpeechStatus() {
+  const status = guidanceManager.riskSpeechStatus();
+  const labels = {
+    disabled: ["风险语音已关闭。", "Risk speech is off."],
+    idle: ["风险播报：开始检测后显示播报状态。", "Risk speech: start detection to see its status."],
+    waiting: ["风险播报：等待首个检测结果。", "Risk speech: waiting for the first detection result."],
+    paused: ["风险播报已暂停，请点击“试听／恢复语音”。", "Risk speech is paused. Tap Test / restore voice."],
+    playing: ["正在播放风险提醒。", "Playing a risk alert."],
+    stale: ["检测结果已超过 1 秒有效期，暂不播报过期风险；画面仅供查看。请检查网络延迟。", "Detection results exceeded the one-second validity limit. Expired risks are not announced; images are for inspection only. Check network latency."],
+    no_alert: ["本帧未达到风险提醒条件，不自动朗读每个物体；这不代表道路安全。", "This frame does not meet risk-alert conditions. Objects are not all read aloud; this does not establish road safety."],
+    unavailable: ["风险语音不可用，请保持页面在前台并点击“试听／恢复语音”。", "Risk speech is unavailable. Keep the page visible and tap Test / restore voice."],
+    preparing: ["正在准备风险语音，播放前仍需最新检测结果确认。", "Preparing a risk alert; playback still requires confirmation by a current detection."],
+    cooldown: ["同一目标处于重复提醒间隔内。", "This target is within the repeat-alert cooldown."],
+    busy: ["正在播放其他语音，风险提醒等待当前有效结果。", "Other speech is active; risk alerts require a current valid result."],
+    ready: ["风险提醒等待播放。", "A risk alert is awaiting playback."],
+  };
+  setStatusText("assist-risk-status", productText(...labels[status.state]));
+  const age = status.capture_age_ms;
+  setStatusText("assist-risk-details", status.frame_index === null ? "" : productText(
+    `最近结果距采集 ${Number.isFinite(age) && age >= 0 ? (age / 1000).toFixed(1) : "?"} 秒 · 需提醒目标 ${status.alert_count} 个`,
+    `Latest result captured ${Number.isFinite(age) && age >= 0 ? (age / 1000).toFixed(1) : "?"} s ago · ${status.alert_count} alert targets`));
+}
+
 /* Functionality: Display genuine speech activation independently of enabled output preferences.
  * Inputs: Activation metadata. Outputs: Accessible status and explicit startup control state.
  * Logic: First backend PCM playback marks ready; pending submission never claims sound or sensor access.
  * Constraints: No browser voice lookup, automatic retry, voice substitution or hardware verification. */
 function renderSpeechActivation(state) {
+  renderRiskSpeechStatus();
   const enabled = speechOutput.enabled.checked;
   const output = guidanceManager.describe();
   const gated = output.paused.speech && output.reasons.speech === "activation_required";
