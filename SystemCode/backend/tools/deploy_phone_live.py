@@ -41,7 +41,7 @@ NAVIGATION_FRONTEND/NAVIGATION_BACKEND — map/MCP files, preserving camera/infe
 runtime_path — explicit interpreter root under the owned workspace, recorded in the manifest;
 shared_asset_route_sha256 — verified active route identity for navigation/output prerequisites.
 Requires local Paramiko/python-dotenv. No automatic rollback, retry, GPU call or hardware change.
-AGENT_ENV_FIELDS — permitted voice/VLM/search-scope settings;
+AGENT_ENV_FIELDS — permitted voice/VLM/search-scope/context-budget settings;
 mcp_profile — explicit public registry.
 """
 
@@ -59,6 +59,7 @@ from pathlib import Path
 import paramiko
 from dotenv import dotenv_values
 
+from core.agent.provider import configured_context_limit
 from core.inference_plan import read_plan
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +68,7 @@ FINGERPRINT = "hIrYH0S2vhyiU53ScT9Ei03o1ClcuHAb2pL/VrMMg90="
 logger = logging.getLogger(__name__)
 AGENT_ENV_FIELDS = (
     "PRS_AGENT_API_KEY", "PRS_AGENT_BASE_URL", "PRS_AGENT_MODEL", "PRS_ASR_MODEL",
+    "PRS_AGENT_MAX_CONTEXT_CHARS",
     "DASHSCOPE_API_KEY", "DASHSCOPE_HOST", "VLM_MODEL",
     "PRS_AGENT_SEARCH_COUNTRY", "PRS_AGENT_SEARCH_LANGUAGE",
 )
@@ -666,7 +668,8 @@ def activate_overlay(client, manifest):
 def load_agent_environment(path):
     """Functionality: Read explicitly selected private voice/VLM and place-scope configuration.
     Inputs: local dotenv path; Outputs: whitelisted nonempty settings held only in memory.
-    Logic: Require complete voice config, fixed regional endpoint and valid model identifiers.
+    Logic: Require complete voice config, fixed regional endpoint, valid model identifiers and an
+    explicitly bounded optional serialized-context character budget.
     Constraints: No unrelated keys, newline injection, credential logs or model/region fallback.
     """
     source = dotenv_values(path)
@@ -683,6 +686,8 @@ def load_agent_environment(path):
     for name in ("PRS_AGENT_MODEL", "PRS_ASR_MODEL", "VLM_MODEL"):
         if name in values and not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", values[name]):
             raise ValueError("Invalid model identifier in private environment")
+    if "PRS_AGENT_MAX_CONTEXT_CHARS" in values:
+        configured_context_limit(values["PRS_AGENT_MAX_CONTEXT_CHARS"])
     if "PRS_AGENT_SEARCH_COUNTRY" in values and not re.fullmatch(
         r"[A-Z]{3}", values["PRS_AGENT_SEARCH_COUNTRY"]
     ):

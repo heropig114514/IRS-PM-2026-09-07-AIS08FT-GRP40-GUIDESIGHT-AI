@@ -3,7 +3,8 @@ Implementation: Catalog intent routing before MCP, mapped-skill enforcement, reg
 skill-declared dependencies/limits/result-count and confirmation boundaries;
 one active task per tab,
 complete-turn memory, correlated visible events,
-no automatic retries; tasks survive page handoffs until completion/cancellation/deadline.
+provider retries remain below the runtime boundary; MCP/browser/device actions are never retried.
+Tasks survive page handoffs until completion/cancellation/deadline.
 Related Modules: transport, provider, intents, selection, skills, tools;
 SystemCode/frontend/agent-client.js.
 Declaration Index: Conversation; Conversation.emit; Conversation.subscribe; Conversation.submit;
@@ -346,7 +347,9 @@ def public_error(error):
     if isinstance(error, AgentError):
         return error
     if isinstance(error, TimeoutError):
-        return AgentError("agent_timeout", "本次处理超时；已发出的操作完成情况未知，未自动重试。")
+        return AgentError(
+            "agent_timeout", "本次处理超时；已发出的操作完成情况未知，未自动重放操作。"
+        )
     return AgentError(
         "agent_internal_error", "执行链路发生错误，请查看页面状态；操作完成情况未知。"
     )
@@ -502,9 +505,10 @@ class Conversation:
         History refreshes prior successful discovery/status/catalog observations, retaining failures
         and actual execution evidence. Candidate records remain exact; current categories use
         lossless compact rows.
-        Constraints: 12 total model calls (including classification)/30 tools/120000 context
-        characters; any failed or declined tool ends the action phase and is returned as bounded
-        evidence for an agent-authored explanation; no subsequent mutation can run.
+        Constraints: 12 total model calls (including classification)/30 tools and the configured
+        provider context-character budget; any failed or declined tool ends the action phase and is
+        returned as bounded evidence for an agent-authored explanation; no subsequent mutation can
+        run.
         """
         turn = [{"role": "user", "content": text}]
         self.emit("working", request_id=request_id, stage="routing")

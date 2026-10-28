@@ -260,7 +260,9 @@ class IntentTests(SimpleTestCase):
         Constraints: Help does not promise runtime readiness or grant tool access.
         """
         with self.assertRaises(AgentError):
-            intents.dialogue([[{"role": "user", "content": "x" * 120001}]], "next")
+            intents.dialogue([[
+                {"role": "user", "content": "x" * (intents.MAX_CONTEXT_CHARS + 1)},
+            ]], "next")
         config = intents.load_catalog()
         reply = intents.static_reply(intents.IntentDecision(
             "system", ("assistant.help",), "en", config,

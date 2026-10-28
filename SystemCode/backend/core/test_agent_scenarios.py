@@ -243,7 +243,8 @@ class ScenarioTests(SimpleTestCase):
         """Functionality: Exercise Qwen configuration, context, transport and message contracts.
         Inputs: configuration mutations and deterministic HTTP responses for text, tools and ASR.
         Outputs: normalized responses or typed failures. Logic: use real request serialization with
-        MockTransport and assert the provider boundary is called once. Constraints: no Qwen access.
+        MockTransport, including the one-attempt transient retry boundary.
+        Constraints: no Qwen access; non-transient responses are not retried.
         """
         invalid_configs = [
             {"PRS_AGENT_API_KEY": "", "PRS_AGENT_BASE_URL": VALID_AGENT_CONFIG["url"]},
@@ -264,12 +265,22 @@ class ScenarioTests(SimpleTestCase):
         }, clear=False):
             self.assertEqual(provider.configuration()["model"], "scenario-model")
 
+        self.assertEqual(provider.configured_context_limit("150000"), 150000)
+        self.assertEqual(provider.configured_context_limit("180000"), 180000)
+        self.assertEqual(provider.configured_context_limit(""), provider.DEFAULT_MAX_CONTEXT_CHARS)
+        for invalid_limit in ("not-a-number", "59999", "180001"):
+            with self.subTest(context_limit=invalid_limit), self.assertRaises(ValueError):
+                provider.configured_context_limit(invalid_limit)
+
         with self.assertRaises(AgentError) as caught:
             provider.enforce_context_limit({"messages": ["x" * provider.MAX_CONTEXT_CHARS]})
         self.assertEqual(caught.exception.code, "context_limit")
 
         response_cases = [
-            ("status", lambda request: httpx2.Response(503), "qwen_http_error"),
+            ("status", lambda request: httpx2.Response(503), "qwen_provider_unavailable"),
+            ("rate_limit", lambda request: httpx2.Response(429), "qwen_rate_limit"),
+            ("request_size", lambda request: httpx2.Response(413), "qwen_request_too_large"),
+            ("credentials", lambda request: httpx2.Response(403), "qwen_auth_error"),
             ("json", lambda request: httpx2.Response(200, content=b"{}"), "qwen_invalid_response"),
             ("role", lambda request: httpx2.Response(200, json={"choices": [{"message": {
                 "role": "user", "content": "bad"}}]}), "qwen_invalid_response"),

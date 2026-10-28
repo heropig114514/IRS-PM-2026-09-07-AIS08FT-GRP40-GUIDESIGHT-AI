@@ -1,15 +1,20 @@
 """Responsibilities: Bounded Qwen text/tool inference and short WAV transcription.
-Implementation: One asynchronous HTTPS request per call; explicit configuration, shared request
-context accounting, and no retries; model identity and size-only diagnostics exclude prompts and
-credentials.
+Implementation: Explicit configuration, shared serialized-context accounting, bounded provider
+retries for transient transport/status failures, and streamed response-size enforcement. Diagnostics
+record model, status, attempt and payload sizes without prompts, audio, credentials or response
+text.
 Related Modules: runtime, transport; SystemCode/backend/.env.example.
-Declaration Index: AgentError; AgentError.__init__; configuration; enforce_context_limit;
-completion; transcribe.
-Variable Index: logger — metadata-only diagnostics; MAX_CONTEXT_CHARS — serialized text/tool
-request budget; MAX_AUDIO_BYTES/MAX_RESPONSE_BYTES — limits; BASE_URLS — supported regional
-endpoints; MAX_AUDIO_SECONDS — recording contract.
+Declaration Index: AgentError; AgentError.__init__; configuration; configured_context_limit;
+provider_http_error; enforce_context_limit; completion; transcribe.
+Variable Index: logger — metadata-only diagnostics; DEFAULT/MIN/MAX_CONTEXT_CHARS — context
+budget defaults and accepted configuration range; MAX_CONTEXT_CHARS — serialized text/tool request
+budget; PROVIDER_TIMEOUT_SECONDS/MAX_PROVIDER_ATTEMPTS/PROVIDER_RETRY_DELAY_SECONDS — bounded
+provider retry timing; RETRYABLE_HTTP_STATUSES/RETRYABLE_NETWORK_ERRORS — transient failures;
+MAX_AUDIO_BYTES/MAX_RESPONSE_BYTES — media and response limits; BASE_URLS — supported endpoints;
+MAX_AUDIO_SECONDS — recording contract.
 """
 
+import asyncio
 import base64
 import io
 import json
@@ -28,7 +33,47 @@ BASE_URLS = {
 MAX_AUDIO_SECONDS = 20
 MAX_AUDIO_BYTES = 640044
 MAX_RESPONSE_BYTES = 262144
-MAX_CONTEXT_CHARS = 120000
+DEFAULT_MAX_CONTEXT_CHARS = 150000
+MIN_MAX_CONTEXT_CHARS = 60000
+MAX_MAX_CONTEXT_CHARS = 180000
+PROVIDER_TIMEOUT_SECONDS = 18
+MAX_PROVIDER_ATTEMPTS = 2
+PROVIDER_RETRY_DELAY_SECONDS = 0.5
+RETRYABLE_HTTP_STATUSES = frozenset({408, 500, 502, 503, 504})
+RETRYABLE_NETWORK_ERRORS = (
+    httpx2.ConnectError,
+    httpx2.ConnectTimeout,
+    httpx2.ReadError,
+    httpx2.ReadTimeout,
+    httpx2.RemoteProtocolError,
+    httpx2.WriteError,
+    httpx2.WriteTimeout,
+)
+
+
+def configured_context_limit(raw=None):
+    """Functionality: Resolve the bounded serialized-request character budget.
+    Inputs: Optional PRS_AGENT_MAX_CONTEXT_CHARS text; omitted/blank uses the default.
+    Outputs: Integer in the declared minimum/maximum range.
+    Logic: Parse one explicit integer and reject malformed or out-of-range settings at startup.
+    Constraints: The value counts compact JSON characters, not provider tokens; no silent clamp.
+    """
+    if raw is None:
+        raw = os.environ.get("PRS_AGENT_MAX_CONTEXT_CHARS", "").strip()
+    if raw == "":
+        return DEFAULT_MAX_CONTEXT_CHARS
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            "PRS_AGENT_MAX_CONTEXT_CHARS must be an integer from 60000 to 180000"
+        ) from error
+    if not MIN_MAX_CONTEXT_CHARS <= value <= MAX_MAX_CONTEXT_CHARS:
+        raise ValueError("PRS_AGENT_MAX_CONTEXT_CHARS must be an integer from 60000 to 180000")
+    return value
+
+
+MAX_CONTEXT_CHARS = configured_context_limit()
 
 
 class AgentError(Exception):
@@ -51,9 +96,9 @@ class AgentError(Exception):
 
 def configuration():
     """Functionality: Validate the independent agent configuration.
-    Inputs: PRS_AGENT_API_KEY/BASE_URL/MODEL and PRS_ASR_MODEL environment.
+    Inputs: PRS_AGENT_API_KEY/BASE_URL/MODEL, PRS_ASR_MODEL and startup context-budget environment.
     Outputs: Secret-bearing internal dict; missing/invalid settings raise AgentError.
-    Logic: Require an explicit key and regional URL; model defaults are documented.
+    Logic: Require an explicit key and regional URL; context budget is validated at module startup.
     Constraints: Never log or return this dict to a browser; no regional/model fallback.
     """
     config = {
@@ -69,6 +114,27 @@ def configuration():
     ):
         raise AgentError("agent_not_configured", "请配置服务端 PRS_AGENT_* 和 PRS_ASR_MODEL。")
     return config
+
+
+def provider_http_error(status):
+    """Functionality: Classify an exhausted non-success Qwen HTTP status for safe user guidance.
+    Inputs: Final provider status code. Outputs: AgentError with a stable code and status metadata.
+    Logic: Distinguish oversized input, rate limiting, credentials and provider outages.
+    Constraints: Provider response bodies are not read or exposed; no retry policy is selected here.
+    """
+    if status == 413:
+        code, detail = "qwen_request_too_large", "Qwen rejected the request size."
+    elif status == 429:
+        code, detail = "qwen_rate_limit", "Qwen request quota or rate limit was reached."
+    elif status in {401, 403}:
+        code, detail = (
+            "qwen_auth_error", "Qwen rejected the configured credentials or model access."
+        )
+    elif status == 408 or status >= 500:
+        code, detail = "qwen_provider_unavailable", "Qwen did not complete the request."
+    else:
+        code, detail = "qwen_http_error", "Qwen rejected the request."
+    return AgentError(code, f"{detail} (HTTP {status})", http_status=status)
 
 
 def enforce_context_limit(payload, *, kind="agent"):
@@ -99,13 +165,17 @@ def enforce_context_limit(payload, *, kind="agent"):
 
 
 async def completion(messages, tools=None, *, audio=False, required_tool=None):
-    """Functionality: Make one bounded Qwen request and validate its assistant message.
+    """Functionality: Make a bounded Qwen request and validate its assistant message.
     Inputs: messages, discovered tools, audio flag, optional required_tool name; environment.
     Outputs: Assistant content/tool_calls; errors have fixed safe codes.
-    Logic: Validate the complete text/tool payload against the shared context budget; stream only
-    transport bytes to enforce a response cap; enforce a 40s total caller deadline in runtime as
-    well as HTTP phase timeouts; disable redirects and retries.
-    Constraints: Text/audio is sent to the configured Qwen region, never logged or persisted.
+    Logic: Validate the complete text/tool payload against the shared context budget; permit at most
+    two provider attempts for listed transient transport/HTTP failures; stream response bytes under
+    a fixed cap. HTTP transport phase timeouts are 18 seconds, with a 0.5-second pause between
+    attempts; the runtime enforces a 40-second deadline for each completion call. Redirects are
+    disabled.
+    Constraints: Only Qwen generation/transcription calls are retried; returned MCP/browser/device
+    actions are not replayed. Text/audio is sent to the configured region, never logged or
+    persisted.
     """
     config = configuration()
     payload = {
@@ -128,35 +198,80 @@ async def completion(messages, tools=None, *, audio=False, required_tool=None):
                 ),
             )
         enforce_context_limit(payload)
-    started = time.monotonic()
     try:
         async with httpx2.AsyncClient(
-            timeout=35, follow_redirects=False, trust_env=False
+            timeout=PROVIDER_TIMEOUT_SECONDS, follow_redirects=False, trust_env=False
         ) as client:
-            async with client.stream(
-                "POST",
-                config["url"] + "/chat/completions",
-                json=payload,
-                headers={"Authorization": "Bearer " + config["key"]},
-            ) as response:
-                logger.info(
-                    "Qwen response kind=%s model=%s status=%s elapsed_ms=%d",
-                    "asr" if audio else "agent",
-                    payload["model"],
-                    response.status_code,
-                    (time.monotonic() - started) * 1000,
-                )
-                if response.status_code != 200:
-                    raise AgentError(
-                        "qwen_http_error",
-                        f"Qwen 请求失败（HTTP {response.status_code}），"
-                        "请检查模型权限、额度和区域配置；未自动重试。",
+            for attempt in range(1, MAX_PROVIDER_ATTEMPTS + 1):
+                retry_status = None
+                started = time.monotonic()
+                try:
+                    async with client.stream(
+                        "POST",
+                        config["url"] + "/chat/completions",
+                        json=payload,
+                        headers={"Authorization": "Bearer " + config["key"]},
+                    ) as response:
+                        logger.info(
+                            "Qwen response kind=%s model=%s status=%s attempt=%d elapsed_ms=%d",
+                            "asr" if audio else "agent",
+                            payload["model"],
+                            response.status_code,
+                            attempt,
+                            (time.monotonic() - started) * 1000,
+                        )
+                        if response.status_code != 200:
+                            if (response.status_code in RETRYABLE_HTTP_STATUSES
+                                    and attempt < MAX_PROVIDER_ATTEMPTS):
+                                retry_status = response.status_code
+                            else:
+                                error = provider_http_error(response.status_code)
+                                logger.warning(
+                                    "Qwen request failed kind=%s status=%d attempt=%d code=%s",
+                                    "asr" if audio else "agent", response.status_code,
+                                    attempt, error.code,
+                                )
+                                raise error
+                        else:
+                            raw = bytearray()
+                            async for chunk in response.aiter_bytes():
+                                raw.extend(chunk)
+                                if len(raw) > MAX_RESPONSE_BYTES:
+                                    raise AgentError(
+                                        "qwen_response_limit", "Qwen 返回超过大小限制。"
+                                    )
+                            break
+                except RETRYABLE_NETWORK_ERRORS as error:
+                    if attempt < MAX_PROVIDER_ATTEMPTS:
+                        logger.warning(
+                            "Qwen transient transport failure; retrying kind=%s attempt=%d "
+                            "exception_type=%s",
+                            "asr" if audio else "agent", attempt, type(error).__name__,
+                        )
+                        await asyncio.sleep(PROVIDER_RETRY_DELAY_SECONDS)
+                        continue
+                    logger.warning(
+                        "Qwen network failed kind=%s attempts=%d exception_type=%s",
+                        "asr" if audio else "agent", attempt, type(error).__name__,
                     )
-                raw = bytearray()
-                async for chunk in response.aiter_bytes():
-                    raw.extend(chunk)
-                    if len(raw) > MAX_RESPONSE_BYTES:
-                        raise AgentError("qwen_response_limit", "Qwen 返回超过大小限制。")
+                    raise AgentError(
+                        "qwen_network_error", "无法完成 Qwen 请求，请检查网络。"
+                    ) from error
+                except httpx2.HTTPError as error:
+                    logger.warning(
+                        "Qwen network failed kind=%s attempts=%d exception_type=%s",
+                        "asr" if audio else "agent", attempt, type(error).__name__,
+                    )
+                    raise AgentError(
+                        "qwen_network_error", "无法完成 Qwen 请求，请检查网络。"
+                    ) from error
+                if retry_status is not None:
+                    logger.warning(
+                        "Qwen transient HTTP status; retrying kind=%s status=%d "
+                        "attempt=%d next_attempt=%d",
+                        "asr" if audio else "agent", retry_status, attempt, attempt + 1,
+                    )
+                    await asyncio.sleep(PROVIDER_RETRY_DELAY_SECONDS)
         message = json.loads(raw)["choices"][0]["message"]
         if not isinstance(message, dict) or message.get("role") != "assistant":
             raise ValueError("Invalid role")
@@ -179,7 +294,7 @@ async def completion(messages, tools=None, *, audio=False, required_tool=None):
             type(error).__name__,
         )
         raise AgentError(
-            "qwen_network_error", "无法完成 Qwen 请求，请检查网络；未自动重试。"
+            "qwen_network_error", "无法完成 Qwen 请求，请检查网络。"
         ) from error
     except (KeyError, IndexError, TypeError, ValueError) as error:
         raise AgentError("qwen_invalid_response", "Qwen 返回不符合消息契约。") from error
@@ -189,8 +304,9 @@ async def transcribe(encoded):
     """Functionality: Validate and transcribe one browser-produced 16 kHz mono PCM16 WAV.
     Inputs: Base64 WAV string; Outputs: nonempty transcript of at most 2000 characters.
     Logic: Validate size, WAV metadata, duration and actual frames before any external call.
-    Constraints: Maximum 20 seconds; no file writes, format conversion, retries or transcription
-    rewriting. Recognition is subsequently displayed as the user's submitted command.
+    Constraints: Maximum 20 seconds; no file writes, format conversion or transcription rewriting.
+    The provider boundary may retry one transient request; recognized text is subsequently
+    displayed as the user's submitted command.
     """
     try:
         if not isinstance(encoded, str) or len(encoded) > 4 * ((MAX_AUDIO_BYTES + 2) // 3):

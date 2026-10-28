@@ -13,6 +13,8 @@ AgentTests.test_empty_failure_explanation_is_not_replaced;
 AgentTests.test_declined_action_blocks_batched_mutations; AgentTests.test_cancel_and_deduplicate;
 AgentTests.test_input_validation; AgentTests.test_audio_validation;
 AgentTests.test_provider_contract; AgentTests.test_provider_contract.handler;
+AgentTests.test_provider_contract.transient_status;
+AgentTests.test_provider_contract.transient_connect;
 AgentTests.test_geocoder_contract; AgentTests.test_start_observes_actual_state;
 AgentTests.test_skill_reference_context; AgentTests.test_geocoder_country_override;
 AgentTests.test_geocoder_contract.handler; AgentTests.test_geocoder_rejects_unknown_country;
@@ -535,8 +537,8 @@ class AgentTests(SimpleTestCase):
         self.assertEqual(model.await_count, 1)
 
     async def test_provider_contract(self):
-        """Functionality: Verify request format, secret handling and HTTP failure without retry.
-        Inputs: fake HTTP responses and test-only key; Outputs: request/body and error assertions.
+        """Functionality: Verify request format and transient/non-transient failure handling.
+        Inputs: fake HTTP responses and test-only key; Outputs: bounded request/body assertions.
         Logic: Real HTTP client against MockTransport; Constraints: not a Qwen service test.
         """
         requests = []
@@ -573,6 +575,49 @@ class AgentTests(SimpleTestCase):
         body = json.loads(requests[0].content)
         self.assertFalse(body["enable_thinking"])
         self.assertNotIn("test-only-secret", requests[0].url.query.decode())
+
+        retry_requests = []
+
+        def transient_status(request):
+            """Functionality: Return one transient server failure then a valid completion.
+            Inputs: MockTransport request. Outputs: 503 followed by an assistant response.
+            Logic: Preserve the same payload across attempts. Constraints: no external provider.
+            """
+            retry_requests.append(request)
+            if len(retry_requests) == 1:
+                return httpx2.Response(503)
+            return httpx2.Response(200, json={
+                "choices": [{"message": {"role": "assistant", "content": "recovered"}}],
+            })
+
+        client = httpx2.AsyncClient(transport=httpx2.MockTransport(transient_status))
+        with patch("core.agent.provider.configuration", return_value=config), \
+                patch("core.agent.provider.httpx2.AsyncClient", return_value=client):
+            retried = await completion([{"role": "user", "content": "test"}])
+        self.assertEqual(retried["content"], "recovered")
+        self.assertEqual(len(retry_requests), 2)
+
+        retry_requests.clear()
+
+        def transient_connect(request):
+            """Functionality: Fail one connection attempt before returning a response.
+            Inputs: MockTransport request. Outputs: ConnectError then valid assistant response.
+            Logic: Verify that a transport failure gets one bounded retry.
+            Constraints: No real network connection or mutation is performed.
+            """
+            retry_requests.append(request)
+            if len(retry_requests) == 1:
+                raise httpx2.ConnectError("synthetic connect failure", request=request)
+            return httpx2.Response(200, json={
+                "choices": [{"message": {"role": "assistant", "content": "reconnected"}}],
+            })
+
+        client = httpx2.AsyncClient(transport=httpx2.MockTransport(transient_connect))
+        with patch("core.agent.provider.configuration", return_value=config), \
+                patch("core.agent.provider.httpx2.AsyncClient", return_value=client):
+            retried = await completion([{"role": "user", "content": "test"}])
+        self.assertEqual(retried["content"], "reconnected")
+        self.assertEqual(len(retry_requests), 2)
 
     async def test_geocoder_contract(self):
         """Functionality: Verify applied country/focus and preservation of place identity.

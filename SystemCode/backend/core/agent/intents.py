@@ -1,19 +1,23 @@
 """Responsibilities: Route natural language against a repository-owned intent catalog.
 Implementation: One structured Qwen classification, strict schema/mapping validation, explicit
-unmatched policy and shared request context accounting; general answers receive no MCP client or
-tools. No keyword or place-name table.
+unmatched policy and shared request context accounting with size-only rejection diagnostics;
+general answers receive no MCP client or tools. No keyword or place-name table.
 Related Modules: skills owns trusted bundle paths; runtime enforces mapped skills.
 Declaration Index: IntentDecision; IntentDecision.skills; IntentDecision.labels; load_catalog;
 dialogue; reply_language_instruction; classify; static_reply; general_answer.
-Variable Index: None; policy is loaded from agent_skills/intents.json on each turn.
+Variable Index: logger — dialogue-size rejection diagnostics without user text; policy is loaded
+from agent_skills/intents.json on each turn.
 """
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 
 from . import skills
 from .provider import MAX_CONTEXT_CHARS, AgentError, completion
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -89,8 +93,8 @@ def dialogue(turns, text, prompt=None):
     """Functionality: Supply conversational context without execution data or tool schemas.
     Inputs: completed turns, current text, optional trusted prompt; Outputs: model messages.
     Logic: Preserve natural-language follow-ups, exclude tool calls/results and empty messages.
-    Constraints: Prior dialogue is untrusted evidence; an oversized message set fails early,
-    while completion checks the full serialized request including any tool schemas.
+    Constraints: Prior dialogue is untrusted evidence; an oversized message set fails early with
+    size-only logging, while completion checks the full serialized request including tool schemas.
     """
     messages = [{"role": item["role"], "content": item["content"]}
                 for turn in turns for item in turn
@@ -99,7 +103,12 @@ def dialogue(turns, text, prompt=None):
     messages.append({"role": "user", "content": text})
     if prompt is not None:
         messages.insert(0, {"role": "system", "content": prompt})
-    if len(json.dumps(messages, ensure_ascii=False, separators=(",", ":"))) > MAX_CONTEXT_CHARS:
+    message_chars = len(json.dumps(messages, ensure_ascii=False, separators=(",", ":")))
+    if message_chars > MAX_CONTEXT_CHARS:
+        logger.warning(
+            "Agent dialogue context rejected history_turns=%d message_chars=%d limit_chars=%d",
+            len(turns), message_chars, MAX_CONTEXT_CHARS,
+        )
         raise AgentError("context_limit", "对话上下文达到上限，请清空对话后重新开始。")
     return messages
 
@@ -128,7 +137,8 @@ async def classify(text, turns):
     Inputs: text, prior turns and trusted catalog; Outputs: IntentDecision or explicit error.
     Logic: Force one route_intent structured response; the current message controls its language
     estimate; validate enum, multiplicity and routes.
-    Constraints: No retry, action invocation, guessed skill, or general-mode switch on failure.
+    Constraints: No second classification decision, action invocation, guessed skill, or
+    general-mode switch on failure; the provider may retry only a bounded transient request.
     """
     config = load_catalog()
     ids = [item["id"] for item in config["intents"]]

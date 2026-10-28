@@ -11,8 +11,8 @@ checks pass. It uses the already isolated `prs-mvp-web.service` boundary:
 - only `prs-mvp-web.service` is restarted on `127.0.0.1:18766`;
 - `/opt/prs-practice/current`, `prs-camera.service`, Nginx, the inference tunnel, and the MVP
   database are not changed by the workflow;
-- old releases are retained and no automatic migration, rollback, dependency installation, or
-  provider retry is performed.
+- old releases are retained and deployment steps do not retry, roll back, migrate, or install
+  dependencies automatically.
 
 The upload archive keeps the `backend/` and `frontend/` release roots but omits local credentials,
 virtual environments, backend test modules, development tools, generated reports, large test datasets,
@@ -90,7 +90,8 @@ public catalog:
 .\.venv\Scripts\python.exe -m tools.deploy_phone_live --activate --agent-env .env --manifest <manifest-path>
 ```
 
-`--agent-env` transfers only explicitly configured allowlisted `PRS_AGENT_*`, `PRS_ASR_MODEL`,
+`--agent-env` transfers only explicitly configured allowlisted `PRS_AGENT_*` (including the bounded
+`PRS_AGENT_MAX_CONTEXT_CHARS` setting), `PRS_ASR_MODEL`,
 `DASHSCOPE_*` and `VLM_MODEL` fields, never local Django/database/HF/ORS fields. File hashes record
 actual released content, including uncommitted files; Git SHA is only a baseline. This path preserves
 HF/ORS credentials and the public outputs catalog without adding public database/DOM tools. It

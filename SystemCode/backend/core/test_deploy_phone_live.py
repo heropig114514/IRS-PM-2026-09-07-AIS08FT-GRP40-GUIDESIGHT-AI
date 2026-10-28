@@ -189,9 +189,9 @@ class DeploymentAssetTests(SimpleTestCase):
                 command.assert_not_called()
 
     def test_agent_environment(self):
-        """Functionality: Keep secret updates scoped and reject invalid configuration.
+        """Functionality: Keep agent updates scoped and reject invalid context configuration.
         Inputs: temporary synthetic dotenv and private bytes; Outputs: value/byte assertions.
-        Logic: Actual whitelist, region validation and serialization; no real credentials are read.
+        Logic: Exercise the actual whitelist, provider context bounds and serialization.
         Constraints: Does not connect to SSH or a model; unrelated fields remain identical.
         """
         from tools import deploy_phone_live as publisher
@@ -199,12 +199,21 @@ class DeploymentAssetTests(SimpleTestCase):
         values = {"PRS_AGENT_API_KEY": "test-only-secret", "PRS_AGENT_BASE_URL":
                   "https://dashscope.aliyuncs.com/compatible-mode/v1",
                   "PRS_AGENT_MODEL": "qwen3.6-plus", "PRS_ASR_MODEL": "qwen3-asr-flash",
+                  "PRS_AGENT_MAX_CONTEXT_CHARS": "150000",
                   "PRS_AGENT_SEARCH_COUNTRY": "SGP"}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".env"
             path.write_text("\n".join(f"{k}={v}" for k, v in values.items()) +
                             "\nDJANGO_SECRET_KEY=must-not-copy\n", encoding="utf-8")
             selected = publisher.load_agent_environment(path)
+            valid_source = path.read_text(encoding="utf-8")
+            path.write_text(valid_source.replace(
+                "PRS_AGENT_MAX_CONTEXT_CHARS=150000",
+                "PRS_AGENT_MAX_CONTEXT_CHARS=180001",
+            ), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "60000 to 180000"):
+                publisher.load_agent_environment(path)
+            path.write_text(valid_source, encoding="utf-8")
             path.write_text(path.read_text(encoding="utf-8").replace(
                 "PRS_AGENT_SEARCH_COUNTRY=SGP", "PRS_AGENT_SEARCH_COUNTRY=Singapore"
             ), encoding="utf-8")
@@ -215,6 +224,7 @@ class DeploymentAssetTests(SimpleTestCase):
         updated = publisher.merge_agent_environment(original, selected)
         self.assertTrue(updated.startswith(original))
         self.assertEqual(updated.count(b"PRS_AGENT_MODEL="), 1)
+        self.assertEqual(updated.count(b"PRS_AGENT_MAX_CONTEXT_CHARS="), 1)
         with self.assertRaisesRegex(ValueError, "Unrelated"):
             publisher.merge_agent_environment(original, {"HF_INFERENCE_TOKEN": "change"})
 

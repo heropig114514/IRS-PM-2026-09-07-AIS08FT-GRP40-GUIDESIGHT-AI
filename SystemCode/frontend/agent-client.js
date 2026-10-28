@@ -12,7 +12,7 @@
  * AgentPanel.record; AgentPanel.startRecording;
  * AgentPanel.finishRecording; AgentPanel.handleRecordClick; AgentPanel.cancel;
  * AgentPanel.receive; AgentPanel.append; AgentPanel.render; AgentPanel.fail.
- * Variable Index: COPY — bilingual interface and media setup text; TOOLS — discovery/action labels;
+ * Variable Index: COPY — bilingual interface, media setup and failure guidance; TOOLS — discovery/action labels;
  * panel — singleton; AgentPanel.productMode selects the formal tap-to-toggle interaction;
  * recording/root.dataset.recording expose active capture; the product finish click dispatches
  * prs-assist-voice-gesture after requesting capture flush, preserving browser speech activation;
@@ -42,6 +42,17 @@ const COPY = {
   contextLimit: ["对话上下文已达到上限，请清空对话后重试。", "The conversation reached its context limit. Clear the conversation and retry."],
   explanationUnavailable: ["助手暂时无法生成故障说明，请稍后重试。", "The assistant could not explain this failure. Try again later."],
   assistantUnavailable: ["助手服务暂时不可用。", "The assistant service is unavailable."],
+  invalidAction: ["助手未能确定有效的下一步操作。请检查导航状态后再试。", "The assistant could not determine a valid next step. Check navigation status before retrying."],
+  candidateMismatch: ["所选地点与路线规划不一致。请重新选择地点并规划路线。", "The selected place did not match the route request. Select the destination again and replan."],
+  stepLimit: ["本次指令步骤过多，请拆分成较短的指令。", "This request required too many steps. Split it into shorter requests."],
+  operationTimeout: ["处理超时。请先检查导航或设备状态，再决定是否重试。", "The request timed out. Check navigation or device status before retrying."],
+  modelRequestTooLarge: ["模型服务认为请求过大。请清空对话或缩短指令后重试。", "The model service rejected the request as too large. Clear the conversation or shorten the request."],
+  modelRateLimit: ["模型服务请求过于频繁，请稍等后重试。", "The model service is rate-limiting requests. Wait briefly before trying again."],
+  modelCredentials: ["助手服务配置或模型权限异常，请联系系统维护者。", "The assistant service configuration or model access is invalid. Contact the system operator."],
+  modelUnavailable: ["暂时无法连接助手模型服务。请检查连接和当前操作状态后重试。", "The assistant model service is unavailable. Check the connection and current operation state before retrying."],
+  modelRequestRejected: ["模型服务拒绝了请求，请检查模型权限、区域或请求参数。", "The model service rejected the request. Check model access, region or request settings."],
+  modelInvalidResponse: ["助手返回内容无效，请缩短指令后重试。", "The assistant returned an invalid response. Shorten the request and try again."],
+  toolResultInvalid: ["系统工具返回了无法识别的数据。请检查导航状态后重试。", "A system tool returned data the assistant could not validate. Check navigation status before retrying."],
   cancelledNotice: ["请求已取消。", "Request cancelled."],
   busyNotice: ["上一条指令仍在处理中。", "The previous request is still running."],
   recording: ["正在录音，点击结束并发送（最长20秒）", "Recording. Finish and send within 20 seconds."],
@@ -67,15 +78,24 @@ const TOOLS = {
 };
 const EVENT_NOTICES = {
   context_limit: COPY.contextLimit,
+  invalid_tool_call: COPY.invalidAction,
+  candidate_mismatch: COPY.candidateMismatch,
+  tool_limit: COPY.stepLimit,
+  model_step_limit: COPY.stepLimit,
+  agent_timeout: COPY.operationTimeout,
   agent_explanation_unavailable: COPY.explanationUnavailable,
   agent_internal_error: COPY.assistantUnavailable,
-  agent_timeout: COPY.assistantUnavailable,
   agent_not_configured: COPY.assistantUnavailable,
-  qwen_network_error: COPY.assistantUnavailable,
-  qwen_http_error: COPY.assistantUnavailable,
-  qwen_response_limit: COPY.assistantUnavailable,
-  qwen_invalid_response: COPY.assistantUnavailable,
-  qwen_empty_response: COPY.assistantUnavailable,
+  qwen_network_error: COPY.modelUnavailable,
+  qwen_http_error: COPY.modelRequestRejected,
+  qwen_provider_unavailable: COPY.modelUnavailable,
+  qwen_rate_limit: COPY.modelRateLimit,
+  qwen_auth_error: COPY.modelCredentials,
+  qwen_request_too_large: COPY.modelRequestTooLarge,
+  qwen_response_limit: COPY.modelInvalidResponse,
+  qwen_invalid_response: COPY.modelInvalidResponse,
+  qwen_empty_response: COPY.modelInvalidResponse,
+  invalid_tool_result: COPY.toolResultInvalid,
   agent_busy: COPY.busyNotice,
   agent_capacity: [
     "语音助手会话已达到服务容量，请稍后刷新页面。",

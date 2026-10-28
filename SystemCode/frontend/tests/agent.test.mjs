@@ -160,7 +160,7 @@ test("agent failures render as status and never as assistant messages", t => {
     detail: "A second fixed backend message must also stay out of dialogue.",
   });
   assert.deepEqual(dialogue, []);
-  assert.equal(status.textContent, "The assistant service is unavailable.");
+  assert.equal(status.textContent, "The model service rejected the request. Check model access, region or request settings.");
 
   AgentPanel.prototype.receive.call(owner, {type: "error", seq: 3, code: "context_limit"});
   assert.deepEqual(dialogue, []);
@@ -168,16 +168,24 @@ test("agent failures render as status and never as assistant messages", t => {
   document.documentElement.lang = "zh-CN";
   AgentPanel.prototype.receive.call(owner, {type: "error", seq: 4, code: "context_limit"});
   assert.equal(status.textContent, "对话上下文已达到上限，请清空对话后重试。");
+  AgentPanel.prototype.receive.call(owner, {type: "error", seq: 5, code: "invalid_tool_call"});
+  assert.equal(status.textContent, "助手未能确定有效的下一步操作。请检查导航状态后再试。");
+  document.documentElement.lang = "en-US";
+  AgentPanel.prototype.receive.call(owner, {type: "error", seq: 6, code: "qwen_request_too_large"});
+  assert.equal(status.textContent, "The model service rejected the request as too large. Clear the conversation or shorten the request.");
+  AgentPanel.prototype.receive.call(owner, {type: "error", seq: 7, code: "qwen_rate_limit"});
+  assert.equal(status.textContent, "The model service is rate-limiting requests. Wait briefly before trying again.");
 
+  document.documentElement.lang = "zh-CN";
   AgentPanel.prototype.receive.call(owner, {
-    type: "rejected", seq: 5, code: "agent_capacity",
+    type: "rejected", seq: 8, code: "agent_capacity",
     detail: "Untrusted backend text must not become dialogue or UI copy.",
   });
   assert.deepEqual(dialogue, []);
   assert.equal(status.textContent, "语音助手会话已达到服务容量，请稍后刷新页面。");
   document.documentElement.lang = "en-US";
   AgentPanel.prototype.receive.call(owner, {
-    type: "rejected", seq: 6, code: "agent_capacity", detail: "Untrusted backend text.",
+    type: "rejected", seq: 9, code: "agent_capacity", detail: "Untrusted backend text.",
   });
   assert.equal(status.textContent, "The assistant session capacity is reached. Refresh the page later.");
 });
