@@ -57,7 +57,7 @@ After `prs-mvp-web.service` is active, run the following on the laptop to start 
 .\.venv\Scripts\python.exe -B -m tools.run_phone_mvp
 ```
 
-The launcher prompts for the app-server SSH password in the terminal and verifies the pinned server fingerprint. The password is not placed in command arguments, saved, or written to the run report. It checks that `prs-mvp-web.service` is already active, starts only `integration.inference.asgi` on the laptop, and establishes the loopback-only reverse tunnel. It reports model state from health without loading the model; native initialization begins only on the first real input. Logs and run details stay under the locally ignored `.venv/tmp/phone-mvp/` directory; `--log-dir` may select another directory under `backend`.
+The launcher reads the app-server target and password from the ignored `SystemCode/backend/server_info.txt` through the existing pinned deployment helper. It validates the fixed server and SSH port, verifies the pinned server fingerprint, enables SSH keepalive, and never prints, places, or saves the password in command arguments or the run report. It checks that `prs-mvp-web.service` is already active, starts only `integration.inference.asgi` on the laptop, and establishes the loopback-only reverse tunnel. It reports model state from health without loading the model; native initialization begins only on the first real input. Logs and run details stay under the locally ignored `.venv/tmp/phone-mvp/` directory; `--log-dir` may select another directory under `backend`.
 
 ## iPhone Operation
 
