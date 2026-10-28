@@ -4,6 +4,7 @@ serialized-context accounting, lossless category compaction and a complete simul
 Related Modules: agent.skills/runtime/tools/poi; test_agent supplies model-message fixtures.
 Declaration Index: DiscoveryTests; DiscoveryTests.setUp; DiscoveryTests.test_registry_is_source;
 DiscoveryTests.test_scope_before_side_effects; DiscoveryTests.test_selected_scope;
+DiscoveryTests.test_category_discovery_requires_live_origin;
 DiscoveryTests.test_scope_validation; DiscoveryTests.test_live_category_contract;
 DiscoveryTests.test_category_required; DiscoveryTests.test_nearby_contract;
 DiscoveryTests.test_invalid_poi_and_failure; DiscoveryTests.test_registry_is_source.probe.
@@ -114,6 +115,40 @@ class DiscoveryTests(SimpleTestCase):
         ):
             await conversation.run("test", "request", None)
         self.assertIn("discovery_required", [event.get("code") for event in conversation.events])
+
+    async def test_category_discovery_requires_live_origin(self):
+        """Functionality: Deny POI category lookup until this turn obtains live device origin.
+        Inputs: synthetic protocol call that skips maps_locate; Outputs: invalid-tool event and
+        bounded rejection log identifying the missing prerequisite.
+        Logic: Exercise the real runtime policy and ensure no category-provider request occurs.
+        Constraints: Browser state, Qwen and the place provider are not contacted externally.
+        """
+        replies = [
+            tool_message("discover_tools"),
+            tool_message("read_skill", {"name": "navigation"}),
+            tool_message("maps_status"),
+            tool_message("places_categories"),
+        ]
+        conversation = Conversation("owned-tab", "token")
+        with patch("core.agent.runtime.completion", AsyncMock(side_effect=replies)):
+            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "available": True, "ready": True, "origin": [103.77, 1.3],
+            })) as browser:
+                with patch("core.agent.poi.categories", AsyncMock()) as categories:
+                    with self.assertLogs("core.agent.runtime", level="WARNING") as logs:
+                        await conversation.run("nearby supermarket", "request", None)
+
+        browser.assert_awaited_once()
+        categories.assert_not_awaited()
+        self.assertIn(
+            "invalid_tool_call", [event.get("code") for event in conversation.events],
+        )
+        self.assertTrue(any(
+            "name=places_categories" in line
+            and "reason=prerequisite_missing" in line
+            and "missing_prerequisites=['maps_locate']" in line
+            for line in logs.output
+        ))
 
     def test_history_preserves_action_evidence(self):
         """Functionality: Refresh repeatable observations without losing actionable history.
@@ -311,9 +346,9 @@ class DiscoveryTests(SimpleTestCase):
         replies = [
             tool_message("discover_tools"),
             tool_message("read_skill", {"name": "navigation"}),
-            tool_message("places_categories"),
             tool_message("maps_status"),
             tool_message("maps_locate"),
+            tool_message("places_categories"),
             {"role": "assistant", "content": "Ready"},
         ]
         with patch("core.agent.runtime.completion", AsyncMock(side_effect=replies)) as model:
@@ -334,8 +369,14 @@ class DiscoveryTests(SimpleTestCase):
         self.assertEqual(model.await_args_list[0].kwargs["required_tool"], "discover_tools")
         self.assertEqual(model.await_args_list[1].kwargs["required_tool"], "read_skill")
         names = {tool["function"]["name"] for tool in model.await_args_list[2].args[1]}
+        self.assertNotIn("places_categories", names)
         self.assertNotIn("places_nearby", names)
         self.assertNotIn("places_search", names)
+        located_names = {
+            tool["function"]["name"] for tool in model.await_args_list[4].args[1]
+        }
+        self.assertIn("places_categories", located_names)
+        self.assertNotIn("places_nearby", located_names)
         self.assertIn(
             "places_nearby", {tool["function"]["name"] for tool in model.await_args_list[5].args[1]}
         )

@@ -317,9 +317,11 @@ class AgentTests(SimpleTestCase):
 
     async def test_service_error_reaches_agent_as_structured_evidence(self):
         """Functionality: Preserve safe service diagnostics for agent reasoning.
-        Inputs: Navigation tool failure with a stable code, HTTP status and trusted diagnostic.
+        Inputs: Nearby-search request, successful synthetic origin and category-service failure
+        with a stable code, HTTP status and trusted diagnostic.
         Outputs: The next model request receives those fields and authors the dialogue reply.
-        Logic: Exercise the real MCP adapter and runtime with a synthetic service exception.
+        Logic: Satisfy the navigation prerequisite before exercising real MCP dispatch and runtime
+        failure handling with a synthetic provider exception.
         Constraints: No live map-provider call or model-quality claim.
         """
         self.router.return_value = tool_message("route_intent", {
@@ -328,16 +330,19 @@ class AgentTests(SimpleTestCase):
         conversation = Conversation("owned-tab", "token")
         with patch("core.agent.runtime.completion", AsyncMock(side_effect=[
             tool_message("discover_tools"), tool_message("read_skill", {"name": "navigation"}),
-            tool_message("places_categories"),
+            tool_message("maps_locate"), tool_message("places_categories"),
             {"role": "assistant", "content": "The map provider rejected this request (HTTP 403)."},
         ])) as model:
-            with patch("core.agent.tools.poi.categories", AsyncMock(side_effect=AgentError(
-                "ors_authentication_failed", "The map provider rejected the configured credential.",
-                http_status=403,
-            ))):
-                await conversation.run("request", "Find nearby supermarkets", None)
+            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "accepted": True, "origin": [103.77, 1.3], "source": "device",
+            })):
+                with patch("core.agent.tools.poi.categories", AsyncMock(side_effect=AgentError(
+                    "ors_authentication_failed",
+                    "The map provider rejected the configured credential.", http_status=403,
+                ))):
+                    await conversation.run("request", "Find nearby supermarkets", None)
         tool_result = next(
-            message["content"] for message in reversed(model.await_args_list[3].args[0])
+            message["content"] for message in reversed(model.await_args_list[4].args[0])
             if message.get("role") == "tool"
         )
         evidence = json.loads(tool_result)

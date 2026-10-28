@@ -504,7 +504,8 @@ class Conversation:
         releases the guard; failed planning pauses actions. New searches replace pending choices.
         History refreshes prior successful discovery/status/catalog observations, retaining failures
         and actual execution evidence. Candidate records remain exact; current categories use
-        lossless compact rows.
+        lossless compact rows. Rejected calls log the attempted tool and unmet prerequisites without
+        recording model arguments.
         Constraints: 12 total model calls (including classification)/30 tools and the configured
         provider context-character budget; any failed or declined tool ends the action phase and is
         returned as bounded evidence for an agent-authored explanation; no subsequent mutation can
@@ -687,20 +688,51 @@ class Conversation:
                         name, arguments = call["function"]["name"], call["function"]["arguments"]
                         call_id = call["id"]
                         arguments = json.loads(arguments)
-                        if (
-                            name not in names
-                            or name not in permitted
-                            or (required and name != required)
-                            or not isinstance(arguments, dict)
-                            or not call_id
-                            or (name == "read_skill"
-                                and arguments.get("name") not in target_skills - loaded)
-                        ):
-                            raise ValueError("Invalid tool")
                     except (KeyError, TypeError, ValueError) as error:
+                        logger.warning(
+                            "Agent rejected malformed tool call id=%s reason=%s",
+                            request_id, type(error).__name__,
+                        )
                         raise AgentError(
                             "invalid_tool_call", "模型返回了无效工具调用，已停止。"
                         ) from error
+                    missing_prerequisites = (
+                        sorted(requirements.get(name, set()))
+                        if isinstance(name, str) else []
+                    )
+                    missing_prerequisites = [
+                        prerequisite for prerequisite in missing_prerequisites
+                        if prerequisite not in completed
+                    ]
+                    if not isinstance(name, str) or not name:
+                        rejection_reason = "invalid_tool_name"
+                    elif name not in names:
+                        rejection_reason = "unregistered_tool"
+                    elif required and name != required:
+                        rejection_reason = "required_stage_mismatch"
+                    elif missing_prerequisites:
+                        rejection_reason = "prerequisite_missing"
+                    elif name not in permitted:
+                        rejection_reason = "tool_not_permitted"
+                    elif not isinstance(arguments, dict):
+                        rejection_reason = "invalid_arguments"
+                    elif not call_id:
+                        rejection_reason = "missing_call_id"
+                    elif (name == "read_skill"
+                            and arguments.get("name") not in target_skills - loaded):
+                        rejection_reason = "skill_not_available"
+                    else:
+                        rejection_reason = None
+                    if rejection_reason:
+                        logger.warning(
+                            "Agent rejected tool call id=%s name=%s reason=%s "
+                            "missing_prerequisites=%s required=%s",
+                            request_id, name[:80] if isinstance(name, str) else "invalid",
+                            rejection_reason, missing_prerequisites, required,
+                        )
+                        raise AgentError(
+                            "invalid_tool_call", "模型返回了无效工具调用，已停止。",
+                        )
                     bound_selection = self.selection and name == self.selection["policy"][
                         "coordinate_tool"
                     ]
