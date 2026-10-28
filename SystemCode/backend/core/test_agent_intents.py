@@ -38,7 +38,7 @@ class IntentTests(SimpleTestCase):
         """
         config = intents.load_catalog()
         self.assertEqual(config["unknown_policy"], "reject")
-        self.assertEqual(len(config["intents"]), 22)
+        self.assertEqual(len(config["intents"]), 23)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
             variants = [

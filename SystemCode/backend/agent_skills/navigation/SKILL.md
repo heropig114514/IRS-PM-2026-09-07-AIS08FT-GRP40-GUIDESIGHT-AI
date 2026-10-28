@@ -126,11 +126,16 @@ nearby category result also ends the action phase.
    location/origin and manually replan; do not claim guidance is available or start a second watch.
    Do not repeat observation of the same terminal state merely for formality. **A promise to locate or plan ends the turn with no background continuation.
    Invoke tools before reporting results; sufficient input requires execution, not a future-tense promise.**
-9. Navigation speech is separate and disabled by default. Read the actual
-   navigation_status.navigation_speech state. The user must enable navigation speech and speech
-   output and select a matching local voice; do not enable these switches on their behalf.
-   enabled/active_started indicates software selection/engine start, not audible speaker output.
-   Report paused/reason accurately. Inspect available voices through ui_snapshot and act on an
-   explicit user selection; explain missing prerequisites. Automatic vibration guidance and obstacle
-   avoidance remain unavailable (vibration_guidance=false); do not promise them. There is no automatic
-   rerouting, navigation cannot guarantee road safety, and timed-out actions must not be resubmitted.
+9. Enable spoken instructions by default when starting walking navigation for this blind-user
+   application, unless the user explicitly requests silent navigation. Inspect
+   navigation_status.navigation_speech and the observed output controls. The agent may enable
+   `#navigation-speech-enabled` and `#speech-enabled` with ui_action when they are off; do not ask
+   the user to operate these application switches. For an explicit silent-navigation request,
+   disable both application switches through ui_action and verify their checked state.
+   If no voice is configured, inspect available choices and select a matching available voice with
+   ui_action; preserve an explicit user voice choice and do not replace a requested but unavailable
+   voice. enabled/active_started indicates software selection/engine start, not audible speaker
+   output. Report paused/reason accurately, and request a real page interaction only when the
+   browser requires activation. Automatic vibration guidance and obstacle avoidance remain
+   unavailable (vibration_guidance=false); do not promise them. There is no automatic rerouting,
+   navigation cannot guarantee road safety, and timed-out actions must not be resubmitted.

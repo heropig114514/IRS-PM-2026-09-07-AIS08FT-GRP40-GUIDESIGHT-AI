@@ -1,8 +1,8 @@
 /* Responsibilities: Expose live PRS DOM state, actions, device output and walking navigation to MCP.
  * Implementation: One WebSocket per page; sessionStorage identity survives explicit navigation;
  * correlated commands execute once and return snapshots/device acknowledgements/errors;
- * agent UI dispatch protects controls that acquire cameras or request camera permission;
- * no automatic reconnect.
+ * agent UI dispatch keeps assistant-owned controls private while allowing requested application
+ * controls to use their existing handlers; no automatic reconnect.
  * Related Modules: core.ai_bridge/ai_mcp, index.html, maps.html, camera/maps controllers,
  * vibration.js, speech-output.js, navigation-ui.js, agent-device.js, agent-client.js.
  * Declaration Index: selectorFor — exact CSS paths; visible — rendered state;
@@ -16,7 +16,7 @@
  * connectControl.onMessage — correlated command handler;
  * connectControl.startHeartbeat — idle keepalive; connectControl.stopHeartbeat — timer cleanup.
  * Variable Index: SESSION_KEY — tab identity storage key; CONTROL_SELECTOR — discoverable controls;
- * USER_GESTURE_CONTROL_IDS — camera permission, camera choice and camera start controls reserved for users;
+ * AGENT_MANAGED_SWITCH_IDS — hidden output/guidance switches addressable by explicit requests;
  * connectControl sessionId/socket/heartbeat — tab transport state; base — application mount URL;
  * AGENT_TOKEN_KEY — tab-local ownership secret, never part of a snapshot.
  */
@@ -28,14 +28,12 @@ import {performDevice} from "./agent-device.js";
 const SESSION_KEY = "prs.ai.session";
 const AGENT_TOKEN_KEY = "prs.agent.token";
 const CONTROL_SELECTOR = "button,a[href],input,select,textarea,[role=button],[contenteditable=true]";
-
-/* Functionality: Identify camera controls whose actions require direct user interaction.
- * Inputs: None. Outputs: Fixed set of control IDs.
- * Logic: Protect camera permission, explicit device choice and the two camera-start buttons from
- * synthetic assistant actions while leaving status reads and unrelated controls available.
- * Constraints: This is an agent UI-action boundary, not a substitute for browser permission policy. */
-const USER_GESTURE_CONTROL_IDS = new Set([
-  "assist-devices-authorize", "assist-device", "product-camera-start", "start",
+/* Functionality: Bound the hidden-control exception to user-requested output/guidance settings.
+ * Inputs: None. Outputs: Exact control IDs eligible for check actions while hidden.
+ * Logic: Preserve the formal page's accessible visible surface while allowing the agent to manage
+ * its existing bound switches. Constraints: No hidden buttons, browser permissions or gestures. */
+const AGENT_MANAGED_SWITCH_IDS = new Set([
+  "speech-enabled", "navigation-speech-enabled", "vibration-enabled", "assist-risk-enabled",
 ]);
 
 /* Functionality: Generate an exact CSS selector for a DOM element.
@@ -158,22 +156,20 @@ export async function waitForState(doc, args) {
   }
 }
 
-/* Functionality: Perform one DOM operation using the same controls as a human user.
+/* Functionality: Perform one DOM operation against an observed application control.
  * Inputs: action name, args DOM/device/navigation parameters, browser document.
  * Outputs: DOM snapshot, structured device result or explicit error.
- * Logic: Vibration/speech commands use shared controllers; agent UI actions reject assistant-owned,
- * output-toggle, camera-permission, device-choice and camera-start controls before dispatch.
- * Other DOM commands use native value setters/events and clicks/forms call DOM methods.
- * Constraints: Async work may still be running; synthetic events never grant browser permissions;
- * disabled/read-only/hidden controls fail instead of being bypassed. */
+ * Logic: Vibration/speech commands use shared controllers; observed application controls use their
+ * normal DOM handlers, while controls inside the assistant panel remain private.
+ * Constraints: Synthetic events never grant browser or operating-system permissions; disabled and
+ * read-only controls fail; hidden controls are limited to the allowlisted output/guidance switches. */
 export async function performAction(action, args, doc = document) {
   if (["maps_status", "maps_locate", "maps_plan", "agent_navigation_status",
     "camera_status", "camera_start", "camera_stop"].includes(action)) return performDevice(action, args, doc);
   if (action === "agent_ui_action") {
     const element = uniqueElement(doc, args.selector);
-    if (element.closest("#agent-panel") || USER_GESTURE_CONTROL_IDS.has(element.id) ||
-        ["speech-enabled", "vibration-enabled", "navigation-speech-enabled"].includes(element.id))
-      throw new Error("This control requires direct user interaction");
+    if (element.closest("#agent-panel"))
+      throw new Error("Assistant-owned controls cannot be manipulated");
     return performAction(args.action, args, doc);
   }
   if (["navigation_status", "navigation_start", "navigation_stop"].includes(action))
@@ -188,7 +184,9 @@ export async function performAction(action, args, doc = document) {
     return snapshot(doc);
   }
   const element = uniqueElement(doc, args.selector);
-  if (!visible(element) || element.matches(":disabled")) throw new Error("Control is hidden or disabled");
+  const hiddenManagedSwitch = action === "check" && AGENT_MANAGED_SWITCH_IDS.has(element.id);
+  if ((!visible(element) && !hiddenManagedSwitch) || element.matches(":disabled"))
+    throw new Error("Control is hidden or disabled");
   if (["fill", "select", "check"].includes(action) && element.readOnly) throw new Error("Control is read-only");
   element.scrollIntoView({block: "center", inline: "nearest"});
   if (action === "click") {

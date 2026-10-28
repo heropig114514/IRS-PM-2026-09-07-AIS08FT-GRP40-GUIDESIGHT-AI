@@ -7,17 +7,100 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {navigatePage, performAction, performSpeech} from "../ai-control.js";
 
-// Functionality: Reject assistant-generated actions on camera acquisition controls.
-// Inputs: Fixed DOM control IDs, one synthetic DOM element/document per case.
-// Outputs: Direct-user-interaction rejection for permission, device-choice and start controls.
-// Logic: Exercise only the agent_ui_action guard; Constraints: no browser, camera or permission fixture.
-test("assistant UI actions cannot grant or initiate camera access", async () => {
-  for (const id of ["assist-devices-authorize", "assist-device", "product-camera-start", "start"]) {
-    const element = {id, closest: () => null};
-    const doc = {querySelectorAll: selector => selector === `#${id}` ? [element] : []};
-    await assert.rejects(performAction("agent_ui_action", {action: "click", selector: `#${id}`}, doc),
-      /This control requires direct user interaction/);
+// Functionality: Allow explicit agent requests to operate application settings and camera controls.
+// Inputs: Synthetic checkbox/button DOM controls and one assistant-submit request. Outputs: updated
+// checkbox state or click dispatch; Logic: exercise real ui_action validation and snapshots.
+// Constraints: browser permissions and trusted activation are not mocked or granted by this fixture.
+test("agent UI actions can change requested output settings and invoke camera controls", async t => {
+  const previousCSS = Object.getOwnPropertyDescriptor(globalThis, "CSS");
+  const previousComputedStyle = Object.getOwnPropertyDescriptor(globalThis, "getComputedStyle");
+  Object.defineProperty(globalThis, "CSS", {configurable: true, value: {escape: value => value}});
+  Object.defineProperty(globalThis, "getComputedStyle", {configurable: true,
+    value: () => ({visibility: "visible"})});
+  t.after(() => {
+    if (previousCSS) Object.defineProperty(globalThis, "CSS", previousCSS);
+    else delete globalThis.CSS;
+    if (previousComputedStyle) Object.defineProperty(globalThis, "getComputedStyle", previousComputedStyle);
+    else delete globalThis.getComputedStyle;
+  });
+
+  for (const [id, type, action] of [
+    ["speech-enabled", "checkbox", "check"],
+    ["vibration-enabled", "checkbox", "check"],
+    ["navigation-speech-enabled", "checkbox", "check"],
+    ["assist-risk-enabled", "checkbox", "check"],
+    ["product-camera-start", "button", "click"],
+    ["start", "button", "click"],
+    ["assist-devices-authorize", "button", "click"],
+  ]) {
+    const events = [];
+    let clicks = 0;
+    const element = {
+      id, type, tagName: type === "checkbox" ? "INPUT" : "BUTTON",
+      disabled: false, readOnly: false, checked: false, value: "camera-1", innerText: "",
+      labels: [], options: [{value: "camera-1", disabled: false}],
+      closest: () => null, getClientRects: () => [{}], getBoundingClientRect: () => ({x: 0, y: 0, width: 40, height: 24}),
+      getAttribute: () => null, matches: selector => selector === ":disabled" && element.disabled,
+      scrollIntoView() {}, click() { clicks++; }, dispatchEvent(event) { events.push(event.type); },
+    };
+    if (type === "checkbox") element.getClientRects = () => [];
+    const doc = {
+      location: {href: "https://example.test/mvp/maps/"}, title: "Assist",
+      documentElement: {lang: "en", dataset: {}}, body: {innerText: ""},
+      querySelector: () => null,
+      querySelectorAll: selector => selector === `#${id}` ||
+        selector === "button,a[href],input,select,textarea,[role=button],[contenteditable=true]" ||
+        selector === "[role=status],[aria-live],.status" ? [element] : [],
+    };
+    element.ownerDocument = doc;
+    const args = action === "check" ? {action, selector: `#${id}`, value: true} :
+      {action, selector: `#${id}`};
+    const result = await performAction("agent_ui_action", args, doc);
+    assert.equal(result.controls[0].selector, `#${id}`);
+    if (action === "check") {
+      assert.equal(result.controls[0].checked, true);
+      assert.deepEqual(events, ["input", "change"]);
+    } else assert.equal(clicks, 1);
   }
+});
+
+// Functionality: Keep hidden non-output application controls unavailable to agent UI actions.
+// Inputs: One hidden synthetic stop button and its document. Outputs: Visibility rejection.
+// Logic: Exercise the ordinary hidden-control guard outside the explicit output-switch allowlist.
+// Constraints: The fixture does not execute a real application action.
+test("agent cannot operate hidden non-output controls", async () => {
+  const previousCSS = Object.getOwnPropertyDescriptor(globalThis, "CSS");
+  const previousComputedStyle = Object.getOwnPropertyDescriptor(globalThis, "getComputedStyle");
+  Object.defineProperty(globalThis, "CSS", {configurable: true, value: {escape: value => value}});
+  Object.defineProperty(globalThis, "getComputedStyle", {configurable: true,
+    value: () => ({visibility: "visible"})});
+  try {
+    const element = {id: "hidden-stop", type: "button", tagName: "BUTTON", disabled: false,
+      readOnly: false, innerText: "", labels: [], options: [], closest: () => null,
+      getClientRects: () => [], matches: selector => selector === ":disabled" && element.disabled};
+    const doc = {location: {href: "https://example.test/mvp/maps/"}, title: "Assist",
+      documentElement: {lang: "en", dataset: {}}, body: {innerText: ""},
+      querySelector: () => null,
+      querySelectorAll: selector => selector === "#hidden-stop" ? [element] : []};
+    element.ownerDocument = doc;
+    await assert.rejects(performAction("agent_ui_action", {action: "click", selector: "#hidden-stop"}, doc),
+      /Control is hidden or disabled/);
+  } finally {
+    if (previousCSS) Object.defineProperty(globalThis, "CSS", previousCSS);
+    else delete globalThis.CSS;
+    if (previousComputedStyle) Object.defineProperty(globalThis, "getComputedStyle", previousComputedStyle);
+    else delete globalThis.getComputedStyle;
+  }
+});
+
+// Functionality: Keep the assistant panel outside the set of application controls the agent can operate.
+// Inputs: One assistant-owned synthetic control/document. Outputs: Explicit rejection.
+// Logic: Verify the ownership guard before any DOM mutation. Constraints: No real page or request.
+test("agent cannot manipulate its own assistant controls", async () => {
+  const element = {id: "assistant-send", closest: selector => selector === "#agent-panel" ? {} : null};
+  const doc = {querySelectorAll: selector => selector === "#assistant-send" ? [element] : []};
+  await assert.rejects(performAction("agent_ui_action", {action: "click", selector: "#assistant-send"}, doc),
+    /Assistant-owned controls cannot be manipulated/);
 });
 
 // Functionality: Focus an available embedded camera without requesting a route change.

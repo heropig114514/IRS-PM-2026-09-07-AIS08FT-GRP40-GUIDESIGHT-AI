@@ -1,6 +1,6 @@
 /* Responsibilities: Adapt existing map/camera controllers to conversational tools.
  * Implementation: Conditional imports, bounded read-only observation waits, product/standalone
- * navigation-speech snapshots, and user-activation gating for camera starts.
+ * navigation-speech snapshots, and camera starts delegated to the shared browser controller.
  * Related Modules: ai-control.js, camera.js, maps-page.js, navigation-ui.js,
  * integration/assist-mvp.js, integration/maps-navigation-speech.js.
  * Declaration Index: CAMERA_FAILURE_REASONS — stable browser error mappings; cameraFailureReason;
@@ -75,10 +75,11 @@ export function productNavigationSpeechState(productGuidance) {
 
 /* Functionality: Execute one semantic command via shared controllers.
  * Inputs: action/args/current document; Outputs: state, acknowledgement or error.
- * Logic: Page checks precede imports; product camera starts require a live local user activation,
- * while the visible product button remains the native permission entry point. Status observes
- * startup and optional navigation speech without creating sensors or enabling output.
- * Constraints: No provider fallback, permission bypass or processing parameter changes. */
+ * Logic: Page checks precede imports; camera_start calls the existing controller after an
+ * asynchronous agent turn, allowing the browser to show or enforce its normal permission prompt.
+ * Status observes startup and optional navigation speech without creating sensors or enabling output.
+ * Constraints: Browser permission remains user-controlled; no permission bypass, provider fallback
+ * or processing parameter changes. */
 export async function performDevice(action, args = {}, doc = document) {
   if (action.startsWith("maps_") || action === "agent_navigation_status") {
     if (!doc.querySelector("#navigation-panel")) return {available: false, accepted: false, reason: "page_unavailable"};
@@ -113,10 +114,6 @@ export async function performDevice(action, args = {}, doc = document) {
     if (action === "camera_start") {
       if (doc.visibilityState === "hidden") return {accepted: false, reason: "page_hidden", ...cameraState(app)};
       if (app.mode !== "idle") return {accepted: false, reason: "already_active", ...cameraState(app)};
-      if (doc.documentElement.dataset.assistView === "product" &&
-          !globalThis.navigator?.userActivation?.isActive) {
-        return {accepted: false, reason: "user_activation_required", ...cameraState(app)};
-      }
       if (args.processing != null) {
         if (!["echo", "hf"].includes(args.processing)) throw new Error("Invalid processing mode");
         app.processing.value = args.processing;

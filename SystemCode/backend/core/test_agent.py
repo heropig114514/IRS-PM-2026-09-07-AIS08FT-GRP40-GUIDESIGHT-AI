@@ -18,7 +18,7 @@ AgentTests.test_provider_contract.transient_connect;
 AgentTests.test_geocoder_contract; AgentTests.test_start_observes_actual_state;
 AgentTests.test_skill_reference_context; AgentTests.test_geocoder_country_override;
 AgentTests.test_geocoder_contract.handler; AgentTests.test_geocoder_rejects_unknown_country;
-AgentTests.test_product_camera_ui_action_requires_user_activation;
+AgentTests.test_product_camera_ui_action_uses_application_control;
 AgentTests.test_cancel_before_start; AgentTests.test_socket_binding_and_heartbeat;
 AgentTests.test_socket_enforces_explicit_idle_session_capacity;
 AgentTests.test_socket_rejects_wrong_owner;
@@ -737,24 +737,31 @@ class AgentTests(SimpleTestCase):
             [call.args[1] for call in browser.await_args_list], ["camera_start", "camera_status"]
         )
 
-    async def test_product_camera_ui_action_requires_user_activation(self):
-        """Functionality: Classify a formal camera-button attempt as a permission prerequisite.
-        Inputs: Protected product selector and one synthetic browser rejection. Outputs: stable
-        user_activation_required diagnostics. Logic: preflight the known selector and normalize the
-        frontend's protected-control error. Constraints: No browser permission, camera, or network.
+    async def test_product_camera_ui_action_uses_application_control(self):
+        """Functionality: Allow requested camera controls through the ordinary observed UI path.
+        Inputs: Product camera selector and synthetic browser result/error. Outputs: one dispatched
+        action or the remaining assistant-panel ownership error. Logic: verify there is no
+        product-camera-specific guard and retain the assistant-owned control boundary.
+        Constraints: No browser permission, camera, or network is accessed.
         """
         adapter = BrowserTools("owned-tab")
-        with self.assertRaises(AgentError) as direct:
-            await adapter.ui_action("click", "#product-camera-start")
-        self.assertEqual(direct.exception.code, "user_activation_required")
+        with patch.object(adapter, "browser", AsyncMock(return_value={"clicked": True})) as browser:
+            result = await adapter.ui_action("click", "#product-camera-start")
+        self.assertEqual(result, {"clicked": True})
+        browser.assert_awaited_once_with(
+            "agent_ui_action",
+            {"action": "click", "selector": "#product-camera-start", "value": None,
+             "state": "visible", "text": "", "timeout_ms": 20000},
+            22,
+        )
 
         with patch(
             "core.agent.tools.BrowserTools.browser",
-            AsyncMock(side_effect=ValueError("This control requires direct user interaction")),
+            AsyncMock(side_effect=ValueError("Assistant-owned controls cannot be manipulated")),
         ):
-            with self.assertRaises(AgentError) as normalized:
-                await adapter.ui_action("click", "#observed-camera-control")
-        self.assertEqual(normalized.exception.code, "user_activation_required")
+            with self.assertRaises(AgentError) as protected:
+                await adapter.ui_action("click", "#agent-panel button")
+        self.assertEqual(protected.exception.code, "action_declined")
 
     async def test_cancel_before_start(self):
         """Functionality: Complete UI cancellation even before the task coroutine starts.

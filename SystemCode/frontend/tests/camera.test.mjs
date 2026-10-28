@@ -1,6 +1,6 @@
 /** Responsibilities: Verify explicit rear-camera/device selection, cancellation, canvas reuse, capture parameters, and first-frame/steady-state timing boundaries.
  * Implementation: Use explicit page, media-permission, track, canvas, and image-decoding fixtures; do not access a real camera or network.
- * Related Modules: camera.js; real-device permissions and browser behavior require separate verification.
+ * Related Modules: camera.js, agent-device.js; real-device permissions and browser behavior require separate verification.
  * Declaration Index: FakeElement; FakeElement.constructor; FakeElement.addEventListener;
  * FakeElement.removeAttribute; FakeDocument; FakeDocument.constructor; FakeDocument.getElementById;
  * FakeDocument.createElement; FakeDocument.addEventListener; ignoreWindowEvent; makeApp;
@@ -10,7 +10,8 @@
  * testCancelled.waitForPermission.register; testCancelled.stopTrack;
  * testCancelled.getTracks; testProcessingPath; testApiMount; testDecodeCancelled;
  * testDecodeCancelled.waitForDecode;
- * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testSceneHooks; testTimingBoundaries; testCameraEvents; testLocalDeviceGate;
+ * testDecodeCancelled.waitForDecode.register; testCaptureReuse; testSceneHooks; testTimingBoundaries; testCameraEvents;
+ * testSemanticCameraStartWithoutActivation; testLocalDeviceGate;
  * testLocalSessionForwarding; testLocalSessionForwarding.recordAdmission; testLocalSessionForwarding.requestCamera;
  * testLocalSessionForwarding.playVideo; testLocalSessionForwarding.getTracks; testLocalSessionForwarding.stopTrack;
  * testLocalRearCamera; testLocalRearCamera.requestCamera; testLocalRearCamera.playVideo;
@@ -25,6 +26,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
+import {performDevice} from "../agent-device.js";
 import {LiveDetectionClient} from "../live-detection-client.js";
 
 /** Functionality: Minimal DOM fixture. Logic: Store control values without rendering.
@@ -136,7 +138,7 @@ globalThis.window = {
   isSecureContext: true,
   addEventListener: ignoreWindowEvent,
 };
-const { CameraApp, processingPath } = await import("../camera.js");
+const { CameraApp, cameraApp, processingPath } = await import("../camera.js");
 
 /** Functionality: Verify explicit Echo/HF/local endpoints and retired modes stay rejected.
  * Inputs: actual mode mapping and retired/unknown enums. Outputs: fixed paths or explicit errors.
@@ -162,6 +164,44 @@ test("camera publishes explicit session/result/stop events without DOM polling",
   app.stop(); assert.equal(events[1].type, "stop"); assert.equal(events[1].sessionId, "local-session");
   unsubscribe(); app.emit({type: "frame"}); assert.equal(events.length, 2);
 });
+
+/** Functionality: Verify semantic camera start reaches the browser permission API without transient activation.
+ * Inputs: assist-product document fixture, inactive userActivation and one synthetic permission denial.
+ * Outputs: accepted start acknowledgement, one media request and the observed permission-denied state.
+ * Logic: Invoke the actual agent adapter and CameraApp while the browser fixture rejects getUserMedia.
+ * Constraints: No real camera, granted permission, network or inference; browser denial is preserved. */
+test("semantic product camera start requests browser permission without a user gesture", async function testSemanticCameraStartWithoutActivation() {
+  const previousDocument = globalThis.document;
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  let requests = 0;
+  globalThis.document = new FakeDocument();
+  Object.defineProperty(globalThis, "navigator", {configurable: true, value: {
+    userActivation: {isActive: false},
+    mediaDevices: {getUserMedia: async () => {
+      requests++;
+      const error = new Error("synthetic camera permission denial");
+      error.name = "NotAllowedError";
+      throw error;
+    }},
+  }});
+  const doc = {visibilityState: "visible", documentElement: {dataset: {assistView: "product"}},
+    querySelector: selector => selector === "#preview" ? {} : null};
+  try {
+    cameraApp.processing.value = "echo";
+    const result = await performDevice("camera_start", {}, doc);
+    assert.equal(result.accepted, true);
+    assert.equal(requests, 1);
+    await new Promise(resolve => setImmediate(resolve));
+    const state = await performDevice("camera_status", {}, doc);
+    assert.equal(state.active, false);
+    assert.equal(state.reason, "camera_permission_denied");
+  } finally {
+    globalThis.document = previousDocument;
+    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+    else delete globalThis.navigator;
+  }
+});
+
 /** Functionality: Verify local-only provider/device gates occur before media authorization.
  * Inputs: local/HF mode and explicit local-only marker. Outputs: zero media calls until an explicit device.
  * Logic: no camera/facing fallback; Constraints: actual device selection is validated by the browser. */

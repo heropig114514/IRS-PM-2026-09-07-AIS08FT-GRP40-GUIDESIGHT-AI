@@ -186,12 +186,13 @@ function startProductCamera() {
 }
 
 /* Functionality: Explain native camera failures without hiding the controller's detailed message.
- * Inputs: Retained error type. Outputs: Fixed localized action. Logic: Permission guidance tells
- * the user to start from the visible click target if no prompt appeared; device and busy states are
- * distinguished from other connection/start errors. Constraints: No permission change or retry. */
+ * Inputs: Retained error type. Outputs: Fixed localized action. Logic: Permission guidance points
+ * to browser site settings when no prompt appears and to the visible click target only when the
+ * browser requires direct activation; device and busy states remain distinct. Constraints: No
+ * permission change or retry. */
 function cameraFailureMessage(reason) {
   if (reason === "NotAllowedError" || reason === "SecurityError")
-    return productText("摄像头请求未获准。若没有出现权限弹窗，请在本页直接点击“开启环境感知”；若之前拒绝过，请在浏览器网站设置中允许摄像头。", "The browser did not grant camera access. If no prompt appeared, tap Start environment awareness on this page; if access was previously denied, allow camera access in the browser's site settings.");
+    return productText("浏览器未授予摄像头权限。若没有出现权限弹窗，请在浏览器网站设置中允许摄像头；若浏览器要求直接操作，请点按本页“开启环境感知”。", "The browser did not grant camera access. If no permission prompt appeared, allow camera access in the site's browser settings; if the browser requires a direct gesture, tap Start environment awareness on this page.");
   if (reason === "NotFoundError" || reason === "OverconstrainedError")
     return productText("未能打开后置摄像头。请使用带后置摄像头的手机，或进入测试页手动选择镜头。", "The rear camera is unavailable. Use a phone with a rear camera, or choose a camera manually on the test page.");
   if (reason === "NotReadableError" || reason === "AbortError")
