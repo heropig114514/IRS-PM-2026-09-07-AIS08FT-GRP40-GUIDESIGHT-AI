@@ -8,12 +8,11 @@ description: Open/close the camera, select existing echo or HF detection mode, i
    route. On a standard PRS surface, use the same tool to navigate to the camera page. A request
    only to show the page/panel ends after verifying it; do not start capture.
 2. For an explicit request to turn on/start the camera, inspect camera_status first. If it is
-   already active, report the observed state. On `assist-product`, do not call camera_start: the
-   browser permission request must come from a direct page tap, so ask the user to tap the visible
-   "Start environment awareness" control and wait for its status. Never use ui_action to click
-   `#product-camera-start` on that surface; a synthetic click cannot satisfy browser user activation.
-   On other surfaces, call
-   camera_start with no mode override to preserve the UI choice. Explicit "object detection"
+   already active, report the observed state. Otherwise call camera_start on every surface, with no
+   mode override, to preserve the UI choice. The browser may show its normal permission prompt; the
+   user must grant it, and a denial must be reported without retry. camera_start uses the shared
+   controller; ui_action may also operate an observed camera control when the user's request calls
+   for that exact UI action. Explicit "object detection"
    requests may use processing="hf"; "echo" requests may use processing="echo". Never silently
    allocate GPU for a generic request.
 3. Verify with camera_status(wait_seconds=12). active means a live media track;

@@ -187,12 +187,13 @@ function startProductCamera() {
 }
 
 /* Functionality: Explain native camera failures without hiding the controller's detailed message.
- * Inputs: Retained error type. Outputs: Fixed localized action. Logic: Permission guidance tells
- * the user to start from the visible click target if no prompt appeared; device and busy states are
- * distinguished from other connection/start errors. Constraints: No permission change or retry. */
+ * Inputs: Retained error type. Outputs: Fixed localized action. Logic: Permission guidance points
+ * to browser site settings when no prompt appears and to the visible click target only when the
+ * browser requires direct activation; device and busy states remain distinct. Constraints: No
+ * permission change or retry. */
 function cameraFailureMessage(reason) {
   if (reason === "NotAllowedError" || reason === "SecurityError")
-    return productText("摄像头请求未获准。若没有出现权限弹窗，请在本页直接点击“开启环境感知”；若之前拒绝过，请在浏览器网站设置中允许摄像头。", "The browser did not grant camera access. If no prompt appeared, tap Start environment awareness on this page; if access was previously denied, allow camera access in the browser's site settings.");
+    return productText("浏览器未授予摄像头权限。若没有出现权限弹窗，请在浏览器网站设置中允许摄像头；若浏览器要求直接操作，请点按本页“开启环境感知”。", "The browser did not grant camera access. If no permission prompt appeared, allow camera access in the site's browser settings; if the browser requires a direct gesture, tap Start environment awareness on this page.");
   if (reason === "NotFoundError" || reason === "OverconstrainedError")
     return productText("未能打开后置摄像头。请使用带后置摄像头的手机，或进入测试页手动选择镜头。", "The rear camera is unavailable. Use a phone with a rear camera, or choose a camera manually on the test page.");
   if (reason === "NotReadableError" || reason === "AbortError")
@@ -327,11 +328,11 @@ function renderRiskSpeechStatus() {
     disabled: ["风险语音已关闭。", "Risk speech is off."],
     idle: ["风险播报：开始检测后显示播报状态。", "Risk speech: start detection to see its status."],
     waiting: ["风险播报：等待首个检测结果。", "Risk speech: waiting for the first detection result."],
-    paused: ["风险播报已暂停，请点击“试听／恢复语音”。", "Risk speech is paused. Tap Test / restore voice."],
+    paused: ["风险播报已暂停。请停止后重新开始检测，或前往测试页恢复语音。", "Risk speech is paused. Stop and restart detection, or restore voice on the test page."],
     playing: ["正在播放风险提醒。", "Playing a risk alert."],
     stale: ["检测结果已超过 1 秒有效期，暂不播报过期风险；画面仅供查看。请检查网络延迟。", "Detection results exceeded the one-second validity limit. Expired risks are not announced; images are for inspection only. Check network latency."],
     no_alert: ["本帧未达到风险提醒条件，不自动朗读每个物体；这不代表道路安全。", "This frame does not meet risk-alert conditions. Objects are not all read aloud; this does not establish road safety."],
-    unavailable: ["风险语音不可用，请保持页面在前台并点击“试听／恢复语音”。", "Risk speech is unavailable. Keep the page visible and tap Test / restore voice."],
+    unavailable: ["风险语音不可用，请保持页面在前台，停止后重新开始检测。", "Risk speech is unavailable. Keep the page visible, then stop and restart detection."],
     preparing: ["正在准备风险语音，播放前仍需最新检测结果确认。", "Preparing a risk alert; playback still requires confirmation by a current detection."],
     cooldown: ["同一目标处于重复提醒间隔内。", "This target is within the repeat-alert cooldown."],
     busy: ["正在播放其他语音，风险提醒等待当前有效结果。", "Other speech is active; risk alerts require a current valid result."],
@@ -392,7 +393,8 @@ function renderSpeechActivation(state) {
 function activateSpeech() {
   boundaryStopped = false;
   if (!testView) readProductVoices();
-  const result = speechActivation.activate();
+  const result = speechActivation.activate({recover: true,
+    replay: speechActivation.describe().ready && guidanceManager.describe().paused.speech});
   renderSpeechActivation(speechActivation.describe());
   return result;
 }

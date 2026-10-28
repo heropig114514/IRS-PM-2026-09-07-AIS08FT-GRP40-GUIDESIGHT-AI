@@ -62,10 +62,11 @@ mcp = MCPServer(
     log_level="WARNING",
     instructions=(
         "Discover an explicit camera tab with ui_sessions, then use only vibration/speech "
-        "status, voice inventory, one test/speak request or stop. The user must enable the "
-        "output switch and interact with the visible page. Do not automatically enable, "
-        "replace voices or repeat timed-out actions. Submission/engine completion never "
-        "verifies physical vibration or audible output. Navigation tools operate on a maps "
+        "status, voice inventory, one test/speak request or stop. This output-only profile does "
+        "not include ui_action, so its caller must enable application switches on the visible "
+        "page. Do not fabricate browser activation, replace voices or repeat timed-out actions. "
+        "Submission/engine completion never verifies physical vibration or audible output. "
+        "Navigation tools operate on a maps "
         "tab with an already planned route. navigation_start requests location permission; "
         "read navigation_status for fresh guidance and navigation_stop to release GPS. "
         "Status includes device location. No automatic rerouting or background navigation."
@@ -76,10 +77,12 @@ mcp = MCPServer(
         "does not imply an asynchronous camera or route request completed; observe its "
         "status with ui_action wait or ui_snapshot. Never automatically repeat timed-out "
         "writes/actions: their completion may be unknown. Database tools are unrestricted."
-        " Vibration tools require an explicit session_id and the camera page. The user must "
-        "enable testing and interact with the visible page first. accepted=true is only "
-        "browser acknowledgement, never physical vibration verification."
-        " Speech tools use the same explicit camera tab and user prerequisites. Read "
+        " Vibration tools require an explicit session_id and the camera page. For an explicit "
+        "request, use an observed ui_action to enable the application switch if needed; real "
+        "browser activation may still be required. accepted=true is only browser acknowledgement, "
+        "never physical vibration verification."
+        " Speech tools use the same explicit camera tab and user prerequisites. An observed "
+        "ui_action may enable the application switch after an explicit request. Read "
         "speech_voices for exact voice IDs, and speech_status for queued/start/end/error "
         "state after submission. Never infer audible output or automatically replace an "
         "unavailable selected voice. Navigation requires a planned route on the maps page. "
@@ -324,9 +327,10 @@ async def ui_navigate(
     description="Operate a DOM control with an exact CSS selector. Actions: click (optional "
     "x/y offsets for map points), fill, select, check, key, submit, scroll, wait. Values are "
     "strings except check's boolean. wait accepts text and state=visible/hidden/enabled; "
-    "it observes completion without repeating operations. Camera permission, explicit camera "
-    "selection and camera-start controls require direct user interaction. Synthetic keys do not "
-    "implement browser-native typing/default actions; use fill, click or submit for other controls."
+    "it observes completion without repeating operations. Use observed application controls for "
+    "explicitly requested settings and device actions; browser permissions remain controlled by "
+    "the browser. Synthetic keys do not implement browser-native typing/default actions; use fill, "
+    "click, submit or other supported actions."
 )
 async def ui_action(
     session_id: str,
@@ -343,7 +347,7 @@ async def ui_action(
     Inputs: session/action/selector, value, x/y pixel offsets, wait text/state, timeout (0..59s).
     Outputs: Post-dispatch DOM snapshot; async application completion must be observed separately.
     Logic: Send all explicit arguments to the browser's documented action dispatcher.
-    Constraints: Disabled/ambiguous and protected camera controls fail; browser permissions apply.
+    Constraints: Disabled/ambiguous and assistant-owned controls fail; browser permissions apply.
     """
     if not 0 < timeout <= 59:
         raise ToolError("timeout must be greater than 0 and at most 59 seconds")
@@ -418,9 +422,10 @@ async def vibration_status(session_id: str) -> dict[str, Any]:
 
 @register_tool(
     description="Request one short (200ms), long (800ms) or double (150/100/150ms) vibration "
-    "in the selected camera tab. The user must enable testing and interact with the visible "
-    "page first. Returns accepted/reason; browser acceptance does not verify phone hardware. "
-    "No automatic retry, switch enabling or browser permission bypass."
+    "in the selected camera tab. An explicit request authorizes enabling the application switch "
+    "through ui_action when available; real browser activation may still be required. Returns "
+    "accepted/reason; browser acceptance does not verify phone hardware. No automatic retry or "
+    "browser permission bypass."
 )
 async def vibration_test(
     session_id: str, pattern: Literal["short", "long", "double"] = "short"
@@ -430,7 +435,8 @@ async def vibration_test(
     accepted and machine-readable refusal reason; hardware_verified is always false.
     Logic: Send one command to the existing controller; device refusals are explicit result data,
     while invalid arguments, lost sessions and uncertain transport completion are MCP errors.
-    Constraints: Does not create trusted user activation or enable the switch. No arbitrary
+    Constraints: Does not create trusted user activation or enable the switch itself; use an
+    observed ui_action when the user requested vibration. No arbitrary
     duration, repeated pattern, inference dependency, alternative reminder or automatic retry.
     """
     return await browser_call(session_id, "vibration_test", {"pattern": pattern})
@@ -480,9 +486,11 @@ async def speech_voices(session_id: str) -> dict[str, Any]:
 
 
 @register_tool(description="Submit one text utterance (1..1000 Unicode characters) to a selected "
-          "visible camera tab after the user enables speech and clicks the page. language is "
-          "zh-CN/en-US, rate 0.5..2, volume 0..1. voice_id omitted/null explicitly uses browser "
-          "default. A specified missing voice fails. Submission does not mean speech started "
+          "visible camera tab after the speech switch is enabled and browser activation is "
+          "available. An explicit request authorizes the agent to enable the application switch "
+          "with ui_action. language is zh-CN/en-US, rate 0.5..2, volume 0..1. "
+          "voice_id omitted/null explicitly uses browser default. A specified missing voice fails. "
+          "Submission does not mean speech started "
           "or became audible; query speech_status. Busy requests fail instead of queuing.")
 async def speech_speak(
     session_id: str,

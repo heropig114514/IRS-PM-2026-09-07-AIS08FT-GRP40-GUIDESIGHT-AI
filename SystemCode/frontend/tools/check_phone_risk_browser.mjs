@@ -31,7 +31,14 @@ try {
  await page.locator('#product-camera-start').waitFor({state:'visible'});
  await page.waitForFunction(()=>!document.getElementById('product-camera-start').disabled,{},{timeout:20000});
  await page.evaluate(async()=>{const app=await import('/mvp/assets/integration/assist-mvp.js');window.__riskApp=app;});
- await page.locator('#assist-speech-start').click();
+ if(await page.locator('#assist-speech-start').isVisible()) await page.locator('#assist-speech-start').click();
+ else {
+  report.probe_calibration_control=true;
+  await page.evaluate(()=>{const button=document.createElement('button');button.id='probe-calibration';
+    button.textContent='Diagnostic calibration';button.addEventListener('click',()=>window.__riskApp.speechActivation.activate({replay:true,recover:true}));
+    document.body.prepend(button);});
+  await page.locator('#probe-calibration').click();
+ }
  await page.waitForFunction(()=>window.__riskApp.speechActivation.describe().ready,{},{timeout:80000});
  await page.waitForFunction(()=>window.__riskApp.speechOutput.phase==='completed',{},{timeout:20000});
  if(profile!=="deployed")await page.evaluate(profile=>{window.__riskApp.cameraApp.cameraProfile=profile;},profile);

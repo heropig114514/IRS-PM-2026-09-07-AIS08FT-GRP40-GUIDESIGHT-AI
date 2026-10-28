@@ -1,18 +1,18 @@
 """Responsibilities: Run only the laptop-hosted CUDA worker behind an app-server tunnel.
 Implementation: Verify pinned local dependencies/checkpoints, confirm the separate app-server Web
 service, start the inference ASGI process, then reverse-forward its loopback port for on-demand use.
-Related Modules: integration.inference.asgi; integration.phone_deploy/relay; tools.run_local_mvp;
-deploy/prs-mvp-web.service; PHONE-MVP.md.
+Related Modules: integration.inference.asgi; integration.phone_deploy/relay;
+tools.deploy_phone_live.connect_server; tools.run_local_mvp; deploy/prs-mvp-web.service;
+PHONE-MVP.md.
 Declaration Index: public_ready; check_remote_binding; check_remote_health; check_web_service;
 verify_inference_port; supervise; run; main.
 Variable Index: ROOT/STOP_REQUESTED and child helpers are reused from the local launcher;
 WEB_PORT/INFERENCE_REMOTE_PORT separate the permanent app-server Web listener from the laptop
-inference tunnel; client/relay/children/log_handles own only this run's resources; secrets stay in
-memory.
+inference tunnel; client/relay/children/log_handles own only this run's resources;
+tools.deploy_phone_live.connect_server reads server_info.txt credentials without printing them.
 """
 
 import argparse
-import getpass
 import http.client
 import json
 import signal
@@ -29,10 +29,10 @@ from integration.phone_deploy import (
     SERVER,
     WEB_PORT,
     PhoneDeploymentError,
-    connect_server,
     remote_command,
 )
 from integration.relay import RelayError, RelayForward
+from tools.deploy_phone_live import connect_server
 from tools.run_local_mvp import (
     INFERENCE_PACKAGES,
     ROOT,
@@ -173,11 +173,13 @@ def supervise(relay, children):
 
 def run(args):
     """Functionality: Preflight or supervise laptop inference through the app-server tunnel.
-    Inputs: Local check flag, inference port and log path. Outputs: bounded readiness then service
-    until explicit stop, child exit or SSH failure.
+    Inputs: Local check flag, inference port, log path and the ignored server_info.txt credential
+    file consumed by the pinned SSH helper. Outputs: bounded readiness then service until explicit
+    stop, child exit or SSH failure.
     Logic: Verify the Web unit first, launch only the CUDA worker, bind remote loopback 18767, and
-    validate tunneled health plus the already-running public page.
-    Constraints: No local Web process, Nginx changes, ORS transfer, GPU fallback, retry or restart.
+    validate tunneled health plus the already-running public page; the password remains in memory.
+    Constraints: No interactive password prompt, local Web process, Nginx changes, ORS transfer,
+    GPU fallback, retry or restart.
     """
     web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
     inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0"})
@@ -209,11 +211,8 @@ def run(args):
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
     try:
-        password = getpass.getpass("Application-server SSH password (not saved): ")
-        try:
-            client = connect_server(password)
-        finally:
-            password = None
+        client = connect_server()
+        client.get_transport().set_keepalive(20)
         check_web_service(client)
         environment = child_environment(
             "", WEB_PORT, args.inference_port, web=False, assist=True, ors_key=""
@@ -274,9 +273,10 @@ def run(args):
 
 def main():
     """Functionality: Parse the laptop inference supervisor CLI and report safe failures.
-    Inputs: Explicit local flags and a hidden SSH password prompt. Outputs: process exit status.
-    Logic: The check mode performs preflight only; normal mode owns one worker and one tunnel.
-    Constraints: No password argument, Nginx installer, public Web process or automatic restart.
+    Inputs: Explicit local flags; normal startup reads credentials through the pinned helper.
+    Outputs: process exit status. Logic: check mode performs preflight only; normal mode owns one
+    worker and one tunnel. Constraints: No password argument or prompt, Nginx installer, public Web
+    process or automatic restart.
     """
     parser = argparse.ArgumentParser(
         description="Run laptop CUDA inference through the application's loopback SSH tunnel."

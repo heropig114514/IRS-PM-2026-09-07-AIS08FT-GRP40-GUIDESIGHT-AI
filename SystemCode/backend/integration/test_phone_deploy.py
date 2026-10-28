@@ -9,6 +9,7 @@ PhoneDeployTests.test_guest_relay_verification_rejects_legacy_hash;
 PhoneDeployTests.test_vhost_is_additive_idempotent_and_rejects_changed_anchor;
 PhoneDeployTests.test_remote_binding_requires_exact_loopback;
 PhoneDeployTests.test_public_ready_verifies_tls_and_bounded_media_policy;
+PhoneDeployTests.test_public_inference_uses_private_server_credentials_without_prompt;
 PhoneDeployTests.test_supervisor_reports_fatal_event_but_accepts_manual_stop;
 PhoneDeployTests.test_remote_status_deadline_closes_only_its_channel;
 PhoneDeployTests.test_install_failure_restores_all_selected_files;
@@ -20,13 +21,16 @@ PhoneDeployTests.test_install_failure_restores_all_selected_files.command.
 Variable Index: None; relay hashes, when present in fixtures, are synthetic recovery fixtures only.
 """
 
+import tempfile
 import threading
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
 from django.test import SimpleTestCase
 
 from tools.run_local_mvp import StartupError
-from tools.run_phone_mvp import check_remote_binding, public_ready, supervise
+from tools.run_phone_mvp import check_remote_binding, public_ready, run, supervise
 
 from .phone_deploy import (
     ANCHOR,
@@ -167,6 +171,55 @@ class PhoneDeployTests(SimpleTestCase):
             response.read.return_value = b"unrelated page"
             with self.assertRaises(StartupError):
                 public_ready()
+
+    def test_public_inference_uses_private_server_credentials_without_prompt(self):
+        """Functionality: Authenticate public inference startup from the ignored server file.
+        Inputs: Synthetic local runtimes, child, SSH client and tunnel with a temporary log root.
+        Outputs: One no-argument call to the pinned credential helper and safe shutdown.
+        Logic: Exercise run's startup transaction while mocking every server/process boundary.
+        Constraints: No private file is read, no password is prompted or logged, and no real SSH,
+        camera, GPU model load or public request occurs.
+        """
+        client, child, relay = Mock(), Mock(), Mock()
+        child.poll.return_value = None
+        relay.start.return_value = relay
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            args = SimpleNamespace(check=False, inference_port=8768, log_dir=root)
+            with (
+                patch("tools.run_phone_mvp.ROOT", root),
+                patch("tools.run_phone_mvp.python_path", side_effect=[root / "web", root / "gpu"]),
+                patch("tools.run_phone_mvp.inspect_environment", side_effect=[{}, {
+                    "device": "Synthetic CUDA device", "cuda_runtime": "synthetic",
+                }]),
+                patch("tools.run_phone_mvp.verify_models"),
+                patch("tools.run_phone_mvp.verify_inference_port"),
+                patch("tools.run_phone_mvp.connect_server", return_value=client) as authenticate,
+                patch("tools.run_phone_mvp.check_web_service"),
+                patch("tools.run_phone_mvp.child_environment", return_value={}),
+                patch("tools.run_phone_mvp.launch", return_value=child),
+                patch("tools.run_phone_mvp.wait_listener"),
+                patch("tools.run_phone_mvp.read_health", return_value={
+                    "status": "ok", "loaded": False,
+                }),
+                patch("tools.run_phone_mvp.RelayForward", return_value=relay),
+                patch("tools.run_phone_mvp.check_remote_binding"),
+                patch("tools.run_phone_mvp.check_remote_health", return_value={
+                    "health_status": "ok", "model_loaded": False, "model_ready": False,
+                }),
+                patch("tools.run_phone_mvp.public_ready", return_value={
+                    "https_verified": True, "public_page_status": 200,
+                    "camera_geolocation_policy": True,
+                }),
+                patch("tools.run_phone_mvp.supervise"),
+            ):
+                run(args)
+
+        authenticate.assert_called_once_with()
+        client.get_transport().set_keepalive.assert_called_once_with(20)
+        relay.stop.assert_called_once_with()
+        client.close.assert_called_once_with()
 
     def test_supervisor_reports_fatal_event_but_accepts_manual_stop(self):
         """Functionality: Distinguish a fatal relay wakeup from manual cancellation.

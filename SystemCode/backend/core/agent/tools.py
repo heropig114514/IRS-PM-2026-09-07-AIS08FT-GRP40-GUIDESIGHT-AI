@@ -14,8 +14,7 @@ BrowserTools.speech_status; BrowserTools.speech_voices; BrowserTools.speech_spea
 BrowserTools.speech_stop; BrowserTools.vibration_status; BrowserTools.vibration_test;
 BrowserTools.vibration_stop; capture_tool_errors; create_server.
 Variable Index: logger — safe tool boundary failure codes/types; DESCRIPTIONS — tool catalog
-descriptions; Wait — bounded observation schema; PRODUCT_CAMERA_START_SELECTOR — formal-page
-camera permission entry that requires a real browser gesture.
+descriptions; Wait — bounded observation schema.
 """
 
 import inspect
@@ -44,8 +43,11 @@ DESCRIPTIONS = {
     "ui_snapshot": "Inspect the bound tab's current URL, controls, options and visible state.",
     "ui_navigate": "Focus the embedded camera panel on unified assist pages, or navigate this tab "
                     "to maps/camera on standard pages and verify its resulting state.",
-    "ui_action": "Operate an observed application control; no assistant UI or permissions bypass. "
-                 "The formal product camera start control requires a direct user tap.",
+    "ui_action": (
+        "Operate an observed application control for an explicit request, including output "
+        "settings and camera controls. Assistant-owned controls and browser permissions remain "
+        "protected."
+    ),
     "maps_status": "Read current map origin/destination, configuration, busy and route state.",
     "maps_locate": "Obtain actual device GPS and set map origin; browser permission required.",
     "maps_plan": "Plan and render ORS walking route using current form or explicit coordinates.",
@@ -69,12 +71,16 @@ DESCRIPTIONS = {
                          "successful planning; browser location permission still applies.",
     "navigation_stop": "Stop navigation and release GPS; verify actual state.",
     "camera_status": "Read media track, processing mode, errors and decoded frame count.",
-    "camera_start": "Start current mode or echo/hf; observe up to12s; permission required. "
-                    "On the formal product page, the user must tap the camera control directly.",
+    "camera_start": (
+        "Start current mode through the shared controller; optional echo/hf; "
+        "observe up to12s. Browser camera permission remains user-controlled."
+    ),
     "camera_stop": "Stop camera and release media/processing using the shared controller.",
     "speech_status": "Read speech prerequisites and engine state; never proves audible sound.",
     "speech_voices": "List available browser voices with exact identifiers.",
-    "speech_speak": "Speak requested text; user must personally enable output and activate page.",
+    "speech_speak": "Speak requested text through the shared controller; on an explicit request, "
+                    "enable the observed app output setting first when needed. Browser activation "
+                    "remains platform-controlled.",
     "speech_stop": "Cancel current speech on this page.",
     "vibration_status": "Read vibration support, user-enabled state and activation.",
     "vibration_test": "Request one short/long/double vibration; never proves hardware output.",
@@ -208,16 +214,10 @@ class BrowserTools:
         timeout: Annotated[float, Field(gt=0, le=30)] = 20,
     ) -> dict[str, Any]:
         """Functionality: Operate requested observed controls. Inputs: action/selector/value,
-        state/text/timeout; Outputs: actual snapshot. Logic: existing control validation plus
-        agent-only protected-control check; Constraints: cannot operate assistant/output switches
-        or camera permission, device-choice and start controls.
+        state/text/timeout; Outputs: actual snapshot. Logic: existing control validation; explicit
+        output-setting and camera actions use their normal app handlers. Constraints: cannot operate
+        controls inside the assistant panel or grant browser permissions.
         """
-        if action == "click" and selector == PRODUCT_CAMERA_START_SELECTOR:
-            raise AgentError(
-                "user_activation_required",
-                "The formal camera control requires a direct tap in the browser. Ask the user to "
-                "tap Start environment awareness, then verify camera_status.",
-            )
         try:
             return await self.browser(
                 "agent_ui_action",
@@ -232,11 +232,10 @@ class BrowserTools:
                 timeout + 2,
             )
         except ValueError as error:
-            if str(error) == "This control requires direct user interaction":
+            if str(error) == "Assistant-owned controls cannot be manipulated":
                 raise AgentError(
-                    "user_activation_required",
-                    "This camera control requires a direct tap in the browser. Ask the user to tap "
-                    "the visible camera button, then verify camera_status.",
+                    "action_declined",
+                    "Assistant panel controls are not application controls.",
                 ) from error
             raise
 
@@ -334,7 +333,8 @@ class BrowserTools:
         """Functionality: Start camera and observe actual track/frame state.
         Inputs: optional processing mode; Outputs: acknowledgement/observed state.
         Logic: Shared CameraApp once, then read up to12s during startup.
-        Constraints: No mode fallback, restart or assertion that permission was granted.
+        Constraints: Browser permission remains user-controlled; no mode fallback, restart or
+        assertion that permission was granted.
         """
         result = await self.browser("camera_start", {"processing": processing})
         if result.get("accepted"):
@@ -368,7 +368,9 @@ class BrowserTools:
         volume: ai_mcp.SpeechVolume = 1.0,
     ) -> dict[str, Any]:
         """Functionality: Submit speech. Inputs: text/language/voice_id/rate/volume.
-        Outputs: acknowledgement; Logic: existing tool; Constraints: user-enabled output required.
+        Outputs: acknowledgement; Logic: existing tool; Constraints: output must be enabled before
+        submission; the workflow enables an observed app switch for explicit requests, while this
+        call itself does not change preferences or browser activation.
         """
         return await ai_mcp.speech_speak(self.session_id, text, language, voice_id, rate, volume)
 
@@ -388,7 +390,8 @@ class BrowserTools:
         self, pattern: Literal["short", "long", "double"] = "short"
     ) -> dict[str, Any]:
         """Functionality: Request vibration. Inputs: pattern; Outputs: acknowledgement.
-        Logic: existing tool; Constraints: no automatic enable, retry or hardware claim.
+        Logic: existing tool; Constraints: the workflow may enable the observed app switch for an
+        explicit request; no browser-activation fabrication, retry or hardware claim.
         """
         return await ai_mcp.vibration_test(self.session_id, pattern)
 

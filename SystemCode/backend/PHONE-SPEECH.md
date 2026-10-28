@@ -2,11 +2,11 @@
 
 ## Responsibilities and operation
 
-The public `/mvp/maps/` entry exposes speech state and **Test / restore voice** above
-navigation and detection. This button plays the configured bilingual calibration through the
-same backend/Web Audio path. No camera, GPS or GPU inference is needed for this test.
-Successful scheduling does not verify the physical speaker. Check media volume, Bluetooth
-output and, on older iPhones, silent mode. Only algorithm-required risks are announced.
+The product `/mvp/maps/` retains the current product design without a separate voice-control card.
+Starting detection explicitly activates or restores speech. Stop and restart detection if the browser
+interrupts audio. The diagnostic `/mvp/maps/test` entry exposes the calibration/recovery control for
+isolated speech tests. Successful scheduling does not verify the physical speaker; check media
+volume and Bluetooth output. Only algorithm-required risks are announced.
 
 ## Detection speech eligibility
 
@@ -47,7 +47,7 @@ from unit tests, returned PCM or desktop playback events.
 From `SystemCode`, set `PRS_PLAYWRIGHT_PATH` to an installed Playwright package and run:
 
 ```text
-node frontend/tools/check_phone_speech_browser.mjs https://47.239.50.129/mvp/maps/ NEW_REPORT.json
+node frontend/tools/check_phone_speech_browser.mjs https://47.239.50.129/mvp/maps/test NEW_REPORT.json
 ```
 
 Installed Chrome is required. `PRS_BROWSER_PROXY` is optional and must be selected explicitly.
@@ -120,3 +120,7 @@ profiles remain bounded by the original 12-frame capacity. Legacy PRS1 clients r
 wire format. Compact mode only removes the returned JPEG on the relay-to-browser leg; original
 camera uploads and the relay-to-GPU link remain unchanged. Measure whether the remaining uplink
 fits the one-second deadline before claiming real-time risk speech is available.
+
+The end-to-end browser probe adds a temporary diagnostic-only calibration button to its isolated
+product tab when the production control is intentionally hidden. That trusted click prepares audio
+before the timed model trial; it does not publish a control or change the production UI.

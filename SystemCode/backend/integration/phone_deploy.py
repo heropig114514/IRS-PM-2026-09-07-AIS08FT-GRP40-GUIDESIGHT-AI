@@ -3,7 +3,7 @@ Implementation: Bound remote reads/commands, install only the additive Nginx inc
 remove its retired access hash, and preserve the independent application-service identity.
 Related Modules: tools.run_phone_mvp; tools.deploy_phone_live; deploy/phone-relay.locations.conf.
 Declaration Index: PhoneDeploymentError; read_remote; write_remote;
-remote_command; connect_server; read_ors; prepare_vhost; verify_relay; install_relay.
+remote_command; read_ors; prepare_vhost; verify_relay; install_relay.
 Variable Index: SERVER/PUBLIC_ORIGIN/WEB_PORT/INFERENCE_REMOTE_PORT/MOUNT are explicit deployment
 targets; WEB_PORT is the app-server service and INFERENCE_REMOTE_PORT is the laptop reverse tunnel;
 VHOST/INCLUDE/LEGACY_AUTH/ANCHOR/INCLUDE_LINE select only relay-owned Nginx files; ROOT is backend.
@@ -12,16 +12,12 @@ SSH/ORS values must never appear in logs or exception messages.
 
 import hashlib
 import io
-import secrets
 import shlex
 import time
 from pathlib import Path
 from uuid import uuid4
 
-import paramiko
 from dotenv.parser import parse_stream
-
-from tools.deploy_phone_live import FINGERPRINT, PinnedHost
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = "47.239.50.129"
@@ -86,39 +82,6 @@ def remote_command(client, command, *, body=None, check=True):
     if len(raw) > 32768 or len(diagnostic) > 32768 or check and status:
         raise PhoneDeploymentError("Remote relay operation failed; inspect its named status.")
     return status, raw
-
-
-def connect_server(password):
-    """Functionality: Authenticate once to the inspected SSH server and fixed host identity.
-    Inputs: Password supplied interactively in memory. Outputs: Connected SSHClient.
-    Logic: No system host/key discovery; also verify the actual transport key before use.
-    Constraints: No password persistence, retries, alternate server or identity acceptance prompt.
-    """
-    import base64
-
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(PinnedHost())
-    try:
-        client.connect(
-            SERVER,
-            port=22,
-            username="root",
-            password=password,
-            allow_agent=False,
-            look_for_keys=False,
-            timeout=12,
-            auth_timeout=12,
-            banner_timeout=12,
-        )
-        key = client.get_transport().get_remote_server_key()
-        digest = base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode()
-        if not secrets.compare_digest(digest, FINGERPRINT):
-            raise PhoneDeploymentError("SSH identity does not match the inspected server.")
-        client.get_transport().set_keepalive(20)
-        return client
-    except Exception:
-        client.close()
-        raise
 
 
 def read_ors(client):

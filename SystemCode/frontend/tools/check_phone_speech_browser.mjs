@@ -10,7 +10,7 @@ import {writeFile} from 'node:fs/promises';
 const [target,output]=process.argv.slice(2);
 if(!target || !output || !process.env.PRS_PLAYWRIGHT_PATH) throw new Error("Use HTTPS_MAPS_URL NEW_REPORT; set PRS_PLAYWRIGHT_PATH");
 const address=new URL(target);
-if(address.protocol!=="https:" || address.pathname!=="/mvp/maps/" || address.search || address.hash || address.username || address.password)
+if(address.protocol!=="https:" || !["/mvp/maps/","/mvp/maps/test"].includes(address.pathname) || address.search || address.hash || address.username || address.password)
   throw new Error("Use the trusted public /mvp/maps/ entry without credentials or parameters");
 const {chromium}=createRequire(import.meta.url)(process.env.PRS_PLAYWRIGHT_PATH);
 const browser=await chromium.launch({channel:'chrome',headless:true,...(process.env.PRS_BROWSER_PROXY?{proxy:{server:process.env.PRS_BROWSER_PROXY}}:{})});
