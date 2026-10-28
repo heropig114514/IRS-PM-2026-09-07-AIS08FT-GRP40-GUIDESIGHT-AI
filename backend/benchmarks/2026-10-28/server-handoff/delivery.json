@@ -1,0 +1,30 @@
+{
+  "at_utc": "2026-10-28T09:11:28.850468+00:00",
+  "destination": "/opt/prs-practice/mvp/optimization-handoffs/71a3f08-20261028",
+  "revision": "71a3f0814bfd22f4e065d2e5d9f39a67a6bdbd35",
+  "verified_files": 1337,
+  "verified_source_bytes": 1055204370,
+  "bundle_sha256": "c5df9ef1af58e4d05736ea4f200b7f19f3aa500788adb5265d394de553d07804",
+  "weights": [
+    {
+      "name": "yolo26n.pt",
+      "bytes": 5544453,
+      "sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+    },
+    {
+      "name": "yolo26n-depth.pt",
+      "bytes": 12998295,
+      "sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9"
+    }
+  ],
+  "entry_document": "/opt/prs-practice/mvp/optimization-handoffs/71a3f08-20261028/README.md",
+  "source_document": "/opt/prs-practice/mvp/optimization-handoffs/71a3f08-20261028/source/backend/OPTIMIZATION-HANDOFF.md",
+  "gpu_inference_started": false,
+  "production_release_replaced": false,
+  "selected_route": "ws://127.0.0.1:18767/ws/infer/",
+  "web_page_status": 200,
+  "original_worker": {
+    "ready": false,
+    "connection_error": "URLError"
+  }
+}
