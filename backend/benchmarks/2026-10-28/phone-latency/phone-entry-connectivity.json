@@ -1,0 +1,51 @@
+{
+  "purpose": "Phone cannot open the page; no inference submitted",
+  "direct": {
+    "443": {
+      "connected": false,
+      "error": "TimeoutError",
+      "elapsed_ms": 5012.173799997981
+    },
+    "80": {
+      "connected": false,
+      "error": "TimeoutError",
+      "elapsed_ms": 5001.254099999642
+    }
+  },
+  "proxy": {
+    "certificate": {
+      "issuer": [
+        [
+          [
+            "countryName",
+            "US"
+          ]
+        ],
+        [
+          [
+            "organizationName",
+            "Let's Encrypt"
+          ]
+        ],
+        [
+          [
+            "commonName",
+            "YE1"
+          ]
+        ]
+      ],
+      "subjectAltName": [
+        [
+          "IP Address",
+          "47.239.50.129"
+        ]
+      ],
+      "notBefore": "Oct 27 15:08:06 2026 GMT",
+      "notAfter": "Nov  3 07:08:05 2026 GMT"
+    },
+    "tls_verified": true,
+    "status": "HTTP/1.1 200 OK",
+    "profile_present": false,
+    "bytes": 13817
+  }
+}

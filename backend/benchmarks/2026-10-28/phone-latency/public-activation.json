@@ -1,0 +1,80 @@
+{
+  "state": "prepared",
+  "files": [
+    {
+      "name": "camera.js",
+      "path": "frontend/camera.js",
+      "before_sha256": "da041d9c98b11a56133c7609619216b2290c3e719aa41707a73cca7841566280",
+      "after_sha256": "70489dac02b1248df9ab3debec6eee7bcb76bcc8ecf1b75d9d9f1c1b08a3f513"
+    },
+    {
+      "name": "assist.py",
+      "path": "backend/integration/assist.py",
+      "before_sha256": "f1b64b27118a6e3b5a2849cc08595166c182aeecb6bb12d7dbde438e989599b7",
+      "after_sha256": "e1c7cbd73fe7b06dc781fc16ccb3bc9d6d184ca494bf97a8cdd505c4c580033c"
+    }
+  ],
+  "public_url": "https://47.239.50.129/mvp/maps/",
+  "camera_profile": "bounded-2",
+  "gpu_restarted": false,
+  "colleague_tunnel_preserved": true,
+  "certificate_installation_required": false,
+  "activation": {
+    "active_release": "/opt/prs-practice/mvp/releases/4557f7e03175be473b38395b23350e654244f960",
+    "route": "ws://127.0.0.1:18769/ws/infer/",
+    "private_config_backup": "/etc/prs-mvp-web/app.env.pre-phone-latency-20261028",
+    "source_backups": "/opt/prs-practice/mvp/inference-artifacts/phone-latency-20261028",
+    "before_config_sha256": "84af0ec6cb399ca964b857f602204d1f28ac2586bcdb167453eae59a5bc48b01",
+    "after_config_sha256": "6b755a443d6d93d45537a4438a5230b3f62a910e1bbe7aa782f5865fd5d1b053",
+    "page_profile_verified": true
+  },
+  "portrait": {
+    "client_location": "authorized Web server public TLS entry",
+    "camera_verified": false,
+    "fixture_sha256": "21042755106123a0f09e98ed169cb765942c20c80a8196d64ff71f0fb0d137c1",
+    "frames": [
+      {
+        "index": 0,
+        "fixture_roundtrip_ms": 10283.200672362,
+        "server_ms": 337.3232000012649,
+        "depth_ms": 16.77709999785293,
+        "depth_predict_ms": 14.440300001297146,
+        "depth_backend": "tensorrt",
+        "depth_fusion": "host",
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+        "rendered_bytes": 87588
+      }
+    ],
+    "max_pending": 2,
+    "first_frame_exclusive": true,
+    "steady_frame_deadline_s": 10,
+    "contract": {
+      "kind": "session",
+      "model": "yolo26n",
+      "classes": 80,
+      "precision": "FP32",
+      "depth_backend": "tensorrt",
+      "depth_fusion": "host",
+      "session_seconds": null
+    },
+    "unexpected_control": {
+      "kind": "ended",
+      "frames": 1,
+      "received": 3,
+      "forwarded": 1,
+      "worker_received": 1,
+      "worker_verified": 1,
+      "delivered": 1
+    },
+    "passed": false,
+    "failure_type": "RuntimeError",
+    "failure_reason": "Expected binary public inference result",
+    "source": "model_tests/samples/bus.jpg",
+    "size": [
+      480,
+      640
+    ]
+  },
+  "failure_type": "RuntimeError"
+}

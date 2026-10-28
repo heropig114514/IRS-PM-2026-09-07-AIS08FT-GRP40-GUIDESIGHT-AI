@@ -8,6 +8,37 @@
 
 ## 执行顺序
 
+### Phone latency: bounded capture and trusted public access
+
+1. Preserve the running public relay and record its twelve-frame control. Inspect the phone
+   camera admission, session deadlines, active GPU identity and the selected local network.
+2. Add explicit camera profiles for controlled two/three-frame and five/ten/thirty-FPS comparisons.
+   Preserve the original profile, max640/JPEG80, FP32 models, capture timestamps, tracking/risk
+   rules and every admitted frame. Profile selection is frozen for each session.
+3. Add an isolated HTTPS LAN entry with exact Host/Origin and subnet admission, reusing the
+   existing local Web-to-GPU protocol. Keep the GPU listener loopback-only and reuse its existing
+   owner. Generate a short-lived dedicated demo certificate; never transfer the public server's
+   private keys or install a device trust anchor without the user's device interaction.
+4. Compare original and candidate camera profiles through real browser capture, encoding,
+   inference and returned-image decode. Record every frame, P50/P95 frame age, pacing/credit
+   waits, timeouts, cancellation and worker idle release. Keep LAN and WAN results separate.
+   Verify first-frame admission and the unchanged five-second idle/ten-second frame deadlines.
+5. Compare the original SSH relay with a separately owned candidate. Apply measured changes to
+   the existing trusted public HTTPS entry so teammates need no certificate profile. Preserve
+   source/configuration backups and the original tunnel. Keep LAN as a diagnostic reference;
+   physical phone camera, radio, display and audio remain unverified until observed on-device.
+6. Run repository checks and relevant frontend/backend regression tests, review declarations
+   and comments, retain failures in structured reports, and commit implementation, tests and
+   operating documentation together. Do not equate fixture completion with latency acceptance.
+
+The operator's updated collaboration requirement is a trusted public HTTPS entry that teammates
+can use without installing a profile. Keep LAN as a diagnostic reference; do not require phone
+certificate enrollment. Before public activation, compare small admission windows at the original
+30-FPS ceiling as well as five/ten FPS, so queue improvement is distinguished from reduced capture
+rate. Apply only verified changes to the existing public entry, preserving the running worker,
+colleague tunnel, private rollback copies and all existing service deadlines. Measure the current
+relay implementation before attributing every remaining delay to the network route.
+
 ### Phone camera inference startup
 
 1. Inspect the active local service and phone launcher's session/environment contract. Add an

@@ -1,10 +1,10 @@
 /**
  * Responsibilities: Manage camera permission, explicit Echo/HF/resident/local-CUDA transport, phase timing, and observable lifecycle.
- * Implementation: 640-pixel maximum edge and JPEG 0.8; after the first HF/local frame completes, capture at up to 30 FPS with a 12-frame limit and ordered display; errors stop processing and retain their browser error names.
+ * Implementation: 640-pixel maximum edge and JPEG 0.8; first frame exclusive, then explicit bounded capture profiles and ordered display; the original profile remains 30 FPS/12 jobs; errors stop processing and retain their browser error names.
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
  * frame-pipeline.js, scene-client.js, integration/local-mvp.js；core.echo/hf_video_relay/integration.asgi；
  * tools/benchmark_phone_browser.mjs validates the real page; fixture input is not physical phone-camera evidence.
- * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
+ * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; captureProfile; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.apiUrl; CameraApp.setStatus; CameraApp.handleDisconnect;
  * CameraApp.handleProcessingChange; CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
@@ -25,6 +25,8 @@
  * localDeviceId — device explicitly selected in the local UI; localFacingMode — null by default, with the integrated entry optionally requesting the rear camera using environment;
  * if both are set, explicit deviceId takes precedence; invalid non-null facing modes are rejected. localOnly prevents the local MVP from starting HF accidentally; sessionId identifies result lifecycle;
  * localSessionSeconds defaults to 55; the separate integration entry may set null for a continuous local session; HF does not accept this option.
+ * CAPTURE_PROFILES — original and explicit two/three-job five/ten/thirty-FPS policies; cameraProfile is page-selected;
+ * sessionCaptureProfile is an immutable snapshot taken before camera permission, used only by local mode.
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
 import { LiveDetectionClient } from "./live-detection-client.js";
@@ -36,6 +38,24 @@ const METRICS_LOG_INTERVAL_MS = 5000;
 export const SCENE_MAX_AGE_MS = 1000;
 const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/", resident: "./ws/detect/resident/",
   local: "./ws/detect/local/"};
+const CAPTURE_PROFILES = Object.freeze({
+  standard: Object.freeze({rate: 30, maxPending: 12}),
+  "bounded-2": Object.freeze({rate: 30, maxPending: 2}),
+  "bounded-3": Object.freeze({rate: 30, maxPending: 3}),
+  "responsive-2": Object.freeze({rate: 10, maxPending: 2}),
+  "responsive-3": Object.freeze({rate: 10, maxPending: 3}),
+  "conservative-2": Object.freeze({rate: 5, maxPending: 2}),
+  "conservative-3": Object.freeze({rate: 5, maxPending: 3}),
+});
+
+/** Functionality: Resolve an explicit capture policy before acquiring a camera.
+ * Inputs: exact profile name. Outputs: frozen cadence/admission settings or an error.
+ * Logic: allowlisted profiles retain the original transport ceiling and image quality.
+ * Constraints: no automatic adaptation, profile substitution, frame dropping or model changes. */
+export function captureProfile(name) {
+  if (!Object.hasOwn(CAPTURE_PROFILES, name)) throw new Error("摄像头采样配置无效。");
+  return CAPTURE_PROFILES[name];
+}
 
 /** Functionality: Resolve one of the four explicitly supported processing modes.
  * Inputs: processing enum. Outputs: fixed relative WS path; unknown values throw.
@@ -96,6 +116,8 @@ export class CameraApp {
     this.localFacingMode = null;
     this.localOnly = document.documentElement?.dataset?.localMvp === "true";
     this.localSessionSeconds = 55;
+    this.cameraProfile = document.documentElement?.dataset?.cameraProfile || "standard";
+    this.sessionCaptureProfile = captureProfile("standard");
     this.sessionId = null;
     this.apiBase = document.documentElement?.dataset?.apiBase || "./";
     this.generation = 0;
@@ -176,11 +198,12 @@ export class CameraApp {
   }
   /** Functionality: Request camera access and use the explicitly selected mode. Inputs: localDeviceId, localFacingMode, facingMode, processing, and browser media APIs.
    * Outputs: Local video, returned image, round-trip timings, and post-first-frame completion rate.
-   * Logic: Clear prior failure state; HF/local/resident modes share the 30 FPS/12-job pipeline. For local mode, explicit deviceId wins; otherwise only an entry that explicitly sets environment may request the rear camera.
+   * Logic: Clear prior failure state; snapshot the explicit local capture policy before permission;
+   * HF/resident retain 30 FPS/12 jobs. For local mode, explicit deviceId wins; otherwise only an entry that explicitly sets environment may request the rear camera.
    * Check facingMode constraint support before requesting rear-camera permission; pass localSessionSeconds locally while HF retains exact-camera behavior.
    * Constraints: Require exact camera selection; fail if unsupported or no rear camera exists, with no front/default-camera fallback.
    * Detection failure stops processing without mode switching or automatic permission retry; never discard sent frames to inflate rate.
-   * Without a fixed delay there is no 10 FPS guarantee; timing begins before drawImage and is not sensor exposure or final screen-render time. */
+   * Configured cadence is an input ceiling, not guaranteed delivered FPS; timing begins before drawImage and is not sensor exposure or final screen-render time. */
   async start() {
     if (this.mode !== "idle") return;
     this.lastErrorType = null;
@@ -194,6 +217,7 @@ export class CameraApp {
     try {
       const processing = this.processing.value;
       const path = processingPath(processing);
+      this.sessionCaptureProfile = captureProfile(processing === "local" ? this.cameraProfile : "standard");
       if (this.localOnly && processing === "hf") throw new Error("本地 MVP 不允许调用 Hugging Face。");
       if (processing === "local" && this.localFacingMode !== null && this.localFacingMode !== "environment")
         throw new Error("本地摄像头方向配置无效，仅支持明确指定后置摄像头。");
@@ -299,7 +323,8 @@ export class CameraApp {
    * Inputs: client, processing snapshot, generation token. Outputs: pipeline completion/exception.
    * Logic: sender admits before capture; result subscribers/HUD retain original capture time and generation guards;
    * controller stop cancels the instance, and LiveDetectionClient owns provider end/error semantics.
-   * Constraints: twelve total jobs, first frame alone,30FPS input ceiling; no retry or automatic next session. */
+   * Constraints: frozen explicit cadence and at most twelve total jobs; first frame alone;
+   * no retry, mid-session adaptation or automatic next session. */
   async runPipeline(client, processing, token) {
     const app = this;
     /** Functionality: Decode the next ordered annotation. Inputs: bytes, metadata.
@@ -328,7 +353,8 @@ export class CameraApp {
      * Logic: stopped/older operations cannot update this camera session. Constraints: no auto-resume. */
     function active() { return token === app.generation; }
     this.pipeline = new FramePipeline({client, capture: this.capture.bind(this), display,
-      onFrame: frame, onSent: sent, isActive: active, onFailure: this.handleDisconnect});
+      onFrame: frame, onSent: sent, isActive: active, onFailure: this.handleDisconnect,
+      ...this.sessionCaptureProfile});
     this.cameraPhase = "pipeline";
     await this.pipeline.run();
   }

@@ -1,0 +1,218 @@
+{
+  "date": "2026-10-28",
+  "selected_profile": "bounded-2",
+  "active_public_url": "https://47.239.50.129/mvp/maps/",
+  "certificate_profile_required": false,
+  "activation": {
+    "two_file_overlay_applied": true,
+    "route": "ws://127.0.0.1:18769/ws/infer/",
+    "source_hash_evidence": "public-activation.json",
+    "original_public_attempt_passed": false,
+    "explicit_followup_server_controls_passed": true,
+    "desktop_proxy_full_browser_passed": false,
+    "physical_phone_verified": false,
+    "gpu_restarted": false,
+    "colleague_tunnel_18767_untouched": true,
+    "current_release": "/opt/prs-practice/mvp/releases/0cafb69a93e3768d9626240ee816dbf53f30d253",
+    "current_source_evidence": "public-reapplication.json",
+    "page_profile_verified": true
+  },
+  "fixed_conditions": {
+    "capture_ceiling_fps": 30,
+    "jpeg_max_edge": 640,
+    "jpeg_quality": 0.8,
+    "precision": "FP32",
+    "detection": "yolo26n / 80 classes",
+    "depth": "TensorRT / host fusion",
+    "first_frame_exclusive": true,
+    "steady_deadline_seconds": 10,
+    "worker_input_idle_seconds": 5,
+    "accepted_frames_dropped": false,
+    "automatic_retry_or_fallback": false
+  },
+  "lan_control": {
+    "count_each": 90,
+    "first_excluded_from_steady": true,
+    "standard": {
+      "first_frame_ms": 103.10000000149012,
+      "p50_capture_to_decoded_ms": 212.80000000074506,
+      "p95_capture_to_decoded_ms": 291.36000000089405,
+      "max_capture_to_decoded_ms": 299.9000000022352,
+      "p50_server_ms": 32.24059999774909,
+      "delivered_fps": 27.519248013344978,
+      "p95_credit_wait_ms": 0,
+      "p95_decode_ms": 5.1799999982118585
+    },
+    "bounded_2": {
+      "first_frame_ms": 85.89999999850988,
+      "p50_capture_to_decoded_ms": 71.69999999925494,
+      "p95_capture_to_decoded_ms": 77.75999999791384,
+      "max_capture_to_decoded_ms": 79.69999999925494,
+      "p50_server_ms": 32.84239999993588,
+      "delivered_fps": 27.507340441971873,
+      "p95_credit_wait_ms": 6.220000001788133,
+      "p95_decode_ms": 3.900000000745058
+    },
+    "p95_reduction_percent": 73.31136738135804,
+    "scope": "Desktop Chrome actual capture/encode/WS/GPU/hash/image decode over direct LAN; no phone radio/CPU/display or public relay"
+  },
+  "relay_controls": [
+    {
+      "name": "original",
+      "passed": true,
+      "frames": 24,
+      "first_ms": 1828.968414105475,
+      "steady_p50_ms": 1708.3322196267545,
+      "steady_p95_ms": 2298.1328939553346,
+      "steady_max_ms": 3300.095688086003,
+      "steady_server_p50_ms": 86.81339999748161
+    },
+    {
+      "name": "optimized",
+      "passed": true,
+      "frames": 24,
+      "first_ms": 1516.912354156375,
+      "steady_p50_ms": 1091.4558530785143,
+      "steady_p95_ms": 1680.4683869704604,
+      "steady_max_ms": 1828.1560176983476,
+      "steady_server_p50_ms": 76.70750000033877
+    },
+    {
+      "name": "original-repeat",
+      "passed": true,
+      "frames": 24,
+      "first_ms": 1545.6297737546265,
+      "steady_p50_ms": 1606.028416659683,
+      "steady_p95_ms": 3922.6995762437555,
+      "steady_max_ms": 4167.580291628838,
+      "steady_server_p50_ms": 74.46089999939431
+    }
+  ],
+  "public_path_diagnosis": [
+    {
+      "name": "direct-candidate",
+      "passed": true,
+      "frames": 24,
+      "first_ms": 3023.366673849523,
+      "steady_p50_ms": 1375.3232038579881,
+      "steady_p95_ms": 3364.913055021315,
+      "steady_max_ms": 4847.146744839847,
+      "steady_server_p50_ms": 83.09200000076089
+    },
+    {
+      "name": "public-portrait",
+      "passed": true,
+      "frames": 24,
+      "first_ms": 1064.252067822963,
+      "steady_p50_ms": 1041.5996299125254,
+      "steady_p95_ms": 1405.9669275302438,
+      "steady_max_ms": 1684.092186857015,
+      "steady_server_p50_ms": 77.335400001175
+    },
+    {
+      "name": "public-landscape",
+      "passed": true,
+      "frames": 24,
+      "first_ms": 976.3810439035296,
+      "steady_p50_ms": 1010.7937110587955,
+      "steady_p95_ms": 1468.1247769389302,
+      "steady_max_ms": 1528.732874430716,
+      "steady_server_p50_ms": 58.252700000593904
+    }
+  ],
+  "motion_browser": [
+    {
+      "fixture": "motion-07-bounded-2.json",
+      "complete": true,
+      "frames": 60,
+      "metrics": {
+        "first_frame_ms": 114.89999999850988,
+        "p50_capture_to_decoded_ms": 72.89999999850988,
+        "p95_capture_to_decoded_ms": 88.13999999985099,
+        "max_capture_to_decoded_ms": 91.89999999850988,
+        "p50_server_ms": 34.18319999764208,
+        "delivered_fps": 26.062373001139935,
+        "p95_credit_wait_ms": 11.480000001937146,
+        "p95_decode_ms": 4.199999999627471
+      }
+    },
+    {
+      "fixture": "motion-10-bounded-2.json",
+      "complete": true,
+      "frames": 60,
+      "metrics": {
+        "first_frame_ms": 104.30000000074506,
+        "p50_capture_to_decoded_ms": 70.89999999850988,
+        "p95_capture_to_decoded_ms": 86.10999999791383,
+        "max_capture_to_decoded_ms": 90.69999999925494,
+        "p50_server_ms": 34.532199999375734,
+        "delivered_fps": 27.079126124462928,
+        "p95_credit_wait_ms": 10.090000000223512,
+        "p95_decode_ms": 4.5
+      }
+    }
+  ],
+  "failure_evidence": [
+    "public-activation.json",
+    "public-browser.json",
+    "public-browser-chrome-trust.json",
+    "public-browser-after-path-diagnosis.json"
+  ],
+  "failure_analysis": {
+    "public_activation": "First result returned after 10283 ms with 337 ms GPU pipeline; worker completed one frame then ended while awaiting next input. Later explicit server-origin controls completed24 frames each. Transient network effects remain unresolved.",
+    "browser": "Normal Chrome TLS passed; full browser via local client proxy still ended early. Last trial capture-to-decode9908 ms, server90 ms. This does not prove direct iPhone performance.",
+    "node_health": "Playwright APIRequestContext rejected the IP certificate while normal Chrome and server TLS validated it. The diagnostic now uses browser fetch with normal validation; no insecure TLS flag was introduced.",
+    "cpu_limit": "Existing Web quota is30 percent of one CPU; throttling observed but not isolated as the latency cause, so unchanged."
+  },
+  "owners": {
+    "gpu_supervisor": "backend/.venv/tmp/optimized-phone-c99936e-v6/state.json",
+    "relay_supervisor": "backend/.venv/tmp/phone-fast-relay-20261028/state.json",
+    "relay_remote_port": 18769,
+    "previous_remote_port": 18768,
+    "explicit_restore_helper": "backend/.venv/tmp/restore-phone-latency.py --restore-tested-overlay",
+    "restore_order": "First restore this two-file/profile/route overlay and verify18768; then, only if removing the GPU replacement, request the older GPU supervisor restore-and-stop. Never stop the GPU owner while18769 still targets it.",
+    "optional_lan_web": "Stopped through its owned stop.request after diagnostic tests; no certificate installed"
+  },
+  "checks": {
+    "django_check": "passed",
+    "makemigrations_check_dry_run": "no changes",
+    "django_test": {
+      "total": 545,
+      "skipped": 8,
+      "result": "passed"
+    },
+    "frontend_test": {
+      "total": 416,
+      "result": "passed"
+    },
+    "amended_profile_tests": {
+      "total": 7,
+      "result": "passed"
+    },
+    "ruff_check": "passed",
+    "manual_documentation_indexes": "reviewed"
+  },
+  "acceptance": "Queue/relay changes validated and applied with colleague release compatibility. Public network access is blocked for the actual phone on both Wi-Fi and cellular. Cloud security-group/upstream reachability remains unresolved; no stable phone demo claim.",
+  "phone_feedback": {
+    "wifi": "Safari server stopped responding",
+    "cellular": "Safari server stopped responding",
+    "inference_started": false,
+    "inference_performance_verified": false
+  },
+  "network_entry": {
+    "evidence": "phone-entry-connectivity.json",
+    "same_wifi_laptop_direct_tcp_80_443": "both timed out after5s",
+    "explicit_proxy_https": "HTTP200 and valid IP certificate",
+    "host_inspection": "server-entry-diagnosis.json",
+    "nginx_and_web": "active",
+    "host_firewall": "ufw inactive, iptables INPUT ACCEPT",
+    "cloud_security_group_and_upstream_path": "not accessible or isolated through SSH; cloud-console information requested"
+  },
+  "deployment_race": {
+    "observed_new_release": "/opt/prs-practice/mvp/releases/0cafb69a93e3768d9626240ee816dbf53f30d253",
+    "cause": "External release switch replaced the initial overlay while retaining environment; detected by source hashes and missing page profile",
+    "original_overlay_evidence_retained": true,
+    "compatible_reapplication": "public-reapplication.json",
+    "new_colleague_prepared_audio_preserved": true
+  }
+}

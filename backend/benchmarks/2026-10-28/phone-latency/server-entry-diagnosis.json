@@ -1,0 +1,48 @@
+{
+  "services": [
+    "active",
+    "active"
+  ],
+  "listeners": [
+    "LISTEN 0      511          0.0.0.0:443   0.0.0.0:*",
+    "LISTEN 0      511          0.0.0.0:80    0.0.0.0:*",
+    "LISTEN 0      128        127.0.0.1:18768 0.0.0.0:*",
+    "LISTEN 0      128        127.0.0.1:18769 0.0.0.0:*",
+    "LISTEN 0      2048       127.0.0.1:18766 0.0.0.0:*"
+  ],
+  "ufw": {
+    "exit": 0,
+    "rules": [
+      "Status: inactive"
+    ]
+  },
+  "iptables": {
+    "exit": 0,
+    "rules": [
+      "-P INPUT ACCEPT"
+    ]
+  },
+  "release": "/opt/prs-practice/mvp/releases/0cafb69a93e3768d9626240ee816dbf53f30d253",
+  "frontend/camera.js": "da041d9c98b11a56133c7609619216b2290c3e719aa41707a73cca7841566280",
+  "backend/integration/assist.py": "ef480805936e7f04fa57a22aeb5c0d734c52d991595cd0efa266d06e463fa391",
+  "routing": {
+    "LOCAL_INFERENCE_URL": "ws://127.0.0.1:18769/ws/infer/",
+    "PRS_CAMERA_PROFILE": "bounded-2"
+  },
+  "internal": {
+    "status": 200,
+    "bytes": 12394,
+    "profile": [],
+    "title": [
+      "PRS \u00b7 \u51fa\u884c\u52a9\u624b"
+    ]
+  },
+  "public": {
+    "status": 200,
+    "bytes": 12394,
+    "profile": [],
+    "title": [
+      "PRS \u00b7 \u51fa\u884c\u52a9\u624b"
+    ]
+  }
+}

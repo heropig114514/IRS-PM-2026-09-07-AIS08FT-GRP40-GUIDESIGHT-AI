@@ -10,6 +10,8 @@ Transport.inject; Client; Client.__init__; Client.get_transport; Client.close;
 receive_all; RelayTests; RelayTests.test_configuration_and_single_start;
 RelayTests.test_refused_bind_fails_once_without_private_text;
 RelayTests.test_binary_roundtrip_and_half_close;
+RelayTests.test_binary_roundtrip_and_half_close.partial_send;
+RelayTests.test_binary_roundtrip_and_half_close.observe_wait;
 RelayTests.test_binary_roundtrip_and_half_close.serve; RelayTests.test_local_half_close_keeps_input;
 RelayTests.test_owned_bounded_cleanup;
 RelayTests.test_foreign_source_and_destination_rejected;
@@ -22,6 +24,7 @@ import select
 import socket
 import threading
 from unittest import TestCase
+from unittest.mock import patch
 
 from integration.relay import LOOPBACK, RelayError, RelayForward
 
@@ -224,6 +227,30 @@ class RelayTests(TestCase):
         Constraints: no HTTP parsing, manufactured receipt or unrestricted background server.
         """
         request, response = bytes(range(256)) * 800, bytes(range(255, -1, -1)) * 700
+        native_select, writable_waits = select.select, []
+        allow_response = threading.Event()
+
+        def partial_send(channel, data):
+            """Functionality: Exercise real partial channel writes smaller than the relay buffer.
+            Inputs: channel and queued bytes. Outputs: actual socket send count.
+            Logic: cap each native send at4096 bytes and remember remaining ready work.
+            Constraints: does not synthesize progress or discard bytes.
+            """
+            count = channel.stream.send(data[:4096])
+            channel.pending_after_send = len(data) - count
+            return count
+
+        def observe_wait(readers, writers, errors, timeout):
+            """Functionality: Detect artificial sleeps while a partial SSH send remains writable.
+            Inputs: real select arguments. Outputs: unchanged native readiness.
+            Logic: record requested timeout only when remaining bytes can actually be written.
+            Constraints: does not substitute timing, wake blocked sockets or bypass backpressure.
+            """
+            if (channel.stream not in writers and getattr(channel, "pending_after_send", 0)
+                    and native_select([], [channel.stream], [], 0)[1]):
+                writable_waits.append(timeout)
+            return native_select(readers, writers, errors, timeout)
+
         with socket.socket() as listener:
             listener.bind((LOOPBACK, 0))
             listener.listen()
@@ -243,6 +270,8 @@ class RelayTests(TestCase):
                     with listener.accept()[0] as peer:
                         peer.settimeout(3)
                         observed.append(receive_all(peer))
+                        if not allow_response.wait(3):
+                            raise TimeoutError("Response observer was not installed")
                         peer.sendall(response)
                         peer.shutdown(socket.SHUT_WR)
                 except Exception as error:
@@ -253,7 +282,11 @@ class RelayTests(TestCase):
             try:
                 remote.sendall(request)
                 remote.shutdown(socket.SHUT_WR)
-                self.assertEqual(receive_all(remote), response)
+                with patch.object(SocketChannel, "send", partial_send), patch(
+                    "integration.relay.select.select", side_effect=observe_wait
+                ):
+                    allow_response.set()
+                    self.assertEqual(receive_all(remote), response)
             finally:
                 remote.close()
                 relay.stop()
@@ -264,6 +297,8 @@ class RelayTests(TestCase):
             self.assertTrue(channel.closed)
             self.assertEqual(relay.active_connections, 0)
             self.assertFalse(client.closed)
+            self.assertTrue(writable_waits)
+            self.assertEqual(set(writable_waits), {0})
 
     def test_local_half_close_keeps_input(self):
         """Functionality: Keep incoming bytes valid after the local service finishes its output.

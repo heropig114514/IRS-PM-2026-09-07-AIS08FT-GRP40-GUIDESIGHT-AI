@@ -5,13 +5,16 @@ frontend/maps.html and frontend/integration/assist-*.
 Declaration Index: render_assist_page; assist_response; AssistApplication;
 AssistApplication.__init__; AssistApplication.__call__; AssistApplication.page;
 AssistApplication.asset; AssistApplication.status; AssistApplication.status.collect.
-Variable Index: ASSIST_ASSETS — canonical integration module/MIME allowlist;
+Variable Index: CAMERA_PROFILES — explicit capture policies shared with frontend camera.js;
+PRS_CAMERA_PROFILE — explicit page policy selection, defaulting to the original profile;
+ASSIST_ASSETS — canonical integration module/MIME allowlist;
 ENTRY_REQUIRED — explicit guidance for standalone 55-second GPU pages in assist mode;
 logger — template failure diagnostics without private file paths or contents.
 """
 
 import json
 import logging
+import os
 import secrets
 from urllib.parse import urlsplit
 
@@ -19,6 +22,10 @@ from .protocol import local_session_seconds, web_origins
 from .services import FRONTEND, IntegrationApplication
 
 logger = logging.getLogger(__name__)
+CAMERA_PROFILES = frozenset({
+    "standard", "bounded-2", "bounded-3", "responsive-2", "responsive-3",
+    "conservative-2", "conservative-3",
+})
 ASSIST_ASSETS = {
     "assist-mvp.js": "text/javascript",
     "assist-guidance.js": "text/javascript",
@@ -41,14 +48,19 @@ ENTRY_REQUIRED = {
 }
 
 
-def render_assist_page(frontend=FRONTEND, *, view="product"):
+def render_assist_page(frontend=FRONTEND, *, view="product", camera_profile=None):
     """Functionality: Render an owned product view or the existing full diagnostic composition.
-    Inputs: fixed frontend root and exact product/test view. Outputs: HTML and fresh style nonce.
+    Inputs: fixed frontend root, exact view and explicit profile or PRS_CAMERA_PROFILE environment.
+    Outputs: HTML and fresh style nonce.
     Logic: both views use the same controller IDs and sibling document URL base; only diagnostics
     compose the original map template. Constraints: no core source edits, user HTML or fallback.
     """
     if view not in {"product", "test"}:
         raise ValueError("Unknown assist view")
+    profile = (os.environ.get("PRS_CAMERA_PROFILE", "standard")
+               if camera_profile is None else camera_profile)
+    if profile not in CAMERA_PROFILES:
+        raise ValueError("Unknown camera capture profile")
     if view == "product":
         html = (frontend / "integration/assist-product.html").read_text(encoding="utf-8")
     else:
@@ -76,7 +88,8 @@ def render_assist_page(frontend=FRONTEND, *, view="product"):
     if html.count("<html ") != 1:
         raise ValueError("Assist template contract changed")
     nonce = secrets.token_urlsafe(24)
-    html = html.replace("<html ", '<html data-local-mvp="true" data-assist="true" '
+    html = html.replace("<html ", f'<html data-camera-profile="{profile}" '
+                        'data-local-mvp="true" data-assist="true" '
                         f'data-assist-view="{view}" data-api-base="../" ', 1)
     return html.replace("__CSP_NONCE__", nonce).encode(), nonce
 

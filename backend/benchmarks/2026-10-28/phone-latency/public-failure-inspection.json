@@ -1,0 +1,75 @@
+{
+  "service": [
+    "MainPID=575391",
+    "CPUUsageNSec=2095805000",
+    "CPUQuotaPerSecUSec=300ms",
+    "ActiveState=active"
+  ],
+  "cpu_stat": [
+    "usage_usec 2095805",
+    "user_usec 1777068",
+    "system_usec 318737",
+    "nr_periods 661",
+    "nr_throttled 57",
+    "throttled_usec 3819563"
+  ],
+  "gateway_logs": [
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open",
+    "INFO:     connection open"
+  ],
+  "nginx_transport": [
+    "proxy_buffering off;",
+    "proxy_read_timeout 3600s;",
+    "proxy_send_timeout 3600s;",
+    "# proxy_read_timeout \u2014 MCP 70 s/video 65 s/scene description 45 s/others 30 s; proxy_next_upstream \u2014 retries explicitly disabled.",
+    "proxy_buffering off;",
+    "proxy_read_timeout 70s;",
+    "proxy_send_timeout 30s;",
+    "proxy_buffering off;",
+    "proxy_read_timeout 65s;",
+    "proxy_send_timeout 30s;",
+    "proxy_buffering off;",
+    "proxy_read_timeout 45s;",
+    "proxy_send_timeout 30s;",
+    "proxy_buffering off;",
+    "proxy_read_timeout 30s;",
+    "proxy_send_timeout 30s;",
+    "proxy_buffering off;",
+    "proxy_read_timeout 75s;",
+    "proxy_send_timeout 30s;"
+  ],
+  "18768": {
+    "ready": true,
+    "busy": false,
+    "error_code": null,
+    "last_inference": {
+      "session_id": "74c2b62a1bf44ee993a0076bf4211871",
+      "index": 0,
+      "completed_at_unix_s": 1793174444.0474126,
+      "capture_time_s": 2774659.507216524,
+      "server_ms": 337.3232000012649
+    }
+  },
+  "18769": {
+    "ready": true,
+    "busy": false,
+    "error_code": null,
+    "last_inference": {
+      "session_id": "74c2b62a1bf44ee993a0076bf4211871",
+      "index": 0,
+      "completed_at_unix_s": 1793174444.0474126,
+      "capture_time_s": 2774659.507216524,
+      "server_ms": 337.3232000012649
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "release": "/opt/prs-practice/mvp/releases/0cafb69a93e3768d9626240ee816dbf53f30d253",
+  "page_profile_verified": true,
+  "colleague_audio_manifest_clips": 66,
+  "files": [
+    {
+      "name": "camera.js",
+      "path": "frontend/camera.js",
+      "before_sha256": "da041d9c98b11a56133c7609619216b2290c3e719aa41707a73cca7841566280",
+      "after_sha256": "70489dac02b1248df9ab3debec6eee7bcb76bcc8ecf1b75d9d9f1c1b08a3f513"
+    },
+    {
+      "name": "assist.py",
+      "path": "backend/integration/assist.py",
+      "before_sha256": "ef480805936e7f04fa57a22aeb5c0d734c52d991595cd0efa266d06e463fa391",
+      "after_sha256": "2b0baaf0c0b9690320a09da73e5c17328c3eb634070c58c94724164aaff6933c"
+    }
+  ],
+  "source_backups": "/opt/prs-practice/mvp/inference-artifacts/phone-latency-20261028-v2",
+  "environment_changed": false,
+  "gpu_restarted": false
+}

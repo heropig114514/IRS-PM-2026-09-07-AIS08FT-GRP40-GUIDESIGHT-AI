@@ -1,0 +1,104 @@
+{
+  "complete": false,
+  "scope": "desktop Chrome fixture camera through public HTTPS and explicit client proxy to real GPU; not physical iPhone",
+  "url": "https://47.239.50.129/mvp/maps/test",
+  "profile": "bounded-2",
+  "requested_frames": 24,
+  "first_frame_reported_separately": true,
+  "tls": {
+    "chain_and_ip_verified": true,
+    "browser_trust": "normal public CA validation",
+    "system_trust_changed": false
+  },
+  "source_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+  "browser": "155.0.8059.86",
+  "page_status": 200,
+  "frames": [
+    {
+      "ordinal": 1,
+      "capturedAt": 10030.800000000745,
+      "encodedAt": 10065.800000000745,
+      "inputBytes": 86999,
+      "scheduledCaptureAt": 10030.70000000298,
+      "pacingRequestedMs": 0,
+      "pacingWaitMs": 0.09999999776482582,
+      "pacingLateMs": 0.09999999776482582,
+      "creditWaitMs": 0,
+      "pendingBeforeAdmission": 0,
+      "receivedAt": 15954.800000000745,
+      "renderStartedAt": 15954.800000000745,
+      "decodedAt": 15957.60000000149,
+      "captureMs": 35,
+      "transportMs": 5889,
+      "renderQueueMs": 0,
+      "decodeMs": 2.800000000745058,
+      "captureToResultMs": 5924,
+      "captureToDecodedMs": 5926.800000000745,
+      "completedAt": 15957.60000000149,
+      "sent": 1,
+      "received": 1,
+      "mediaTime": null,
+      "server_ms": 79.15960000173072,
+      "inference_ms": 24.619799998617964,
+      "depth_ms": 44.35009999724571,
+      "tracking_ms": 2.9595000014523976,
+      "risk_ms": 0.11269999959040433,
+      "render_ms": 3.296700000646524,
+      "depth_backend": "tensorrt",
+      "depth_fusion": "host",
+      "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+      "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "depth_interval": 1,
+      "tracking_timestamp_s": 10.030800000000745,
+      "graph_setup_ms": 0,
+      "objects": [
+        {
+          "track_id": 1,
+          "distance_m": 3.577531337738037,
+          "relative_speed_mps": null,
+          "risk_level": "medium",
+          "ttc_sec": null
+        },
+        {
+          "track_id": 2,
+          "distance_m": 5.020396709442139,
+          "relative_speed_mps": null,
+          "risk_level": "medium",
+          "ttc_sec": null
+        },
+        {
+          "track_id": 3,
+          "distance_m": 3.810196876525879,
+          "relative_speed_mps": null,
+          "risk_level": "medium",
+          "ttc_sec": null
+        },
+        {
+          "track_id": 4,
+          "distance_m": 4.849352836608887,
+          "relative_speed_mps": null,
+          "risk_level": "medium",
+          "ttc_sec": null
+        },
+        {
+          "track_id": 5,
+          "distance_m": 3.7417664527893066,
+          "relative_speed_mps": null,
+          "risk_level": "medium",
+          "ttc_sec": null
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "page_profile": "bounded-2",
+  "profile_settings": {
+    "rate": 30,
+    "maxPending": 2
+  },
+  "sent": 3,
+  "received": 1,
+  "max_inflight": 2,
+  "stream_kind": "static image MediaStream",
+  "worker_released": true
+}

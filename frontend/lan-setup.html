@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- Responsibilities: Explain explicit iPhone trust enrollment for the isolated LAN demo.
+Implementation: Static instructions and same-host links with escaped certificate metadata.
+Related Modules: integration.lan_setup; tools.lan_certificate/run_lan_mvp.
+Declaration Index: None.
+Variable Index: origin, fingerprint and expires are validated server substitutions. -->
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>手机局域网测试</title></head><body>
+<h1>手机局域网测试</h1>
+<p>请使用 Safari，并让 iPhone 与电脑连接同一个 Wi-Fi。</p>
+<ol>
+<li><a href="/demo.mobileconfig">下载本次演示证书描述文件</a>，允许下载。</li>
+<li>打开“设置 → 通用 → VPN 与设备管理”，安装“PRS LAN Demo”。</li>
+<li>打开“设置 → 通用 → 关于本机 → 证书信任设置”，为“PRS LAN Demo - 7 days”启用完全信任。</li>
+<li>返回 Safari，<a href="{{origin}}/mvp/maps/test">打开摄像头测试页</a>，选择后置摄像头并开始检测。</li>
+</ol>
+<p><a href="{{origin}}/mvp/maps/">打开一键环境感知页面</a>（点击开始检测后申请后置摄像头权限）。</p>
+<p>这台电脑负责推理，请保持开机、联网、不休眠。此入口用于检测测试，地图和云端语音需要各自配置。</p>
+<p>证书到期时间：{{expires}}。本次演示结束后，可在“VPN 与设备管理”中移除此描述文件。</p>
+<p>证书 SHA-256：<code>{{fingerprint}}</code></p>
+<p><a href="/demo-ca.crt">下载公开 CA 证书</a></p>
+</body></html>

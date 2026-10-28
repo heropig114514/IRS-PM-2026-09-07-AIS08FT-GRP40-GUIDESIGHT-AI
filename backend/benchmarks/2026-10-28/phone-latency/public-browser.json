@@ -1,0 +1,16 @@
+{
+  "complete": false,
+  "scope": "desktop Chrome fixture camera through public HTTPS and explicit client proxy to real GPU; not physical iPhone",
+  "url": "https://47.239.50.129/mvp/maps/test",
+  "profile": "bounded-2",
+  "requested_frames": 24,
+  "first_frame_reported_separately": true,
+  "tls": {
+    "chain_and_ip_verified": false,
+    "browser_trust": "normal public CA validation",
+    "system_trust_changed": false
+  },
+  "source_sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+  "browser": "155.0.8059.86",
+  "error": "apiRequestContext.get: Hostname/IP does not match certificate's altnames: Cert does not contain a DNS name\nCall log:\n\u001b[2m  - → GET https://47.239.50.129/mvp/integration/status/\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n"
+}
