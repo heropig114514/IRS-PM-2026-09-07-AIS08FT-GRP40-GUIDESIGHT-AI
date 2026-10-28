@@ -8,6 +8,25 @@
 
 ## 执行顺序
 
+### General transport latency: fresh capture and immediate TCP forwarding
+
+1. Inspect the browser admission queue, binary protocol, gateway and SSH relay. Preserve
+   model settings, JPEG size/quality, frame deadlines, accepted-frame ordering and the original
+   server inference route. Do not restart local GPU services or temporary laptop tunnels.
+2. Add cancellable WebSocket send-buffer admission before camera capture, retaining an explicit
+   ungated pipeline control. Measure this wait separately from capture, network and model time;
+   the browser buffer is not a measure of remote receipt or total network congestion.
+3. Disable Nagle buffering on owned relay TCP sockets and SSH connections. Preserve partial-write
+   handling, half-close behavior and failure visibility; do not add retries or provider fallbacks.
+4. Verify queue drain, cancellation, timestamps, unchanged ordering and native socket settings.
+   Run required backend checks and frontend regression tests without GPU inference, then record
+   reproducible conditions and remaining WAN/physical-phone limitations in a structured report.
+5. Publish implementation and operating guidance together. Stage a versioned server handoff,
+   then apply only compatible, verified Web changes with source guards and rollback copies.
+   Preserve colleague features and the original GPU route; restore existing profile wiring if
+   a newer release omitted it. Delivery alone does not establish a latency improvement or
+   resolve public-network reachability.
+
 ### Server handoff and removal of the temporary laptop route
 
 1. Inspect the public server's current inference route, original private route backup, available

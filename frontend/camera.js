@@ -10,6 +10,7 @@
  * CameraApp.handleProcessingChange; CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
  * CameraApp.runPipeline; CameraApp.runPipeline.display;
  * CameraApp.runPipeline.frame; CameraApp.runPipeline.sent; CameraApp.runPipeline.active;
+ * CameraApp.runPipeline.bufferedBytes;
  * CameraApp.publishFrame; CameraApp.handleSessionEnd;
  * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
@@ -27,6 +28,8 @@
  * localSessionSeconds defaults to 55; the separate integration entry may set null for a continuous local session; HF does not accept this option.
  * CAPTURE_PROFILES — original and explicit two/three-job five/ten/thirty-FPS policies; cameraProfile is page-selected;
  * sessionCaptureProfile is an immutable snapshot taken before camera permission, used only by local mode.
+ * frameTimings.transportAdmissionFrames/transportWaitTotalMs/transportWaitMaxMs/transportWaitFrames/
+ * transportQueuedMaxBytes aggregate observed browser queue waits separately from returned-frame latency.
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
 import { LiveDetectionClient } from "./live-detection-client.js";
@@ -352,9 +355,13 @@ export class CameraApp {
     /** Functionality: Check ownership. Inputs: generation token. Outputs: boolean.
      * Logic: stopped/older operations cannot update this camera session. Constraints: no auto-resume. */
     function active() { return token === app.generation; }
+    /** Functionality: Read native outbound bytes before camera acquisition. Inputs: current client.
+     * Outputs: unsent byte count. Logic: the client validates connection state.
+     * Constraints: send-queue admission is separate from result/display credits and RTT. */
+    function bufferedBytes() { return client.bufferedBytes(); }
     this.pipeline = new FramePipeline({client, capture: this.capture.bind(this), display,
       onFrame: frame, onSent: sent, isActive: active, onFailure: this.handleDisconnect,
-      ...this.sessionCaptureProfile});
+      ...this.sessionCaptureProfile, bufferedBytes});
     this.cameraPhase = "pipeline";
     await this.pipeline.run();
   }
@@ -457,7 +464,8 @@ export class CameraApp {
   }
   /** Functionality: Aggregate one frame's phase timings and return completion rate after the first frame.
    * Inputs: processing mode; timing.capture/transport/renderQueue/decode, capture-to-result/decode milliseconds, and completedAt;
-   * the pipeline may supply pacingLateMs/creditWaitMs to distinguish late timers from bounded credit waits.
+   * the pipeline may supply pacingLateMs/creditWaitMs and transportWaitMs/transportQueuedBytes
+   * to distinguish late timers, bounded credits and browser send-buffer waits.
    * Outputs: null for the first frame or a non-positive clock interval; otherwise completion FPS. Emit summaries initially and every five seconds.
    * Logic: Retain full first-frame timing; later frames update only count, sum, and maximum, not image history or an unbounded timing list.
    * Completion FPS counts frames from first-frame completion through the current frame, includes later pauses, and does not exclude slow frames.
@@ -472,6 +480,8 @@ export class CameraApp {
         captureToResultMaxMs: 0, captureToDecodedMaxMs: 0,
         pacingFrames: 0, pacingLateTotalMs: 0, pacingLateMaxMs: 0,
         creditWaitTotalMs: 0, creditWaitMaxMs: 0, creditWaitFrames: 0,
+        transportAdmissionFrames: 0, transportWaitTotalMs: 0, transportWaitMaxMs: 0,
+        transportWaitFrames: 0, transportQueuedMaxBytes: 0,
       };
       this.reportFrameTimings("first_frame");
       return null;
@@ -493,6 +503,13 @@ export class CameraApp {
       metrics.creditWaitMaxMs = Math.max(metrics.creditWaitMaxMs, timing.creditWaitMs);
       if (timing.creditWaitMs > 0) metrics.creditWaitFrames += 1;
     }
+    if (Number.isFinite(timing.transportWaitMs) && Number.isFinite(timing.transportQueuedBytes)) {
+      metrics.transportAdmissionFrames += 1;
+      metrics.transportWaitTotalMs += timing.transportWaitMs;
+      metrics.transportWaitMaxMs = Math.max(metrics.transportWaitMaxMs, timing.transportWaitMs);
+      metrics.transportQueuedMaxBytes = Math.max(metrics.transportQueuedMaxBytes, timing.transportQueuedBytes);
+      if (timing.transportQueuedBytes > 0) metrics.transportWaitFrames += 1;
+    }
     if (timing.completedAt - metrics.lastReportAt >= METRICS_LOG_INTERVAL_MS)
       this.reportFrameTimings("periodic");
     const elapsed = timing.completedAt - metrics.first.completedAt;
@@ -500,7 +517,7 @@ export class CameraApp {
   }
   /** Functionality: Emit bounded aggregate statistics. Inputs: reason and instance frameTimings.
    * Outputs: One console.info entry. Logic: Report first frame separately from steady-state mean/max latency and completion FPS, then update log time;
-   * when scheduling observations exist, report bounded mean/max and credit-wait frame count; otherwise use null.
+   * when scheduling/send-buffer observations exist, report separate bounded aggregates; otherwise use null.
    * Constraints: Emit nothing without frames; mean is not P95; decode completion does not prove screen presentation; do not retry or trigger inference.
    */
   reportFrameTimings(reason) {
@@ -515,6 +532,7 @@ export class CameraApp {
         renderQueue: metrics.first.renderQueueMs, decode: metrics.first.decodeMs,
         captureToResult: metrics.first.captureToResultMs,
         captureToDecoded: metrics.first.captureToDecodedMs,
+        sendQueueWait: metrics.first.transportWaitMs ?? null,
       },
       steadyFrames: count, steadyFps: count && elapsed > 0 ? count * 1000 / elapsed : null,
       steadyMeanMs: count ? {
@@ -529,6 +547,11 @@ export class CameraApp {
         pacingLateMaxMs: metrics.pacingLateMaxMs, creditWaitFrames: metrics.creditWaitFrames,
         creditWaitMeanMs: metrics.creditWaitTotalMs / metrics.pacingFrames,
         creditWaitMaxMs: metrics.creditWaitMaxMs,
+      } : null,
+      steadySendQueue: metrics.transportAdmissionFrames ? {
+        frames: metrics.transportAdmissionFrames, waitedFrames: metrics.transportWaitFrames,
+        waitMeanMs: metrics.transportWaitTotalMs / metrics.transportAdmissionFrames,
+        waitMaxMs: metrics.transportWaitMaxMs, queuedMaxBytes: metrics.transportQueuedMaxBytes,
       } : null,
     });
     metrics.lastReportAt = metrics.lastCompletedAt;

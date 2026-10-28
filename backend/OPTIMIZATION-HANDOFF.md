@@ -32,14 +32,16 @@ Actual service state and cleanup evidence belong in `benchmarks/2026-10-28/serve
 the server delivery receipt, not in this operating guide.
 
 Keep the current Web release and its prepared bilingual speech features. A whole-tree replacement
-with this branch would lose independent colleague changes. The existing public Web overlay applies
-only capture-profile wiring. An independent release switch can remove that overlay; integrate
+with this branch would lose independent colleague changes. Limit compatible Web overlays to
+capture-profile wiring and the three camera transport modules. An independent release switch can remove an overlay; integrate
 the changes into the authoritative release source before depending on automatic deployments.
 
 ## Implemented optimization map
 
 | Concern | Implementation and method | Boundary |
 | --- | --- | --- |
+| Browser upload queue | `frontend/frame-pipeline.js`, `live-detection-client.js`, `camera.js`; cancellable send-buffer admission before live capture and separate queue diagnostics | Native buffer emptiness is not remote receipt; keep frame window, JPEG policy and deadlines; explicit ungated pipeline control retained |
+| Small TCP writes | `integration/relay.py`, `integration/phone_deploy.py`; TCP_NODELAY on owned local-peer and SSH sockets | New tunnel process required; no propagation/bandwidth guarantee, automatic retry or provider fallback |
 | Resident model reuse | `realtime/services.py`, `zerogpu/runtime.py`; one native execution owner, reused detection model/graph and session-local tracking | One worker per GPU; native work drains before ownership is released |
 | Depth forward | `realtime/depth_runtime.py`, `realtime/depth.py`; static-shape TensorRT FP32 engine pool and native predictor adapter | Preserve depth edge768, calibration and SDK alignment; reject stale/unsupported engines |
 | Export and numerical comparison | `tools/benchmark_depth_export.py`, `tools/depth_export_runtime.py`; Torch, graph, ONNX CUDA and TensorRT controls | ONNX remains an experiment; no automatic backend selection |

@@ -2,7 +2,7 @@
  * Implementation: Explicit socket fixtures, production plan admission, real WebCrypto and synthetic
  * JPEG markers; no GPU/network.
  * Related Modules: live-detection-client.js; actual image decoding/public-service tests are separate.
- * Declaration Index: FakeSocket; FakeSocket.constructor; FakeSocket.send; FakeSocket.close;
+ * Declaration Index: testBufferedBytes; FakeSocket; FakeSocket.constructor; FakeSocket.send; FakeSocket.close;
  * FakeSocket.message; packet; fixture; fixture.socketFactory; fixture.failed; fixture.ended;
  * admitted; testBinary; testInvalid; testOrder; testStop; testBudgets; testFinal; testHello;
  * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
@@ -281,6 +281,31 @@ class FakeSocket {
    * Logic: use real client callback. Constraints: not browser parsing. */
   message(data) { this.onmessage({data}); }
 }
+
+/** Functionality: Expose only validated native send-buffer readings on an admitted open session.
+ * Inputs: controlled socket state/count. Outputs: exact bytes or visible error.
+ * Logic: observe no send or sequence change; test closed, stopped and malformed readings.
+ * Constraints: synthetic socket, not a network throughput measurement. */
+test("buffered bytes require an admitted open socket and never send", async function testBufferedBytes() {
+  const f = fixture();
+  assert.throws(() => f.client.bufferedBytes(), /尚未就绪/);
+  await admitted(f);
+  const sent = f.socket.sent.length;
+  for (const value of [0, 65536]) {
+    f.socket.bufferedAmount = value;
+    assert.equal(f.client.bufferedBytes(), value);
+  }
+  for (const value of [-1, NaN, Infinity, 1.5, undefined]) {
+    f.socket.bufferedAmount = value;
+    assert.throws(() => f.client.bufferedBytes(), /队列状态/);
+    assert.throws(() => f.client.sendFrame(JPEG.slice().buffer), /队列状态/);
+  }
+  assert.equal(f.socket.sent.length, sent); assert.equal(f.client.sequence, 0);
+  f.socket.readyState = 3;
+  assert.throws(() => f.client.bufferedBytes(), /尚未就绪/);
+  f.client.stop();
+  assert.throws(() => f.client.bufferedBytes(), /尚未就绪/);
+});
 
 /** Functionality: Build an independent Python-compatible response fixture.
  * Inputs: index, metadata overrides, JPEG bytes. Outputs: ArrayBuffer PRS1 packet.

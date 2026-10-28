@@ -2,6 +2,8 @@
  * Implementation: Use explicit page, media-permission, track, canvas, and image-decoding fixtures; do not access a real camera or network.
  * Related Modules: camera.js; real-device permissions and browser behavior require separate verification.
  * Declaration Index: testCaptureProfiles; testCaptureProfileSnapshot;
+ * testCameraSendAdmission; testCameraSendAdmission.bufferedBytes; testCameraSendAdmission.capture;
+ * testCameraSendAdmission.poll;
  * testCaptureProfileSnapshot.requestCamera; testInvalidCaptureProfile;
  * FakeElement; FakeElement.constructor; FakeElement.addEventListener;
  * FakeElement.removeAttribute; FakeDocument; FakeDocument.constructor; FakeDocument.getElementById;
@@ -183,6 +185,29 @@ test("invalid camera profile fails before media authorization", async function t
   app.processing.value = "local"; app.localDeviceId = "fixture-device"; app.cameraProfile = "invalid";
   await app.start();
   assert.equal(requests, 0); assert.match(app.message.textContent, /采样配置无效/);
+});
+
+/** Functionality: Verify the actual camera controller enables pre-capture send-buffer admission.
+ * Inputs: blocked client with unchanged generation. Outputs: queue checks but no captured image.
+ * Logic: enter CameraApp.runPipeline, observe one native wait, then cancel it.
+ * Constraints: no camera authorization, socket, GPU or network-speed claim. */
+test("camera controller enables send-buffer admission", async function testCameraSendAdmission() {
+  const app = makeApp(ignoreWindowEvent);
+  let reads = 0, captures = 0;
+  /** Functionality: Observe buffer reads. Inputs: None. Outputs: one queued byte.
+   * Logic: keep admission blocked. Constraints: fixture cannot send frames. */
+  function bufferedBytes() { reads++; return 1; }
+  /** Functionality: Record unexpected capture. Inputs: None. Outputs: marker bytes.
+   * Logic: counter detects admission bypass. Constraints: no camera or codec. */
+  async function capture() { captures++; return new ArrayBuffer(1); }
+  app.capture = capture;
+  const running = app.runPipeline({bufferedBytes}, "local", app.generation);
+  /** Functionality: Yield to pipeline microtasks. Inputs: resolver. Outputs: next timer turn.
+   * Logic: no dependency on elapsed speed. Constraints: test cancels before sending. */
+  function poll(resolve) { setTimeout(resolve, 0); }
+  await new Promise(poll);
+  app.pipeline.stop(); await running;
+  assert.ok(reads > 0); assert.equal(captures, 0);
 });
 
 /** Functionality: Verify explicit Echo, HF, local and resident modes and their explanatory notes.
@@ -607,6 +632,7 @@ test("Separate slow startup frame and include stalls in steady-state metrics", f
     captureMs: 10, transportMs: 675, renderQueueMs: 0, decodeMs: 15,
     captureToResultMs: 685, captureToDecodedMs: 700, completedAt: 1880,
     pacingLateMs: 20, creditWaitMs: 90,
+    transportWaitMs: 120, transportQueuedBytes: 65536,
   }), 2.5);
   assert.equal(app.frameTimings.steadyFrames, 2);
   assert.equal(app.frameTimings.transportTotalMs, 730);
@@ -618,4 +644,9 @@ test("Separate slow startup frame and include stalls in steady-state metrics", f
   assert.equal(app.frameTimings.pacingLateMaxMs, 20);
   assert.equal(app.frameTimings.creditWaitTotalMs, 90);
   assert.equal(app.frameTimings.creditWaitFrames, 1);
+  assert.equal(app.frameTimings.transportAdmissionFrames, 1);
+  assert.equal(app.frameTimings.transportWaitTotalMs, 120);
+  assert.equal(app.frameTimings.transportWaitMaxMs, 120);
+  assert.equal(app.frameTimings.transportQueuedMaxBytes, 65536);
+  assert.equal(app.frameTimings.transportWaitFrames, 1);
 });

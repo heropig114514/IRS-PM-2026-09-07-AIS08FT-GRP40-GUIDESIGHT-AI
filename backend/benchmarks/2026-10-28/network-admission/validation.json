@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "date": "2026-10-28",
+  "base_revision": "57f698c",
+  "scope": "General live-camera send-buffer admission and owned TCP forwarding; no GPU inference benchmarks",
+  "changes": {
+    "live_camera": "Check native WebSocket unsent bytes after display/network credit and before capture; poll only while nonempty, cancel on stop/end/failure",
+    "admission_poll_ms": 4,
+    "admission_stall_limit_ms": 10000,
+    "control": "FramePipeline bufferedBytes=null retains original ungated admission",
+    "diagnostics": ["transportWaitMs", "transportQueuedBytes", "steadySendQueue", "firstFrameMs.sendQueueWait"],
+    "tcp": "TCP_NODELAY=1 on owned relay local peer and pinned SSH TCP connection; explicit setup failure and cleanup"
+  },
+  "unchanged": [
+    "Capture-profile cadence and pending-frame bounds",
+    "First frame alone and accepted-frame order/retention",
+    "JPEG max edge 640 and quality 0.8",
+    "Model weights, model precision, detector classes, depth settings, tracking and risk rules",
+    "Existing 55s cold/10s steady request deadlines and 5s worker input idle budget",
+    "Independent native-video replay sampler and serial Echo path",
+    "No automatic provider fallback or reconnect"
+  ],
+  "environment": {
+    "os": "Windows",
+    "workspace": "E:/AI_map",
+    "python": "backend/.venv/Scripts/python.exe",
+    "test_model_configuration": {"YOLO_OFFLINE": "1", "YOLO_AUTOINSTALL": "0"},
+    "django_secret": "Ephemeral process-only test value; not recorded",
+    "socket_tests": "Native loopback TCP and socket pairs with synthetic SSH control; no external authentication or inference",
+    "frontend_tests": "Node test runner; controlled timing, explicit socket/DOM adapters"
+  },
+  "checks": {
+    "python_manage_py_check": "passed",
+    "python_manage_py_makemigrations_check_dry_run": "passed, no changes detected",
+    "python_manage_py_test": {"run": 549, "skipped": 8, "failed": 0, "duration_s": 30.861},
+    "ruff_check": "passed",
+    "node_test_frontend_tests": {"run": 423, "passed": 423, "failed": 0, "skipped": 0},
+    "manual_review": "Changed file responsibility headers, declaration/variable indexes and function contracts reviewed; no tools/check_docs.py exists"
+  },
+  "verified_behaviors": [
+    "Nonempty browser queue prevents new camera capture until it clears",
+    "Clear queue adds no polling timer; original ungated control remains available",
+    "Stop and normal finish release the native timer; transport failure preserves its original rejection",
+    "Persistent admission stall fails visibly; invalid counters are rejected rather than bypassed",
+    "Fresh capture timestamps occur after the explicit wait; credit wait and upload wait remain separate",
+    "All submitted frames retain order and completion accounting",
+    "CameraApp enables the real admission adapter; missing timing fields do not become NaN or artificial zero samples",
+    "Native relay and SSH TCP sockets report TCP_NODELAY=1",
+    "Pinned identity is checked before SSH socket configuration; failed configuration closes owned resources without retry",
+    "Binary partial writes and full-duplex half-close regression tests pass"
+  ],
+  "controlled_fixture_comparison": {
+    "nature": "Deterministic correctness fixture, not a speed benchmark",
+    "frames_per_arm": 2,
+    "injected_browser_queue_bytes": 48000,
+    "injected_wait_ms": 20,
+    "ungated_second_capture_ms": 115,
+    "gated_second_capture_ms": 135,
+    "gated_reported_transport_wait_ms": 20,
+    "capture_encode_ms_both_arms": 100,
+    "admitted_and_completed_frames_both_arms": 2,
+    "interpretation": "Admission moves acquisition after the controlled queue wait; completion interval still includes waiting. No model or WAN speedup is inferred."
+  },
+  "server_overlay_preflight": {
+    "release_label": "35f7b755b38ffc7b7088463f8e0cbe44a57b030f",
+    "route": "ws://127.0.0.1:18767/ws/infer/",
+    "worker_listening": false,
+    "observed_profile": "Environment still bounded-2; current page and camera omitted profile wiring and used the twelve-frame default",
+    "scope": "Restore previously validated explicit profile wiring and apply current send-buffer changes to the existing three-mode frontend; preserve colleague source and prepared audio",
+    "source_compatibility": "The four relevant main-branch files are unchanged between 0cafb69 and 35f7b75; original camera SHA matches the previous profile overlay's exact precondition",
+    "original_release_frontend_targeted_tests": {"run": 54, "passed": 54},
+    "new_network_tests_against_overlay": {"run": 8, "passed": 8},
+    "syntax_checks": "All three staged JavaScript modules pass node --check",
+    "initial_inspection_failure": "Release archive has no .git directory; removed that assumption and inspected exact file hashes instead",
+    "initial_patch_conflicts": "Root-branch context included resident-mode/profile comments absent from main; prepared a separate four-file overlay and verified it against the exact server source"
+  },
+  "initial_failures_and_repairs": [
+    {"check": "New frontend fixture", "failure": "Fixture treated zero-duration cadence checks as buffer polling", "repair": "Advance the injected stall only on a positive wait; targeted 70/70 and final 423/423 pass"},
+    {"check": "Ruff", "failure": "One new assertion exceeded the 100-character line limit", "repair": "Wrapped assertion; final Ruff passes"},
+    {"check": "Initial standalone Django check/migration commands", "failure": "DJANGO_SECRET_KEY was not set in that command process", "repair": "Explicit ephemeral process configuration; both required checks and the complete suite pass"}
+  ],
+  "limitations": [
+    "No new physical-phone, Safari radio/display or real WAN latency measurements",
+    "bufferedAmount=0 does not establish remote receipt or reveal all network queues",
+    "Timer clamping can increase actual wait; TCP_NODELAY can increase small packet count",
+    "No demonstrated percentage or millisecond reduction for this change",
+    "Does not repair public-server reachability or start the colleague's offline GPU worker",
+    "New Python relay settings require integration and startup by the actual tunnel owner"
+  ]
+}

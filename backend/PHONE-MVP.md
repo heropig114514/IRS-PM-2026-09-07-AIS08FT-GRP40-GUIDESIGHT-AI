@@ -141,6 +141,45 @@ does not change an already-running relay. Use a separate loopback binding for co
 its routed worker identity, and change only the Web inference URL for activation. Never stop
 another operator's tunnel or the supervisor that still owns the selected GPU.
 
+### Browser send-buffer admission and TCP forwarding
+
+Camera sessions using `LiveDetectionClient` check `WebSocket.bufferedAmount` after result/display
+credit becomes available and before acquiring the next image. A nonempty browser buffer delays
+capture, so the next submitted image is fresh when the local queue clears. Polling uses a cancellable
+4ms timer only while bytes remain; an empty queue adds no timer. A persistent10s admission stall
+fails visibly. Existing first/steady frame deadlines still apply to every accepted frame, and
+stop/provider-end wakes the wait. JPEG quality, dimensions, model settings and accepted-frame order
+are unchanged. This covers the live camera pipeline, not the independent native-video replay sampler
+or serial Echo diagnostic path.
+
+The [browser buffer counter](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/bufferedAmount)
+counts unsent application bytes. Zero does not establish remote receipt or reveal all TCP/router
+queues; retain the selected outstanding-frame bound as a separate control. Browser timer clamping
+may make waits longer than4ms. Compare completion FPS and end-to-end frame age together, including
+first-frame behavior and failures. `transportWaitMs`/`transportQueuedBytes` report admission waiting
+separately from `creditWaitMs`, capture/encode, request/result transport and JPEG decode. Console
+summaries expose `firstFrameMs.sendQueueWait` and `steadySendQueue`; no image or device identity is
+logged. Frame age begins at actual capture, so a shorter frame age alone is not a throughput gain.
+
+For an explicit code-level control, instantiate `FramePipeline` with `bufferedBytes: null` (its
+original default). `CameraApp.runPipeline` enables the adapter for live HF/local/resident cameras.
+Use identical capture profile, codec, models, source and network conditions for a comparison; do
+not change these conditions or omit slow/failed frames when reporting an improvement.
+
+`RelayForward` enables `TCP_NODELAY` on its owned local TCP peer, and `connect_server` enables it
+on the owned SSH TCP socket after verifying the host identity. This removes Nagle's small-write
+coalescing delay; it may increase small packets and cannot remove propagation time, packet loss or
+bandwidth limits. See the [TCP socket option contract](https://man7.org/linux/man-pages/man7/tcp.7.html).
+Socket configuration failure is explicit, closes owned endpoints and never silently retries with
+a different policy. New relay connections/processes are needed to load these changes; restarting
+the Web service cannot update a separately owned GPU-side SSH process.
+
+Deploy `camera.js`, `frame-pipeline.js` and `live-detection-client.js` together to avoid a mixed
+client/adapter contract, then reload the phone page. Preserve the current server route and the
+colleague's independent UI/audio changes. TCP changes must also be integrated at the GPU tunnel
+owner; a source archive on the Web server does not activate them. These mechanisms are regression
+verified, but new WAN/phone latency gains require an available GPU worker and on-device acceptance.
+
 For rollback, verify the current route and source hashes against the activation report. Restore
 the two changed source files from their recorded backups, and restore only `LOCAL_INFERENCE_URL`
 and `PRS_CAMERA_PROFILE` to their prior values while preserving unrelated environment changes.

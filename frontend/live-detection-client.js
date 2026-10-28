@@ -6,7 +6,8 @@
  * core.hf_video_relay and realtime.resident_asgi/protocol/risk.
  * Declaration Index: browserSocket; sha256; validateSession; decodeResult; LiveDetectionClient;
  * LiveDetectionClient.constructor; LiveDetectionClient.connect; LiveDetectionClient.connect.register;
- * LiveDetectionClient.sendFrame; LiveDetectionClient.sendFrame.register; LiveDetectionClient.sendFrame.deadline;
+ * LiveDetectionClient.bufferedBytes; LiveDetectionClient.sendFrame;
+ * LiveDetectionClient.sendFrame.register; LiveDetectionClient.sendFrame.deadline;
  * LiveDetectionClient.handleMessage; LiveDetectionClient.handleMessage.verify;
  * LiveDetectionClient.handleMessage.failed; LiveDetectionClient.handleError;
  * LiveDetectionClient.handleMessage.ended; LiveDetectionClient.handleClose;
@@ -352,18 +353,29 @@ export class LiveDetectionClient {
     }
     return new Promise(register);
   }
+  /** Functionality: Read unsent browser bytes for pre-capture admission.
+   * Inputs: admitted open native socket. Outputs: nonnegative integer byte count.
+   * Logic: reject closed/stopped/unadmitted sessions and invalid readings before use.
+   * Constraints: bufferedAmount does not measure remote receipt, TCP acknowledgements or RTT;
+   * this method does not wait, send, reconnect or alter outstanding frame deadlines. */
+  bufferedBytes() {
+    if (this.stopped || !this.contract || this.socket?.readyState !== 1)
+      throw new Error("视频连接尚未就绪或已停止。");
+    const bytes = this.socket.bufferedAmount;
+    if (!Number.isSafeInteger(bytes) || bytes < 0) throw new Error("视频发送队列状态无效。");
+    return bytes;
+  }
   /** Functionality: Send one original JPEG with ordered PRF1/PRF2 identity and local source timestamp.
    * Inputs: ArrayBuffer and optional capturedAt milliseconds (mandatory for local). Outputs: result/RTT Promise.
    * Logic: reserve pending before send; local PRF2 adds big-endian float64 capture seconds after uint32 index;
    * first55s, later10s; enforce count/socket byte bounds and monotonic local capture times.
    * Constraints: no encoding, base64, stale-frame queue or retry; max12 requests, caller gates capture. */
   sendFrame(buffer, {capturedAt} = {}) {
-    if (this.stopped || !this.contract || this.socket.readyState !== 1)
-      throw new Error("视频连接尚未就绪或已停止。");
+    const bufferedBytes = this.bufferedBytes();
     if (!(buffer instanceof ArrayBuffer) || !buffer.byteLength || buffer.byteLength > MAX_FRAME_BYTES)
       throw new Error("图像帧为空或超过 1 MiB 限制");
     if (this.pending.size >= MAX_INFLIGHT || this.sequence > 0xFFFFFFFF ||
-        this.socket.bufferedAmount > MAX_INFLIGHT * (MAX_FRAME_BYTES + (this.provider === "local" ? 16 : 8)))
+        bufferedBytes > MAX_INFLIGHT * (MAX_FRAME_BYTES + (this.provider === "local" ? 16 : 8)))
       throw new Error("视频发送超过在途边界。");
     const captureTimeS = capturedAt / 1000, local = this.provider === "local";
     if (local && (!Number.isFinite(captureTimeS) || captureTimeS < 0 || captureTimeS <= this.lastCaptureTimeS))

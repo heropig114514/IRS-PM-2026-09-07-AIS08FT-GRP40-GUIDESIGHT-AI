@@ -1,6 +1,7 @@
 """Responsibilities: Relay one SSH-owned reverse loopback binding to the local web process.
 Implementation: Fast bounded admission, owned worker/socket cleanup, raw TCP backpressure and
-half-close; explicit failures without retry, credentials, HTTP parsing or client ownership.
+half-close; TCP_NODELAY on the local TCP peer; explicit failures without retry, credentials,
+HTTP parsing or client ownership.
 Related Modules: tools.run_phone_mvp owns SSH authentication, identity, keepalive and processes.
 Declaration Index: RelayError; RelayError.__init__; _Connection; RelayForward;
 RelayForward.__init__; RelayForward._fail; RelayForward._control; RelayForward._control.invoke;
@@ -234,7 +235,8 @@ class RelayForward:
     def _forward(self, connection):
         """Functionality: Connect exactly once to the local web listener and forward raw bytes.
         Inputs: admitted connection. Outputs: half-closed/closed owned endpoints.
-        Logic: register the socket before connect so stop can interrupt it; never inspect payloads.
+        Logic: register before connect so stop can interrupt it; disable Nagle buffering on this
+        owned TCP socket to forward small writes promptly; never inspect payloads.
         Constraints: a missing local service is fatal; peer resets end only that connection.
         """
         try:
@@ -245,6 +247,12 @@ class RelayForward:
                     return
                 connection.peer = peer
             peer.settimeout(CONNECT_SECONDS)
+            try:
+                peer.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            except OSError:
+                if not self.stop_event.is_set():
+                    self._fail("local_socket_setup_failed")
+                return
             try:
                 peer.connect((LOOPBACK, self.local_port))
             except OSError:

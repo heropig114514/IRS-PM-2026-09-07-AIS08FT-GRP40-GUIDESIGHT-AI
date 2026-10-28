@@ -1,6 +1,6 @@
 """Responsibilities: Verify bounded reverse-loopback relay lifetime without SSH credentials.
 Implementation: Synthetic SSH control/channel adapters over real socket pairs and loopback TCP;
-assert opaque binary preservation, half-close, overload, failure and owned cleanup.
+assert opaque binary preservation, TCP_NODELAY, half-close, overload, failure and owned cleanup.
 Related Modules: integration.relay; tools.run_phone_mvp owns actual SSH/nginx deployment.
 Declaration Index: SocketChannel; SocketChannel.__init__; SocketChannel.fileno;
 SocketChannel.settimeout; SocketChannel.recv; SocketChannel.send; SocketChannel.send_ready;
@@ -16,6 +16,7 @@ RelayTests.test_binary_roundtrip_and_half_close.serve; RelayTests.test_local_hal
 RelayTests.test_owned_bounded_cleanup;
 RelayTests.test_foreign_source_and_destination_rejected;
 RelayTests.test_transport_loss_is_latched; RelayTests.test_local_connect_failure_is_fatal;
+RelayTests.test_socket_configuration_failure_is_fatal;
 RelayTests.test_cancel_failure_does_not_skip_endpoint_cleanup.
 Variable Index: None; fixtures create no real SSH/SFTP connection, external network, files or GPU.
 """
@@ -24,7 +25,7 @@ import select
 import socket
 import threading
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from integration.relay import LOOPBACK, RelayError, RelayForward
 
@@ -303,7 +304,8 @@ class RelayTests(TestCase):
     def test_local_half_close_keeps_input(self):
         """Functionality: Keep incoming bytes valid after the local service finishes its output.
         Inputs: real TCP write EOF before remote request EOF. Outputs: both original payloads.
-        Logic: local half-close maps only to SSH write EOF, leaving its request side readable.
+        Logic: verify the actual relay socket disables Nagle; local half-close maps only to
+        SSH write EOF, leaving its request side readable.
         Constraints: no whole-connection shutdown that truncates the remaining opposite stream.
         """
         with socket.socket() as listener:
@@ -316,6 +318,11 @@ class RelayTests(TestCase):
             try:
                 with listener.accept()[0] as peer:
                     peer.settimeout(3)
+                    with relay._lock:
+                        connection = next(iter(relay._connections))
+                        self.assertEqual(
+                            connection.peer.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY), 1
+                        )
                     peer.sendall(b"response-first\x00\xff")
                     peer.shutdown(socket.SHUT_WR)
                     self.assertEqual(receive_all(remote), b"response-first\x00\xff")
@@ -421,6 +428,34 @@ class RelayTests(TestCase):
         finally:
             remote.close()
             relay.stop()
+
+    def test_socket_configuration_failure_is_fatal(self):
+        """Functionality: Stop the relay when its explicit TCP configuration is refused.
+        Inputs: Real channel pair and a refused socket option. Outputs: safe fatal code/cleanup.
+        Logic: no local connect is attempted; owner closes endpoints after the worker fails.
+        Constraints: no silent Nagle-enabled fallback, retry or private exception text.
+        """
+        stream, remote = socket.socketpair()
+        channel = SocketChannel(stream)
+        client = Client()
+        relay = RelayForward(client).start()
+        peer = Mock()
+        peer.setsockopt.side_effect = OSError("private-credential-sentinel")
+        try:
+            with patch("integration.relay.socket.socket", return_value=peer):
+                client.transport.handler(channel, (LOOPBACK, 30001), (LOOPBACK, 18766))
+                self.assertTrue(relay.stop_event.wait(4))
+                with self.assertRaises(RelayError) as raised:
+                    relay.check_active()
+                self.assertEqual(raised.exception.code, "local_socket_setup_failed")
+                peer.connect.assert_not_called()
+        finally:
+            remote.close()
+            relay.stop()
+        self.assertTrue(channel.closed)
+        peer.close.assert_called_once()
+        self.assertEqual(relay.active_connections, 0)
+        self.assertFalse(client.closed)
 
     def test_cancel_failure_does_not_skip_endpoint_cleanup(self):
         """Functionality: Keep cleanup safe when SSH cancellation is explicitly refused.

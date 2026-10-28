@@ -1,6 +1,7 @@
 """Responsibilities: Manage the isolated public guest relay and pinned app-server SSH operations.
 Implementation: Bound remote reads/commands, install only the additive Nginx include when requested,
-remove its retired access hash, and preserve the independent application-service identity.
+remove its retired access hash, preserve the independent application-service identity,
+and enable TCP_NODELAY on the owned SSH connection for prompt forwarding.
 Related Modules: tools.run_phone_mvp; tools.deploy_phone_live; deploy/phone-relay.locations.conf.
 Declaration Index: PhoneDeploymentError; read_remote; write_remote;
 remote_command; connect_server; read_ors; prepare_vhost; verify_relay; install_relay.
@@ -14,6 +15,7 @@ import hashlib
 import io
 import secrets
 import shlex
+import socket
 import time
 from pathlib import Path
 from uuid import uuid4
@@ -91,7 +93,8 @@ def remote_command(client, command, *, body=None, check=True):
 def connect_server(password):
     """Functionality: Authenticate once to the inspected SSH server and fixed host identity.
     Inputs: Password supplied interactively in memory. Outputs: Connected SSHClient.
-    Logic: No system host/key discovery; also verify the actual transport key before use.
+    Logic: No system host/key discovery; verify the actual transport key before use and disable
+    Nagle buffering on the owned SSH TCP socket for immediate small writes.
     Constraints: No password persistence, retries, alternate server or identity acceptance prompt.
     """
     import base64
@@ -114,7 +117,12 @@ def connect_server(password):
         digest = base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode()
         if not secrets.compare_digest(digest, FINGERPRINT):
             raise PhoneDeploymentError("SSH identity does not match the inspected server.")
-        client.get_transport().set_keepalive(20)
+        transport = client.get_transport()
+        try:
+            transport.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except OSError:
+            raise PhoneDeploymentError("SSH low-latency socket setup failed.") from None
+        transport.set_keepalive(20)
         return client
     except Exception:
         client.close()

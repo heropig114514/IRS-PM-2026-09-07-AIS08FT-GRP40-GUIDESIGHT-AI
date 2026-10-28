@@ -3,6 +3,9 @@ Implementation: Exact synthetic templates and mock remote boundary;
 no existing virtualenv directories, private configuration, server or GPU required.
 Related Modules: integration.phone_deploy; tools.run_phone_mvp; deploy/phone-relay.locations.conf.
 Declaration Index: PhoneDeployTests;
+PhoneDeployTests.test_ssh_socket_disables_nagle;
+PhoneDeployTests.test_ssh_socket_failure_closes_without_retry;
+PhoneDeployTests.test_ssh_identity_failure_precedes_socket_configuration;
 PhoneDeployTests.test_guest_relay_verification_requires_no_hash;
 PhoneDeployTests.test_guest_relay_verification_requires_no_hash.read;
 PhoneDeployTests.test_guest_relay_verification_rejects_legacy_hash;
@@ -20,6 +23,9 @@ PhoneDeployTests.test_install_failure_restores_all_selected_files.command.
 Variable Index: None; relay hashes, when present in fixtures, are synthetic recovery fixtures only.
 """
 
+import base64
+import hashlib
+import socket
 import threading
 from unittest.mock import MagicMock, Mock, patch
 
@@ -36,6 +42,7 @@ from .phone_deploy import (
     ROOT,
     VHOST,
     PhoneDeploymentError,
+    connect_server,
     install_relay,
     prepare_vhost,
     remote_command,
@@ -48,6 +55,65 @@ class PhoneDeployTests(SimpleTestCase):
     """Functionality: Protect exact deployment boundaries and secret handling.
     Logic: Use temporary files and synthetic remote replies. Constraints: No actual SSH/TLS/GPU.
     """
+
+    def test_ssh_socket_disables_nagle(self):
+        """Functionality: Configure the owned TCP socket after matching the pinned identity.
+        Inputs: Mock SSH boundary and a real native TCP socket. Outputs: TCP_NODELAY=1.
+        Logic: independently hash fixture host bytes; retain authentication/keepalive policy.
+        Constraints: no SSH connection, real credentials or WAN latency claim.
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as peer:
+            client = MagicMock()
+            transport = client.get_transport.return_value
+            transport.sock = peer
+            transport.get_remote_server_key.return_value.asbytes.return_value = b"fixture-key"
+            fingerprint = base64.b64encode(hashlib.sha256(b"fixture-key").digest()).decode()
+            self.assertEqual(peer.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY), 0)
+            with (patch("integration.phone_deploy.paramiko.SSHClient", return_value=client),
+                  patch("integration.phone_deploy.FINGERPRINT", fingerprint)):
+                self.assertIs(connect_server("synthetic-password"), client)
+            self.assertEqual(peer.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY), 1)
+            transport.set_keepalive.assert_called_once_with(20)
+            client.connect.assert_called_once()
+            self.assertFalse(client.connect.call_args.kwargs["allow_agent"])
+            self.assertFalse(client.connect.call_args.kwargs["look_for_keys"])
+            client.close.assert_not_called()
+
+    def test_ssh_socket_failure_closes_without_retry(self):
+        """Functionality: Refuse unsupported socket configuration without implicit fallback.
+        Inputs: Valid synthetic host identity and private socket failure. Outputs: safe exception.
+        Logic: assert one connect/close and no keepalive on a failed client.
+        Constraints: no network operation or sensitive diagnostic in the raised message.
+        """
+        client = MagicMock()
+        transport = client.get_transport.return_value
+        transport.get_remote_server_key.return_value.asbytes.return_value = b"fixture-key"
+        transport.sock.setsockopt.side_effect = OSError("private-credential-sentinel")
+        fingerprint = base64.b64encode(hashlib.sha256(b"fixture-key").digest()).decode()
+        with (patch("integration.phone_deploy.paramiko.SSHClient", return_value=client),
+              patch("integration.phone_deploy.FINGERPRINT", fingerprint),
+              self.assertRaisesRegex(
+                  PhoneDeploymentError, "^SSH low-latency socket setup failed.$"
+              )):
+            connect_server("synthetic-password")
+        client.connect.assert_called_once()
+        client.close.assert_called_once()
+        transport.set_keepalive.assert_not_called()
+
+    def test_ssh_identity_failure_precedes_socket_configuration(self):
+        """Functionality: Keep pinned identity mandatory before tuning the connected socket.
+        Inputs: Wrong synthetic host. Outputs: closed client with no socket changes.
+        Logic: reject identity exactly once. Constraints: no host-key acceptance or reconnect.
+        """
+        client = MagicMock()
+        transport = client.get_transport.return_value
+        transport.get_remote_server_key.return_value.asbytes.return_value = b"wrong-key"
+        with (patch("integration.phone_deploy.paramiko.SSHClient", return_value=client),
+              self.assertRaisesRegex(PhoneDeploymentError, "identity does not match")):
+            connect_server("synthetic-password")
+        transport.sock.setsockopt.assert_not_called()
+        client.connect.assert_called_once()
+        client.close.assert_called_once()
 
     def test_remote_status_deadline_closes_only_its_channel(self):
         """Functionality: Refuse a hung SSH exit status after bounded output reads.
