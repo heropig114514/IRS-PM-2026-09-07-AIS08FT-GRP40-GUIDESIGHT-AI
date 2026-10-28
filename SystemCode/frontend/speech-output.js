@@ -8,7 +8,8 @@
  * integration/risk-speech-cache.js; core.ai_mcp/core.camera.
  * Declaration Index: SpeechOutput; SpeechOutput.constructor; SpeechOutput.feedback;
  * SpeechOutput.render; SpeechOutput.refreshVoices; SpeechOutput.describe; SpeechOutput.voiceList;
- * SpeechOutput.result; SpeechOutput.speak; SpeechOutput.unlock; SpeechOutput.speakBackend;
+ * SpeechOutput.result; SpeechOutput.speak; SpeechOutput.audioContextForPlayback;
+ * SpeechOutput.claimAudioSession; SpeechOutput.releaseAudioSession; SpeechOutput.reserveMicrophone; SpeechOutput.handleAudioState; SpeechOutput.unlock; SpeechOutput.speakBackend;
  * SpeechOutput.clearBackendWatchdog; SpeechOutput.armBackendWatchdog;
  * SpeechOutput.handleBackendMessage; SpeechOutput.schedulePcm; SpeechOutput.finishBackend;
  * SpeechOutput.handleBackendError; SpeechOutput.stopBackend; SpeechOutput.stop; SpeechOutput.handlePlay;
@@ -28,6 +29,9 @@
  * riskSocketFactory is an optional explicit risk-only transport binding; a missing binding fails instead of falling back.
  * audioContext/gain/sources/nextAudioTime own decoded PCM playback; request watchdog and
  * setTimer/clearTimer bound TTS progress; stream state is request-object guarded; backendVoice is fixed Cherry.
+ * audioSessionOwner retains the previous optional platform session type only during owned playback;
+ * microphoneReservations prevents playback-only routing during pending/active microphone capture;
+ * context state changes invalidate readiness without automatic resume or replay.
  * localOnly remains restricted to the standalone integration page's native speech policy.
  */
 export const MAX_TEXT_LENGTH = 1000;
@@ -96,6 +100,9 @@ export class SpeechOutput {
     this.listeners = new Set();
     this.localOnly = doc.documentElement?.dataset?.localMvp === "true";
     this.audioContext = null;
+    this.audioSessionOwner = null;
+    this.microphoneReservations = new Set();
+    this.handleAudioState = this.handleAudioState.bind(this);
     this.audioGain = null;
     this.audioSources = new Set();
     this.nextAudioTime = 0;
@@ -248,7 +255,8 @@ export class SpeechOutput {
       user_activated: this.win.navigator.userActivation?.hasBeenActive ?? null,
       state: this.phase, active_request: this.current !== null,
       engine_speaking: this.phase === "speaking", engine_pending: this.phase === "queued",
-      engine_paused: false, voice_count: 1, voice_query_failed: false,
+      engine_paused: false, audio_context_state: this.audioContext?.state ?? "uninitialized",
+      voice_count: 1, voice_query_failed: false,
       last_request: this.lastRequest ? {...this.lastRequest} : null, last_error: this.lastError,
       audio_output_verified: false, speech_service: "backend"};
     return {available: true, supported: this.supported, enabled: this.enabled.checked,
@@ -395,6 +403,63 @@ export class SpeechOutput {
     }
   }
 
+  /** Functionality: Obtain the owned context and observe platform interruptions.
+   * Inputs: Existing context and browser constructor. Outputs: Open context with one state listener.
+   * Logic: A closed context is replaced only when a caller explicitly requests playback/unlock.
+   * Constraints: No resume loop, synthesis, media permission or physical audibility claim. */
+  audioContextForPlayback() {
+    if (!this.audioContext || this.audioContext.state === "closed") {
+      this.audioContext?.removeEventListener?.("statechange", this.handleAudioState);
+      this.audioContext = new this.AudioContext();
+      this.audioContext.addEventListener?.("statechange", this.handleAudioState);
+    }
+    return this.audioContext;
+  }
+
+  /** Functionality: Request media playback routing on platforms supporting Audio Session.
+   * Inputs: Optional navigator.audioSession. Outputs: Owned previous type or explicit exception.
+   * Logic: Claim playback for audible prompts; respect a separately selected recording session.
+   * Constraints: API absence keeps standard Web Audio; no provider fallback, device-volume change,
+   * or claim that silent-switch behavior is identical on every OS. Playback may pause other media. */
+  claimAudioSession() {
+    const session = this.win.navigator?.audioSession;
+    if (!session || this.microphoneReservations.size || this.audioSessionOwner || session.type === "play-and-record") return;
+    this.audioSessionOwner = {session, previous: session.type};
+    session.type = "playback";
+  }
+
+  /** Functionality: Protect pending/active microphone capture from playback-only routing.
+   * Inputs: One recorder or entry permission operation. Outputs: Idempotent reservation release callback.
+   * Logic: Release our playback claim synchronously before getUserMedia; concurrent reservations coexist.
+   * Constraints: No permission request, recording, provider call or automatic playback on release. */
+  reserveMicrophone() {
+    const token = {}; this.microphoneReservations.add(token);
+    this.releaseAudioSession();
+    return () => this.microphoneReservations.delete(token);
+  }
+
+  /** Functionality: Restore only the platform session type this player still owns.
+   * Inputs: Saved session/type. Outputs: Released ownership and prior routing where unchanged.
+   * Logic: Another recorder's type change wins. Constraints: No retry or cancellation of foreign audio. */
+  releaseAudioSession() {
+    const owner = this.audioSessionOwner; this.audioSessionOwner = null;
+    if (!owner) return;
+    try { if (owner.session.type === "playback") owner.session.type = owner.previous; }
+    catch (error) { this.win.console.error("[PRS speech] Audio session release failed", {error_name: error?.name}); }
+  }
+
+  /** Functionality: Stop obsolete PCM and expose a platform audio interruption immediately.
+   * Inputs: Context statechange. Outputs: Terminal owned error and a readiness-invalidating event.
+   * Logic: Running is informational; suspended/interrupted/closed require a later explicit action.
+   * Constraints: No automatic resume, stale alert replay, sensor stop or operating-system volume change. */
+  handleAudioState() {
+    const state = this.audioContext?.state;
+    if (!state || state === "running") return;
+    this.win.console.info("[PRS speech] Audio context interrupted", {state});
+    if (this.current) this.handleBackendError(this.current, "audio_context_interrupted");
+    this.notify("interrupted", "audio_context_interrupted");
+  }
+
   /** Functionality: Create/resume the audio output context during a real user gesture.
    * Inputs: Browser AudioContext and current state. Outputs: Promise with accepted/reason.
    * Logic: Call resume synchronously before returning so browsers can observe the activation event.
@@ -403,7 +468,7 @@ export class SpeechOutput {
   unlock() {
     if (!this.backendOnly || !this.supported) return Promise.resolve({accepted: false, reason: "unsupported"});
     try {
-      const context = this.audioContext || (this.audioContext = new this.AudioContext());
+      const context = this.audioContextForPlayback();
       const resumed = context.state === "running" ? Promise.resolve() : context.resume();
       return Promise.resolve(resumed).then(() => {
         if (context.state !== "running") throw new Error("AudioContext did not enter running state");
@@ -429,18 +494,22 @@ export class SpeechOutput {
   speakBackend(text, {language, rate, volume, purpose = null}) {
     let context, socket, audioReady;
     try {
-      context = this.audioContext || (this.audioContext = new this.AudioContext());
+      this.claimAudioSession();
+      context = this.audioContextForPlayback();
       if (context.state !== "running") {
         audioReady = Promise.resolve(context.resume()).then(() => {
           if (context.state !== "running") throw new Error("AudioContext did not resume");
         });
       } else audioReady = Promise.resolve();
+      // A socket constructor failure must not leave a rejected resume promise unobserved.
+      void audioReady.catch(() => {});
       const base = new URL(this.doc.documentElement.dataset.apiBase || "../", this.win.location.href);
       const address = new URL("ws/tts/", base);
       address.protocol = address.protocol === "https:" ? "wss:" : "ws:";
       socket = purpose === "risk" ? this.riskSocketFactory(address) : new this.win.WebSocket(address);
       socket.binaryType = "arraybuffer";
     } catch (error) {
+      this.releaseAudioSession();
       this.phase = "error"; this.lastError = "transport_unavailable";
       this.feedback("无法连接后端语音服务，请检查网络连接。", "error"); this.render();
       this.win.console.error("[PRS speech] Backend transport setup failed", {error_name: error?.name});
@@ -454,6 +523,8 @@ export class SpeechOutput {
       rate, volume, service: "backend", local_service: false,
       audio_transport: purpose === "risk" ? "risk_cache" : "websocket"};
     this.current = request; this.phase = "queued"; this.lastError = null;
+    void audioReady.catch(error => this.handleBackendError(request,
+      error?.name === "NotAllowedError" ? "activation_required" : "audio_context_unavailable", error));
     this.nextAudioTime = 0;
     this.feedback("已连接后端，等待中英文语音音频流。", "idle"); this.render(); this.notify("submitted");
     this.armBackendWatchdog(request, "connect", BACKEND_CONNECT_TIMEOUT_MS);
@@ -602,6 +673,7 @@ export class SpeechOutput {
     if (this.current !== request) return;
     this.clearBackendWatchdog(request);
     this.current = null; this.phase = "completed"; this.lastError = null;
+    this.releaseAudioSession();
     try { request.gain?.disconnect(); } catch {}
     this.feedback("后端语音播放完成；实际声音仍需在设备上确认。", "live"); this.render();
     this.win.console.info("[PRS speech] Backend audio ended", {request_id: this.lastRequest.id,
@@ -617,6 +689,7 @@ export class SpeechOutput {
     if (!request || this.current !== request) return;
     this.clearBackendWatchdog(request);
     this.current = null; this.phase = "error"; this.lastError = reason;
+    this.releaseAudioSession();
     try { request.socket.close(); } catch {}
     for (const source of request.sources) {
       this.audioSources.delete(source);
@@ -655,6 +728,7 @@ export class SpeechOutput {
     }
     request.sources.clear(); try { request.gain?.disconnect(); } catch {}
     this.phase = "stopped"; this.lastError = null;
+    this.releaseAudioSession();
     this.feedback("已停止语音输出。", "idle"); this.render();
     this.win.console.info("[PRS speech] Backend stream cancelled", {request_id: this.lastRequest?.id});
     this.notify("cancel"); return this.result("stop", true);

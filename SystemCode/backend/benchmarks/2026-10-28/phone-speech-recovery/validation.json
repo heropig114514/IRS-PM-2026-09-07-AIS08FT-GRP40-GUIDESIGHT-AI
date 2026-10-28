@@ -1,0 +1,53 @@
+{
+  "base_revision": "faa6383572c7e1a22e2c0ee81941f6333b2ea638",
+  "target": "https://47.239.50.129/mvp/maps/",
+  "findings": {
+    "server_synthesis_completed": true,
+    "product_activation_status_and_recovery_hidden_before": true,
+    "historical_activation_bypassed_context_recovery": true,
+    "physical_phone_root_cause_confirmed": false
+  },
+  "checks": {
+    "django_check": 0,
+    "makemigrations_check_dry_run": 0,
+    "ruff_check": 0,
+    "django_tests": {
+      "count": 485,
+      "skipped": 20,
+      "exit_code": 0
+    },
+    "frontend_tests": {
+      "count": 490,
+      "failed": 0,
+      "exit_code": 0
+    },
+    "manual_comment_index_review": true,
+    "public_browser": {
+      "checks": 5,
+      "passed": true,
+      "prepared_risk_languages": [
+        "zh-CN",
+        "en-US"
+      ],
+      "risk_tts_sockets": 0,
+      "physical_audio_verified": false
+    }
+  },
+  "environment": {
+    "os": "Windows",
+    "python": "3.12",
+    "browser": "isolated Chrome 155 headless",
+    "browser_proxy": "http://127.0.0.1:7897",
+    "server_os": "Ubuntu 22.04",
+    "local_server_started": false,
+    "gpu_requests": 0
+  },
+  "boundaries": {
+    "inference_route_changed": false,
+    "provider_config_changed": false,
+    "web_service_restarted": false,
+    "physical_iPhone_audibility": "Awaiting user confirmation",
+    "real_microphone_recording": "Not performed; ownership checked by fixtures",
+    "ios_audio_session_hardware_behavior": "Not verified; optional API covered by fixtures"
+  }
+}

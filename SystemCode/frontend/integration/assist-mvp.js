@@ -9,7 +9,7 @@
  * devices.js/video-replay.js/catalog.js/voice-preferences.js/risk-speech-cache.js/risk-audio-resources.js;
  * original camera/navigation/speech/vibration singletons.
  * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; renderDiagnostics; guidanceDiagnostic; onGuidance; applyVoice;
- * renderSpeechActivation; activateSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
+ * renderSpeechActivation; activateSpeech; testSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; requestEntryMediaPermissions; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
  * onBoundary; speakAssistantReply; prepareRiskAudio; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
  * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
@@ -323,7 +323,7 @@ function renderSpeechActivation(state) {
   const enabled = speechOutput.enabled.checked;
   const output = guidanceManager.describe();
   const gated = output.paused.speech && output.reasons.speech === "activation_required";
-  node("assist-speech-start").disabled = !speechOutput.supported || !enabled || state.ready && !gated || state.state === "queued" ||
+  node("assist-speech-start").disabled = !speechOutput.supported || !enabled || speechOutput.describe().active_request || state.state === "queued" ||
     !testView && Boolean(voicePreference.reason);
   if (!testView) {
     setStatusText("assist-speech-status", !speechOutput.supported
@@ -338,10 +338,12 @@ function renderSpeechActivation(state) {
       : state.ready
         ? gated ? productText("点击启动语音、发送助手指令，或重新开始导航、检测。", "Tap Activate voice, send an assistant request, or start navigation or detection again.")
           : output.paused.speech ? productText("语音提醒已暂停，请点击恢复语音。", "Voice alerts are paused. Tap Resume voice.")
-          : productText("语音提醒已就绪。", "Voice alerts are ready.")
+          : productText("已发送语音到设备。若没有声音，请点击试听并检查媒体音量和蓝牙输出。", "Speech was sent to your device. If silent, test voice and check media volume and Bluetooth output.")
       : state.state === "queued" ? productText("正在启用语音提醒。", "Activating voice alerts.")
       : state.state === "error"
-        ? productText("语音尚未启动，请保持页面在前台，再次点击启动语音或发送助手指令。", "Voice has not started. Keep this page open, then tap Activate voice again or send an assistant request.")
+        ? ["audio_context_interrupted", "audio_context_unavailable", "activation_required"].includes(state.reason)
+          ? productText("手机暂停了语音。请保持页面在前台，点击试听／恢复语音。", "Your phone paused audio. Keep this page open and tap Test / restore voice.")
+          : productText("语音启动失败。请检查网络后点击试听／恢复语音；检测画面可继续使用。", "Voice could not start. Check your connection, then tap Test / restore voice. Detection can continue.")
         : productText("语音跟随界面语言。点击启动语音、发送助手指令，或开始导航、检测。", "Voice follows the interface language. Tap Activate voice, send an assistant request, or start navigation or detection."));
     return;
   }
@@ -370,7 +372,17 @@ function activateSpeech() {
  * Logic: An unstarted audio context must first receive explicit calibration, not asynchronous risk.
  * Constraints: Existing unrelated output errors still require the manager's explicit recovery. */
 function resumeSpeech() {
-  return speechActivation.describe().ready ? guidanceManager.resume("speech") : activateSpeech();
+  return testSpeech();
+}
+
+/* Functionality: Replay calibration and recover speech from one explicit visible control.
+ * Inputs: Trusted click. Outputs: Owned calibration result.
+ * Logic: Validate playback again even after earlier success; clear only the captured pause after PCM starts.
+ * Constraints: No camera/GPS access, automatic retry, expired alert replay or hardware-volume change. */
+function testSpeech() {
+  boundaryStopped = false;
+  if (!testView) readProductVoices();
+  return speechActivation.activate({replay: true, recover: true});
 }
 
 /* Functionality: Submit a live or matching in-flight replay reply for automatic backend speech.
@@ -517,6 +529,7 @@ async function authorizeDevices() {
  * track before enumerating labels, and discard late UI updates after a page boundary.
  * Constraints: No recording, preview, selected camera, inference, speech output or retry. */
 async function requestEntryMediaPermissions() {
+  const releaseAudio = speechOutput.reserveMicrophone();
   const choice = ++permissionChoice, target = testView ? "assist-status" : "product-camera-message";
   sourceStarting = "permission";
   setStatusText(target, productText("正在申请摄像头和麦克风权限。", "Requesting camera and microphone permission."));
@@ -537,6 +550,7 @@ async function requestEntryMediaPermissions() {
       setStatusText(target, message);
     }
   } finally {
+    releaseAudio();
     if (choice === permissionChoice) { sourceStarting = null; renderControls(); }
   }
 }
@@ -693,7 +707,7 @@ function initialize() {
   node("navigation-start").addEventListener("click", activateSpeech, true);
   for (const id of ["navigation-speech-resume", "assist-resume-speech"])
     node(id).addEventListener("click", resumeSpeech);
-  node("assist-speech-start").addEventListener("click", activateSpeech);
+  node("assist-speech-start").addEventListener("click", testSpeech);
   if (!testView) window.addEventListener("prs-assist-voice-gesture", activateSpeech);
   speechOutput.enabled.addEventListener("change", () => {
     if (!speechOutput.enabled.checked) {

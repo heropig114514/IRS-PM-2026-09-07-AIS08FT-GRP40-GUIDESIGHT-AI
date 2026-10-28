@@ -1,0 +1,64 @@
+{
+  "physical_audio_verified": false,
+  "errors": [],
+  "events": [
+    "[PRS speech] Initialized {supported: true}",
+    "[PRS speech] Setting changed {enabled: true}",
+    "[PRS speech] Initialized {supported: true}",
+    "[PRS speech] Setting changed {enabled: true}",
+    "[PRS speech] Backend request submitted {request_id: 1, text_length: 8, language: zh-CN, rate: 2, volume: 1}",
+    "[PRS speech] Backend audio started {request_id: 1}",
+    "[PRS speech] Backend audio ended {request_id: 1, audio_bytes: 39096}"
+  ],
+  "product": {
+    "activate_visible": false,
+    "resume_visible": false,
+    "status_visible": false
+  },
+  "playback": {
+    "driver": {
+      "available": true,
+      "supported": true,
+      "enabled": true,
+      "visible": true,
+      "user_activated": true,
+      "state": "completed",
+      "active_request": false,
+      "engine_speaking": false,
+      "engine_pending": false,
+      "engine_paused": false,
+      "voice_count": 1,
+      "voice_query_failed": false,
+      "last_request": {
+        "id": 1,
+        "text_length": 8,
+        "language": "zh-CN",
+        "voice_id": "Cherry",
+        "rate": 2,
+        "volume": 1,
+        "service": "backend",
+        "local_service": false,
+        "audio_transport": "websocket"
+      },
+      "last_error": null,
+      "audio_output_verified": false,
+      "speech_service": "backend"
+    },
+    "activation": {
+      "ready": true,
+      "state": "ready",
+      "reason": null,
+      "request_id": 1,
+      "owned_request_id": null,
+      "cancel_failed": false,
+      "disposed": false
+    },
+    "audio_context_state": "running",
+    "audio_session_type": null,
+    "paused": {
+      "speech": false,
+      "vibration": false
+    },
+    "status": "后端语音已开始播放，助手回复、导航和风险提醒可自动播报；请确认设备实际声音。"
+  }
+}

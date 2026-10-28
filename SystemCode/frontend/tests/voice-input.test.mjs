@@ -1,7 +1,7 @@
 /* Responsibilities: Verify explicit voice capture, PCM encoding, worklet boundaries and cleanup.
  * Implementation: Install deterministic browser-audio fixtures and exercise real recorder modules.
  * Related Modules: ../voice-input.js, ../voice-worklet.js, agent.test.mjs.
- * Declaration Index: browserFixture — install and restore fake media/WebAudio APIs;
+ * Declaration Index: testCaptureReservation; browserFixture — install and restore fake media/WebAudio APIs;
  * deferred — expose one manually settled asynchronous operation;
  * loadWorklet — load the production worklet under host-owned audio globals;
  * encodeWavBoundaries — check sample conversion and input limits;
@@ -325,3 +325,22 @@ test("flush timeout and inactive finish fail with resource cleanup", finishTimeo
 test("release respects an already closed AudioContext", releaseRespectsClosedContext);
 test("AudioWorklet batches samples, stops silently and enforces its duration cap",
   audioWorkletFlushesBatchesAndStopsAtLimit);
+
+/* Functionality: Bound microphone-compatible routing to capture resources and failure cleanup.
+ * Inputs: Real recorder with injected reservation and explicit browser fixtures.
+ * Outputs: Exactly one acquisition before permission and one release after track stop/close.
+ * Logic: Verify normal cancel and context-close error independently.
+ * Constraints: No actual microphone, browser permission or audio hardware. */
+test("capture reserves audio before permission and releases on cleanup", async function testCaptureReservation(t) {
+  for(const closeError of [null,new Error("fixture close failure")]) {
+    await t.test(closeError?"close error":"normal cancel",async t=>{
+      const f=browserFixture(t,{closeError});
+      let reserved=0,released=0;
+      f.voice.reserveAudio=()=>{ assert.equal(f.state.permissionCalls,0); reserved++;
+        return ()=>{assert.equal(f.state.stoppedTracks,1); released++;}; };
+      await f.voice.start(); assert.equal(reserved,1); assert.equal(released,0);
+      if(closeError) await assert.rejects(f.voice.cancel(),closeError); else await f.voice.cancel();
+      assert.equal(released,1); await f.voice.cancel(); assert.equal(released,1);
+    });
+  }
+});

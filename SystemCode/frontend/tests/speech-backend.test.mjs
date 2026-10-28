@@ -16,7 +16,8 @@
  * flushMicrotasks; pcmMessage; testPageContracts; testStreamingBilingualPlayback; testBackendWatchdog; testStopAndStaleFrames;
  * testBackendErrors; testBeforePlaybackCancellation; testRiskTransportIsolation;
  * testRiskTransportUnavailable; testCachedRiskPlayback; testPreparedRiskPlayback;
- * testPreparedRiskPlayback.fetchResource; testTransportSetupErrors.
+ * testPreparedRiskPlayback.fetchResource; testTransportSetupErrors; testAudioSessionOwnership;
+ * testAudioContextInterruption; testAudioSessionFailure; testMicrophoneReservation; FakeAudioContext.constructor.
  * Variable Index: FakeWebSocket.instances and FakeAudioContext.instances — isolated transport/audio evidence;
  * PCM_RATE — protocol fixture sample rate; per-test timer maps force connection, stream and playback deadlines without wall-clock waits.
  * Constraints: Fixtures verify application contracts and scheduled audio data, not provider availability,
@@ -99,10 +100,10 @@ class FakeGain {
 /** Functionality: Provide the Web Audio methods required by the PCM player.
  * Inputs: none. Outputs: sample buffers, source nodes and gain nodes.
  * Logic: resume is synchronous in state and promise-shaped; Constraints: no rendered audio. */
-class FakeAudioContext {
+class FakeAudioContext extends EventTarget {
   static instances = [];
   constructor() {
-    this.state = "suspended"; this.currentTime = 1; this.destination = {};
+    super(); this.state = "suspended"; this.currentTime = 1; this.destination = {};
     this.sources = []; this.gains = []; FakeAudioContext.instances.push(this);
   }
   resume() { this.state = "running"; return Promise.resolve(); }
@@ -389,7 +390,11 @@ test("formal and diagnostic pages select backend bilingual speech", async functi
   const map = await readFile(new URL("../maps.html", import.meta.url), "utf8");
   const panel = await readFile(new URL("../integration/assist-panel.html", import.meta.url), "utf8");
   const renderer = await readFile(new URL("../../backend/integration/assist.py", import.meta.url), "utf8");
-  assert.match(product, /Backend bilingual TTS/);
+  const bindings = product.indexOf('id="product-driver-bindings"');
+  for (const id of ["assist-speech-start", "assist-speech-status", "assist-resume-speech"]) {
+    assert.equal(product.split(`id="${id}"`).length, 2, "one binding per control");
+    assert.ok(product.indexOf(`id="${id}"`) < bindings, "recovery must be outside hidden bindings");
+  }
   assert.match(product, /id="speech-language"[^>]*>[\s\S]*?value="auto"/);
   assert.match(map, /id="speech-voice"[^>]*>[\s\S]*?value="Cherry"/);
   assert.match(map, /id="speech-language"[^>]*>[\s\S]*?value="auto"/);
@@ -527,4 +532,66 @@ test("backend command construction and send failures are classified as transport
     assert.equal(output.describe().last_error, "transport_failed", `${failure} is not an audio-context failure`);
     assert.equal(output.describe().active_request, false);
   }
+});
+
+/** Functionality: Verify bounded optional platform routing and foreign ownership.
+ * Inputs: Synthetic Audio Session with auto/recording types. Outputs: Exact acquire/release assertions.
+ * Logic: Exercise real request stop and preserve subsequent recorder changes.
+ * Constraints: No iPhone hardware or silent-switch behavior is simulated. */
+test("speech owns playback routing only until its request ends", function testAudioSessionOwnership() {
+  const {output, win} = backendFixture("product"); enable(output);
+  const session = {type: "auto"}; win.navigator.audioSession = session;
+  assert.equal(output.speak("Test", {language:"en-US", voice_id:"Cherry"}).accepted, true);
+  assert.equal(session.type, "playback"); output.stop(); assert.equal(session.type, "auto");
+  output.speak("Test", {language:"en-US", voice_id:"Cherry"});
+  session.type = "play-and-record"; output.stop(); assert.equal(session.type, "play-and-record");
+  output.speak("Test", {language:"en-US", voice_id:"Cherry"});
+  assert.equal(session.type, "play-and-record"); output.stop();
+});
+
+/** Functionality: Verify interruption closes obsolete streams and invalidates readiness without replay.
+ * Inputs: Synthetic context state transitions. Outputs: Owned close, interruption event and fresh context.
+ * Logic: A later explicit playback replaces a closed context, with old listeners detached.
+ * Constraints: Platform interruptions are fixture events, not device tests. */
+test("audio interruption cancels owned PCM and closed contexts recover on explicit playback", function testAudioContextInterruption() {
+  const {output} = backendFixture("product"); enable(output);
+  const events = []; output.subscribe(event => events.push(event));
+  output.speak("Test", {language:"en-US", voice_id:"Cherry"});
+  const old = output.audioContext, socket = FakeWebSocket.instances.at(-1);
+  old.state = "interrupted"; old.dispatchEvent(new Event("statechange"));
+  assert.equal(output.describe().last_error, "audio_context_interrupted");
+  assert.equal(output.describe().active_request, false); assert.equal(socket.readyState, 3);
+  assert.equal(events.at(-1).phase, "interrupted"); assert.equal(FakeWebSocket.instances.length, 1);
+  old.state = "closed"; old.dispatchEvent(new Event("statechange"));
+  output.speak("Test", {language:"en-US", voice_id:"Cherry"});
+  assert.notEqual(output.audioContext, old); assert.equal(output.describe().audio_context_state, "running");
+  const count = events.length; old.dispatchEvent(new Event("statechange"));
+  assert.equal(events.length, count); output.stop();
+});
+
+/** Functionality: Keep a failed platform routing request explicit and bounded.
+ * Inputs: Throwing session setter. Outputs: Rejection with no opened transport or retained ownership.
+ * Logic: Use the real setup exception path. Constraints: No alternate provider or automatic retry. */
+test("a rejected audio session change fails visibly before transport", function testAudioSessionFailure() {
+  const {output, win} = backendFixture("product"); enable(output);
+  win.navigator.audioSession = {get type() { return "auto"; }, set type(value) { throw new Error(value); }};
+  assert.equal(output.speak("Test", {language:"en-US", voice_id:"Cherry"}).accepted, false);
+  assert.equal(output.audioSessionOwner, null); assert.equal(FakeWebSocket.instances.length, 0);
+});
+
+/** Functionality: Preserve pending and concurrent microphone ownership during speech.
+ * Inputs: Two reservation tokens and a synthetic platform session. Outputs: Auto routing until both release.
+ * Logic: A reservation releases our existing playback claim before microphone access.
+ * Constraints: No capture or iPhone hardware behavior is simulated. */
+test("pending microphone capture prevents playback-only routing", function testMicrophoneReservation() {
+  const {output,win}=backendFixture("product"); enable(output);
+  win.navigator.audioSession={type:"auto"};
+  output.speak("Test",{language:"en-US",voice_id:"Cherry"});
+  assert.equal(win.navigator.audioSession.type,"playback");
+  const first=output.reserveMicrophone(), second=output.reserveMicrophone();
+  assert.equal(win.navigator.audioSession.type,"auto"); output.stop(); first(); first();
+  output.speak("Test",{language:"en-US",voice_id:"Cherry"});
+  assert.equal(win.navigator.audioSession.type,"auto"); output.stop(); second();
+  output.speak("Test",{language:"en-US",voice_id:"Cherry"});
+  assert.equal(win.navigator.audioSession.type,"playback"); output.stop();
 });

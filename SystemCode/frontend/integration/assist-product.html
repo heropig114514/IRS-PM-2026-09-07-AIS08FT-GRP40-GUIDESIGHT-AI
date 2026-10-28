@@ -3,7 +3,7 @@
 Implementation: Request location and temporary camera/microphone permissions on entry; tap-to-toggle voice
 input, rear-camera detection, annotated results and direct route selection remain explicit actions. Original
 controller IDs preserve navigation/camera lifecycles; a visually hidden video remains the capture source.
-Backend bilingual TTS and vibration controls stay in hidden bindings.
+Speech status and explicit test/recovery remain visible; low-level driver and vibration bindings stay hidden.
 Related Modules: agent-client.js/agent.css, assist-mvp.js, product-ui.js, assist-product.css;
 maps/navigation/camera controllers; integration.assist renders this product template.
 Declaration Index: None.
@@ -46,6 +46,12 @@ keys select fixed bilingual labels. No inline code, saved coordinates, device ID
         <p class="product-permission-note" data-product-copy="permissionNote">打开页面时，浏览器会申请位置、摄像头和麦克风权限；临时媒体流会立即关闭。</p>
       </div>
       <nav class="product-jump" aria-label="主要功能" data-product-aria="mainNavigation"><a href="#product-navigation" data-product-copy="navigation">步行导航</a><button id="product-camera-start" type="button" data-product-copy="startCameraShortcut" disabled>开启环境感知</button></nav>
+      <section class="product-card product-speech" aria-labelledby="product-speech-heading">
+        <h2 id="product-speech-heading" data-product-copy="voiceHeading">语音提醒</h2>
+        <p id="assist-speech-status" role="status" data-language-original></p>
+        <div class="product-actions"><button id="assist-speech-start" class="button primary" type="button" data-product-copy="testVoice">试听／恢复语音</button><button id="assist-resume-speech" class="button secondary" type="button" disabled data-product-copy="resumeVoice">恢复提醒</button></div>
+        <p class="product-hint" data-product-copy="voiceHint">先试听确认声音，再开始检测。若无声，请调高媒体音量、检查蓝牙耳机；旧版 iPhone 还需关闭静音。仅需提醒的风险目标会自动播报。</p>
+      </section>
       <div class="product-grid">
         <section id="product-navigation" class="product-card" aria-labelledby="product-navigation-heading">
           <div class="product-card-heading"><div><span class="product-step" aria-hidden="true">01</span><h2 id="product-navigation-heading" data-product-copy="navigation">步行导航</h2></div><span id="product-map-state" class="product-badge" role="status" data-language-original>正在准备地图</span></div>
@@ -102,8 +108,8 @@ keys select fixed bilingual labels. No inline code, saved coordinates, device ID
     <span id="maps-status"></span><p id="maps-message"></p><span id="tile-status"></span><span id="location-source">尚未指定</span><span id="accuracy"></span>
     <p id="navigation-message"></p><p id="navigation-position"></p><p id="navigation-deviation"></p><p id="navigation-instruction"></p><p id="navigation-next"></p>
     <section id="maps-navigation-speech-panel"><h2>语音绑定</h2><select id="navigation-speech-language"><option value="zh-CN">中文</option><option value="en-US">English</option></select><select id="navigation-speech-voice"><option value="Cherry">Cherry</option></select><button id="navigation-voices-refresh" type="button"></button><button id="navigation-speech-stop" type="button"></button><button id="navigation-speech-resume" type="button" disabled></button><p id="navigation-speech-status"></p></section>
-    <section id="product-output-bindings"><p id="assist-speech-status" role="status"></p><p id="assist-output-status" role="status"></p>
-      <button id="assist-speech-start" type="button"></button><button id="assist-resume-speech" type="button" disabled></button><button id="assist-resume-vibration" type="button" disabled></button>
+    <section id="product-output-bindings"><p id="assist-output-status" role="status"></p>
+      <button id="assist-resume-vibration" type="button" disabled></button>
       <input id="speech-enabled" type="checkbox" /><input id="navigation-speech-enabled" type="checkbox" checked /><input id="assist-risk-enabled" type="checkbox" checked /><input id="vibration-enabled" type="checkbox" /></section>
     <section id="speech-test"><span id="speech-status"></span><textarea id="speech-text" maxlength="2000"></textarea><select id="speech-language"><option value="zh-CN">中文</option><option value="en-US">English</option><option value="auto">自动适配中英文</option></select><select id="speech-voice"><option value="Cherry">Cherry · 中文 / English</option></select><input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="2" /><output id="speech-rate-value"></output><input id="speech-volume" type="range" min="0" max="1" step="0.1" value="1" /><output id="speech-volume-value"></output><button id="speech-play" type="button"></button><button id="speech-stop" type="button"></button><p id="speech-message"></p><p id="speech-request"></p></section>
     <section id="vibration-test"><span id="vibration-status"></span><button id="vibration-stop" type="button"></button><p id="vibration-message"></p></section>

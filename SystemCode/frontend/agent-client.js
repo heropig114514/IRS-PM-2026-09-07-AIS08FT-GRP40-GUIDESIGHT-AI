@@ -5,7 +5,8 @@
  * Failures render as status, never dialogue.
  * Disconnect releases microphone. A visible page reconnects with bounded backoff without resubmitting
  * an in-flight command; only a reply matching the page's pending request may speak once after replay.
- * Related Modules: ai-control.js, voice-input.js, agent.css, integration/assist-mvp.js;
+ * Microphone startup reserves shared audio routing until capture resources are released.
+ * Related Modules: speech-output.js, ai-control.js, voice-input.js, agent.css, integration/assist-mvp.js;
  * SystemCode/backend/core/agent/transport.
  * Declaration Index: label; recordingFailure; eventNotice; AgentPanel; AgentPanel.constructor; AgentPanel.connect;
  * AgentPanel.handleDisconnect; AgentPanel.scheduleReconnect; AgentPanel.send; AgentPanel.submit;
@@ -24,6 +25,7 @@
  * eventNotice resolves the visible notice from that map.
  */
 import {VoiceInput} from "./voice-input.js";
+import {speechOutput} from "./speech-output.js";
 
 const COPY = {
   title: ["语音助手", "Voice assistant"], help: ["说出或输入你想做的事，例如：开启导航、关闭摄像头。", "Say or type a request, such as start navigation or close the camera."],
@@ -212,7 +214,7 @@ export class AgentPanel {
     this.leaving = false;
     this.pendingRequestId = null;
     this.pendingReplyNotified = false;
-    this.voice = new VoiceInput(() => this.record());
+    this.voice = new VoiceInput(() => this.record(), () => speechOutput?.reserveMicrophone() ?? (() => {}));
     this.root.querySelector("#agent-form").addEventListener("submit", event => {
       event.preventDefault();
       const text = this.input.value.trim();
