@@ -1,13 +1,16 @@
-/* Responsibilities: Integrate Leaflet/OSM, device location, walking routes and shared continuous navigation.
- * Implementation: Initialize one map; serialize user actions; report errors and tile state separately; no implicit retries.
+/* Responsibilities: Integrate Leaflet/OSM, entry-time device location, walking routes and shared continuous navigation.
+ * Implementation: Request one location fix as the page opens, initialize one map, serialize user actions,
+ * report errors and tile state separately, and expose an explicit retry after location failure.
  * Related Modules: maps-client.js, navigation-ui.js, maps.html, i18n.js, core.maps/services.
  * Declaration Index: setCoordinates — fill coordinates; setBusy — action lock; clearRoute — discard stale routes;
  * showFailure — display errors; initialize — configuration/map; locate — device origin; useExample — explicit sample;
- * plan — request a route; describeMap — structured state; planDestination — agent inputs to existing route controls.
+ * plan — request a route; describeMap — structured state; planDestination — agent inputs to existing route controls;
+ * mapsReady — settled map/location initialization.
  * Variable Index: button/planButton/exampleButton/status/message — state DOM; map/tiles — Leaflet instances;
  * routeLayer/startMarker/endMarker — replaceable layers; busy — action lock; configured — backend configuration;
  * tileFailed — current tile failure; navigationMarker — live position; NUS_START/NUS_END — fixed test points;
- * lastFailure — latest error; startSource — origin provenance; mapsControl — semantic MCP interface.
+ * lastFailure — latest error; startSource — origin provenance; startupPosition — one page-entry location result;
+ * mapsControl — semantic MCP interface.
  */
 import {
   getDevicePosition,
@@ -80,9 +83,10 @@ function showFailure(error) {
 
 /* Functionality: Check backend configuration and initialize OSM tiles.
  * Inputs: Same-origin configuration and pinned/SRI Leaflet; Outputs: Map, configuration state and events.
- * Logic: Mark the NUS view as a preview; actual location requires a user/agent request;
+ * Logic: Mark the NUS view as a temporary preview; use the page-entry location request after map setup;
  * report tile load/tileerror separately.
- * Constraints: No tile prefetch, cache overrides or hidden attribution; failed loading requires manual refresh.
+ * Constraints: No tile prefetch, cache overrides or hidden attribution; a failed location is never replaced
+ * with the preview and can be retried explicitly.
  */
 async function initialize() {
   try {
@@ -135,25 +139,27 @@ async function initialize() {
     status.textContent = configured ? "ORS 已配置" : "ORS 未配置";
     message.textContent = configured
       ? (exampleButton
-        ? "可获取设备起点，点击地图选择终点；或填入 NUS 示例后测试路线。"
-        : "使用当前位置设置起点，点击地图选择目的地。")
+        ? "页面打开时请求设备位置，点击地图选择终点；或填入 NUS 示例后测试路线。"
+        : "页面打开时请求设备位置并设为起点，点击地图选择目的地。")
       : "服务器未配置 ORS_API_KEY，路线接口暂不可用。";
     setBusy(false);
     console.info(
       "[PRS routes] Map initialized; backend key stays server-side.",
     );
+    await locate(startupPosition);
   } catch (error) {
     showFailure(error);
   }
 }
 
 /* Functionality: Use one device location fix as the route origin.
- * Inputs: User click or bound MCP request and browser permission; Outputs: Coordinates, accuracy,
+ * Inputs: Page-entry result, user retry or bound MCP request and browser permission; Outputs: Coordinates, accuracy,
  * provenance, origin layer and structured result.
- * Logic: Disable input during the operation; failures never use cached/sample locations.
- * Constraints: A click does not upload location; MCP returns results to the agent; planning sends them to PRS/ORS.
+ * Logic: Disable route controls during acquisition; reveal product retry only on failure and hide it after success;
+ * failures never use cached/sample locations. Constraints: Location stays in page state until route planning;
+ * MCP returns results to its agent; planning sends coordinates to PRS/ORS.
  */
-async function locate() {
+async function locate(positionResult = null) {
   if (busy || !map) return {accepted: false, reason: busy ? "busy" : "map_not_ready"};
   lastFailure = null;
   if (!clearRoute()) return {accepted: false, reason: "stop_failed"};
@@ -167,7 +173,9 @@ async function locate() {
     "#start-latitude",
   ).value = "";
   try {
-    const { coords } = await getDevicePosition();
+    const result = positionResult ? await positionResult : {position: await getDevicePosition()};
+    if (result.error) throw result.error;
+    const { coords } = result.position;
     startSource = "device";
     setCoordinates("start", [coords.longitude, coords.latitude]);
     document.querySelector("#location-source").textContent = "设备当前位置";
@@ -182,8 +190,10 @@ async function locate() {
       .bindTooltip("设备起点");
     status.textContent = "起点已定位";
     message.textContent = "点击地图选择终点，然后规划步行路线。";
+    button.hidden = !exampleButton;
     console.info("[PRS routes] Device position acquired; not yet submitted.");
   } catch (error) {
+    if (!exampleButton) button.hidden = false;
     showFailure(error);
   } finally {
     setBusy(false);
@@ -308,6 +318,11 @@ export async function planDestination({destination = null, origin = null} = {}) 
 
 export const mapsControl = {describe: describeMap, locate, plan: planDestination};
 
+const startupPosition = getDevicePosition().then(
+  position => ({position}),
+  error => ({error}),
+);
+
 button.addEventListener("click", locate);
 // Functionality: Render shared navigation position; Inputs: Controller events; Outputs: One position layer.
 // Logic: Update while active/arrived, remove on stop/route clear; Constraints: No route edits or automatic panning.
@@ -335,4 +350,4 @@ for (const input of document.querySelectorAll("#route-form input"))
       document.querySelector("#accuracy").textContent = "不适用";
     }
   });
-initialize();
+export const mapsReady = initialize();

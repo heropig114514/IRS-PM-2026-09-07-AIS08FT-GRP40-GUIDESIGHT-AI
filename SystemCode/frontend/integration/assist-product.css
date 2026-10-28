@@ -41,8 +41,8 @@ h3 { font-size: 18px; line-height: 1.5; }
 .product-jump a:first-child { background: #e7eee8; }
 #product-main > #agent-panel[data-view="product"] { margin: 0 0 20px; padding: 20px 22px; border-color: var(--line); color: var(--ink); }
 #agent-panel[data-view="product"] .agent-heading h2 { font-size: 18px; }
-#agent-panel[data-view="product"] #agent-record { min-width: 160px; background: var(--accent); border-color: var(--accent); color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; }
-#agent-panel[data-view="product"][data-pressing="true"] #agent-record { background: #0d504b; transform: translateY(1px); }
+#agent-panel[data-view="product"] #agent-record { min-width: 160px; background: var(--accent); border-color: var(--accent); color: #fff; user-select: none; -webkit-user-select: none; }
+#agent-panel[data-view="product"][data-recording="true"] #agent-record { background: #0d504b; }
 #agent-panel[data-view="product"] #agent-input { border-color: #91a9a1; color: var(--ink); }
 #agent-panel[data-view="product"] .agent-actions button { font: inherit; }
 #agent-panel[data-view="product"] .agent-actions button:disabled { opacity: 1; color: #586b65; background: #e6eae6; border-color: #ced9d3; }

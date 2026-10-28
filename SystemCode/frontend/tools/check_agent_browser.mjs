@@ -171,8 +171,8 @@ export async function ask(page, text, report) {
 /* Functionality: Verify recorded speech actually closes a running camera.
  * Inputs: connected page, evidence report, Chrome configured with explicit fake audio.
  * Outputs: transcript, tool evidence and independent released-stream assertion; capture state on missing transcript.
- * Logic: Wait for shared speech to finish, start the existing product camera through its real button, hold the
- * actual pointer for six seconds, and require a new ASR/agent turn before reading its transcript.
+ * Logic: Wait for shared speech to finish, start the existing product camera through its real button, click to
+ * start recording, hold capture for six seconds without holding the control, then click to submit and require a new ASR/agent turn.
  * Constraints: Synthetic Chinese voice and fake camera; actual local inference; no physical microphone or recognition-rate claim. */
 export async function checkAudio(page, report) {
   await waitForSpeechIdle(page);
@@ -185,13 +185,11 @@ export async function checkAudio(page, report) {
   await recordButton.scrollIntoViewIfNeeded();
   const bounds = await recordButton.boundingBox();
   assert.ok(bounds, "Voice button must be visible before recording");
-  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
-  await page.mouse.down();
-  try {
-    await page.waitForFunction(() => /Release to send|松开发送|Finish.*send|结束并发送/.test(
-      document.querySelector("#agent-record").textContent));
-    await page.waitForTimeout(6000);
-  } finally { await page.mouse.up(); }
+  await recordButton.click();
+  await page.waitForFunction(() => /Finish.*send|结束并发送/.test(
+    document.querySelector("#agent-record").textContent));
+  await page.waitForTimeout(6000);
+  await recordButton.click();
   try {
     await page.waitForFunction(previous => document.querySelectorAll(".agent-message.you").length > previous,
       userCount, {timeout: 45000});

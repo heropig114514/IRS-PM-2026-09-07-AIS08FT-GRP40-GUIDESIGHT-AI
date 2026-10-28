@@ -1,19 +1,20 @@
 /* Responsibilities: Verify the public guest diagnostic relay with real Chrome/ORS/local GPU transport.
  * Implementation: Strict TLS, native fake-video capture and explicit
  * synthetic NUS watch callbacks; verify default-on controls without startup acquisition/output,
- * then a genuine start-click/backend-PCM activation before automatic guidance.
+ * requests page-entry location/camera/microphone permission then releases temporary media; capture
+ * and output remain gated until a real user click produces backend PCM playback.
  * Related Modules: integration/assist-mvp.js, camera.js, navigation-ui.js, ai-control.js, speech-output.js;
  * SystemCode/backend/integration/assist.py and the separately deployed /mvp/ reverse proxy.
  * Declaration Index: requireGate — apply fixed acceptance failures; validateArguments — pin public target and outputs;
  * requireNew — prohibit artifact overwrite; safeFailure — redact exceptions; classifyRequest — constrain resources;
  * verifyModelEvidence — correlate genuine frames and model sockets; verifySpeechActivation — validate first PCM start;
  * verifyTtsStreamEvidence — correlate server stream IDs with playback; guardMedia — wrap native media and WebSocket boundaries;
- * guardMedia.checkedVideo — preserve native video while rejecting microphone access;
+ * guardMedia.checkedVideo — track combined entry authorization and preserve native video while rejecting later microphone capture;
  * guardMedia.observedWebSocket — observe trusted speech gestures;
  * guardMedia.observedWebSocket.send — correlate synthesis UUIDs with playback IDs;
  * installGPS — inject labeled synthetic sensor callbacks; installGPS.emit — deliver one owned fix;
  * installGPS.describe — report fixture counters; installGPS.watchPosition — register one synthetic watch;
- * installGPS.clearWatch — release that watch; installGPS.getCurrentPosition — reject unexpected one-shot GPS;
+ * installGPS.clearWatch — release that watch; installGPS.getCurrentPosition — supply one synthetic entry fix;
  * observe — load canonical controllers and evidence listeners; observe.recordFrame — retain frame metadata;
  * observe.recordGuidance — correlate owned guidance with request policy; observe.recordAudio — retain output lifecycle;
  * observe.recordNavigation — retain navigation state; navigationEvidence — read controller state;
@@ -223,13 +224,14 @@ export function verifyTtsStreamEvidence(sockets, audioEvents, submissions) {
     sample_rate: 24000, format: "pcm_s16le_mono", physical_audibility_verified: false};
 }
 
-/* Functionality: Observe native video tracks while preventing any microphone request before it occurs.
- * Inputs: pre-module Chrome page. Outputs: body-free native calls and retained track cleanup handles.
- * Logic: delegate all video requests unchanged to Chrome's explicit fake-video launch device.
- * Constraints: no physical camera fixture, substituted media stream, audio permission or retry. */
+/* Functionality: Observe entry-time media authorization and later native video capture separately.
+ * Inputs: pre-module Chrome page. Outputs: body-free request evidence and track cleanup handles.
+ * Logic: delegate the combined permission probe and subsequent video request to Chrome's fake devices;
+ * keep microphone capture disabled after entry.
+ * Constraints: no physical sensor fixture, substituted production video or retry. */
 function guardMedia() {
   const native = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
-  window.__phoneMedia = {calls: [], tracks: []};
+  window.__phoneMedia = {calls: [], startupCalls: [], startupTracks: [], startupGranted: false, tracks: []};
   window.__phoneSpeechCalls = [];
   const NativeWebSocket = window.WebSocket;
   /* Functionality: Observe backend speech requests without retaining utterance bodies in reports.
@@ -274,6 +276,18 @@ function guardMedia() {
    * Inputs: production media constraints. Outputs: original native stream.
    * Logic: check before invoking the native API; Constraints: never generate or replace video pixels. */
   async function checkedVideo(constraints) {
+    if (constraints?.audio === true && constraints?.video === true) {
+      window.__phoneMedia.startupCalls.push({audio: true, video: true});
+      try {
+        const stream = await native(constraints);
+        window.__phoneMedia.startupGranted = true;
+        window.__phoneMedia.startupTracks.push(...stream.getTracks());
+        return stream;
+      } catch (error) {
+        window.__phoneMedia.startupGranted = false;
+        throw error;
+      }
+    }
     if (constraints?.audio !== undefined && constraints.audio !== false) throw new Error("MICROPHONE_FORBIDDEN");
     window.__phoneMedia.calls.push({audio_false: constraints.audio === false,
       exact_device: typeof constraints.video?.deviceId?.exact === "string", video: Boolean(constraints.video)});
@@ -325,10 +339,13 @@ export function installGPS(point) {
     if (!watches[id]?.active) throw new Error("UNKNOWN_GPS_OWNER");
     watches[id].active = false; clearInterval(watches[id].timer); watches[id].timer = null;
   }
-  /* Functionality: Reject unintended one-shot sensor acquisition in the explicit example route test.
-   * Inputs: None. Outputs: fixed failure and counter. Logic: no replacement one-shot fix.
-   * Constraints: no fallback position or undisclosed sensor use. */
-  function getCurrentPosition() { oneShots++; throw new Error("UNEXPECTED_GPS_ONESHOT"); }
+  /* Functionality: Supply one entry-time location fix. Inputs: original callbacks/options.
+   * Outputs: synthetic coordinates and a fresh timestamp. Logic: keep one-shot count independent
+   * from navigation watch ownership. Constraints: never represents physical GPS or starts navigation. */
+  function getCurrentPosition(success, error, options) {
+    oneShots++;
+    queueMicrotask(() => success({coords: {...point}, timestamp: Date.now()}));
+  }
   window.__phoneGPS = {describe};
   Object.defineProperty(navigator, "geolocation", {configurable: true,
     value: {watchPosition, clearWatch, getCurrentPosition}});
@@ -341,6 +358,7 @@ export function installGPS(point) {
 async function observe() {
   const asset = new URL("../assets/", location.href);
   const glue = await import(new URL("integration/assist-mvp.js", asset)); await glue.assistReady;
+  const maps = await import(new URL("maps-page.js", asset)); await maps.mapsReady;
   const {cameraApp} = await import(new URL("camera.js", asset));
   const {navigation} = await import(new URL("navigation-ui.js", asset));
   const {speechOutput: driver} = await import(new URL("speech-output.js", asset));
@@ -738,7 +756,7 @@ export async function run(options) {
         ...(options.fakeCameraFile ? [`--use-file-for-fake-video-capture=${options.fakeCameraFile}`] : [])]});
     context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
-    await context.grantPermissions(["geolocation"], {origin: PHONE_ORIGIN});
+    await context.grantPermissions(["geolocation", "camera", "microphone"], {origin: PHONE_ORIGIN});
     await context.addInitScript(guardMedia);
     await context.addInitScript(installGPS, NUS);
     page = await context.newPage();
@@ -763,7 +781,12 @@ export async function run(options) {
     requireGate(response.status() === 200, "PUBLIC_PAGE_FAILED");
     report.checks.permissions_policy = response.headers()["permissions-policy"];
     requireGate(/camera=\(self\)/.test(report.checks.permissions_policy) &&
+      /microphone=\(self\)/.test(report.checks.permissions_policy) &&
       /geolocation=\(self\)/.test(report.checks.permissions_policy), "PHONE_PERMISSIONS_POLICY");
+    await page.waitForFunction(() => window.__phoneMedia.startupCalls.length === 1 &&
+      window.__phoneMedia.startupTracks.length === 2 &&
+      window.__phoneMedia.startupTracks.every(track => track.readyState === "ended") &&
+      window.__phoneGPS.describe().one_shot_requests === 1, null, {timeout: 10000});
     report.phase = "canonical_modules"; report.identity = await page.evaluate(observe);
     requireGate(report.identity.secure_context && report.identity.media_devices && report.identity.geolocation_api &&
       report.identity.native_geolocation_api &&
@@ -776,6 +799,10 @@ export async function run(options) {
       camera_panel_visible: await page.locator("#assist-camera-panel").isVisible(),
       video_panel_hidden: await page.locator("#assist-video-panel").isHidden(),
       get_user_media_calls: await page.evaluate(() => window.__phoneMedia.calls.length),
+      startup_permission_calls: await page.evaluate(() => window.__phoneMedia.startupCalls.length),
+      startup_permission_granted: await page.evaluate(() => window.__phoneMedia.startupGranted),
+      startup_permission_tracks_stopped: await page.evaluate(() => window.__phoneMedia.startupTracks.length === 2 &&
+        window.__phoneMedia.startupTracks.every(track => track.readyState === "ended")),
       startup_outputs: await page.evaluate(() => ({speech_calls: window.__phoneSpeechCalls.length,
         gps_watches: window.__phoneGPS.describe().watch_count,
         gps_one_shot_requests: window.__phoneGPS.describe().one_shot_requests,
@@ -784,9 +811,11 @@ export async function run(options) {
         guidance: window.__phoneControllers.glue.guidanceManager.describe()}))};
     const initialCamera = report.checks.initial_camera_entry;
     requireGate(initialCamera.source === "camera" && initialCamera.camera_panel_visible &&
-      initialCamera.video_panel_hidden && initialCamera.get_user_media_calls === 0, "INITIAL_CAMERA_ENTRY_INVALID");
+      initialCamera.video_panel_hidden && initialCamera.get_user_media_calls === 0 &&
+      initialCamera.startup_permission_calls === 1 && initialCamera.startup_permission_granted === true &&
+      initialCamera.startup_permission_tracks_stopped === true, "INITIAL_CAMERA_ENTRY_INVALID");
     const initialOutput = initialCamera.startup_outputs;
-    requireGate(initialOutput.speech_calls === 0 && initialOutput.gps_watches === 0 && initialOutput.gps_one_shot_requests === 0 &&
+    requireGate(initialOutput.speech_calls === 0 && initialOutput.gps_watches === 0 && initialOutput.gps_one_shot_requests === 1 &&
       initialOutput.voice_id === "Cherry" &&
       initialOutput.activation.ready === false && initialOutput.guidance.paused.speech === true &&
       initialOutput.guidance.reasons.speech === "activation_required", "STARTUP_OUTPUT_NOT_GATED");

@@ -1,7 +1,9 @@
 /** Responsibilities: Verify explicit permission cleanup, failure propagation and no implicit camera choice.
  * Implementation: Independent media-device/track fixtures; no real browser permission or sensor.
  * Related Modules: integration/devices.js and local-mvp.js; root browser test verifies native prompt/UI behavior.
- * Declaration Index: testGranted; testGranted.stopFirst; testGranted.stopSecond; testGranted.getUserMedia;
+ * Declaration Index: testPageGranted; testPageGranted.getUserMedia; testPageGranted.enumerateDevices;
+ * testPageDenied; testPageDenied.getUserMedia; testPageDenied.enumerateDevices;
+ * testGranted; testGranted.stopFirst; testGranted.stopSecond; testGranted.getUserMedia;
  * testGranted.enumerateDevices; testDenied; testDenied.getUserMedia; testDenied.enumerateDevices;
  * testCleanupFailure; testCleanupFailure.stopFirst; testCleanupFailure.stopSecond;
  * testCleanupFailure.getUserMedia; testCleanupFailure.enumerateDevices; testExplicitSelection.
@@ -9,7 +11,43 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {authorizeCameraDevices, explicitDeviceId} from "../integration/devices.js";
+import {authorizeCameraDevices, explicitDeviceId, requestPageMediaPermissions} from "../integration/devices.js";
+
+/** Functionality: Verify page-entry media permission releases audio and video before inventory reads.
+ * Inputs: Combined-media and track fixtures. Outputs: Inventory after exact request/cleanup ordering.
+ * Logic: One browser request authorizes both features; each temporary track changes to ended.
+ * Constraints: Fixtures do not start a recorder, preview or inference session. */
+test("page-entry media permission stops its temporary audio and video tracks", async function testPageGranted() {
+  const calls = [], devices = [{kind: "videoinput", deviceId: "camera-1"}];
+  const tracks = ["audio", "video"].map(kind => ({kind, readyState: "live", stop() {
+    calls.push(`stop:${kind}`); this.readyState = "ended";
+  }}));
+  /** Functionality: Return one explicit combined-permission stream. Inputs: Media constraints.
+   * Outputs: Two stoppable synthetic tracks. Logic: Record one call; Constraints: no native device. */
+  async function getUserMedia(options) { calls.push(options); return {getTracks: () => tracks}; }
+  /** Functionality: Supply a readable inventory after cleanup. Inputs: None. Outputs: fixed devices.
+   * Logic: Ordering marker proves cleanup precedes enumeration. Constraints: no real labels or IDs. */
+  async function enumerateDevices() { calls.push("enumerate"); return devices; }
+  const inventory = await requestPageMediaPermissions({getUserMedia, enumerateDevices});
+  assert.deepEqual(calls, [{audio: true, video: true}, "stop:audio", "stop:video", "enumerate"]);
+  assert.equal(tracks.every(track => track.readyState === "ended"), true);
+  assert.equal(inventory, devices);
+});
+
+/** Functionality: Preserve one-shot denial semantics for page-entry media permission.
+ * Inputs: Explicit rejected getUserMedia fixture. Outputs: Original typed error and one call.
+ * Logic: A denial never falls through to inventory or retries. Constraints: no permission prompt. */
+test("page-entry media denial is surfaced without retry or inventory fallback", async function testPageDenied() {
+  const calls = [], denied = Object.assign(new Error("denied"), {name: "NotAllowedError"});
+  /** Functionality: Reject the combined media request. Inputs: Constraints. Outputs: Original error.
+   * Logic: Count exactly one request. Constraints: no native browser state is changed. */
+  async function getUserMedia(options) { calls.push(options); throw denied; }
+  /** Functionality: Detect prohibited enumeration after denial. Inputs: None. Outputs: marker.
+   * Logic: Record any unexpected access. Constraints: no device inventory. */
+  async function enumerateDevices() { calls.push("enumerate"); return []; }
+  await assert.rejects(requestPageMediaPermissions({getUserMedia, enumerateDevices}), error => error === denied);
+  assert.deepEqual(calls, [{audio: true, video: true}]);
+});
 
 /** Functionality: Verify granting permission releases every temporary track before reading IDs.
  * Inputs: native-style stream fixture with two tracks. Outputs: video-only request/order/inventory.

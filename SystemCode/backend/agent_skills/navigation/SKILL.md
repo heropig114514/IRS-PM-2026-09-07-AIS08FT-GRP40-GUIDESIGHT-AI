@@ -5,6 +5,9 @@ description: Start/stop navigation, inspect status, obtain the real device origi
 
 Use only the actual tools and parameters returned by discover_tools. Never invent a missing tool.
 read_skill.environment_context describes search configuration; maps_locate supplies the real device origin.
+The executor exposes places_search, places_categories and places_nearby only after a successful
+maps_locate in this turn. This ordering is an execution invariant: a coordinate visible in a map
+preview, a previous turn, or a test fixture cannot authorize a new provider query.
 Do not maintain place, business or campus alias tables. Places, branches, categories and coordinates
 must come from actual map service results. Language understanding cannot replace tool evidence
 with remembered places or coordinates.
@@ -39,8 +42,10 @@ nearby category result also ends the action phase.
    A supplied business/brand/name or address takes priority over a generic category word. Requests
    to list stores of a named chain still use places_search with that name, including when described
    as a supermarket, pharmacy or restaurant. places_nearby cannot filter a named brand: never discard
-   the name and substitute a category-only query. This rule uses the user's actual constraint, not
-   a fixed brand dictionary.
+   the name and substitute a category-only query. If a business-like transcript plausibly sounds like
+   a specific business name from recent conversation, apply the contextual pronunciation rule below
+   instead of requiring exact spelling. This rule uses the user's actual constraint, not a fixed brand
+   dictionary.
    - Explicit coordinates, an existing map destination or an already selected candidate: reuse directly.
    - Specific name/address: use places_search. Normalize an ordinary name according to
      environment_context.query_language. original_text must preserve the user's place name verbatim,
@@ -73,6 +78,12 @@ nearby category result also ends the action phase.
    - Suspected pronunciation/transcription error, approximate-name wording or explicit sound-alike
      correction: preserve the heard name in text and infer at most two pronunciation_queries from
      Chinese homophones/near sounds, English pronunciation/spelling or cross-language transliteration.
+     Use recent conversation context to resolve likely speech-recognition substitutions before
+     searching: when the user previously named a specific business and the current transcript is a
+     plausible sound-alike (for example, prior “Sheng Siong supermarket” followed by “Samsung” or
+     “Shin Song”), include that exact contextual business name as the first pronunciation query.
+     Do not require the user to announce that recognition failed, and do not treat the contextual
+     name as confirmed intent.
      Use no fixed alias table; preserve explicit branch, address and country constraints.
      The user need not announce a pronunciation error. Nonstandard Chinese phonetic renderings of
      foreign names that require a sound-based guess must use pronunciation_queries and retain the

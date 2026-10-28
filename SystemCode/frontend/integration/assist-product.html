@@ -1,8 +1,9 @@
 <!doctype html>
 <!-- Responsibilities: Present the user-facing walking assistant, route planner and camera awareness.
-Implementation: Long-press voice input, rear-camera detection, annotated detection results and direct route
-selection; the original controller IDs preserve navigation and camera lifecycles. A visually hidden video
-remains the camera capture source. Backend bilingual TTS and vibration controls stay in hidden bindings.
+Implementation: Request location and temporary camera/microphone permissions on entry; tap-to-toggle voice
+input, rear-camera detection, annotated results and direct route selection remain explicit actions. Original
+controller IDs preserve navigation/camera lifecycles; a visually hidden video remains the capture source.
+Backend bilingual TTS and vibration controls stay in hidden bindings.
 Related Modules: agent-client.js/agent.css, assist-mvp.js, product-ui.js, assist-product.css;
 maps/navigation/camera controllers; integration.assist renders this product template.
 Declaration Index: None.
@@ -42,16 +43,17 @@ keys select fixed bilingual labels. No inline code, saved coordinates, device ID
         <p class="product-eyebrow" data-product-copy="eyebrow">步行导航 · 环境提醒</p>
         <h1 data-product-copy="heading">出行，从这里开始。</h1>
         <p data-product-copy="intro">选择目的地，开启摄像头，沿途听取导航与风险提醒。</p>
+        <p class="product-permission-note" data-product-copy="permissionNote">打开页面时，浏览器会申请位置、摄像头和麦克风权限；临时媒体流会立即关闭。</p>
       </div>
       <nav class="product-jump" aria-label="主要功能" data-product-aria="mainNavigation"><a href="#product-navigation" data-product-copy="navigation">步行导航</a><button id="product-camera-start" type="button" data-product-copy="startCameraShortcut" disabled>开启环境感知</button></nav>
       <div class="product-grid">
         <section id="product-navigation" class="product-card" aria-labelledby="product-navigation-heading">
           <div class="product-card-heading"><div><span class="product-step" aria-hidden="true">01</span><h2 id="product-navigation-heading" data-product-copy="navigation">步行导航</h2></div><span id="product-map-state" class="product-badge" role="status" data-language-original>正在准备地图</span></div>
-          <p class="product-hint" data-product-copy="routeHint">获取当前位置后，点选地图上的目的地。</p>
-          <div class="product-actions"><button id="locate" class="button secondary" type="button" disabled data-product-copy="locate">使用当前位置</button></div>
+          <p class="product-hint" data-product-copy="routeHint">页面打开时获取当前位置作为起点，再点选地图上的目的地。</p>
+          <div class="product-actions"><button id="locate" class="button secondary" type="button" disabled hidden data-product-copy="locate">重试定位</button></div>
           <p id="product-route-message" class="product-notice" role="status" data-language-original>正在准备路线服务。</p>
           <div id="map" aria-label="OpenStreetMap 地图"></div>
-          <p class="product-map-caption" data-product-copy="mapHint">使用当前位置设置起点，点击地图选择目的地。</p>
+          <p class="product-map-caption" data-product-copy="mapHint">当前位置已设为起点；点击地图选择目的地。</p>
           <p id="product-tile-message" class="product-error" role="status" data-language-original></p>
           <div class="product-location-summary"><span data-product-copy="origin">起点</span><strong id="product-origin" data-language-original>尚未选择</strong><span data-product-copy="destination">目的地</span><strong id="product-destination" data-language-original>请在地图上点选</strong></div>
           <form id="route-form">

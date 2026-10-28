@@ -152,8 +152,11 @@ test("explicit GPS fixture owns one watch, delivers fresh epoch fixes and releas
   assert.equal(JSON.stringify(description).includes("longitude"), false);
   const second = geo.watchPosition(fix => fixes.push(fix));
   geo.clearWatch(second); microtasks.shift()(); assert.equal(fixes.length, 2);
-  assert.throws(() => geo.getCurrentPosition(), /UNEXPECTED_GPS_ONESHOT/);
+  const oneShot = [];
+  geo.getCurrentPosition(position => oneShot.push(position));
   assert.equal(fixture.describe().one_shot_requests, 1);
+  microtasks.shift()();
+  assert.deepEqual(oneShot.map(fix => fix.timestamp), [3000]);
 });
 
 test("model acceptance matches two real-format capture-clock sessions without accepting synthetic risk", () => {

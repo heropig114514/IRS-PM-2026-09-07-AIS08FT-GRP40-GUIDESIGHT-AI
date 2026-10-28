@@ -16,6 +16,7 @@ AgentTests.test_provider_contract; AgentTests.test_provider_contract.handler;
 AgentTests.test_geocoder_contract; AgentTests.test_start_observes_actual_state;
 AgentTests.test_skill_reference_context; AgentTests.test_geocoder_country_override;
 AgentTests.test_geocoder_contract.handler; AgentTests.test_geocoder_rejects_unknown_country;
+AgentTests.test_product_camera_ui_action_requires_user_activation;
 AgentTests.test_cancel_before_start; AgentTests.test_socket_binding_and_heartbeat;
 AgentTests.test_socket_enforces_explicit_idle_session_capacity;
 AgentTests.test_socket_rejects_wrong_owner;
@@ -47,7 +48,7 @@ from core.agent.runtime import (
     tool_exception,
     tool_failure,
 )
-from core.agent.skills import catalog, fingerprint, instructions, read_skill
+from core.agent.skills import catalog, fingerprint, instructions, read_skill, tool_policy
 from core.agent.tools import BrowserTools, create_server
 from core.agent.transport import agent_socket, handle_message
 
@@ -104,6 +105,13 @@ class AgentTests(SimpleTestCase):
         """
         self.assertEqual(set(catalog()), {"navigation", "camera", "outputs"})
         self.assertIn("maps_locate", read_skill("navigation"))
+        self.assertIn("executor exposes places_search", read_skill("navigation"))
+        self.assertIn("Formal-page scenario contract", instructions())
+        self.assertEqual(tool_policy("navigation")["requires"]["places_search"], ["maps_locate"])
+        self.assertEqual(
+            tool_policy("navigation")["requires"]["places_nearby"],
+            ["maps_locate", "places_categories"],
+        )
         self.assertEqual(len(fingerprint()), 64)
         with self.assertRaises(ValueError):
             read_skill("../../.env")
@@ -678,6 +686,25 @@ class AgentTests(SimpleTestCase):
         self.assertEqual(
             [call.args[1] for call in browser.await_args_list], ["camera_start", "camera_status"]
         )
+
+    async def test_product_camera_ui_action_requires_user_activation(self):
+        """Functionality: Classify a formal camera-button attempt as a permission prerequisite.
+        Inputs: Protected product selector and one synthetic browser rejection. Outputs: stable
+        user_activation_required diagnostics. Logic: preflight the known selector and normalize the
+        frontend's protected-control error. Constraints: No browser permission, camera, or network.
+        """
+        adapter = BrowserTools("owned-tab")
+        with self.assertRaises(AgentError) as direct:
+            await adapter.ui_action("click", "#product-camera-start")
+        self.assertEqual(direct.exception.code, "user_activation_required")
+
+        with patch(
+            "core.agent.tools.BrowserTools.browser",
+            AsyncMock(side_effect=ValueError("This control requires direct user interaction")),
+        ):
+            with self.assertRaises(AgentError) as normalized:
+                await adapter.ui_action("click", "#observed-camera-control")
+        self.assertEqual(normalized.exception.code, "user_activation_required")
 
     async def test_cancel_before_start(self):
         """Functionality: Complete UI cancellation even before the task coroutine starts.

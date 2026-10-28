@@ -4,6 +4,7 @@
  * Related Modules: voice-input.js, agent-client.js, agent-device.js, integration/assist-mvp.js;
  * check_agent_browser.mjs adds real UI.
  * Declaration Index: testLiveReplyNotifications; testLiveReplyNotifications.FixtureCustomEvent;
+ * testProductRecordingToggle; testProductRecordingRender;
  * testAgentReconnect; testAgentReconnect.FixtureCustomEvent; testAgentReconnect.FakeWebSocket.
  * Variable Index: None; fixtures and request state are local to each test. */
 import test from "node:test";
@@ -12,6 +13,92 @@ import {encodeWav, VoiceInput} from "../voice-input.js";
 import {AgentPanel} from "../agent-client.js";
 import {cameraFailureReason, cameraState, observe, performDevice,
   productNavigationSpeechState} from "../agent-device.js";
+
+/* Functionality: Verify product recording uses a click toggle and dispatches speech activation synchronously.
+ * Inputs: Minimal panel state and EventTarget fixture. Outputs: start/finish calls and activation count.
+ * Logic: Exercise the production record and button-handler methods in both idle and recording states.
+ * Constraints: No DOM layout, browser permission prompt, microphone, network or actual speech playback. */
+test("product recording control toggles capture on clicks", async function testProductRecordingToggle(t) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const target = new EventTarget();
+  let activations = 0;
+  const timeline = [];
+  target.addEventListener("prs-assist-voice-gesture", () => { activations++; timeline.push("activate"); });
+  Object.defineProperty(globalThis, "window", {configurable: true, value: target});
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, "window", previous);
+    else delete globalThis.window;
+  });
+
+  const actions = [];
+  const owner = {productMode: true, busy: false, connected: true, recording: false, stage: "ready",
+    startRecording() { actions.push("start"); timeline.push("start"); },
+    finishRecording() { actions.push("finish"); timeline.push("finish"); }};
+  owner.record = AgentPanel.prototype.record;
+  AgentPanel.prototype.handleRecordClick.call(owner);
+  await Promise.resolve();
+  assert.deepEqual(actions, ["start"]);
+  assert.deepEqual(timeline, ["start"]);
+  assert.equal(activations, 0, "speech calibration does not play over a new recording");
+
+  owner.recording = true;
+  AgentPanel.prototype.handleRecordClick.call(owner);
+  await Promise.resolve();
+  assert.deepEqual(actions, ["start", "finish"]);
+  assert.deepEqual(timeline, ["start", "finish", "activate"]);
+  assert.equal(activations, 1, "finishing the recording activates speech within the click gesture");
+
+  owner.productMode = false;
+  owner.recording = false;
+  AgentPanel.prototype.handleRecordClick.call(owner);
+  await Promise.resolve();
+  assert.deepEqual(actions, ["start", "finish", "start"]);
+  assert.deepEqual(timeline, ["start", "finish", "activate", "start"]);
+  assert.equal(activations, 1, "diagnostic clicks do not signal product speech activation");
+});
+
+/* Functionality: Render accessible labels and cancellation states for the product recording toggle.
+ * Inputs: Minimal language-aware panel controls. Outputs: text, disabled state and active-recording marker.
+ * Logic: Exercise production rendering in ready, permission-pending and recording states.
+ * Constraints: No browser layout, hardware prompt, microphone, network or playback verification. */
+test("product recording toggle exposes start, permission, and finish states", function testProductRecordingRender(t) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {configurable: true, value: {
+    documentElement: {lang: "en"},
+  }});
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else delete globalThis.document;
+  });
+
+  const controls = {
+    '[data-copy="help"]': {textContent: ""}, "#agent-send": {disabled: false},
+    "#agent-record": {textContent: "", disabled: false, setAttribute() {}},
+    "#agent-cancel": {disabled: true}, "#agent-clear": {disabled: true},
+  };
+  const owner = {productMode: true, connected: true, busy: false, recording: false, stage: "ready",
+    notice: null, input: {disabled: false}, status: {textContent: ""}, root: {
+      dataset: {}, querySelectorAll: () => [], querySelector: selector => controls[selector],
+    }};
+  const record = controls["#agent-record"];
+  AgentPanel.prototype.render.call(owner);
+  assert.equal(record.textContent, "Start recording");
+  assert.equal(record.disabled, false);
+
+  owner.stage = "permission";
+  AgentPanel.prototype.render.call(owner);
+  assert.equal(record.textContent, "Waiting for microphone permission…");
+  assert.equal(record.disabled, true);
+  assert.equal(controls["#agent-cancel"].disabled, false);
+
+  owner.recording = true;
+  owner.stage = "recording";
+  AgentPanel.prototype.render.call(owner);
+  assert.equal(record.textContent, "Finish & send");
+  assert.equal(owner.status.textContent, "Recording. Tap again to finish and send within 20 seconds.");
+  assert.equal(owner.root.dataset.recording, "true");
+  assert.equal(record.disabled, false);
+});
 
 // Functionality: Show routing decisions in the activity log before tool execution, once.
 // Inputs: explicit bilingual intent/replay events and a minimal DOM fixture; Outputs: labels.
@@ -242,12 +329,14 @@ test("agent reconnect replays its pending reply once without resubmitting", func
   FakeWebSocket.CONNECTING = 0; FakeWebSocket.OPEN = 1;
   Object.defineProperty(globalThis, "WebSocket", {configurable: true, value: FakeWebSocket});
   let rendered = 0, failures = 0;
-  const owner = {recording: true, connected: true, holdActive: true, holdToken: 5,
-    activePointerId: 7, root: {dataset: {pressing: "true"}}, stage: "ready", busy: false,
+  const owner = {recording: true, connected: true,
+    root: {dataset: {recording: "true"}}, stage: "ready", busy: false,
     socket: null, heartbeat: null, heartbeatTimeout: null, pingPending: false,
     connectionTimer: null, reconnectTimer: null, reconnectAttempt: 0,
     connectionGeneration: 0, leaving: false, pendingRequestId: null, pendingReplyNotified: false,
-    voice: {cancel: async () => { cancelled++; }}, render: () => { rendered++; }, fail() { failures++; }, append() {},
+    voice: {cancel: async () => { cancelled++; }}, render() {
+      rendered++; this.root.dataset.recording = String(this.recording);
+    }, fail() { failures++; }, append() {},
     connect() { return AgentPanel.prototype.connect.call(this); },
     handleDisconnect(socket, generation) { return AgentPanel.prototype.handleDisconnect.call(this, socket, generation); },
     send(message) { return AgentPanel.prototype.send.call(this, message); },
@@ -263,10 +352,7 @@ test("agent reconnect replays its pending reply once without resubmitting", func
   assert.equal(cancelled, 1);
   assert.equal(owner.recording, false);
   assert.equal(owner.connected, false);
-  assert.equal(owner.holdActive, false);
-  assert.equal(owner.holdToken, 6);
-  assert.equal(owner.activePointerId, null);
-  assert.equal(owner.root.dataset.pressing, "false");
+  assert.equal(owner.root.dataset.recording, "false");
   assert.equal(owner.stage, "offline");
   assert.equal(rendered >= 3, true);
 

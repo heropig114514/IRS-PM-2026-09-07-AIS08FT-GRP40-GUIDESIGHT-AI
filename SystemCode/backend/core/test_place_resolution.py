@@ -116,31 +116,52 @@ class PlaceResolutionTests(SimpleTestCase):
                 self.assertEqual(search.await_count, len(prefix) + 1)
 
     async def test_confirmation_blocks_plan(self):
-        """Functionality: A single phonetic candidate cannot be automatically planned or navigated.
-        Inputs: real MCP flow and a one-candidate result requesting confirmation.
-        Outputs: exact candidate reply terminates the action phase before another model/action call.
-        Logic: Runtime consumes the Skill's confirm_if field, independently of model compliance.
-        Constraints: Does not validate actual geocoder or candidate-confirmation language quality.
+        """Functionality: Resolve a likely ASR substitution from conversation context safely.
+        Inputs: Prior Sheng Siong mention, current Samsung transcript, and one provider candidate.
+        Outputs: Workflow receives context; sound-alike queries still require confirmation.
+        Logic: Verify the query reaches the resolver and runtime blocks route planning.
+        Constraints: Scripted output verifies the contract, not live recognition accuracy.
         """
         route = tool_message("route_intent", {
-            "route": "system", "intent_ids": ["navigation.start"], "language": "zh",
+            "route": "system", "intent_ids": ["navigation.start"], "language": "en",
         })
         replies = [tool_message("discover_tools"),
                    tool_message("read_skill", {"name": "navigation"}),
-                   tool_message("places_search", {"text": "heard name",
-                                                  "original_text": "heard name",
-                                                  "pronunciation_queries": ["hypothesis"]}),
+                   tool_message("maps_locate"),
+                   tool_message("places_search", {
+                       "text": "Samsung supermarket",
+                       "original_text": "Samsung supermarket",
+                       "pronunciation_queries": ["Sheng Siong supermarket"],
+                   }),
                    tool_message("maps_plan", {"destination": [103.77, 1.3]})]
         conversation = Conversation("tab", "token")
+        conversation.turns.append([
+            {"role": "user", "content": "I want to go to Sheng Siong supermarket."},
+            {"role": "assistant", "content": "You want to go to Sheng Siong supermarket."},
+        ])
         with patch("core.agent.intents.completion", AsyncMock(return_value=route)), patch(
             "core.agent.runtime.completion", AsyncMock(side_effect=replies)
         ) as model, patch("core.agent.tools.resolve_places", AsyncMock(return_value={
             "candidates": [{"label": "Verified test place", "coordinates": [103.77, 1.3]}],
             "requires_confirmation": True,
-        })), patch("core.ai_mcp.browser_call", AsyncMock()) as browser:
-            await conversation.run("test", "synthetic phonetic request", None)
-        browser.assert_not_awaited()
-        self.assertEqual(model.await_count, 3)
+        })) as resolver, patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+            "accepted": True, "origin": [103.77, 1.3], "source": "device",
+        })) as browser:
+            await conversation.run("test", "Navigate to Samsung supermarket", None)
+        browser.assert_awaited_once()
+        self.assertEqual(browser.await_args.args[1], "maps_locate")
+        self.assertEqual(model.await_count, 4)
+        resolver.assert_awaited_once_with(
+            "Samsung supermarket", "Samsung supermarket", None, None, ["Sheng Siong supermarket"],
+        )
+        workflow_messages = model.await_args_list[3].args[0]
+        workflow_context = " ".join(item["content"] for item in workflow_messages)
+        self.assertIn("Sheng Siong supermarket", workflow_context)
+        self.assertIn("Samsung", workflow_context)
+        self.assertIn(
+            "include that exact contextual business name as the first pronunciation query",
+            workflow_context,
+        )
         self.assertIn("1. Verified test place", conversation.turns[-1][-1]["content"])
 
     async def test_empty_hypotheses_remain_empty(self):

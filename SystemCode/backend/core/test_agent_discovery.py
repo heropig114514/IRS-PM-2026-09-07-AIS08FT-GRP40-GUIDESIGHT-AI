@@ -211,6 +211,7 @@ class DiscoveryTests(SimpleTestCase):
             tool_message("discover_tools"),
             tool_message("read_skill", {"name": "navigation"}),
             tool_message("maps_status"),
+            tool_message("maps_locate"),
             tool_message("places_categories"),
             tool_message("places_nearby", {"focus": origin, "category_ids": [category_id]}),
             tool_message("maps_plan", {"destination": destination}),
@@ -229,6 +230,8 @@ class DiscoveryTests(SimpleTestCase):
             browser_calls.append((action, arguments))
             if action == "maps_status":
                 return {"available": True, "ready": True, "origin": origin}
+            if action == "maps_locate":
+                return {"accepted": True, "origin": origin, "source": "device"}
             if action == "maps_plan":
                 return {
                     "accepted": True, "state": "planned",
@@ -257,7 +260,7 @@ class DiscoveryTests(SimpleTestCase):
         start.assert_awaited_once_with("navigation-fixture")
         self.assertEqual(
             [item[0] for item in browser_calls],
-            ["maps_status", "maps_plan", "agent_navigation_status"],
+            ["maps_status", "maps_locate", "maps_plan", "agent_navigation_status"],
         )
         planned = next(arguments for action, arguments in browser_calls if action == "maps_plan")
         self.assertEqual(planned["destination"], candidate["coordinates"])
@@ -265,7 +268,7 @@ class DiscoveryTests(SimpleTestCase):
             event["name"] for event in conversation.events if event["type"] == "tool_start"
         ]
         self.assertEqual(tool_names, [
-            "discover_tools", "read_skill", "maps_status", "places_categories",
+            "discover_tools", "read_skill", "maps_status", "maps_locate", "places_categories",
             "places_nearby", "maps_plan", "navigation_start",
         ])
         self.assertEqual(
@@ -274,7 +277,7 @@ class DiscoveryTests(SimpleTestCase):
         )
         self.assertFalse(any(event["type"] == "error" for event in conversation.events))
 
-        final_request = model.await_args_list[7].args[0]
+        final_request = model.await_args_list[8].args[0]
         start_result = next(
             json.loads(message["content"])
             for message in final_request if message.get("role") == "tool"
@@ -285,7 +288,7 @@ class DiscoveryTests(SimpleTestCase):
         self.assertEqual(start_result["state"], "navigating")
 
         category_message = next(
-            message for message in model.await_args_list[4].args[0]
+            message for message in model.await_args_list[5].args[0]
             if message.get("role") == "tool" and "category_fields" in message.get("content", "")
         )
         compact_catalog = json.loads(category_message["content"])
@@ -310,10 +313,13 @@ class DiscoveryTests(SimpleTestCase):
             tool_message("read_skill", {"name": "navigation"}),
             tool_message("places_categories"),
             tool_message("maps_status"),
+            tool_message("maps_locate"),
             {"role": "assistant", "content": "Ready"},
         ]
         with patch("core.agent.runtime.completion", AsyncMock(side_effect=replies)) as model:
-            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={"ready": True})):
+            with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "ready": True, "accepted": True, "origin": [103.77, 1.3],
+            })):
                 with patch(
                     "core.agent.poi.categories",
                     AsyncMock(
@@ -329,8 +335,9 @@ class DiscoveryTests(SimpleTestCase):
         self.assertEqual(model.await_args_list[1].kwargs["required_tool"], "read_skill")
         names = {tool["function"]["name"] for tool in model.await_args_list[2].args[1]}
         self.assertNotIn("places_nearby", names)
+        self.assertNotIn("places_search", names)
         self.assertIn(
-            "places_nearby", {tool["function"]["name"] for tool in model.await_args_list[3].args[1]}
+            "places_nearby", {tool["function"]["name"] for tool in model.await_args_list[5].args[1]}
         )
         self.assertNotIn("camera_start", names)
         self.assertNotIn("system_request", names)
@@ -399,6 +406,7 @@ class DiscoveryTests(SimpleTestCase):
         replies = [
             tool_message("discover_tools"),
             tool_message("read_skill", {"name": "navigation"}),
+            tool_message("maps_locate"),
             tool_message("places_search", {"text": "first query", "original_text": "first query"}),
             tool_message("places_search", {"text": "translated", "original_text": "first query"}),
         ]
@@ -411,11 +419,13 @@ class DiscoveryTests(SimpleTestCase):
                         "candidates": [{"label": "Synthetic unique result"}],
                     }
                 ),
-            ) as search:
+            ) as search, patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                "accepted": True, "origin": [103.77, 1.3], "source": "device",
+            })):
                 await conversation.run("test", "find a destination", None)
         search.assert_awaited_once()
         self.assertNotIn(
-            "places_search", {tool["function"]["name"] for tool in model.await_args_list[3].args[1]}
+            "places_search", {tool["function"]["name"] for tool in model.await_args_list[4].args[1]}
         )
         self.assertIn("invalid_tool_call", [event.get("code") for event in conversation.events])
 
@@ -435,6 +445,7 @@ class DiscoveryTests(SimpleTestCase):
                 replies = [
                     tool_message("discover_tools"),
                     tool_message("read_skill", {"name": "navigation"}),
+                    tool_message("maps_locate"),
                     tool_message("places_search", {
                         "text": "synthetic", "original_text": "synthetic",
                     }),
@@ -454,15 +465,18 @@ class DiscoveryTests(SimpleTestCase):
                             }
                         ),
                     ):
-                        with patch("core.ai_mcp.browser_call", AsyncMock()) as browser:
+                        with patch("core.ai_mcp.browser_call", AsyncMock(return_value={
+                            "accepted": True, "origin": [103.77, 1.3], "source": "device",
+                        })) as browser:
                             await conversation.run("test", "navigate", None)
-                browser.assert_not_awaited()
+                browser.assert_awaited_once()
+                self.assertEqual(browser.await_args.args[1], "maps_locate")
                 if count:
-                    self.assertEqual(model.await_count, 3)
+                    self.assertEqual(model.await_count, 4)
                     self.assertIn("1. Test 0", conversation.turns[-1][-1]["content"])
                 else:
-                    self.assertEqual(model.await_args_list[3].args[1], [])
-                    self.assertIn('"count": 0', model.await_args_list[3].args[0][-1]["content"])
+                    self.assertEqual(model.await_args_list[4].args[1], [])
+                    self.assertIn('"count": 0', model.await_args_list[4].args[0][-1]["content"])
 
     async def test_live_category_contract(self):
         """Functionality: Obtain semantic categories from provider JSON, not local IDs.

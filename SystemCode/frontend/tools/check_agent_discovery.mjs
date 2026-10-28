@@ -66,6 +66,9 @@ async function main() {
     await page.goto(url);
     const stores = await turn(page, "帮我导航到 Sheng Siong 超市，先给我可选分店。", report);
     assert.ok(stores.tools.some(tool => tool.name === "maps_locate"));
+    const locateIndex = stores.tools.findIndex(tool => tool.name === "maps_locate");
+    const searchIndex = stores.tools.findIndex(tool => tool.name === "places_search");
+    assert.ok(locateIndex >= 0 && searchIndex > locateIndex);
     assert.equal(stores.tools.filter(tool => tool.name === "places_search").length, 1);
     assert.equal(report.routes.length, 0);
     assert.match(stores.reply, /Clementi|金文泰/i);
@@ -85,7 +88,8 @@ async function main() {
       const entry = await turn(page, text, report);
       const catalogIndex = entry.tools.findIndex(tool => tool.name === "places_categories");
       const queryIndex = entry.tools.findIndex(tool => tool.name === "places_nearby");
-      assert.ok(catalogIndex >= 0 && queryIndex > catalogIndex);
+      const locateIndex = entry.tools.findIndex(tool => tool.name === "maps_locate");
+      assert.ok(catalogIndex >= 0 && locateIndex >= 0 && queryIndex > catalogIndex && queryIndex > locateIndex);
       assert.equal(entry.tools.filter(tool => tool.name === "places_nearby").length, 1);
       assert.ok(!entry.tools.some(tool => ["places_search", "maps_plan", "navigation_start"].includes(tool.name)));
       const result = entry.results.find(tool => tool.name === "places_nearby")?.result;

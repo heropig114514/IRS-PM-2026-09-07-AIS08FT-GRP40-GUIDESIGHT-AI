@@ -14,7 +14,8 @@ const URL = "https://47.239.50.129/mvp/maps/", ENV = {PRS_PLAYWRIGHT_PATH: "synt
 /* Functionality: Build a fresh startup snapshot. Inputs: None. Outputs: synthetic evidence.
  * Logic: valid defaults with fixed bilingual backend voice and unactivated outputs. Constraints: never represents browser success. */
 function initial() {
-  return {camera_calls: 0, speech_calls: 0, gps_watches: 0, gps_one_shots: 0, outputs: [true, true, true],
+  return {camera_calls: 0, startup_media_calls: 1, startup_media_permission: "granted", startup_media_tracks_stopped: true,
+    speech_calls: 0, gps_watches: 0, gps_one_shots: 1, origin_ready: true, origin_source: "device", outputs: [true, true, true],
     source: "camera", rate: 2, volume: 1, activation: {ready: false}, gated: true,
     voice: {id: "Cherry", language: "multi", languages: ["zh-CN", "en-US"], service: "backend", local_service: false}};
 }
@@ -23,7 +24,7 @@ function initial() {
  * Logic: named mobile controls, hidden diagnostics. Constraints: never substitutes actual screenshots. */
 function surface() {
   return {horizontal_overflow: 0, duplicate_ids: [], unnamed_controls: [], small_touch_controls: [], visible_test_controls: [],
-    visible_test_text: [], voice_hold_label: "按住说话", diagnostic_link: null};
+    visible_test_text: [], voice_toggle_label: "开始录音", diagnostic_link: null};
 }
 
 /* Functionality: Reject guest checker scope expansion. Inputs: synthetic URL/report paths.
@@ -41,13 +42,17 @@ test("product checker pins public guest access to exact HTTPS entry and report s
   assert.throws(() => validateArguments([URL, "new.json", "extra"], ENV), /INVALID_ARGUMENTS/);
 });
 
-/* Functionality: Reject implicit startup side effects. Inputs: one changed sensor/output count.
+/* Functionality: Reject invalid startup boundaries. Inputs: one changed permission/sensor/output value.
  * Outputs: fixed rejection. Logic: independently corrupt each counter. Constraints: no native APIs. */
-test("enabled product outputs cannot excuse on-load permissions or playback", function testStartup() {
+test("entry permissions are released while capture and output remain gated", function testStartup() {
   assert.equal(verifyInitial(initial()).gated, true);
-  for (const key of ["camera_calls", "speech_calls", "gps_watches", "gps_one_shots"]) {
-    const value = initial(); value[key] = 1;
-    assert.throws(() => verifyInitial(value), /AUTOMATIC_DEVICE_OR_SPEECH_START/);
+  for (const key of ["camera_calls", "startup_media_calls", "startup_media_permission", "startup_media_tracks_stopped",
+    "speech_calls", "gps_watches", "gps_one_shots", "origin_ready", "origin_source"]) {
+    const value = initial();
+    value[key] = key === "startup_media_calls" || key === "gps_one_shots" ? 2
+      : key === "startup_media_permission" ? "denied"
+        : key === "origin_source" ? "other" : 1;
+    assert.throws(() => verifyInitial(value), /ENTRY_PERMISSION_BOUNDARIES_INVALID/);
   }
 });
 
@@ -74,27 +79,30 @@ test("default output controls, camera source and original speech parameters rema
     assert.throws(() => verifyInitial({...initial(), ...changed}), /PRODUCT_DEFAULTS_INVALID/);
 });
 
-/* Functionality: Require press-to-talk and ensure diagnostic links/text are absent. Inputs: visible surface evidence.
+/* Functionality: Require the product voice toggle and ensure diagnostic links/text are absent. Inputs: visible surface evidence.
  * Outputs: rejection. Logic: one independent exposure each. Constraints: synthetic DOM evidence only. */
-test("product surface requires press-to-talk and hides diagnostic links and text", function testDiagnostics() {
+test("product surface requires click-to-toggle voice control and hides diagnostic links and text", function testDiagnostics() {
   assert.equal(verifyProductSurface(surface()).diagnostic_link, null);
+  assert.equal(verifyProductSurface({...surface(), voice_toggle_label: "结束并发送"}).voice_toggle_label, "结束并发送");
+  assert.equal(verifyProductSurface({...surface(), voice_toggle_label: "Finish & send"}).voice_toggle_label, "Finish & send");
+  assert.throws(() => verifyProductSurface({...surface(), voice_toggle_label: "Hold to speak"}), /PRODUCT_VOICE_TOGGLE_MISSING/);
   for (const changed of [{visible_test_controls: ["speech-play"]}, {visible_test_controls: ["example"]},
     {visible_test_text: ["PRF2"]}, {visible_test_text: ["Live camera"]},
     {visible_test_text: ["Navigation not started"]}, {visible_test_text: ["No reliable navigation progress"]},
     {visible_test_text: ["Waiting for turn guidance"]}, {visible_test_text: ["Find a route to start navigation."]}])
     assert.throws(() => verifyProductSurface({...surface(), ...changed}), /PRODUCT_DIAGNOSTICS_EXPOSED/);
-  assert.throws(() => verifyProductSurface({...surface(), voice_hold_label: null}), /PRODUCT_HOLD_CONTROL_MISSING/);
+  assert.throws(() => verifyProductSurface({...surface(), voice_toggle_label: null}), /PRODUCT_VOICE_TOGGLE_MISSING/);
   assert.throws(() => verifyProductSurface({...surface(), diagnostic_link: "/mvp/maps/test"}), /PRODUCT_DIAGNOSTIC_LINK_EXPOSED/);
 });
 
-/* Functionality: Reject inaccessible or ambiguous product surfaces. Inputs: broken layout, binding, name or PTT control.
+/* Functionality: Reject inaccessible or ambiguous product surfaces. Inputs: broken layout, binding, name or voice toggle.
  * Outputs: rejection. Logic: distinct accessibility gates. Constraints: actual layout still requires browser. */
 test("mobile overflow, missing labels, duplicate bindings and absent voice control fail", function testAccessibility() {
   assert.throws(() => verifyProductSurface({...surface(), horizontal_overflow: 20}), /PRODUCT_LAYOUT_INVALID/);
   assert.throws(() => verifyProductSurface({...surface(), duplicate_ids: ["start"]}), /PRODUCT_LAYOUT_INVALID/);
   assert.throws(() => verifyProductSurface({...surface(), unnamed_controls: ["language"]}), /PRODUCT_CONTROL_LABEL_MISSING/);
   assert.throws(() => verifyProductSurface({...surface(), small_touch_controls: ["start"]}), /PRODUCT_TOUCH_TARGET_TOO_SMALL/);
-  assert.throws(() => verifyProductSurface({...surface(), voice_hold_label: ""}), /PRODUCT_HOLD_CONTROL_MISSING/);
+  assert.throws(() => verifyProductSurface({...surface(), voice_toggle_label: ""}), /PRODUCT_VOICE_TOGGLE_MISSING/);
 });
 
 /* Functionality: Reject duplicate acquisition and relaxed or microphone-enabled camera requests.

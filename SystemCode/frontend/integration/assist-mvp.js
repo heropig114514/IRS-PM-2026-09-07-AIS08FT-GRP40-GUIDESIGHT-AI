@@ -1,5 +1,6 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
- * Implementation: Default-enabled unified outputs, one backend bilingual voice preference,
+ * Implementation: Default-enabled unified outputs, entry-time temporary camera/microphone permission checks,
+ * one backend bilingual voice preference,
  * synchronous user-gesture audio unlock, prioritized accepted assistant reply speech and
  * one-click product rear-camera acquisition,
  * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
@@ -8,11 +9,12 @@
  * devices.js/video-replay.js/catalog.js/voice-preferences.js; original camera/navigation/speech/vibration singletons.
  * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; guidanceDiagnostic; onGuidance; applyVoice;
  * renderSpeechActivation; activateSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
- * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
+ * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; requestEntryMediaPermissions; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
  * onBoundary; speakAssistantReply; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
  * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
- * locks user source choice during permission/admission; fileChoice/permissionChoice invalidate
- * late metadata/permission UI; boundaryStopped prevents repeated lifecycle cancellation;
+ * locks user source choice during permission/admission; permissionChoice invalidates late page-entry,
+ * authorization and source permission work; fileChoice invalidates late video selection;
+ * boundaryStopped prevents repeated lifecycle cancellation;
  * fileReady/latest retain one source state/result only; stoppingAll makes two-source cleanup atomic.
  * Exported controllers are the original instances; navigationPort forwards the existing bridge API;
  * replay href uses its original integration/video base so ../../ws preserves the current application mount.
@@ -34,7 +36,7 @@ import {AssistGuidanceManager} from "./assist-guidance.js";
 import {SpeechActivation} from "./speech-activation.js";
 import {MapsNavigationSpeechBridge} from "./maps-navigation-bridge.js";
 import {VideoReplay} from "./video-replay.js";
-import {authorizeCameraDevices, explicitDeviceId} from "./devices.js";
+import {authorizeCameraDevices, explicitDeviceId, requestPageMediaPermissions} from "./devices.js";
 import {resultText} from "./catalog.js";
 import {interfaceSpeechLanguage} from "./voice-preferences.js";
 export {cameraApp} from "../camera.js";
@@ -468,6 +470,37 @@ async function authorizeDevices() {
   finally { if (choice === permissionChoice) { sourceStarting = null; renderControls(); } }
 }
 
+/* Functionality: Request camera and microphone permission when either unified view opens.
+ * Inputs: Native mediaDevices, view marker and page lifecycle generation. Outputs: released temporary
+ * media tracks, diagnostic inventory, or a visible denial/device message.
+ * Logic: Lock competing camera starts while the single combined request is pending, release every
+ * track before enumerating labels, and discard late UI updates after a page boundary.
+ * Constraints: No recording, preview, selected camera, inference, speech output or retry. */
+async function requestEntryMediaPermissions() {
+  const choice = ++permissionChoice, target = testView ? "assist-status" : "product-camera-message";
+  sourceStarting = "permission";
+  setStatusText(target, productText("正在申请摄像头和麦克风权限。", "Requesting camera and microphone permission."));
+  renderControls();
+  try {
+    const devices = await requestPageMediaPermissions(navigator.mediaDevices);
+    if (choice !== permissionChoice || boundaryStopped) return;
+    await readDevices(devices);
+    if (choice !== permissionChoice || boundaryStopped) return;
+    setStatusText(target, productText("摄像头和麦克风权限已就绪；临时媒体流已关闭。", "Camera and microphone permission is ready; temporary media streams are closed."));
+  } catch (error) {
+    if (choice === permissionChoice && !boundaryStopped) {
+      const detail = error?.name || "UnavailableError";
+      const message = productText(
+        `摄像头或麦克风授权失败（${detail}）。请检查网站权限与设备后重新打开页面。`,
+        `Camera or microphone permission failed (${detail}). Check site permissions and devices, then reload this page.`,
+      );
+      setStatusText(target, message);
+    }
+  } finally {
+    if (choice === permissionChoice) { sourceStarting = null; renderControls(); }
+  }
+}
+
 /* Functionality: Load an explicitly selected local video without playback or upload.
  * Inputs: File chooser. Outputs: Metadata-ready source or diagnosed failure.
  * Logic: Preserve newer user choices when an older read settles late.
@@ -575,8 +608,9 @@ function onBoundary(event) {
  * Inputs: Explicit assist document marker. Outputs: Read-only setup and user action handlers.
  * Logic: Select only local PRF2, reuse shared drivers; expose the existing ping button only on the
  * diagnostic page; product speech uses backend bilingual TTS and accepts a voice-release or
- * text-submit gesture as synchronous audio activation.
- * Constraints: No automatic permissions, route requests, inference or first playback. */
+ * text-submit gesture as synchronous audio activation. Start entry permission requests only after
+ * handlers are bound; their pending browser prompt never gates assistReady or agent interactions.
+ * Constraints: Entry permission checks release media tracks; no route request, inference or first playback. */
 function initialize() {
   if (doc.documentElement.dataset.assist !== "true" || !navigation)
     throw new Error("Unified assist entry requires its explicit maps integration template.");
@@ -638,6 +672,7 @@ function initialize() {
   window.addEventListener("pagehide", onBoundary, true);
   if (!testView) observeProductLanguage();
   enableDefaultOutputs(); readVoices(); renderControls();
+  void requestEntryMediaPermissions();
 }
 
 export const assistReady = Promise.resolve().then(initialize);

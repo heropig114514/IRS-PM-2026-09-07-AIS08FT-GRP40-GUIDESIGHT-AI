@@ -11,12 +11,12 @@ import test from "node:test";
 import {evaluateBlackboxCoverage, parseArguments} from "../tools/verify_blackbox_coverage.mjs";
 
 /* Functionality: Construct a valid responsive-surface fixture.
- * Inputs: Viewport width and visible hold label. Outputs: Body-free layout evidence.
+ * Inputs: Viewport width and visible voice-toggle label. Outputs: Body-free layout evidence.
  * Logic: Provide empty arrays for every audited accessibility/overflow category.
  * Constraints: Synthetic fixture only; no browser layout is measured. */
-function surface(width, label = "Hold to speak") {
+function surface(width, label = "Start recording") {
   return {width, horizontal_overflow: 0, duplicate_ids: [], unnamed_controls: [], small_touch_controls: [],
-    visible_test_controls: [], visible_test_text: [], voice_hold_label: label};
+    visible_test_controls: [], visible_test_text: [], voice_toggle_label: label};
 }
 
 /* Functionality: Construct fixed English/Chinese backend synthesis evidence.
@@ -45,7 +45,9 @@ function completeReports() {
     depth_model: "yolo26n-depth", risk_model: "rules-v1"};
   const productChecks = {
     identity: {camera: true, navigation: true, speech: true, continuous_session: true},
-    initial: {gated: true, camera_calls: 0, speech_calls: 0, gps_watches: 0, gps_one_shots: 0},
+    initial: {gated: true, camera_calls: 0, startup_media_calls: 1, startup_media_permission: "granted",
+      startup_media_tracks_stopped: true, speech_calls: 0, gps_watches: 0, gps_one_shots: 1,
+      origin_ready: true, origin_source: "device"},
     english_voice: {id: "Cherry", service: "backend", languages: ["en-US", "zh-CN"]},
     mobile_surface: surface(390), desktop_surface: surface(1280), english_surface: surface(390),
     camera_request: {audio_false: true, exact_rear: true, user_gesture_active: true},
@@ -59,7 +61,8 @@ function completeReports() {
     diagnostic_bilingual_tts: {cases: ttsCases(4)},
   };
   const cameraChecks = {
-    initial: {gated: true, camera_calls: 0, speech_calls: 0, gps_watches: 0, gps_one_shots: 0},
+    initial: {gated: true, camera_calls: 0, startup_media_calls: 1, startup_media_permission: "granted",
+      startup_media_tracks_stopped: true, speech_calls: 0, gps_watches: 0, gps_one_shots: 1, origin_ready: true},
     single_request: {audio_false: true, exact_rear: true, user_gesture_active: true},
     pending: {one_request: true, both_starts_disabled: true, stop_enabled: true},
     late_grant: {camera_idle: true, track_stopped: true, stream_absent: true, preview_absent: true, frames: 0},
@@ -109,8 +112,9 @@ function completeReports() {
       control_session_id: "control-one"},
     checks: {guest_http_status: 200, permissions_policy: "camera=(self)",
       private_endpoints: Array.from({length: 4}, () => ({status: 404})),
-      initial_camera_entry: {source: "camera", get_user_media_calls: 0,
-        startup_outputs: {speech_calls: 0, gps_watches: 0}},
+      initial_camera_entry: {source: "camera", get_user_media_calls: 0, startup_permission_calls: 1,
+        startup_permission_granted: true, startup_permission_tracks_stopped: true,
+        startup_outputs: {speech_calls: 0, gps_watches: 0, gps_one_shot_requests: 1}},
       camera_stop_preserves_navigation: true, navigation_stop_preserves_camera: true,
       first_session_drained: {stable_idle_observed: true}, second_session_drained: {stable_idle_observed: true},
       backend_tts_streams: {secure_sockets: 5, started_streams: 5, completed_streams: 3,

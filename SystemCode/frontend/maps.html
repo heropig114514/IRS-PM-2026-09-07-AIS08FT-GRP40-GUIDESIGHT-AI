@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Responsibilities: Present OSM location, ORS walking routes and continuous navigation.
-Implementation: Pin Leaflet 1.9.4/SRI; install shared language controls before maps; load the AI bridge and separate navigation speech wiring, disabled by default; require explicit location, selection, sample and planning actions; both header links return to the canonical /maps/ product page rather than the retired bare mount; core.maps substitutes the nonce.
+Implementation: Pin Leaflet 1.9.4/SRI; install shared language controls before maps; load the AI bridge and separate navigation speech wiring, disabled by default; request one device location fix on entry, retain explicit destination/sample/planning actions, and offer location retry after failure; both header links return to the canonical /maps/ product page rather than the retired bare mount; core.maps substitutes the nonce.
 Related Modules: agent-client.js/agent.css (voice/text assistant), i18n.js, translations.js, maps-client.js, maps-page.js, navigation-ui.js, ai-control.js, speech-output.js, integration/maps-navigation-speech.js, camera.css, core.maps/services.
 Declaration Index: None.
 Variable Index: __CSP_NONCE__ — CSS nonce; language — preference; form IDs — controller bindings; navigation-* — navigation buttons/status; Leaflet URL/integrity — pinned dependency. -->
@@ -137,7 +137,7 @@ Variable Index: __CSP_NONCE__ — CSS nonce; language — preference; form IDs �
           </div>
           <div class="map-controls">
             <button id="locate" class="button primary" disabled>
-              获取当前位置作为起点</button
+              重新获取当前位置</button
             ><button id="example" class="button secondary" disabled>
               填入 NUS 测试示例
             </button>

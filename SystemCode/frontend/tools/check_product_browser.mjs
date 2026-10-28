@@ -4,17 +4,18 @@
  * Related Modules: integration/assist-product.html, product-ui.js, assist-mvp.js, speech-activation.js;
  * check_phone_relay_browser.mjs provides shared evidence privacy helpers.
  * Declaration Index: validateArguments — pin the public product URL and new artifact paths;
- * verifyInitial — enforce default preferences and activation gates; verifyProductSurface — enforce accessible product layout;
+ * verifyInitial — enforce default preferences and activation gates; verifyProductSurface — enforce accessible product layout and voice toggle;
  * verifyCameraRequest — validate one user-gesture rear-camera request; verifyCameraDisplay — validate a decoded model result;
- * installProbe — install synthetic sensor and browser observation boundaries;
+ * installProbe — install synthetic sensor/media and browser observation boundaries;
  * installProbe.observedWebSocket — observe TTS connection metadata;
  * installProbe.supportedConstraints — advertise the explicit synthetic rear-camera capability;
- * installProbe.checkedVideo — delegate a rear-camera request to Chrome fake video;
+ * installProbe.checkedVideo — inspect entry permission and delegate explicit rear capture;
  * installProbe.getCurrentPosition — deliver one synthetic location; installProbe.watchPosition — own periodic location callbacks;
  * installProbe.watchPosition.emit — deliver an active fix; installProbe.clearWatch — release its timer;
  * observe — import canonical controllers and subscribe to real output events;
  * observe.recordFrame — retain actual model frame metadata; observe.recordAudio — retain backend playback lifecycle;
- * surfaceEvidence — inspect responsive visible controls; initialEvidence — inspect startup state without side effects;
+ * surfaceEvidence — inspect responsive visible controls; initialEvidence — inspect entry permissions and gated startup;
+ * waitEntryMedia — await one combined permission probe and completed track cleanup;
  * waitVoice — wait for the backend bilingual voice inventory;
  * manualBilingualTts — verify four backend PCM samples and retain bounded failure state;
  * run — execute formal and diagnostic page acceptance; setSyntheticVisibility — simulate page visibility boundaries;
@@ -28,7 +29,7 @@
  * main — validate the CLI, run the selected acceptance and write its report.
  * Variable Index: ORIGIN/PREFIX — approved relay; ROUTE/POINT — explicit synthetic fixtures;
  * report — body-free evidence without login credentials, pixels or positions.
- * Constraints: No device/route/model changes, physical camera/GPS, fabricated audio start/end, retries,
+ * Constraints: No device/route/model changes, physical rear-camera/GPS verification, fabricated audio start/end, retries,
  * installation, TLS bypass, actual audibility claim, service control or commits.
  */
 import {createRequire} from "node:module";
@@ -68,12 +69,15 @@ export function validateArguments(argv, environment) {
     fakeCameraFile: environment.PRS_FAKE_CAMERA_VIDEO ? resolve(environment.PRS_FAKE_CAMERA_VIDEO) : null};
 }
 
-/* Functionality: Require enabled intentions without automatic device access or speech.
- * Inputs: body-free startup snapshot. Outputs: same validated snapshot. Logic: independent gates.
- * Constraints: a checked preference is never interpreted as permission, activation or audibility. */
+/* Functionality: Require entry permission checks without capture, route, watch or audio playback.
+ * Inputs: body-free startup snapshot. Outputs: same validated snapshot. Logic: one stopped media probe
+ * and one location fix are permitted; camera inference, navigation watches and speech remain gated.
+ * Constraints: permission success is not interpreted as recording, activation or audibility. */
 export function verifyInitial(value) {
-  requireGate(value.camera_calls === 0 && value.speech_calls === 0 && value.gps_watches === 0 && value.gps_one_shots === 0,
-    "AUTOMATIC_DEVICE_OR_SPEECH_START");
+  requireGate(value.camera_calls === 0 && value.startup_media_calls === 1 &&
+    value.startup_media_permission === "granted" && value.startup_media_tracks_stopped === true &&
+    value.speech_calls === 0 && value.gps_watches === 0 && value.gps_one_shots === 1 &&
+    value.origin_ready === true && value.origin_source === "device", "ENTRY_PERMISSION_BOUNDARIES_INVALID");
   requireGate(value.outputs.every(Boolean) && value.source === "camera" && value.rate === 2 && value.volume === 1,
     "PRODUCT_DEFAULTS_INVALID");
   requireGate(value.activation.ready === false && value.gated === true, "PRODUCT_ACTIVATION_GATE_MISSING");
@@ -83,7 +87,7 @@ export function verifyInitial(value) {
   return value;
 }
 
-/* Functionality: Require product press-to-talk and reject exposed diagnostics or bad layout.
+/* Functionality: Require the product voice toggle and reject exposed diagnostics or bad layout.
  * Inputs: visible-surface evidence. Outputs: same validated evidence. Logic: named and sized controls.
  * Constraints: hidden compatibility bindings are permitted; diagnostic links stay off the product surface. */
 export function verifyProductSurface(value) {
@@ -91,7 +95,8 @@ export function verifyProductSurface(value) {
   requireGate(value.unnamed_controls.length === 0, "PRODUCT_CONTROL_LABEL_MISSING");
   requireGate(value.small_touch_controls.length === 0, "PRODUCT_TOUCH_TARGET_TOO_SMALL");
   requireGate(value.visible_test_controls.length === 0 && value.visible_test_text.length === 0, "PRODUCT_DIAGNOSTICS_EXPOSED");
-  requireGate(["按住说话", "Hold to speak"].includes(value.voice_hold_label), "PRODUCT_HOLD_CONTROL_MISSING");
+  requireGate(["开始录音", "结束并发送", "Start recording", "Finish & send"].includes(value.voice_toggle_label),
+    "PRODUCT_VOICE_TOGGLE_MISSING");
   requireGate(value.diagnostic_link === null, "PRODUCT_DIAGNOSTIC_LINK_EXPOSED");
   return value;
 }
@@ -117,14 +122,16 @@ export function verifyCameraDisplay(value) {
 }
 
 /* Functionality: Install explicit sensor fixtures and read-only media/backend-speech probes.
- * Inputs: fixed synthetic position before production modules. Outputs: body-free counters/track handles.
- * Logic: record exact rear request then explicitly translate facingMode for Chrome's sole fake camera;
- * real TTS and sensor callbacks use real clocks. Constraints: CLI must enable fake-device flags;
- * no actual GPS/microphone, native rear-camera proof or generated audio lifecycle events. */
-function installProbe(point) {
+ * Inputs: fixed synthetic position and optional lifecycle-only media fixture. Outputs: entry-permission
+ * and camera-call counters with track cleanup handles. Logic: record the combined entry permission
+ * separately and optionally supply temporary tracks for lifecycle-only checks. Translate facingMode
+ * only for Chrome's fake camera during a later exact-rear capture. Constraints: no actual GPS,
+ * microphone or rear-camera proof. */
+function installProbe(point, syntheticEntryMedia = false) {
   const nativeVideo = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
   const nativeConstraints = navigator.mediaDevices?.getSupportedConstraints?.bind(navigator.mediaDevices);
-  const probe = {speech: [], media: [], tracks: [], watches: [], oneShots: 0}; window.__productProbe = probe;
+  const probe = {speech: [], media: [], permissions: [], permissionTracks: [], permissionResult: "not_requested",
+    tracks: [], watches: [], oneShots: 0}; window.__productProbe = probe;
   /* Functionality: Observe the fixed backend speech socket without reading request bodies.
    * Inputs: constructor URL/protocols. Outputs: native socket and safe gesture/path evidence.
    * Logic: delegate to the original constructor once; Constraints: no content capture or event fabrication. */
@@ -144,10 +151,29 @@ function installProbe(point) {
    * Inputs: None. Outputs: native support plus labeled facingMode fixture. Logic: preserve other flags.
    * Constraints: never product code or proof of a real rear lens. */
   function supportedConstraints() { return {...nativeConstraints?.(), facingMode: true}; }
-  /* Functionality: Observe product rear constraints and acquire only Chrome's native fake camera.
-   * Inputs: original constraints. Outputs: native fake stream. Logic: omit only the synthetic facingMode.
-   * Constraints: no physical hardware, microphone, stream replacement or product fallback. */
+  /* Functionality: Observe the combined entry check and explicit rear-camera acquisition.
+   * Inputs: original constraints. Outputs: released synthetic stream for lifecycle-only checks or the
+   * native fake stream for rear capture. Logic: record combined permission separately; omit only the
+   * synthetic facingMode for Chrome's fake camera. Constraints: no physical hardware or fallback. */
   async function checkedVideo(constraints) {
+    if (constraints.audio === true && constraints.video === true) {
+      probe.permissions.push({audio: true, video: true, user_gesture_active: navigator.userActivation?.isActive === true});
+      if (syntheticEntryMedia) {
+        // This verifies production cleanup without opening a physical or fake camera device.
+        const tracks = ["audio", "video"].map(kind => ({kind, readyState: "live", stop() { this.readyState = "ended"; }}));
+        probe.permissionResult = "granted"; probe.permissionTracks.push(...tracks);
+        return {getTracks: () => tracks};
+      }
+      try {
+        const stream = await nativeVideo(constraints);
+        probe.permissionResult = "granted";
+        probe.permissionTracks.push(...stream.getTracks());
+        return stream;
+      } catch (error) {
+        probe.permissionResult = "denied";
+        throw error;
+      }
+    }
     if (constraints.audio !== false) throw new Error("MICROPHONE_FORBIDDEN");
     const exactRear = constraints.video?.facingMode?.exact === "environment";
     probe.media.push({audio_false: true, exact_rear: exactRear,
@@ -189,6 +215,7 @@ function installProbe(point) {
 async function observe() {
   const asset = new URL("../assets/", location.href);
   const glue = await import(new URL("integration/assist-mvp.js", asset)); await glue.assistReady;
+  const maps = await import(new URL("maps-page.js", asset)); await maps.mapsReady;
   const {cameraApp} = await import(new URL("camera.js", asset));
   const {navigation} = await import(new URL("navigation-ui.js", asset));
   const {speechOutput} = await import(new URL("speech-output.js", asset));
@@ -238,19 +265,25 @@ function surfaceEvidence() {
       "填入 NUS 示例", "Fill NUS example", "手动输入坐标", "Enter coordinates manually", "实时画面", "Live camera",
       "尚未开始导航", "Navigation not started", "暂无可靠导航进度", "No reliable navigation progress",
       "等待转向指令", "Waiting for turn guidance", "Find a route to start navigation."].filter(word => text.includes(word)),
-    voice_hold_label: document.getElementById("agent-record")?.textContent.trim() || null,
+    voice_toggle_label: document.getElementById("agent-record")?.textContent.trim() || null,
     diagnostic_link: diagnostic ? new URL(diagnostic.href).pathname : null};
 }
 
-/* Functionality: Read default output/voice and untouched sensor state. Inputs: initialized page.
- * Outputs: safe startup evidence. Logic: controller voice inventory plus DOM intentions.
- * Constraints: does not play, select a voice, request permission or change configuration. */
+/* Functionality: Read default output/voice and entry permission state. Inputs: initialized page.
+ * Outputs: body-free request counts, stopped-track state and origin readiness.
+ * Logic: observe original controllers plus the fixed permission probe.
+ * Constraints: omit coordinates and media contents; never synthesize output or change configuration. */
 function initialEvidence() {
   const {glue, speechOutput} = window.__productControllers, probe = window.__productProbe;
   const id = document.getElementById("navigation-speech-voice").value;
   const voice = speechOutput.voiceList().voices.find(item => item.id === id) || {};
-  return {camera_calls: probe.media.length, speech_calls: probe.speech.length, gps_watches: probe.watches.length,
-    gps_one_shots: probe.oneShots, outputs: ["speech-enabled", "navigation-speech-enabled", "assist-risk-enabled"].map(id => document.getElementById(id).checked),
+  return {camera_calls: probe.media.length, startup_media_calls: probe.permissions.length,
+    startup_media_permission: probe.permissionResult,
+    startup_media_tracks_stopped: probe.permissionTracks.length > 0 && probe.permissionTracks.every(track => track.readyState === "ended"),
+    speech_calls: probe.speech.length, gps_watches: probe.watches.length, gps_one_shots: probe.oneShots,
+    origin_ready: document.getElementById("start-latitude").value !== "" && document.getElementById("start-longitude").value !== "",
+    origin_source: document.getElementById("location-source").textContent === "设备当前位置" ? "device" : "other",
+    outputs: ["speech-enabled", "navigation-speech-enabled", "assist-risk-enabled"].map(id => document.getElementById(id).checked),
     source: document.getElementById("assist-source").value, rate: Number(document.getElementById("speech-rate").value),
     volume: Number(document.getElementById("speech-volume").value),
     activation: glue.speechActivation.describe(), gated: glue.guidanceManager.describe().reasons.speech === "activation_required",
@@ -268,6 +301,19 @@ async function waitVoice(page) {
       voice.languages.includes("zh-CN") && voice.languages.includes("en-US"));
   }, null, {timeout: 15000});
   return page.evaluate(initialEvidence);
+}
+
+/* Functionality: Wait for the page-entry media permission attempt to settle.
+ * Inputs: initialized browser page with the read-only probe installed. Outputs: void or timeout.
+ * Logic: Require one combined request and, on grant, both tracks ended before inventory assertions.
+ * Constraints: The fixture proves request/cleanup behavior, not a phone OS permission prompt. */
+async function waitEntryMedia(page) {
+  await page.waitForFunction(() => {
+    const probe = window.__productProbe;
+    return probe?.permissions.length === 1 && probe.permissionResult !== "not_requested" &&
+      (probe.permissionResult !== "granted" || probe.permissionTracks.length === 2 &&
+        probe.permissionTracks.every(track => track.readyState === "ended"));
+  }, null, {timeout: 10000});
 }
 
 /* Functionality: Verify real backend PCM playback for fixed English, Chinese and auto-detected samples.
@@ -360,6 +406,7 @@ export async function run(options) {
     requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
       "PRODUCT_MICROPHONE_POLICY_MISSING");
     report.checks.identity = await page.evaluate(observe);
+    await waitEntryMedia(page);
     requireGate(Object.values(report.checks.identity).every(Boolean), "PRODUCT_CORE_IDENTITY_INVALID");
     await waitVoice(page); report.checks.initial = verifyInitial(await page.evaluate(initialEvidence));
     report.checks.mobile_surface = verifyProductSurface(await page.evaluate(surfaceEvidence));
@@ -430,6 +477,7 @@ export async function run(options) {
     report.phase = "diagnostic_surface";
     const diagnostic = await page.goto(new URL("test", options.url).href, {waitUntil: "domcontentloaded"});
     requireGate(diagnostic.status() === 200, "DIAGNOSTIC_HTTP_FAILED"); await page.evaluate(observe);
+    await waitEntryMedia(page);
     requireGate(await page.locator("#speech-play").isVisible() && await page.locator("#navigation-speech-voice").isVisible() &&
       await page.locator("#example").isVisible() && await page.locator("#assist-source").isVisible(), "DIAGNOSTIC_CONTROLS_MISSING");
     report.phase = "diagnostic_bilingual_tts";
@@ -465,10 +513,20 @@ function setSyntheticVisibility(hidden) {
  * Logic: replace only GUM/support discovery; late grant returns a stoppable synthetic track.
  * Constraints: late stream is delivered only after cancellation, never to a video or model pipeline. */
 function installCameraBoundary() {
-  const state = {requests: [], stopped: 0, support: true}; window.__cameraBoundary = state;
+  const state = {requests: [], stopped: 0, permissionStopped: 0, support: true}; window.__cameraBoundary = state;
   /* Functionality: Hold one explicit acquisition at its permission boundary. Inputs: original constraints.
    * Outputs: pending promise. Logic: retain one-shot callbacks. Constraints: no media stream or device. */
   function checkedVideo(constraints) {
+    if (constraints.audio === true && constraints.video === true) {
+      window.__productProbe.permissions.push({audio: true, video: true, user_gesture_active: navigator.userActivation?.isActive === true});
+      const tracks = ["audio", "video"].map(kind => ({kind, readyState: "live", stop() {
+        if (this.readyState === "ended") return;
+        this.readyState = "ended"; state.permissionStopped++;
+      }}));
+      window.__productProbe.permissionTracks.push(...tracks);
+      window.__productProbe.permissionResult = "granted";
+      return Promise.resolve({getTracks: () => tracks});
+    }
     const record = {audio_false: constraints.audio === false, exact_rear: constraints.video?.facingMode?.exact === "environment",
       exact_device: typeof constraints.video?.deviceId?.exact === "string", user_gesture_active: navigator.userActivation?.isActive === true};
     window.__productProbe.media.push(record);
@@ -519,7 +577,7 @@ export async function runCameraBoundaries(options) {
     requireGate(response.status() === 200, "PRODUCT_HTTP_FAILED");
     requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
       "PRODUCT_MICROPHONE_POLICY_MISSING");
-    await page.evaluate(observe); await waitVoice(page);
+    await page.evaluate(observe); await waitEntryMedia(page); await waitVoice(page);
     report.checks.initial = verifyInitial(await page.evaluate(initialEvidence));
     report.phase = "double_click_permission_pending";
     await page.locator("#product-camera-start").dblclick();
@@ -575,14 +633,15 @@ export async function runCameraBoundaries(options) {
 
 /* Functionality: Test backend voice inventory, product activation, diagnostic bilingual TTS and page boundaries.
  * Inputs: pinned public product/new report paths. Outputs: boundary JSON and product ready-map screenshots.
- * Logic: exercise real backend PCM on the product activation and diagnostic pages; explicit route/GPS/visibility
- * fixtures surround their existing controllers. Constraints: no camera acquisition, actual GPS/ORS, GPU session,
- * fabricated speech lifecycle or retry. */
+ * Logic: exercise real backend PCM on the product activation and diagnostic pages; synthetic entry-media,
+ * route/GPS and visibility fixtures surround their existing controllers. Constraints: no hardware device,
+ * physical GPS/ORS, GPU session, fabricated speech lifecycle or retry. */
 export async function runBoundaries(options) {
   for (const path of [options.output, options.screenshot, options.desktopScreenshot]) await requireNew(path);
   await mkdir(dirname(options.output), {recursive: true});
   const report = {complete: false, phase: "startup", failures: [], checks: {}, fixtures: {
     voice_inventory: "fixed server-provided Cherry voice supports Chinese and English",
+    entry_media: "synthetic combined permission response with temporary audio/video tracks",
     gps: "explicit synthetic NUS callbacks with Date.now", route: "explicit synthetic ORS response fixture",
     visibility: "explicit synthetic visibilityState/event", page_cache: "explicit synthetic persisted pagehide",
     speech: "real backend Qwen PCM stream and Web Audio lifecycle"},
@@ -593,7 +652,7 @@ export async function runBoundaries(options) {
     browser = await chromium.launch({channel: "chrome", headless: true});
     context = await browser.newContext({viewport: {width: 390, height: 844},
       isMobile: true, hasTouch: true, locale: "zh-CN"});
-    await context.addInitScript(installProbe, POINT);
+    await context.addInitScript(installProbe, POINT, true);
     await context.route(`${ORIGIN}${PREFIX}maps/route/`, route => route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify(ROUTE)}));
     page = await context.newPage(); page.on("pageerror", error => report.failures.push(safeFailure(error, report.phase)));
     const response = await page.goto(options.url, {waitUntil: "domcontentloaded", timeout: 30000});
@@ -601,10 +660,11 @@ export async function runBoundaries(options) {
     requireGate((response.headers()["permissions-policy"] || "").includes("microphone=(self)"),
       "PRODUCT_MICROPHONE_POLICY_MISSING");
     await page.evaluate(observe);
+    await waitEntryMedia(page);
     report.phase = "backend_voice_inventory";
     const held = await page.evaluate(initialEvidence);
     requireGate(held.voice.id === "Cherry" && held.voice.service === "backend" && held.speech_calls === 0 &&
-      held.camera_calls === 0 && held.gps_one_shots === 0 && held.gps_watches === 0,
+      held.camera_calls === 0 && held.gps_one_shots === 1 && held.gps_watches === 0,
       "BACKEND_VOICE_NOT_READY_OR_AUTOSTARTED");
     report.checks.backend_voice = verifyInitial(held);
     report.phase = "ready_layout"; await page.waitForFunction(() => !document.getElementById("locate").disabled);
@@ -633,7 +693,7 @@ export async function runBoundaries(options) {
       report.checks.incomplete_route.route_absent && report.checks.incomplete_route.speech_calls === 0 && report.checks.incomplete_route.camera_calls === 0,
       "INCOMPLETE_ROUTE_SELECTION_NOT_HANDLED");
     report.phase = "visibility_cleanup";
-    await page.click("#locate"); await page.waitForFunction(() => document.getElementById("start-latitude").value !== "");
+    requireGate((await page.evaluate(initialEvidence)).origin_ready, "ENTRY_LOCATION_NOT_APPLIED");
     await page.locator("#map").click({position: {x: 160, y: 180}}); await page.click("#plan");
     await page.waitForFunction(() => !document.getElementById("navigation-start").disabled);
     await page.click("#navigation-start"); await page.waitForFunction(() => window.__productControllers.navigation.active);
@@ -659,6 +719,7 @@ export async function runBoundaries(options) {
     const diagnostic = await page.goto(diagnosticUrl.href, {waitUntil: "domcontentloaded", timeout: 30000});
     requireGate(diagnostic.status() === 200, "DIAGNOSTIC_HTTP_FAILED");
     await page.evaluate(observe);
+    await waitEntryMedia(page);
     requireGate(await page.locator("#speech-play").isVisible() && await page.locator("#speech-enabled").isVisible(),
       "DIAGNOSTIC_TTS_CONTROLS_MISSING");
     report.checks.diagnostic_bilingual_tts = await manualBilingualTts(page, report);

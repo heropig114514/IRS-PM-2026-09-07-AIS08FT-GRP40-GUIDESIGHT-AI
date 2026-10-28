@@ -23,6 +23,8 @@ This gate excludes test and browser-tool files from the measured application sou
 
 `tools/verify_blackbox_coverage.mjs` requires five completed reports and validates 56 required scenarios across live Qwen assistant interactions, the formal product page, camera permission boundaries, page lifecycle boundaries, and the public relay. It checks report failures and each recorded evidence field; a missing report, failed run, or missing scenario exits nonzero. Synthetic agent routes and GPS remain labeled as such. The relay risk-alert case requires a real inference frame, matching track, backend speech start, and completed playback. A synthetic scheduler alert cannot satisfy it.
 
+The product, diagnostic, and relay checks also verify that page entry makes one location request and one combined camera/microphone permission request, releases temporary media tracks, and keeps recording, inference, route planning, and speech playback gated behind their existing explicit actions. These browser fixtures verify the application boundary only; they do not establish that a phone operating system displayed or accepted its native permission prompt.
+
 The browser checks require a working public deployment, Chrome, the local Playwright package path, and a caller-supplied Y4M scene file for actual model inference. The strict relay run also needs a scene that produces a server-required alert. These checks do not claim physical-phone GPS, camera, vibration, or speaker audibility.
 
 Generate fresh reports with the corresponding browser checkers, then run the aggregate gate. The example uses new report names; the scripts refuse to overwrite existing reports.

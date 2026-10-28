@@ -25,7 +25,8 @@ const TURN_LABELS = [
 /* Functionality: Obtain device location without uploading or persisting it.
  * Inputs: navigator, defaulting to the browser; Outputs: GeolocationPosition Promise and permission request.
  * Logic: One high-accuracy fix with a 10-second timeout and zero cache; expose browser errors explicitly.
- * Constraints: Require a user click or explicit agent location request; no IP inference or sample coordinates.
+ * Constraints: The unified page requests one fix on entry; retries and agent requests remain explicit;
+ * no IP inference or sample coordinates.
  */
 export function getDevicePosition(navigator = globalThis.navigator) {
   if (!navigator.geolocation)

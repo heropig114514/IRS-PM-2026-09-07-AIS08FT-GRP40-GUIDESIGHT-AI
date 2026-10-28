@@ -1,6 +1,6 @@
 /* Responsibilities: Adapt shared controller status to the everyday assist product.
  * Implementation: Fixed bilingual labels and passive DOM mirrors; original controllers retain
- * route, GPS, camera and output ownership. Product route coordinates are selected through location and map controls.
+ * route, GPS, camera and output ownership. Page entry requests one location fix; map controls select destination.
  * Related Modules: assist-product.html/css, assist-mvp.js; i18n.js, maps-page.js, camera.js.
  * Declaration Index: productMessage; coordinateSummary; coordinateSummary.valid; mountProduct; mountProduct.node; mountProduct.write;
  * mountProduct.render; mountProduct.stop; mountProduct.refresh; mountProduct.changed; mountProduct.onPageHide.
@@ -15,13 +15,14 @@ const COPY = {
   language: ["界面语言", "Language"], eyebrow: ["步行导航 · 环境提醒", "WALKING DIRECTIONS · AWARENESS"],
   heading: ["出行，从这里开始。", "Your walk starts here."],
   intro: ["选择目的地，开启摄像头，沿途听取导航与风险提醒。", "Choose a destination and turn on your camera for directions and risk alerts along the way."],
+  permissionNote: ["打开页面时，浏览器会申请位置、摄像头和麦克风权限；临时媒体流会立即关闭。", "On page entry, your browser asks for location, camera and microphone permission. Temporary media streams are closed immediately."],
   navigation: ["步行导航", "Walking directions"], camera: ["环境感知", "Surroundings"],
-  routeHint: ["获取当前位置后，点选地图上的目的地。", "Get your current location, then tap your destination on the map."],
-  locate: ["使用当前位置", "Use my location"], mapHint: ["使用当前位置设置起点，点击地图选择目的地。", "Use your current location as the start, then tap the map to choose a destination."],
+  routeHint: ["页面打开时会申请当前位置并设为起点；在地图上选择目的地。", "Your current location is requested on entry and set as the start. Choose a destination on the map."],
+  locate: ["重试定位", "Retry location"], mapHint: ["当前位置已设为起点；点击地图选择目的地。", "Your current location is the start; tap the map to choose a destination."],
   origin: ["起点", "From"], destination: ["目的地", "To"],
   plan: ["规划步行路线", "Find walking route"], startNavigation: ["开始导航", "Start navigation"], stopNavigation: ["结束导航", "End navigation"],
   routeDetails: ["查看路线详情", "Route details"],
-  cameraHint: ["点击开始检测，自动使用手机后置摄像头。首次使用请允许摄像头权限。", "Tap Start detection to use your phone's rear camera. Allow camera access when prompted."],
+  cameraHint: ["页面打开时会申请摄像头和麦克风权限并立即关闭临时流；点击开始检测后才打开摄像头。", "Camera and microphone permission are requested on entry, then temporary streams are closed. The camera opens only after you start detection."],
   startCameraShortcut: ["开启环境感知", "Start surroundings"],
   annotatedCamera: ["识别结果", "Detection results"],
   resultPending: ["开始检测后，显示带标记框的返回画面", "Start detection to see the returned image with object boxes"],
@@ -41,7 +42,7 @@ const MESSAGES = new Map([
   ["ORS 未配置", ["路线服务不可用", "Routes unavailable"]],
   ["检查配置中", ["正在准备", "Preparing"]],
   ["正在检查 ORS 配置。", COPY.routeLoading],
-  ["使用当前位置设置起点，点击地图选择目的地。", COPY.routeHint],
+  ["页面打开时请求设备位置并设为起点，点击地图选择目的地。", COPY.routeHint],
   ["服务器未配置 ORS_API_KEY，路线接口暂不可用。", ["路线服务暂不可用，请稍后再试。", "Route service is unavailable. Please try again later."]],
   ["Leaflet 未加载，请检查 unpkg 网络后刷新页面。", ["地图未能加载，请检查网络后刷新页面。", "The map could not load. Check your connection and refresh the page."]],
   ["路线配置接口失败。", ["路线服务连接失败，请检查网络后刷新页面。", "Could not connect to route service. Check your connection and refresh."]],

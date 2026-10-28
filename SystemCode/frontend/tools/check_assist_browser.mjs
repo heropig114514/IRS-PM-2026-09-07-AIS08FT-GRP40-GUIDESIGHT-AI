@@ -17,7 +17,7 @@
  * evidence. MCP_SCRIPT invokes the existing outputs tools. assistProbe stores body-free lifecycle,
  * TTS policy flags and validated frame identities; socket records retain PCM counts only, and real
  * model metadata is never replaced or generated in video mode.
- * Constraints: No service/Git changes, GPU mocks, retries, camera permission, speech-event
+ * Constraints: No service/Git changes, GPU mocks, retries, physical camera permission, speech-event
  * simulation, media seek/loop, CDN replacement, coordinate/utterance/credential serialization or
  * physical-audibility claim. Missing dependencies, backend PCM or fresh actual alerts fail explicitly.
  */
@@ -109,7 +109,7 @@ export function installSpeechProbe() {
  * Inputs: Browser environment. Outputs: One-watch GPS fixture with actual epoch timestamps.
  * Logic: Retain callbacks and count original ownership; periodic fixes are explicitly controlled.
  * Constraints: No real positioning, core replacement, forged clocks or saved coordinates. */
-function installGPS() {
+function installGPS(point) {
   const watches = [], cleared = [];
   let timer = null, maxActive = 0, fixes = 0, oneShots = 0;
   const fixture = {
@@ -146,12 +146,30 @@ function installGPS() {
      * Logic: reject unknown/double release; Constraints: retains callbacks only for late-event checks. */
     clearWatch(id) { if (!watches[id]?.active) throw new Error("Unknown/double GPS cleanup");
       watches[id].active = false; cleared.push(id); },
-    /* Functionality: Fail unintended one-shot acquisition. Inputs: None. Outputs: Explicit error/count.
-     * Logic: fixture route uses existing form only; Constraints: no fallback position. */
-    getCurrentPosition() { oneShots++; throw new Error("Unexpected one-shot GPS request"); },
+    /* Functionality: Supply the entry-time location fix. Inputs: Original callbacks/options.
+     * Outputs: One synthetic point with an epoch timestamp. Logic: preserve one-shot count separately
+     * from navigation watches. Constraints: never represents physical GPS or starts navigation. */
+    getCurrentPosition(success, error, options) {
+      oneShots++;
+      queueMicrotask(() => success({coords: {longitude: point[0], latitude: point[1], accuracy: 5}, timestamp: Date.now()}));
+    },
   };
   window.__assistGPS = fixture;
   Object.defineProperty(navigator, "geolocation", {configurable: true, value: geo});
+}
+
+/* Functionality: Replace only the page-entry permission probe with stoppable synthetic tracks.
+ * Inputs: Pre-module browser mediaDevices. Outputs: request/cleanup evidence without native capture.
+ * Logic: accept the exact combined audio/video permission request and reject all other acquisitions.
+ * Constraints: no physical device, recording, preview or inference; production remains unmodified. */
+function installEntryMedia() {
+  const state = {requests: [], tracks: []}; window.__assistEntryMedia = state;
+  navigator.mediaDevices.getUserMedia = async constraints => {
+    state.requests.push({audio: constraints.audio === true, video: constraints.video === true});
+    if (constraints.audio !== true || constraints.video !== true) throw new Error("UNEXPECTED_MEDIA_CAPTURE");
+    const tracks = ["audio", "video"].map(kind => ({kind, readyState: "live", stop() { this.readyState = "ended"; }}));
+    state.tracks.push(...tracks); return {getTracks: () => tracks};
+  };
 }
 
 /* Functionality: Observe canonical controllers and genuine backend speech/source events.
@@ -160,6 +178,7 @@ function installGPS() {
  * Constraints: No enablement, output-event fabrication, algorithm mutation or media retention. */
 async function observe() {
   const glue = await import("/assets/integration/assist-mvp.js"); await glue.assistReady;
+  const maps = await import("/assets/maps-page.js"); await maps.mapsReady;
   const {cameraApp} = await import("/assets/camera.js");
   const {navigation} = await import("/assets/navigation-ui.js");
   const {speechOutput: driver} = await import("/assets/speech-output.js");
@@ -395,7 +414,7 @@ async function waitOutput(page, phase, kind, count = 1, timeout = 15000) {
 function assertStopped(result) {
   const state = result.cleanup;
   assert.equal(state.navigation.active, false); assert.equal(state.gps.active_watch_count, 0);
-  assert.ok(state.gps.max_active_watch_count <= 1); assert.equal(state.gps.one_shot_requests, 0);
+  assert.ok(state.gps.max_active_watch_count <= 1); assert.equal(state.gps.one_shot_requests, 1);
   for (const name of ["gps_watch_cleared", "gps_deadline_cleared", "scheduler_cleared", "speech_request_cleared", "local_socket_closed"])
     assert.equal(state[name], true, `Cleanup incomplete: ${name}`);
   assert.equal(state.video_mode, "idle"); assert.equal(state.camera_mode, "idle");
@@ -610,7 +629,8 @@ async function run(options) {
     const {chromium} = createRequire(import.meta.url)(resolve(options.runtime));
     browser = await chromium.launch({channel: "chrome", headless: true});
     const context = await browser.newContext({viewport: {width: 390, height: 844}});
-    await context.addInitScript(installGPS);
+    await context.addInitScript(installGPS, FIX);
+    await context.addInitScript(installEntryMedia);
     await context.addInitScript(installSpeechProbe);
     await context.route(new URL("config/", options.url).href, route => route.fulfill({json: {
       provider: "openrouteservice", profile: "foot-walking", configured: true, code: "explicit_synthetic_fixture"}}));
@@ -709,7 +729,13 @@ async function run(options) {
         path: address.pathname, error: request.failure()?.errorText ?? null}); });
     const response = await page.goto(options.url, {waitUntil: "domcontentloaded"}); assert.equal(response.status(), 200);
     report.permissions_policy = response.headers()["permissions-policy"];
-    assert.match(report.permissions_policy, /camera=\(self\)/); assert.match(report.permissions_policy, /geolocation=\(self\)/);
+    assert.match(report.permissions_policy, /camera=\(self\)/);
+    assert.match(report.permissions_policy, /microphone=\(self\)/);
+    assert.match(report.permissions_policy, /geolocation=\(self\)/);
+    await page.waitForFunction(() => window.__assistEntryMedia.requests.length === 1 &&
+      window.__assistEntryMedia.tracks.length === 2 &&
+      window.__assistEntryMedia.tracks.every(track => track.readyState === "ended") &&
+      window.__assistGPS.describe().one_shot_requests === 1, null, {timeout: 10000});
     report.identity = await page.evaluate(observe);
     await page.waitForFunction(() => !document.getElementById("example").disabled, null, {timeout: 15000});
     assert.equal(await page.evaluate(() => globalThis.L?.version), "1.9.4", "Original Leaflet CDN dependency unavailable");
@@ -726,6 +752,12 @@ async function run(options) {
       vibration: {supported: !document.getElementById("vibration-enabled").disabled,
         checked: document.getElementById("vibration-enabled").checked}}));
     assert.equal(report.startup.native_speech_calls, 0); assert.equal(report.startup.gps.watch_count, 0);
+    assert.equal(report.startup.gps.one_shot_requests, 1);
+    const entryMedia = await page.evaluate(() => ({requests: window.__assistEntryMedia.requests,
+      tracks_stopped: window.__assistEntryMedia.tracks.length === 2 &&
+        window.__assistEntryMedia.tracks.every(track => track.readyState === "ended")}));
+    assert.deepEqual(entryMedia.requests, [{audio: true, video: true}]);
+    assert.equal(entryMedia.tracks_stopped, true);
     assert.equal(report.startup.camera_idle, true); assert.equal(report.startup.activation.ready, false);
     assert.equal(report.startup.guidance.reasons.speech, "activation_required");
     assert.equal(report.startup.guidance.paused.speech, true);

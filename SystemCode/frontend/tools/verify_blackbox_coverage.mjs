@@ -131,17 +131,19 @@ const SCENARIOS = [
   {id: "product.canonical_controllers", source: "product", verify: report =>
     report.checks.identity?.camera === true && report.checks.identity?.navigation === true &&
     report.checks.identity?.speech === true && report.checks.identity?.continuous_session === true},
-  {id: "product.no_automatic_sensor_or_audio_start", source: "product", verify: report =>
+  {id: "product.entry_permissions_without_capture_or_audio", source: "product", verify: report =>
     report.checks.initial?.gated === true && report.checks.initial.camera_calls === 0 &&
-    report.checks.initial.speech_calls === 0 && report.checks.initial.gps_watches === 0 &&
-    report.checks.initial.gps_one_shots === 0},
+    report.checks.initial.startup_media_calls === 1 && report.checks.initial.startup_media_permission === "granted" &&
+    report.checks.initial.startup_media_tracks_stopped === true && report.checks.initial.speech_calls === 0 &&
+    report.checks.initial.gps_watches === 0 && report.checks.initial.gps_one_shots === 1 &&
+    report.checks.initial.origin_ready === true && report.checks.initial.origin_source === "device"},
   {id: "product.backend_bilingual_voice", source: "product", verify: report =>
     report.checks.english_voice?.id === "Cherry" && report.checks.english_voice?.service === "backend" &&
     report.checks.english_voice?.languages?.includes("en-US") && report.checks.english_voice?.languages?.includes("zh-CN")},
   {id: "product.mobile_layout", source: "product", verify: report => surfaceReady(report.checks.mobile_surface, 390)},
   {id: "product.desktop_layout", source: "product", verify: report => surfaceReady(report.checks.desktop_surface, 1280)},
   {id: "product.english_surface", source: "product", verify: report =>
-    surfaceReady(report.checks.english_surface, 390) && report.checks.english_surface.voice_hold_label === "Hold to speak"},
+    surfaceReady(report.checks.english_surface, 390) && report.checks.english_surface.voice_toggle_label === "Start recording"},
   {id: "product.exact_rear_camera_gesture", source: "product", verify: report =>
     report.checks.camera_request?.audio_false === true && report.checks.camera_request?.exact_rear === true &&
     report.checks.camera_request?.user_gesture_active === true},
@@ -166,8 +168,10 @@ const SCENARIOS = [
     report.checks.diagnostics?.page_status === 200 && report.checks.diagnostics?.backend_voice_selected === true &&
     bilingualTtsReady(report.checks.diagnostic_bilingual_tts?.cases, 4)},
   {id: "camera.permission_startup_gate", source: "camera", verify: report => report.checks.initial?.gated === true &&
-    report.checks.initial.camera_calls === 0 && report.checks.initial.speech_calls === 0 &&
-    report.checks.initial.gps_watches === 0 && report.checks.initial.gps_one_shots === 0},
+    report.checks.initial.camera_calls === 0 && report.checks.initial.startup_media_calls === 1 &&
+    report.checks.initial.startup_media_permission === "granted" && report.checks.initial.startup_media_tracks_stopped === true &&
+    report.checks.initial.speech_calls === 0 && report.checks.initial.gps_watches === 0 && report.checks.initial.gps_one_shots === 1 &&
+    report.checks.initial.origin_ready === true},
   {id: "camera.explicit_rear_request", source: "camera", verify: report =>
     report.checks.single_request?.exact_rear === true && report.checks.single_request?.audio_false === true &&
     report.checks.single_request?.user_gesture_active === true},
@@ -258,11 +262,15 @@ const SCENARIOS = [
     report.identity?.secure_context === true && report.identity?.canonical_camera === true &&
     report.identity?.canonical_navigation === true && report.identity?.canonical_speech === true &&
     report.sockets.length > 0 && report.sockets.every(socket => socket.secure === true)},
-  {id: "relay.camera_first_no_device_acquisition", source: "relay", verify: report =>
+  {id: "relay.entry_permissions_before_explicit_capture", source: "relay", verify: report =>
     report.checks.initial_camera_entry?.source === "camera" &&
     report.checks.initial_camera_entry?.get_user_media_calls === 0 &&
+    report.checks.initial_camera_entry?.startup_permission_calls === 1 &&
+    report.checks.initial_camera_entry?.startup_permission_granted === true &&
+    report.checks.initial_camera_entry?.startup_permission_tracks_stopped === true &&
     report.checks.initial_camera_entry?.startup_outputs?.speech_calls === 0 &&
-    report.checks.initial_camera_entry?.startup_outputs?.gps_watches === 0},
+    report.checks.initial_camera_entry?.startup_outputs?.gps_watches === 0 &&
+    report.checks.initial_camera_entry?.startup_outputs?.gps_one_shot_requests === 1},
   {id: "relay.live_ors_route", source: "relay", verify: report =>
     report.real_ors_verified === true && report.route?.status === 200 && report.route?.source === "real_public_ORS" &&
     report.route?.provider === "openrouteservice" && report.route?.points >= 2 && report.route?.steps >= 1},

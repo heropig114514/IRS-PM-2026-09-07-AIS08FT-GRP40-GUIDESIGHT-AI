@@ -127,14 +127,12 @@ async function checkFixtureFlows(browser, url, output) {
     const page = await context.newPage();
     await openMaps(page, url);
     await expectText(page, "#maps-status", "ORS configured");
+    await expectText(page, "#location-source", "Current device location");
+    await expectText(page, "#accuracy", "About 12 m");
     await assertEnglish(page, "initial system-English page");
     await page.locator("#map").click({position: {x: 120, y: 150}});
     await expectText(page, "#maps-status", "Ready to plan");
     await assertEnglish(page, "map destination selected");
-    await page.locator("#locate").click();
-    await expectText(page, "#location-source", "Current device location");
-    await expectText(page, "#accuracy", "About 12 m");
-    await assertEnglish(page, "synthetic location acquired");
     await page.locator("#start-latitude").fill("1.2971");
     await expectText(page, "#location-source", "Manually entered start");
     await page.locator("#example").click();
@@ -184,7 +182,7 @@ async function checkFixtureFlows(browser, url, output) {
     await assertEnglish(page, "preference retained across camera/maps navigation");
     report.fixture = {passed: true, routeRequests: requests, viewport: "390x844",
       screenshot: output + ".png", languageCycle: "en -> zh-CN -> en",
-      checks: ["static text and accessibility", "selected destination", "synthetic location/accuracy",
+      checks: ["static text and accessibility", "entry-time synthetic location/accuracy", "selected destination",
         "manual source", "route summary/turn labels", "marker tooltip", "original ORS text preserved",
         "route error identifiers", "permission denial", "cross-page preference", "mobile overflow"]};
   } finally { await context.close(); }

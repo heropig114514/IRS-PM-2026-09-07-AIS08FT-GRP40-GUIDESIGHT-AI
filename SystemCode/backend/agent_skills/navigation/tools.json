@@ -2,7 +2,7 @@
   "ui_snapshot", "ui_navigate", "ui_action", "maps_status", "maps_locate", "places_search",
   "places_categories", "places_nearby", "maps_plan", "navigation_status",
   "navigation_start", "navigation_stop"
-], "requires": {"places_nearby": ["places_categories"]},
+], "requires": {"places_search": ["maps_locate"], "places_nearby": ["maps_locate", "places_categories"]},
 "limits": {"places_search": 1, "places_categories": 1, "places_nearby": 1},
 "result_counts": {"places_search": {"field": "candidates", "min": 1, "max": 1,
   "confirm_if": "requires_confirmation",

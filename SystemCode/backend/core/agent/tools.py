@@ -14,7 +14,8 @@ BrowserTools.speech_status; BrowserTools.speech_voices; BrowserTools.speech_spea
 BrowserTools.speech_stop; BrowserTools.vibration_status; BrowserTools.vibration_test;
 BrowserTools.vibration_stop; capture_tool_errors; create_server.
 Variable Index: logger — safe tool boundary failure codes/types; DESCRIPTIONS — tool catalog
-descriptions; Wait — bounded observation schema.
+descriptions; Wait — bounded observation schema; PRODUCT_CAMERA_START_SELECTOR — formal-page
+camera permission entry that requires a real browser gesture.
 """
 
 import inspect
@@ -35,6 +36,7 @@ from .skills import catalog, read_skill, tool_policy
 
 logger = logging.getLogger(__name__)
 Wait = Annotated[float, Field(ge=0, le=12)]
+PRODUCT_CAMERA_START_SELECTOR = "#product-camera-start"
 DESCRIPTIONS = {
     "discover_tools": "Discover the actual bound MCP tool catalog and skill tool scopes before "
                       "executing mapped workflows. Registration is not successful execution.",
@@ -42,7 +44,8 @@ DESCRIPTIONS = {
     "ui_snapshot": "Inspect the bound tab's current URL, controls, options and visible state.",
     "ui_navigate": "Focus the embedded camera panel on unified assist pages, or navigate this tab "
                     "to maps/camera on standard pages and verify its resulting state.",
-    "ui_action": "Operate an observed application control; no assistant UI or permissions bypass.",
+    "ui_action": "Operate an observed application control; no assistant UI or permissions bypass. "
+                 "The formal product camera start control requires a direct user tap.",
     "maps_status": "Read current map origin/destination, configuration, busy and route state.",
     "maps_locate": "Obtain actual device GPS and set map origin; browser permission required.",
     "maps_plan": "Plan and render ORS walking route using current form or explicit coordinates.",
@@ -52,7 +55,8 @@ DESCRIPTIONS = {
                      "before any translation/spelling/phonetic correction. Rewritten names require "
                      "confirmation. One invocation per turn. For uncertain pronunciation, "
                      "keep the heard place text in text and provide at most two distinct "
-                     "sound-alike pronunciation_queries; all such results require confirmation. "
+                     "sound-alike pronunciation_queries, prioritizing plausible exact names "
+                     "already stated in conversation; all such results require confirmation. "
                      "Default country is deployment scope, not the user's location.",
     "places_categories": "Discover live map-provider POI category IDs/names. "
                          "Never invent IDs or use name search as a nearby category search.",
@@ -63,7 +67,8 @@ DESCRIPTIONS = {
     "navigation_start": "Start existing route and observe GPS for up to12s; returns actual state.",
     "navigation_stop": "Stop navigation and release GPS; verify actual state.",
     "camera_status": "Read media track, processing mode, errors and decoded frame count.",
-    "camera_start": "Start current mode or echo/hf; observe up to12s; permission required.",
+    "camera_start": "Start current mode or echo/hf; observe up to12s; permission required. "
+                    "On the formal product page, the user must tap the camera control directly.",
     "camera_stop": "Stop camera and release media/processing using the shared controller.",
     "speech_status": "Read speech prerequisites and engine state; never proves audible sound.",
     "speech_voices": "List available browser voices with exact identifiers.",
@@ -205,18 +210,33 @@ class BrowserTools:
         agent-only protected-control check; Constraints: cannot operate assistant/output switches
         or camera permission, device-choice and start controls.
         """
-        return await self.browser(
-            "agent_ui_action",
-            {
-                "action": action,
-                "selector": selector,
-                "value": value,
-                "state": state,
-                "text": text,
-                "timeout_ms": timeout * 1000,
-            },
-            timeout + 2,
-        )
+        if action == "click" and selector == PRODUCT_CAMERA_START_SELECTOR:
+            raise AgentError(
+                "user_activation_required",
+                "The formal camera control requires a direct tap in the browser. Ask the user to "
+                "tap Start environment awareness, then verify camera_status.",
+            )
+        try:
+            return await self.browser(
+                "agent_ui_action",
+                {
+                    "action": action,
+                    "selector": selector,
+                    "value": value,
+                    "state": state,
+                    "text": text,
+                    "timeout_ms": timeout * 1000,
+                },
+                timeout + 2,
+            )
+        except ValueError as error:
+            if str(error) == "This control requires direct user interaction":
+                raise AgentError(
+                    "user_activation_required",
+                    "This camera control requires a direct tap in the browser. Ask the user to tap "
+                    "the visible camera button, then verify camera_status.",
+                ) from error
+            raise
 
     async def maps_status(self) -> dict[str, Any]:
         """Functionality: Read map state. Inputs: bound tab; Outputs: form/route state.
@@ -247,8 +267,9 @@ class BrowserTools:
         Inputs: search text, exact user original_text, observed focus, optional country and
         pronunciation_queries.
         Outputs: real candidates, applied queries/scope and phonetic-mode confirmation marker.
-        Logic: Normal lookup or at most two explicit sound-alike hypotheses against the same ORS
-        service. Constraints: no GPS inference, alias-certainty claim or automatic selection.
+        Logic: Normal lookup or at most two explicit sound-alike hypotheses, including plausible
+        names already present in conversation, against the same ORS service. Constraints: no GPS
+        inference, alias-certainty claim or automatic selection.
         """
         return await resolve_places(text, original_text, focus, country, pronunciation_queries)
 
