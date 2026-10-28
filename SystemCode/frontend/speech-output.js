@@ -1,8 +1,11 @@
 /** Responsibilities: Provide shared browser speech output, test UI, lifecycle events, and explicit failure feedback.
  * Implementation: Unified assist pages stream backend Qwen PCM through Web Audio; legacy standalone pages retain native SpeechSynthesis.
  * Both modes are off by default, share manual/MCP speak/stop, preserve activation/foreground rules, and never retry.
+ * Explicit risk requests may use composed prepared PCM through the integration cache;
+ * other utterances use the original socket.
  * Snapshot request events before broadcasting and give each subscriber a copy to isolate synchronous reentry or mutation.
- * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js; core.ai_mcp/core.camera.
+ * Related Modules: index.html, camera.css, translations.js, ai-control.js, integration/guidance.js,
+ * integration/risk-speech-cache.js; core.ai_mcp/core.camera.
  * Declaration Index: SpeechOutput; SpeechOutput.constructor; SpeechOutput.feedback;
  * SpeechOutput.render; SpeechOutput.refreshVoices; SpeechOutput.describe; SpeechOutput.voiceList;
  * SpeechOutput.result; SpeechOutput.speak; SpeechOutput.unlock; SpeechOutput.speakBackend;
@@ -21,6 +24,8 @@
  * phase/lastRequest/lastError/nativeVoices/voiceReadError — bounded state; listeners observe lifecycle without utterance text;
  * notify's local event fixes phase/request_id/reason/at for the current event and gives each snapshotted listener a copy;
  * backendOnly selects same-origin server TTS only on the product/diagnostic assist entries; it retains no native voice inventory.
+ * before_start lets the current output owner synchronously withdraw stale guidance before any PCM source is scheduled.
+ * riskSocketFactory is an optional explicit risk-only transport binding; a missing binding fails instead of falling back.
  * audioContext/gain/sources/nextAudioTime own decoded PCM playback; request watchdog and
  * setTimer/clearTimer bound TTS progress; stream state is request-object guarded; backendVoice is fixed Cherry.
  * localOnly remains restricted to the standalone integration page's native speech policy.
@@ -62,6 +67,7 @@ export class SpeechOutput {
     this.setTimer = typeof win.setTimeout === "function" ? win.setTimeout.bind(win) : globalThis.setTimeout;
     this.clearTimer = typeof win.clearTimeout === "function" ? win.clearTimeout.bind(win) : globalThis.clearTimeout;
     this.backendOnly = doc.documentElement?.dataset?.assist === "true";
+    this.riskSocketFactory = null;
     this.engine = this.backendOnly ? null : win.speechSynthesis;
     this.AudioContext = win.AudioContext || win.webkitAudioContext;
     this.supported = this.backendOnly
@@ -285,14 +291,16 @@ export class SpeechOutput {
 
   /** Functionality: Submit one controlled text-to-speech request.
    * Inputs: text; options.language (zh-CN/en-US, plus auto in backend mode), voice_id (Cherry on backend;
-   * null/empty selects the browser default on standalone pages), rate (0.5..2), volume (0..1), and page prerequisites.
+   * null/empty selects the browser default on standalone pages), rate (0.5..2), volume (0..1),
+   * optional purpose="risk" for the integration's cached backend transport, and page prerequisites.
    * Outputs: Submission status and structured reason; backend mode streams PCM while standalone mode uses native events.
    * Logic: Validate Unicode length/options and prerequisites before using only the page's configured speech provider;
    * native voices must be unique and language-matched, while backend voice and provider region remain server-fixed.
+   * Risk-only transport selection is local metadata and never changes the server's synthesis command.
    * Constraints: Do not queue or interrupt older requests automatically; do not retry native exceptions/events or rewrite/store text.
    * Local-MVP standalone support accepts only explicitly localService voices and never substitutes a missing voice.
    */
-  speak(text, {language = "zh-CN", voice_id = null, rate = 1, volume = 1} = {}) {
+  speak(text, {language = "zh-CN", voice_id = null, rate = 1, volume = 1, purpose = null} = {}) {
     const length = typeof text === "string" ? [...text].length : 0;
     if (typeof text !== "string" || !text.trim() || length > MAX_TEXT_LENGTH) {
       this.feedback("请输入1至1000个字符的朗读文本。", "error");
@@ -300,7 +308,8 @@ export class SpeechOutput {
     }
     if (!(this.backendOnly ? SPEECH_LANGUAGES : LANGUAGES).includes(language) || !Number.isFinite(rate) || rate < 0.5 || rate > 2 ||
         !Number.isFinite(volume) || volume < 0 || volume > 1 ||
-        voice_id !== null && (typeof voice_id !== "string" || voice_id.length > 1024)) {
+        voice_id !== null && (typeof voice_id !== "string" || voice_id.length > 1024) ||
+        purpose !== null && purpose !== "risk") {
       this.feedback("语音参数无效，请检查语言、语速、音量和语音选择。", "error");
       return this.result("speak", false, "invalid_parameters");
     }
@@ -326,7 +335,11 @@ export class SpeechOutput {
         this.feedback("请求的后端语音不可用。", "error");
         return this.result("speak", false, "voice_unavailable");
       }
-      return this.speakBackend(text, {language, rate, volume});
+      if (purpose === "risk" && typeof this.riskSocketFactory !== "function") {
+        this.feedback("风险语音准备模块不可用，请检查页面配置。", "error");
+        return this.result("speak", false, "risk_audio_unavailable");
+      }
+      return this.speakBackend(text, {language, rate, volume, purpose});
     }
     let voice = null;
     if (voice_id) {
@@ -406,13 +419,14 @@ export class SpeechOutput {
   }
 
   /** Functionality: Submit one text request to the same-origin backend synthesis stream.
-   * Inputs: validated text and language/rate/volume options, enabled/visible/activation gates.
+   * Inputs: validated text and language/rate/volume/purpose options, enabled/visible/activation gates.
    * Outputs: queued request metadata; binary PCM later advances start/end/error events.
-   * Logic: Open one request-bound WebSocket and schedule little-endian PCM chunks through a gain node.
+   * Logic: Open one request-bound WebSocket, using the bound cache adapter only for explicit risk,
+   * and schedule little-endian PCM chunks through the unchanged gain and pre-playback gates.
    * Constraints: No native voice lookup, text logging, retry, language rewriting or implicit queue;
    * connection, first-audio, stream-idle and scheduled-playback waits have client-side deadlines.
    */
-  speakBackend(text, {language, rate, volume}) {
+  speakBackend(text, {language, rate, volume, purpose = null}) {
     let context, socket, audioReady;
     try {
       context = this.audioContext || (this.audioContext = new this.AudioContext());
@@ -424,7 +438,7 @@ export class SpeechOutput {
       const base = new URL(this.doc.documentElement.dataset.apiBase || "../", this.win.location.href);
       const address = new URL("ws/tts/", base);
       address.protocol = address.protocol === "https:" ? "wss:" : "ws:";
-      socket = new this.win.WebSocket(address);
+      socket = purpose === "risk" ? this.riskSocketFactory(address) : new this.win.WebSocket(address);
       socket.binaryType = "arraybuffer";
     } catch (error) {
       this.phase = "error"; this.lastError = "transport_unavailable";
@@ -437,7 +451,8 @@ export class SpeechOutput {
     const request = {id: requestId, socket, sources: new Set(), gain: null, sampleRate: null,
       receivedBytes: 0, streamComplete: false, started: false, language, rate, volume, watchdog: null};
     this.lastRequest = {id: requestId, text_length: [...text].length, language, voice_id: BACKEND_VOICE,
-      rate, volume, service: "backend", local_service: false};
+      rate, volume, service: "backend", local_service: false,
+      audio_transport: purpose === "risk" ? "risk_cache" : "websocket"};
     this.current = request; this.phase = "queued"; this.lastError = null;
     this.nextAudioTime = 0;
     this.feedback("已连接后端，等待中英文语音音频流。", "idle"); this.render(); this.notify("submitted");
@@ -526,7 +541,8 @@ export class SpeechOutput {
         this.armBackendWatchdog(request, "playback", remainingMs + 10000);
       }
     } else if (message.type === "error") {
-      const allowed = ["tts_not_configured", "tts_timeout", "tts_upstream_error", "tts_upstream_unavailable",
+      const allowed = ["risk_audio_unavailable", "invalid_audio_resource",
+        "tts_not_configured", "tts_timeout", "tts_upstream_error", "tts_upstream_unavailable",
         "tts_upstream_protocol", "tts_audio_limit", "invalid_speech_request", "invalid_message"];
       this.handleBackendError(request, allowed.includes(message.code) ? message.code : "synthesis_failed");
     } else this.handleBackendError(request, "invalid_server_message");
@@ -534,13 +550,17 @@ export class SpeechOutput {
 
   /** Functionality: Schedule one little-endian PCM16 block in the shared Web Audio timeline.
    * Inputs: Current request and even-length PCM bytes. Outputs: Playback source and start event.
-   * Logic: Normalize signed samples, append continuously after queued audio, apply requested gain,
-   * and bound gaps between server audio chunks.
+   * Logic: Before the first block, notify the output owner to revalidate its source; normalize signed
+   * samples, append continuously after queued audio, apply gain, and bound gaps between audio chunks.
    * Constraints: bounded by the backend stream limit; sample rate is fixed by protocol metadata.
    */
   schedulePcm(request, bytes) {
     if (!bytes.byteLength || bytes.byteLength % 2 || request.streamComplete)
       return this.handleBackendError(request, "invalid_audio_format");
+    if (!request.started) {
+      this.notify("before_start");
+      if (this.current !== request || this.phase !== "queued" || this.lastError) return;
+    }
     try {
       this.clearBackendWatchdog(request);
       const context = this.audioContext;

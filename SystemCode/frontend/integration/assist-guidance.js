@@ -1,6 +1,7 @@
 /* Responsibilities: Arbitrate live assistant replies, navigation and algorithm-required risk output in one owner.
  * Implementation: Latest-source scheduling, separate monotonic/GPS clocks, existing short-text
- * policies, a temporary FIFO for live assistant replies, owned preemption, source deadlines and
+ * policies, a temporary FIFO for live assistant replies, owned preemption, queued synthesis preparation,
+ * current semantic confirmation before first PCM, same-target sentence completion and
  * start-based channel cooldowns. Assistant replies use automatic bilingual TTS language selection;
  * risk/navigation guidance follows the explicit UI language. Long replies use safe text boundaries.
  * Related Modules: video-alerts.js, navigation-speech.js, maps-navigation-bridge.js, events.js,
@@ -15,6 +16,8 @@
  * AssistGuidanceManager.ingestRisk; AssistGuidanceManager.stopRisk;
  * AssistGuidanceManager.beginNavigation; AssistGuidanceManager.ingestNavigation;
  * AssistGuidanceManager.stopNavigation; AssistGuidanceManager.riskFresh;
+ * AssistGuidanceManager.riskPreparationCurrent; AssistGuidanceManager.riskSpeechConfirmation;
+ * AssistGuidanceManager.sameConfirmedRiskTarget;
  * AssistGuidanceManager.navigationFresh; AssistGuidanceManager.navigationCandidate;
  * AssistGuidanceManager.refreshNavigation; AssistGuidanceManager.eligible;
  * AssistGuidanceManager.driverOwns; AssistGuidanceManager.cancel;
@@ -26,6 +29,10 @@
  * existing driver pattern names/durations. latestRisk/latestNavigation are bounded sources;
  * active/pendingSubmission preserve ownership; pumpRequested coalesces synchronous lifecycle reentry;
  * histories separate speech/vibration actual starts;
+ * speechText/speechLanguage/speechVoiceId retain the submitted phrase and voice configuration;
+ * queued synthesis is only preparation until an eligible highest-priority current target confirms it;
+ * synthesis provenance stays unchanged while separately reported confirmation identifies the current source;
+ * confirmedTarget freezes actual speech-start target/session/epoch identity independently of the synthesis source;
  * assistantReplies/assistantReplySequence retain only queued live reply text and request identity;
  * navigationRevision/completedNavigation deduplicate completed steps; paused/reasons require
  * explicit recovery; schedulerTimer expires sources without retrying failed output.
@@ -127,14 +134,16 @@ export class AssistGuidanceManager {
       hardware_outputs_verified: false, disposed: this.disposed};
   }
 
-  /* Functionality: Extract request-bound source context. Inputs: Owned descriptor.
-   * Outputs: Finite metadata. Logic: Use captured source identity rather than newer state.
+  /* Functionality: Extract original request context and separately retained playback confirmation. Inputs: Owned descriptor.
+   * Outputs: Finite metadata. Logic: Keep original captured identity and actual speech-start identity distinct.
    * Constraints: No box body, spoken text, instruction or GPS coordinate. */
   context(descriptor) {
     return {kind: descriptor?.kind ?? null, ...descriptor?.source,
       source: descriptor?.kind === "risk" ? "perception" : descriptor?.kind === "navigation" ? "navigation" : null,
       notice: descriptor?.notice ?? null,
-      track_id: descriptor?.box?.track_id ?? null, alert_priority: descriptor?.box?.alert_priority ?? null};
+      track_id: descriptor?.box?.track_id ?? null, alert_priority: descriptor?.box?.alert_priority ?? null,
+      ...(descriptor?.confirmedTarget ? {confirmed_track_id: descriptor.confirmedTarget.track_id,
+        confirmed_tracking_epoch: descriptor.confirmedTarget.tracking_epoch} : {})};
   }
 
   /* Functionality: Publish diagnosed state changes. Inputs: Phase/details. Outputs: Event.
@@ -146,9 +155,12 @@ export class AssistGuidanceManager {
   }
 
   /* Functionality: Store the shared voice ID and language selection. Inputs: voiceId/language.
-   * Outputs: State. Logic: The unified assist pages require the server-provided Cherry voice.
-   * Constraints: Does not enable, resume or replace a voice; local browser synthesis is not an assist-page path. */
-  configure({voiceId, language}) { this.voiceId = voiceId; this.language = languageOf(language); return this.describe(); }
+   * Outputs: State. Logic: The unified assist pages require the server-provided Cherry voice;
+   * revalidate pending preparation immediately after an explicit configuration change.
+   * Constraints: No enablement, channel recovery or voice fallback; local synthesis is not an assist-page path. */
+  configure({voiceId, language}) {
+    this.voiceId = voiceId; this.language = languageOf(language); this.pump(); return this.describe();
+  }
 
   /* Functionality: Queue one live assistant reply for prioritized automatic speech.
    * Inputs: Reply text. Outputs: Acceptance and reply identity; no text is returned in metadata.
@@ -295,6 +307,47 @@ export class AssistGuidanceManager {
     return Number.isFinite(age) && age >= 0 && age < RISK_TTL_MS;
   }
 
+  /* Functionality: Bound pending risk synthesis without treating preparation as audible guidance.
+   * Inputs: Owned descriptor and latest original frame. Outputs: Boolean.
+   * Logic: Require a fresh frame and unchanged session/generation/epoch/language/voice while
+   * permitting transient changes in target identity, direction and risk meaning during synthesis.
+   * Constraints: The one-second capture TTL remains strict; playback needs separate current semantic
+   * confirmation. Higher global priority, stop/disable and available lower-priority work are handled by pump. */
+  riskPreparationCurrent(descriptor) {
+    return Boolean(this.riskEnabled && this.riskSessionId && this.riskFresh() &&
+      descriptor?.generation === this.riskGeneration &&
+      descriptor.source.session_id === this.riskSessionId &&
+      descriptor.source.tracking_epoch === this.trackingEpoch &&
+      descriptor.speechLanguage === this.language && descriptor.speechVoiceId === this.voiceId);
+  }
+
+  /* Functionality: Identify a current target that permits the prepared phrase to begin playback.
+   * Inputs: Owned descriptor, latest fresh boxes and actual-start speech cooldown history. Outputs: Box or null.
+   * Logic: Require exact submitted phrase/priority at the global highest current priority and an eligible
+   * target; prefer the original track, otherwise use the existing TTC/distance/track ordering.
+   * Constraints: Never rewrite original request provenance, downgrade urgency, refresh capture time or
+   * use an ineligible/cooled-down target merely because an older phrase has finished synthesis. */
+  riskSpeechConfirmation(descriptor) {
+    if (!this.riskPreparationCurrent(descriptor)) return null;
+    const boxes = this.latestRisk.metadata.boxes, highest = selectVideoAlert(boxes);
+    if (!highest || highest.alert_priority !== descriptor.box.alert_priority) return null;
+    const matches = boxes.filter(box => box.alert_required === true && box.alert_priority === highest.alert_priority &&
+      videoAlertText(box, this.language) === descriptor.speechText && this.eligible(box, "speech"));
+    return matches.find(box => box.track_id === descriptor.box.track_id) || selectVideoAlert(matches);
+  }
+
+  /* Functionality: Recognize the actual target of an already-started risk sentence.
+   * Inputs: Owned speech descriptor and a current validated detection. Outputs: Boolean.
+   * Logic: Match retained speech-start track, session, generation and tracking epoch rather than
+   * the original synthesis target, which may differ after semantic confirmation.
+   * Constraints: Target IDs from another tracker epoch are distinct; no algorithm identity inference. */
+  sameConfirmedRiskTarget(descriptor, box) {
+    const confirmed = descriptor?.confirmedTarget;
+    return Boolean(descriptor?.started && confirmed && box &&
+      confirmed.track_id === box.track_id && confirmed.session_id === this.riskSessionId &&
+      confirmed.generation === this.riskGeneration && confirmed.tracking_epoch === this.trackingEpoch);
+  }
+
   /* Functionality: Check source GPS age on the epoch clock. Inputs: Core snapshot.
    * Outputs: Boolean. Logic: Existing NAVIGATION_POLICY freshness boundary.
    * Constraints: Never compare GPS epoch timestamps to performance.now or use cached age_ms. */
@@ -389,8 +442,8 @@ export class AssistGuidanceManager {
   /* Functionality: Submit one backend risk, navigation or assistant utterance.
    * Inputs: Frozen descriptor/text.
    * Outputs: Request ownership or diagnosed pause/suppression. Logic: Protect all foreign speech.
-   * Constraints: Backend Cherry is mandatory; no local voice, automatic enablement, retry or
-   * scene/manual preemption is permitted. */
+   * Constraints: Only risk requests carry the explicit risk-preparation purpose; backend Cherry is
+   * mandatory and no local voice, automatic enablement, retry or scene/manual preemption is permitted. */
   submitSpeech(descriptor, text) {
     const status = this.speech?.describe();
     if (this.paused.speech) return this.suppress("speech", "channel_paused", descriptor);
@@ -404,11 +457,13 @@ export class AssistGuidanceManager {
     if (!this.speech.backendOnly || !inventory.accepted || voices.length !== 1 || voice?.service !== "backend" ||
         voice.id !== "Cherry" || !voice.languages?.includes(this.language))
       return this.pause("speech", "backend_voice_unavailable", descriptor);
-    this.pendingSubmission = {...descriptor, channel: "speech", started: false, requestId: null};
-    let result;
     const language = descriptor.kind === "assistant" ? "auto" : this.language;
+    this.pendingSubmission = {...descriptor, speechText: text, speechLanguage: language, speechVoiceId: this.voiceId,
+      channel: "speech", started: false, requestId: null};
+    let result;
     try { result = this.speech.speak(text, {language, voice_id: this.voiceId,
-      rate: Number(this.speech.rate?.value ?? 2), volume: Number(this.speech.volume?.value ?? 1)}); }
+      rate: Number(this.speech.rate?.value ?? 2), volume: Number(this.speech.volume?.value ?? 1),
+      ...(descriptor.kind === "risk" ? {purpose: "risk"} : {})}); }
     catch { result = {accepted: false, reason: "speak_failed"}; }
     const pending = this.pendingSubmission; this.pendingSubmission = null;
     if (!result?.accepted) return this.pause("speech", result?.reason || "speak_failed", pending);
@@ -446,7 +501,8 @@ export class AssistGuidanceManager {
 
   /* Functionality: Consume real driver lifecycle with synchronous submission support.
    * Inputs: Body-free shared-driver event. Outputs: Start cooldown, completion or latched failure.
-   * Logic: Match exact owned IDs; advance assistant replies only after the shared driver reports completion.
+   * Logic: Match exact owned IDs; recheck risk sources before first PCM scheduling, retain the actual
+   * confirming target for sentence-completion decisions, then advance assistant replies after completion.
    * Unconfirmed external stop retains ownership and pauses.
    * Constraints: Old/foreign callbacks cannot complete another request or silently recover a channel. */
   outputEvent(event) {
@@ -459,16 +515,32 @@ export class AssistGuidanceManager {
       if (["end", "cancel"].includes(event.phase)) this.pump();
       return;
     }
+    if (event.phase === "before_start") {
+      this.pump();
+      if (this.active[channel] === active && active.kind === "risk" && !active.started && !active.cancelFailed &&
+          !this.riskSpeechConfirmation(active)) {
+        this.cancel(channel, "risk_changed_before_start"); this.pump();
+      }
+      return;
+    }
     if (event.phase === "start") {
+      const confirmation = channel === "speech" && active.kind === "risk" ? this.riskSpeechConfirmation(active) : null;
       active.started = true;
-      if (active.kind === "risk" && active.generation === this.riskGeneration && active.source.tracking_epoch === this.trackingEpoch) {
+      if (confirmation) active.confirmedTarget = Object.freeze({track_id: confirmation.track_id,
+        session_id: this.riskSessionId, generation: this.riskGeneration, tracking_epoch: this.trackingEpoch});
+      const historyBox = channel === "vibration" && active.kind === "risk" &&
+        active.generation === this.riskGeneration && active.source.tracking_epoch === this.trackingEpoch
+        ? active.box : confirmation;
+      if (historyBox) {
         const history = this.histories[channel];
-        if (!history.has(active.box.track_id) && history.size >= 300) history.delete(history.keys().next().value);
-        history.set(active.box.track_id, {priority: active.box.alert_priority, at: this.now()});
+        if (!history.has(historyBox.track_id) && history.size >= 300) history.delete(history.keys().next().value);
+        history.set(historyBox.track_id, {priority: historyBox.alert_priority, at: this.now()});
       }
       this.report("output_start", {channel, request_id: active.requestId, ...this.context(active),
         actual_start: true, hardware_verified: false,
-        capture_to_start_ms: active.kind === "risk" ? this.now() - active.source.captured_at_ms : null});
+        capture_to_start_ms: active.kind === "risk" ? this.now() - active.source.captured_at_ms : null,
+        ...(confirmation ? {confirmed_track_id: confirmation.track_id, confirmed_frame_index: this.latestRisk.metadata.index,
+          confirmed_capture_to_start_ms: this.now() - this.latestRisk.capturedAt} : {})});
     } else if (["end", "cancel", "error"].includes(event.phase)) {
       const retained = event.phase === "error" &&
         (event.reason === "cancel_failed" || this.driverOwns(channel, active.requestId));
@@ -490,9 +562,11 @@ export class AssistGuidanceManager {
   }
 
   /* Functionality: Arm only the earliest source/nominal-pattern deadline. Inputs: Source clocks.
-   * Outputs: One timer. Logic: Recompute exact original deadlines after each state change; only
-   * navigation speech has a GPS-source deadline, while assistant replies have none.
-   * Constraints: No cooldown loop, failed-output retry or source timestamp refresh. */
+   * Outputs: One timer. Logic: Expire current risk evidence at its original capture deadline;
+   * pending preparation may continue while latest source evidence stays fresh; semantic approval
+   * happens before first PCM. Navigation
+   * retains its original GPS-source deadline; assistant replies have none.
+   * Constraints: No cooldown loop, failed-output retry or request-provenance rewriting. */
   armTimer() {
     if (this.schedulerTimer !== null) this.clearTimer(this.schedulerTimer);
     this.schedulerTimer = null;
@@ -504,8 +578,7 @@ export class AssistGuidanceManager {
       delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - this.navigation.snapshot.position.timestamp));
     const speech = this.active.speech;
     if (speech && !speech.started && !speech.cancelFailed) {
-      if (speech.kind === "risk") delays.push(RISK_TTL_MS - (this.now() - speech.source.captured_at_ms));
-      else if (speech.kind === "navigation" && speech.notice !== "error")
+      if (speech.kind === "navigation" && speech.notice !== "error")
         delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - speech.snapshot.position.timestamp));
     }
     const vibration = this.active.vibration;
@@ -516,7 +589,12 @@ export class AssistGuidanceManager {
 
   /* Functionality: Arbitrate current risk, queued assistant replies and real navigation.
    * Inputs: Independent source/driver state. Outputs: Owned speech/vibration actions.
-   * Logic: Risk preempts owned navigation or assistant replies; replies preempt navigation and
+   * Logic: Retain risk synthesis as preparation through fresh-frame target/meaning changes until
+   * first PCM requires exact current confirmation. A started short sentence finishes for its actual
+   * confirmed target even if that target escalates; latest valid escalation is reconsidered on completion.
+   * Higher priority from another target or tracker epoch still preempts immediately;
+   * no-alert preparation yields to available assistant/navigation work. Risk preempts owned navigation
+   * or assistant replies; replies preempt navigation and
    * continue in FIFO order; latest fresh navigation resumes after higher-priority speech.
    * Constraints: No manual/foreign preemption, frame FIFO, algorithm changes or failed cleanup retries. */
   pump() {
@@ -529,9 +607,15 @@ export class AssistGuidanceManager {
         ? selectVideoAlert(this.latestRisk.metadata.boxes) : null;
       const speech = this.active.speech;
       if (speech?.kind === "risk") {
-        const expiredQueued = !speech.started && this.now() - speech.source.captured_at_ms >= RISK_TTL_MS;
-        if ((!box && !speech.started) || expiredQueued || box && box.alert_priority > speech.box.alert_priority)
-          this.cancel("speech", expiredQueued ? "risk_expired_before_start" : "risk_changed");
+        const expiredQueued = !speech.started && !this.riskFresh();
+        const yieldPreparation = !speech.started && !box && (this.assistantReplies.length > 0 ||
+          this.navigationEnabled && this.navigation && this.completedNavigation !== this.navigation.revision);
+        const interruptingRisk = speech.started && box
+          ? selectVideoAlert(this.latestRisk.metadata.boxes.filter(candidate => !this.sameConfirmedRiskTarget(speech, candidate))) : box;
+        if ((!speech.started && !this.riskPreparationCurrent(speech)) ||
+            interruptingRisk && interruptingRisk.alert_priority > speech.box.alert_priority || yieldPreparation)
+          this.cancel("speech", expiredQueued ? "risk_expired_before_start"
+            : yieldPreparation ? "risk_preparation_yield" : "risk_changed");
       } else if (speech?.kind === "navigation" && (box || this.assistantReplies.length))
         this.cancel("speech", box ? "risk_preempted_navigation" : "assistant_reply_priority");
       else if (speech?.kind === "assistant" && box) this.cancel("speech", "risk_preempted_assistant");

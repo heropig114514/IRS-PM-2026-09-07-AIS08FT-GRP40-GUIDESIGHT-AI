@@ -43,6 +43,7 @@ export const translations = {
   "后端语音失败（{0}），请检查连接后重试。": "Backend speech failed ({0}). Check the connection and try again.",
   "请求的后端语音不可用。": "The requested backend voice is unavailable.",
   "无法连接后端语音服务，请检查网络连接。": "Cannot connect to the backend speech service. Check the network connection.",
+  "风险语音准备模块不可用，请检查页面配置。": "Risk speech preparation is unavailable. Check the page configuration.",
   "须明确选择声音": "Select a voice explicitly",
   "语速（默认2倍，可调整）": "Rate (2x by default, adjustable)",
   "语音引擎事件不等于实际扬声器听音验证。导航语音与视频警报保持独立。": "Speech engine events do not verify loudspeaker audibility. Navigation speech remains independent of video alerts.",

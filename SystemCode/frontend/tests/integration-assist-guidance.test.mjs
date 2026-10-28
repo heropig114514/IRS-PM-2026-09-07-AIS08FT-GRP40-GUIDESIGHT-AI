@@ -1,6 +1,9 @@
 /* Responsibilities: Independently verify unified risk/navigation scheduling and driver ownership.
  * Implementation: Separate epoch/monotonic clocks, explicit source snapshots and synchronous or
- * deferred fake-driver events exercise the production manager without sensors or native output.
+ * deferred fake-driver events exercise the production manager without sensors or native output;
+ * slow synthesis remains preparation through fresh-frame semantic changes, requires matching
+ * eligible highest-priority evidence at first PCM, completes started same-target sentences, and retains
+ * distinct-target priority/lifecycle preemption without altering original request provenance.
  * Related Modules: integration/assist-guidance.js, integration/video-alerts.js,
  * integration/navigation-speech.js. No algorithm implementation or threshold is substituted.
  * Declaration Index: Clock; Clock.constructor; Clock.now; Clock.epochNow; Clock.setTimer;
@@ -11,8 +14,14 @@
  * box; navigationSnapshot; fixture; fixture.risk; fixture.navigation;
  * testDisabled; testNavigationOnly; testAssistantReplyQueue; testAssistantReplyPriority;
  * testRiskOnly; testPreemption; testLatestNavigation;
- * testCompletedNavigation; testRiskCompletion; testEscalation; testCooldown; testSourceClock;
- * testQueuedRisk; testQueuedNavigation; testNavigationExpiry; testIndependentStops;
+ * testCompletedNavigation; testRiskCompletion; testEscalation; testSameTargetRepeats;
+ * testSameTargetEscalation; testEscalationUsesLatestRisk; testConfirmedTargetEscalation; testConfirmedTargetPreemption;
+ * testOtherTargetEscalation; testEscalationEpochIdentity; testCooldown; testVibrationCooldown; testSourceClock;
+ * testQueuedRisk; testSlowRiskSynthesis; testRiskReranking; testQueuedEscalation;
+ * testRiskCrossTrackConfirmation; testQueuedRiskTargetIneligible; testChangedRiskSynthesis;
+ * testPreparationSemanticRecovery; testRiskConfirmationCooldown; testNoAlertPreparation;
+ * testPreparationYields; testPreparationBoundaries; testExpiredBeforePlayback;
+ * testLanguageChangedBeforePlayback; testQueuedNavigation; testNavigationExpiry; testIndependentStops;
  * testIndependentSwitches; testForeignSpeech; testForeignVibration; testSynchronous;
  * testChannelFailure; testCancellationFailure; testExternalFailure; testUserCancel;
  * testVoice; testEpochReset; testSessionIsolation; testGlobalStop; testPort; testMetadata;
@@ -101,9 +110,14 @@ class Speech {
     if (this.synchronous === "error") this.error();
     return {accepted: true, last_request: {id}};
   }
-  /* Functionality: Start current utterance. Inputs: Current. Outputs: PCM-start event.
-   * Logic: Mark before dispatch. Constraints: Not audible proof. */
-  start() { this.current.started = true; this.emit("start"); }
+  /* Functionality: Start a current utterance only after its synchronous pre-playback guard.
+   * Inputs: Current request. Outputs: PCM-start event unless cancelled before scheduling.
+   * Logic: Preserve request identity across before_start observers. Constraints: Not audible proof. */
+  start() {
+    const request = this.current; this.emit("before_start");
+    if (this.current !== request) return;
+    request.started = true; this.emit("start");
+  }
   /* Functionality: Complete current utterance. Inputs: Current. Outputs: End event.
    * Logic: Release before dispatch. Constraints: No automatic successor. */
   end() { const id = this.current.id; this.current = null; this.emit("end", id); }
@@ -214,6 +228,7 @@ test("both automatic sources default disabled", function testDisabled() {
 // Functionality: Check navigation-only scheduling; Inputs: Same-step GPS; Outputs: One policy utterance; Logic: Dedup completion; Constraints: No camera requirement.
 test("navigation works alone and completed same-step GPS never repeats", function testNavigationOnly() {
   const f = fixture(); f.navigation(); assert.equal(f.speech.requests[0].text, navigationSpeechText(f.manager.latestNavigation, "zh-CN"));
+  assert.equal(Object.hasOwn(f.speech.requests[0].options, "purpose"), false);
   f.speech.start(); f.speech.end(); f.clock.advance(200); f.navigation(); assert.equal(f.speech.requests.length, 1);
   assert.equal(f.vibration.requests.length, 0); f.manager.dispose();
 });
@@ -231,6 +246,7 @@ test("live assistant replies queue in order and long text is spoken without trun
     assert.ok(request, "the next queued assistant part should own the speech driver");
     assert.equal(request.options.voice_id, "Cherry");
     assert.equal(request.options.language, "auto");
+    assert.equal(Object.hasOwn(request.options, "purpose"), false);
     parts.push(request.text); f.speech.start(); f.speech.end();
   }
   assert.ok(parts.slice(0, -1).every(part => [...part].length <= MAX_TEXT_LENGTH));
@@ -259,7 +275,8 @@ test("risk preempts a live assistant reply and route guidance resumes after both
 // Functionality: Check risk-only output; Inputs: Required box; Outputs: Existing text/pattern; Logic: No nav prerequisite; Constraints: No scoring change.
 test("perception works alone with existing short speech and vibration policy", function testRiskOnly() {
   const f = fixture(); f.risk(); assert.equal(f.speech.requests[0].text, videoAlertText(box(), "zh-CN"));
-  assert.equal(f.vibration.requests[0].name, "double"); assert.equal(f.speech.requests[0].options.rate, 2); f.manager.dispose();
+  assert.equal(f.vibration.requests[0].name, "double"); assert.equal(f.speech.requests[0].options.rate, 2);
+  assert.equal(f.speech.requests[0].options.purpose, "risk"); f.manager.dispose();
 });
 
 // Functionality: Check unified priority; Inputs: Nav then medium risk; Outputs: Owned preemption/resume; Logic: Every risk tier wins; Constraints: Fresh current step only.
@@ -290,11 +307,131 @@ test("started risk finishes after empty and stale frames while queued risk expir
   assert.deepEqual(f.speech.attempts, []); assert.equal(f.manager.active.speech.kind, "risk"); f.speech.end(); f.manager.dispose();
 });
 
-// Functionality: Check escalation only; Inputs: Equal/downgraded/upgraded risks; Outputs: Upgrade preemption; Logic: Server priority; Constraints: No TTC urgency override.
-test("equal risk does not interrupt but a higher algorithm priority does", function testEscalation() {
+// Functionality: Check distinct-target escalation; Inputs: Equal and upgraded competing risks; Outputs: Upgrade preemption; Logic: Server priority; Constraints: No TTC urgency override.
+test("equal risk does not interrupt but a distinct target with higher algorithm priority does", function testEscalation() {
   const f = fixture(); f.risk(); f.speech.start(); f.risk([box({track_id: 8})]);
-  assert.deepEqual(f.speech.attempts, []); f.risk([box({risk_level: "critical", alert_priority: 4})]);
+  assert.deepEqual(f.speech.attempts, []); f.risk([box({track_id: 8, risk_level: "critical", alert_priority: 4})]);
   assert.deepEqual(f.speech.attempts, [1]); assert.match(f.speech.current.text, /^危险/); f.manager.dispose();
+});
+
+/* Functionality: Coalesce repeated frames of the same currently announced target.
+ * Inputs: Twelve fresh same-ID/equal-grade updates during one started sentence and its cooldown boundary.
+ * Outputs: One complete sentence without cancellation, then one reminder after3000ms from start.
+ * Logic: Repeated detections do not create extra driver requests or reset the actual-start cooldown.
+ * Constraints: Synthetic events verify scheduling only; reminders are retained rather than disabled. */
+test("repeated same-target frames never interrupt a sentence or reset its speech cooldown", function testSameTargetRepeats() {
+  const f = fixture(); f.risk(); f.speech.start();
+  for (let index = 0; index < 12; index++) { f.clock.advance(100); f.risk([box({ttc_sec: 2 - index / 10})]); }
+  assert.equal(f.speech.requests.length, 1); assert.deepEqual(f.speech.attempts, []);
+  assert.deepEqual(f.manager.histories.speech.get(7), {priority: 3, at: 100});
+  f.speech.end(); assert.equal(f.speech.current, null);
+  f.clock.advance(1799); f.risk(); assert.equal(f.speech.requests.length, 1);
+  f.clock.advance(1); f.risk(); assert.equal(f.speech.requests.length, 2); f.manager.dispose();
+});
+
+/* Functionality: Complete a same-target sentence before considering a current severity upgrade.
+ * Inputs: Started high-risk speech followed by repeated critical frames for the same track.
+ * Outputs: No truncated sentence, one latest critical follow-up and independent vibration escalation.
+ * Logic: Retain actual speech-start identity; completion schedules only the latest still-valid risk.
+ * Constraints: Algorithm grades remain unchanged and vibration acceptance cannot consume speech cooldown. */
+test("same-target escalation finishes its current sentence then submits one current higher warning", function testSameTargetEscalation() {
+  const f = fixture(); f.risk(); f.speech.start();
+  const original = structuredClone(f.manager.active.speech.source);
+  for (let index = 0; index < 12; index++) {
+    f.clock.advance(50); f.risk([box({risk_level: "critical", alert_priority: 4})]);
+  }
+  assert.equal(f.speech.requests.length, 1); assert.deepEqual(f.speech.attempts, []);
+  assert.deepEqual(f.manager.active.speech.source, original);
+  assert.equal(f.manager.active.speech.confirmedTarget.track_id, 7);
+  assert.equal(f.manager.active.speech.confirmedTarget.tracking_epoch, 1);
+  assert.equal(Object.isFrozen(f.manager.active.speech.confirmedTarget), true);
+  assert.equal(f.manager.histories.vibration.get(7).priority, 4);
+  assert.equal(f.manager.histories.speech.get(7).priority, 3);
+  f.speech.end(); assert.equal(f.speech.requests.length, 2);
+  assert.match(f.speech.current.text, /^危险/);
+  f.risk([box({risk_level: "critical", alert_priority: 4})]); assert.equal(f.speech.requests.length, 2);
+  f.speech.start(); assert.equal(f.manager.histories.speech.get(7).priority, 4); f.speech.end();
+  f.risk([box({risk_level: "critical", alert_priority: 4})]);
+  assert.equal(f.speech.current, null); assert.equal(f.speech.requests.length, 2);
+  assert.equal(f.events.filter(event => event.channel === "speech" && event.phase === "output_end").length, 2);
+  f.manager.dispose();
+});
+
+/* Functionality: Avoid replaying an earlier same-target upgrade after its evidence changes.
+ * Inputs: A transient critical update followed by current high risk, an empty frame or source expiry.
+ * Outputs: The started high sentence completes with no queued critical follow-up.
+ * Logic: Completion evaluates only the latest valid algorithm result, never a remembered peak grade.
+ * Constraints: Same-grade cooldown and capture expiry remain unchanged; no risk history is fabricated. */
+test("a transient same-target upgrade is not replayed after its latest risk recovers clears or expires", function testEscalationUsesLatestRisk() {
+  for (const latest of [[box()], [], null]) {
+    const f = fixture(); f.risk(); f.speech.start(); f.clock.advance(50);
+    f.risk([box({risk_level: "critical", alert_priority: 4})]);
+    if (latest === null) f.clock.advance(1200);
+    else { f.clock.advance(50); f.risk(latest); }
+    assert.deepEqual(f.speech.attempts, []); f.speech.end();
+    assert.equal(f.speech.requests.length, 1); assert.equal(f.speech.current, null); f.manager.dispose();
+  }
+});
+
+/* Functionality: Protect the actual confirming target when synthesis began for another track.
+ * Inputs: Original track7 preparation, track8 semantic confirmation, then track8 critical escalation.
+ * Outputs: Track8's sentence completes before one current escalation, preserving original source identity.
+ * Logic: Completion ownership follows confirmed track/epoch rather than the synthesis descriptor's box.
+ * Constraints: No source/track relabelling, obsolete severity replay or changed per-track cooldown. */
+test("same-target completion follows the actual confirming track rather than the original synthesis target", function testConfirmedTargetEscalation() {
+  const f = fixture(); f.risk(); const original = structuredClone(f.manager.active.speech.source);
+  f.risk([box({track_id: 8})]); f.speech.start();
+  assert.equal(f.manager.active.speech.box.track_id, 7);
+  assert.equal(f.manager.active.speech.confirmedTarget.track_id, 8);
+  f.risk([box({track_id: 8, risk_level: "critical", alert_priority: 4})]);
+  assert.deepEqual(f.speech.attempts, []); assert.equal(f.speech.requests.length, 1);
+  assert.deepEqual(f.manager.active.speech.source, original);
+  assert.equal(f.manager.describe().active.speech.confirmed_track_id, 8);
+  assert.equal(f.manager.describe().active.speech.confirmed_tracking_epoch, 1);
+  f.speech.end(); assert.equal(f.speech.requests.length, 2);
+  assert.equal(f.manager.active.speech.box.track_id, 8); assert.match(f.speech.current.text, /^危险/);
+  f.speech.start(); f.speech.end(); assert.equal(f.speech.current, null); f.manager.dispose();
+});
+
+/* Functionality: Preserve preemption when the old synthesis target becomes a distinct urgent risk.
+ * Inputs: Track7 synthesis confirmed by track8, then a critical track7 and still-high track8.
+ * Outputs: Immediate interruption for track7's current higher priority.
+ * Logic: Original synthesis identity is not treated as the actual playing sentence's target.
+ * Constraints: Current algorithm priority is used unchanged; only manager-owned speech is cancelled. */
+test("the old synthesis target can preempt a sentence actually confirmed by another track", function testConfirmedTargetPreemption() {
+  const f = fixture(); f.risk(); f.risk([box({track_id: 8})]); f.speech.start();
+  f.risk([box({risk_level: "critical", alert_priority: 4}), box({track_id: 8})]);
+  assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.requests.length, 2);
+  assert.equal(f.manager.active.speech.box.track_id, 7); assert.match(f.speech.current.text, /^危险/);
+  f.manager.dispose();
+});
+
+/* Functionality: Retain a distinct target's urgent interruption even behind a same-target upgrade.
+ * Inputs: Playing high track7, then critical track7 ranked ahead of another critical track8.
+ * Outputs: Owned high speech is interrupted so a current critical warning can begin preparation.
+ * Logic: Same-target completion protection cannot hide a different higher-priority required risk.
+ * Constraints: Selection and grading are unchanged; the new selected critical target may still be track7. */
+test("a same-target upgrade cannot mask another target with higher priority than the playing sentence", function testOtherTargetEscalation() {
+  const f = fixture(); f.risk(); f.speech.start();
+  f.risk([box({risk_level: "critical", alert_priority: 4, ttc_sec: 0.5}),
+    box({track_id: 8, risk_level: "critical", alert_priority: 4, ttc_sec: 1})]);
+  assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.requests.length, 2);
+  assert.match(f.speech.current.text, /^危险/); f.manager.dispose();
+});
+
+/* Functionality: Separate reused track IDs across tracker epochs during started speech.
+ * Inputs: Track7 high speech in epoch1, then track7 critical risk in epoch2.
+ * Outputs: Immediate interruption and a new epoch2 request.
+ * Logic: Actual target identity includes tracker epoch and cannot be inferred from a numeric ID alone.
+ * Constraints: Tracker resets remain algorithm-owned; original speech provenance is not rewritten. */
+test("a reused numeric track ID in a new tracking epoch is a distinct target for preemption", function testEscalationEpochIdentity() {
+  const f = fixture(); f.risk(); f.speech.start();
+  assert.equal(f.manager.active.speech.confirmedTarget.tracking_epoch, 1);
+  f.manager.ingestRisk({sessionId: f.manager.riskSessionId, capturedAt: f.clock.now(),
+    metadata: {index: 2, tracking_epoch: 2, boxes: [box({risk_level: "critical", alert_priority: 4})]}});
+  assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.requests.length, 2);
+  assert.equal(f.manager.active.speech.source.tracking_epoch, 2);
+  f.speech.start(); assert.equal(f.manager.active.speech.confirmedTarget.tracking_epoch, 2); f.manager.dispose();
 });
 
 // Functionality: Separate output cooldowns; Inputs: Foreign speech plus vibration start; Outputs: Later risk speech; Logic: Actual channel starts; Constraints: 3s unchanged.
@@ -305,6 +442,20 @@ test("vibration acceptance cannot consume speech cooldown and speech cooldown be
   f.clock.advance(100); f.risk(); assert.equal(f.speech.requests.length, 2); f.manager.dispose();
 });
 
+/* Functionality: Preserve independent vibration cooldown while speech uses semantic confirmation.
+ * Inputs: Accepted risk vibration, expired source, and new fresh evidence around its3000ms cooldown.
+ * Outputs: Original vibration track/time retained and a second pattern only after the original boundary.
+ * Logic: Vibration descriptors do not carry speech language/voice and keep their original history path.
+ * Constraints: API acceptance remains distinct from physical vibration or speech playback. */
+test("semantic speech confirmation leaves original vibration start cooldown unchanged", function testVibrationCooldown() {
+  const f = fixture(); f.risk();
+  assert.deepEqual(f.manager.histories.vibration.get(7), {priority: 3, at: 100});
+  assert.equal(f.manager.histories.speech.has(7), false);
+  f.clock.advance(2900); f.risk(); assert.equal(f.vibration.requests.length, 1);
+  f.clock.advance(100); f.risk(); assert.equal(f.vibration.requests.length, 2);
+  assert.deepEqual(f.manager.histories.vibration.get(7), {priority: 3, at: 3100}); f.manager.dispose();
+});
+
 // Functionality: Verify independent clock domains; Inputs: Epoch GPS/monotonic capture; Outputs: Both accepted; Logic: True source TTL; Constraints: No receipt-age reset.
 test("GPS epoch and capture monotonic origins stay separate and future captures are rejected", function testSourceClock() {
   const f = fixture(); f.navigation(); assert.equal(f.speech.requests.length, 1); f.speech.start(); f.speech.end();
@@ -312,10 +463,233 @@ test("GPS epoch and capture monotonic origins stay separate and future captures 
   f.risk(); assert.equal(f.speech.requests.length, 2); f.manager.dispose();
 });
 
-// Functionality: Check original risk deadline; Inputs: Unstarted speech and newer frame; Outputs: Old cancelled; Logic: Capture TTL; Constraints: Fresh new frame may submit once.
-test("queued risk is cancelled at its original capture deadline", function testQueuedRisk() {
-  const f = fixture(); f.risk(); f.clock.advance(900); f.risk(); f.clock.advance(100);
-  assert.ok(f.speech.attempts.includes(1)); assert.notEqual(f.manager.active.speech?.requestId, 1); f.manager.dispose();
+// Functionality: Check missing source expiry; Inputs: Unstarted speech and no new frame; Outputs: Cancelled; Logic: Capture TTL; Constraints: No extra synthesis.
+test("queued risk is cancelled when the last original source frame expires", function testQueuedRisk() {
+  const f = fixture(); f.risk(); f.clock.advance(1000);
+  assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.current, null);
+  assert.equal(f.speech.requests.length, 1); f.manager.dispose();
+});
+
+/* Functionality: Prevent slow backend synthesis from starving a continuously confirmed risk warning.
+ * Inputs: Matching original detections every 700ms and a delayed PCM start after 2100ms.
+ * Outputs: One synthesis request and separate original/confirmed frame latency evidence.
+ * Logic: Keep all source clocks unchanged while the latest detection confirms exactly the same text.
+ * Constraints: Synthetic frames and driver events do not verify actual TTS or hardware audio. */
+test("slow risk synthesis survives matching fresh frames without rewriting original provenance", function testSlowRiskSynthesis() {
+  const f = fixture(); f.risk();
+  const original = structuredClone(f.manager.active.speech.source);
+  for (let index = 0; index < 3; index++) { f.clock.advance(700); f.risk(); }
+  assert.equal(f.speech.requests.length, 1); assert.deepEqual(f.speech.attempts, []);
+  assert.deepEqual(f.manager.active.speech.source, original);
+  f.speech.start();
+  const started = f.events.find(event => event.phase === "output_start" && event.channel === "speech");
+  assert.equal(started.frame_index, original.frame_index);
+  assert.equal(started.captured_at_ms, original.captured_at_ms);
+  assert.equal(started.capture_to_start_ms, 2100);
+  assert.equal(started.confirmed_frame_index, 4); assert.equal(started.confirmed_capture_to_start_ms, 0);
+  f.manager.dispose();
+});
+
+/* Functionality: Prevent equal-priority TTC ranking changes from starving a still-current warning.
+ * Inputs: Two original tracks retained in fresh frames every100ms, alternating TTC rank for2300ms.
+ * Outputs: One synthesis followed by a start for the original track, with separate confirmation provenance.
+ * Logic: The other track has a different direction and leads on the final frame, so neither its phrase
+ * nor the selected-target identity may replace the still-valid queued warning.
+ * Constraints: No target scoring changes, source clock reset or physical audio claim. */
+test("slow risk synthesis survives equal-priority target reranking while its own track remains current", function testRiskReranking() {
+  const f = fixture(); f.risk([box(), box({track_id: 8, direction: "front_right", ttc_sec: 2})]);
+  const original = structuredClone(f.manager.active.speech.source), originalText = f.speech.current.text;
+  for (let index = 1; index <= 23; index++) {
+    f.clock.advance(100);
+    f.risk([box({ttc_sec: index % 2 ? 2 : 1}),
+      box({track_id: 8, direction: "front_right", ttc_sec: index % 2 ? 1 : 2})]);
+  }
+  assert.equal(f.speech.requests.length, 1); assert.deepEqual(f.speech.attempts, []);
+  assert.equal(f.speech.current.text, originalText); assert.deepEqual(f.manager.active.speech.source, original);
+  f.speech.start();
+  const started = f.events.find(event => event.phase === "output_start" && event.channel === "speech");
+  assert.equal(started.track_id, 7); assert.equal(started.frame_index, original.frame_index);
+  assert.equal(started.captured_at_ms, original.captured_at_ms); assert.equal(started.capture_to_start_ms, 2300);
+  assert.equal(started.confirmed_frame_index, 24); assert.equal(started.confirmed_capture_to_start_ms, 0);
+  assert.equal(f.manager.histories.speech.has(7), true); assert.equal(f.manager.histories.speech.has(8), false);
+  f.manager.dispose();
+});
+
+/* Functionality: Preserve immediate higher-priority preemption during slow synthesis.
+ * Inputs: Still-valid original high-risk target and a fresh critical target in the same frame.
+ * Outputs: Original request cancelled and critical warning submitted before playback.
+ * Logic: Stable target confirmation never overrides global algorithm priority.
+ * Constraints: The test supplies algorithm grades without recomputing risk or waiting for hardware. */
+test("a higher global priority preempts queued speech even while its original target remains valid", function testQueuedEscalation() {
+  const f = fixture(); f.risk(); f.clock.advance(100);
+  f.risk([box(), box({track_id: 8, direction: "front_right", risk_level: "critical", alert_priority: 4})]);
+  assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.current.id, 2);
+  assert.equal(f.manager.active.speech.box.track_id, 8); assert.match(f.speech.current.text, /^危险，右前方/);
+  assert.equal(f.manager.active.speech.started, false);
+  f.speech.start();
+  assert.equal(f.events.filter(event => event.phase === "output_start" && event.channel === "speech").length, 1);
+  f.manager.dispose();
+});
+
+/* Functionality: Confirm an identical prepared phrase against a different current target.
+ * Inputs: Both tracks present, then only the competing track remains with the same spoken phrase.
+ * Outputs: One original synthesis, separate actual confirmation identity and cooldown for that target.
+ * Logic: The phrase describes the current eligible highest-priority target without claiming old track continuity.
+ * Constraints: Original track/source/capture latency remain immutable; no obsolete phrase is played. */
+test("a current matching target confirms prepared speech without relabelling its original provenance", function testRiskCrossTrackConfirmation() {
+  const f = fixture(); f.risk([box(), box({track_id: 8, ttc_sec: 2})]); f.clock.advance(100);
+  const original = structuredClone(f.manager.active.speech.source);
+  f.risk([box({ttc_sec: 2}), box({track_id: 8})]); assert.deepEqual(f.speech.attempts, []);
+  f.clock.advance(100); f.risk([box({track_id: 8})]);
+  assert.deepEqual(f.speech.attempts, []); assert.equal(f.speech.current.id, 1);
+  f.speech.start();
+  const started = f.events.find(event => event.phase === "output_start" && event.channel === "speech");
+  assert.equal(started.track_id, 7); assert.equal(started.confirmed_track_id, 8);
+  assert.equal(started.frame_index, original.frame_index); assert.equal(started.capture_to_start_ms, 200);
+  assert.equal(started.confirmed_frame_index, 3); assert.equal(started.confirmed_capture_to_start_ms, 0);
+  assert.deepEqual(f.manager.active.speech.source, original);
+  assert.equal(f.manager.histories.speech.has(7), false); assert.equal(f.manager.histories.speech.has(8), true);
+  f.speech.end(); f.risk([box({track_id: 8})]); assert.equal(f.speech.requests.length, 1);
+  f.clock.advance(2999); f.risk([box({track_id: 8})]); assert.equal(f.speech.requests.length, 1);
+  f.clock.advance(1); f.risk([box({track_id: 8})]); assert.equal(f.speech.requests.length, 2);
+  f.manager.dispose();
+});
+
+/* Functionality: Reject confirmation from a track that no longer qualifies for an algorithm alert.
+ * Inputs: Original target with false alert_required, zero or absent priority, plus a differently phrased competitor.
+ * Outputs: Preparation retained until first PCM, then cancelled with the valid target replacing it.
+ * Logic: Exact text from an ineligible target cannot authorize physical audio scheduling.
+ * Constraints: Caller contract validation remains upstream; these inputs cannot invent a new alert. */
+test("an ineligible original target cannot retain queued speech when another valid alert remains", function testQueuedRiskTargetIneligible() {
+  for (const change of [{alert_required: false}, {alert_priority: 0}, {alert_priority: undefined}]) {
+    const f = fixture(); f.risk(); f.clock.advance(100);
+    f.risk([box(change), box({track_id: 8, direction: "front_right"})]);
+    assert.deepEqual(f.speech.attempts, []); f.speech.start();
+    assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.current.id, 2);
+    assert.equal(f.manager.active.speech.box.track_id, 8); f.manager.dispose();
+  }
+});
+
+/* Functionality: Reject prepared audio whose phrase or priority lacks current confirmation.
+ * Inputs: Fresh changed priority, direction, category or approach suffix before first PCM.
+ * Outputs: Preparation retained until audio arrives, then cancelled and replaced without an old start.
+ * Logic: Target fluctuations are not playback approval; exact current semantic evidence is mandatory.
+ * Constraints: No source timestamp mutation, risk scoring or retry after an output failure. */
+test("changed risk meaning stays preparation until first PCM rejects the obsolete phrase", function testChangedRiskSynthesis() {
+  for (const change of [
+    {alert_priority: 2, risk_level: "medium"}, {direction: "front_right"}, {label: "car"}, {risk_reasons: []},
+  ]) {
+    const f = fixture(); f.risk(); f.clock.advance(100);
+    f.risk([box(change)]);
+    assert.deepEqual(f.speech.attempts, [], JSON.stringify(change)); assert.equal(f.speech.current.id, 1);
+    f.speech.start();
+    assert.deepEqual(f.speech.attempts, [1], JSON.stringify(change));
+    assert.equal(f.speech.current.id, 2); assert.equal(f.manager.active.speech.source.frame_index, 2);
+    assert.equal(f.events.some(event => event.phase === "output_start" && event.channel === "speech"), false);
+    f.manager.dispose();
+  }
+});
+
+/* Functionality: Permit slow synthesis to outlive transient per-frame target/meaning changes.
+ * Inputs: Three fresh frames700ms apart with intervening direction/category changes and a final matching new track.
+ * Outputs: One request starting after2100ms with original provenance and separate current confirmation.
+ * Logic: Preparation is reusable only when the current phrase/priority is supported at first PCM.
+ * Constraints: No risk cache, changed clock, old-risk playback or guarantee of provider timing. */
+test("preparation survives transient semantic changes only if the current risk confirms it before playback", function testPreparationSemanticRecovery() {
+  const f = fixture(); f.risk();
+  f.clock.advance(700); f.risk([box({track_id: 8, direction: "front_right"})]);
+  f.clock.advance(700); f.risk([box({track_id: 9, label: "car"})]);
+  f.clock.advance(700); f.risk([box({track_id: 10})]);
+  assert.equal(f.speech.requests.length, 1); assert.deepEqual(f.speech.attempts, []);
+  f.speech.start();
+  const started = f.events.find(event => event.phase === "output_start" && event.channel === "speech");
+  assert.equal(started.track_id, 7); assert.equal(started.confirmed_track_id, 10);
+  assert.equal(started.capture_to_start_ms, 2100); assert.equal(started.confirmed_frame_index, 4);
+  assert.equal(started.confirmed_capture_to_start_ms, 0); f.manager.dispose();
+});
+
+/* Functionality: Recheck actual confirming-target cooldown before prepared audio can start.
+ * Inputs: A recently spoken target, a different pending target, then only the cooled-down target remains.
+ * Outputs: Pending audio cancelled with no second start and no cooldown attributed to the absent target.
+ * Logic: Cross-track semantic confirmation cannot bypass start-based per-track cooldown.
+ * Constraints: Cooldown duration and algorithm grades remain unchanged. */
+test("an already cooled-down target cannot authorize a different target's prepared phrase", function testRiskConfirmationCooldown() {
+  const f = fixture(); f.risk([box({track_id: 8})]); f.speech.start(); f.speech.end();
+  f.risk(); assert.equal(f.speech.current.id, 2); f.clock.advance(100); f.risk([box({track_id: 8})]);
+  assert.deepEqual(f.speech.attempts, []); f.speech.start();
+  assert.deepEqual(f.speech.attempts, [2]); assert.equal(f.speech.current, null);
+  assert.equal(f.speech.requests.length, 2); assert.equal(f.manager.histories.speech.has(7), false);
+  assert.equal(f.events.filter(event => event.phase === "output_start" && event.channel === "speech").length, 1);
+  f.manager.dispose();
+});
+
+/* Functionality: Reject prepared risk audio when fresh evidence no longer contains an alert.
+ * Inputs: A queued warning followed by an empty fresh frame and first PCM.
+ * Outputs: No eager synthesis churn, but cancellation before any physical audio start.
+ * Logic: Freshness permits preparation while semantic confirmation remains independently mandatory.
+ * Constraints: No lower-priority work is waiting in this case. */
+test("fresh no-alert frames retain preparation but never authorize obsolete risk playback", function testNoAlertPreparation() {
+  const f = fixture(); f.risk(); f.clock.advance(100); f.risk([]);
+  assert.deepEqual(f.speech.attempts, []); assert.equal(f.speech.current.id, 1);
+  f.speech.start(); assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.current, null);
+  assert.equal(f.events.some(event => event.phase === "output_start" && event.channel === "speech"), false);
+  f.manager.dispose();
+});
+
+/* Functionality: Avoid letting no-alert preparation block available assistant/navigation speech.
+ * Inputs: Risk preparation, pending lower-priority work and a fresh frame without alerts.
+ * Outputs: Preparation cancelled and the existing queued reply or current navigation candidate submitted.
+ * Logic: Yield only before risk playback when there is no current alert to retain priority.
+ * Constraints: No provider timeout, automatic retry or new scheduling priority is introduced. */
+test("no-alert risk preparation yields immediately to waiting assistant or navigation work", function testPreparationYields() {
+  for (const kind of ["assistant", "navigation"]) {
+    const f = fixture(); f.risk();
+    if (kind === "assistant") f.manager.enqueueAssistantReply("已为你准备好路线。");
+    else f.navigation();
+    assert.deepEqual(f.speech.attempts, []); f.clock.advance(100); f.risk([]);
+    assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.manager.active.speech.kind, kind);
+    assert.equal(f.speech.current.id, 2);
+    assert.equal(f.events.some(event => event.phase === "output_cancel" && event.reason === "risk_preparation_yield"), true);
+    f.speech.start(); assert.equal(f.manager.active.speech.started, true); f.manager.dispose();
+  }
+});
+
+/* Functionality: Cancel queued preparation immediately at epoch and voice boundaries.
+ * Inputs: Fresh source from a new tracking epoch or an explicit unavailable voice selection.
+ * Outputs: Old request cancelled before PCM, with a new epoch request or diagnosed voice failure.
+ * Logic: Reusable phrases cannot cross source identity or submitted voice configuration.
+ * Constraints: No fallback voice, channel recovery or changed target risk policy. */
+test("tracking epoch and voice changes immediately invalidate queued risk preparation", function testPreparationBoundaries() {
+  const f = fixture(); f.risk(); f.clock.advance(100);
+  f.manager.ingestRisk({sessionId: f.manager.riskSessionId, capturedAt: f.clock.now(),
+    metadata: {index: 2, tracking_epoch: 2, boxes: [box()]}});
+  assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.current.id, 2); f.manager.dispose();
+  const g = fixture(); g.risk(); g.manager.configure({voiceId: "unavailable", language: "zh-CN"});
+  assert.deepEqual(g.speech.attempts, [1]); assert.equal(g.speech.current, null);
+  assert.equal(g.manager.describe().reasons.speech, "backend_voice_unavailable"); g.manager.dispose();
+});
+
+/* Functionality: Recheck source expiry before PCM playback even when a scheduled timer is delayed.
+ * Inputs: Expired source and an explicit driver before_start event without timer execution.
+ * Outputs: Cancelled request with no start event. Logic: The production manager pumps synchronously.
+ * Constraints: Original one-second freshness remains strict at its boundary. */
+test("risk cannot begin playback after source expiry even before the expiry timer runs", function testExpiredBeforePlayback() {
+  const f = fixture(); f.risk(); f.clock.time += 1000; f.speech.start();
+  assert.deepEqual(f.speech.attempts, [1]); assert.equal(f.speech.current, null);
+  assert.equal(f.events.some(event => event.phase === "output_start" && event.channel === "speech"), false);
+  f.manager.dispose();
+});
+
+/* Functionality: Keep synthesized text tied to the interface language at actual playback.
+ * Inputs: Fresh waiting Chinese warning and an English configuration update before first audio.
+ * Outputs: Chinese request cancelled and a new English request. Logic: Exact phrase matching.
+ * Constraints: Replacing source semantics does not claim that either driver request was audible. */
+test("risk playback revalidates the exact phrase after an interface-language change", function testLanguageChangedBeforePlayback() {
+  const f = fixture(); f.risk(); f.manager.configure({voiceId: "Cherry", language: "en-US"});
+  assert.deepEqual(f.speech.attempts, [1]);
+  assert.equal(f.speech.current.id, 2); assert.equal(f.speech.current.options.language, "en-US");
+  assert.equal(f.manager.active.speech.started, false); f.speech.start();
+  assert.equal(f.manager.active.speech.started, true); f.manager.dispose();
 });
 
 // Functionality: Preserve queued navigation provenance; Inputs: Newer same-step fix; Outputs: Old expires once; Logic: Original GPS deadline; Constraints: No same-step replacement loop.

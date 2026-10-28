@@ -7,6 +7,9 @@ AssistTests.test_explicit_policy_and_worker_contract;
 AssistTests.test_combined_page_and_permissions;
 AssistTests.test_product_and_diagnostic_boundaries;
 AssistTests.test_canonical_asset_closure; AssistTests.test_asset_and_route_isolation;
+AssistTests.test_prepared_audio_resources_and_boundaries;
+AssistTests.test_prepared_audio_manifest_and_file_failures;
+AssistTests.test_prepared_audio_mobile_mount;
 AssistTests.test_entry_redirect_and_incompatible_gpu_pages;
 AssistTests.test_status_preserves_health_and_announces_maps;
 AssistTests.test_continuous_session_stops_without_default_deadline;
@@ -16,10 +19,12 @@ gate/started — synthetic thread controls, never real inference or performance 
 """
 
 import asyncio
+import hashlib
 import json
 import re
 import threading
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
+from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, Mock, patch
 from urllib.parse import urljoin, urlsplit
 
@@ -33,6 +38,7 @@ from realtime.protocol import unpack_result
 from .assist import ASSIST_ASSETS, AssistApplication, render_assist_page
 from .errors import IntegrationError
 from .inference.services import InferenceWorker
+from .mobile import MobileApplication
 from .protocol import local_session_seconds, model_contract, pack_request, validate_contract
 from .services import FRONTEND, IntegrationApplication
 from .test_local import MANIFEST, DetectorFixture, fixture_runtime, open_worker, terminal
@@ -50,8 +56,12 @@ async def http_call(app, path, method="GET", **changes):
     peer = ApplicationCommunicator(app, scope)
     await peer.send_input({"type": "http.request", "body": b""})
     start, body = await peer.receive_output(), await peer.receive_output()
+    chunks = [body["body"]]
+    while body.get("more_body"):
+        body = await peer.receive_output()
+        chunks.append(body["body"])
     await peer.wait()
-    return start, body["body"]
+    return start, b"".join(chunks)
 
 
 class AssistTests(SimpleTestCase):
@@ -213,6 +223,7 @@ class AssistTests(SimpleTestCase):
                 self.assertTrue(dependency.startswith(("./", "../", "/")), dependency)
                 todo.append(urljoin(url, dependency))
         self.assertIn(ORIGIN + "/assets/speech-output.js", seen)
+        self.assertIn(ORIGIN + "/assets/integration/risk-speech-cache.js", seen)
         self.assertNotIn(ORIGIN + "/assets/integration/maps-navigation-speech.js", seen)
 
     async def test_asset_and_route_isolation(self):
@@ -241,6 +252,101 @@ class AssistTests(SimpleTestCase):
         self.assertEqual(software.await_count, 4)
         original = IntegrationApplication(software)
         self.assertEqual((await http_call(original, "/maps/config/"))[0]["status"], 403)
+
+    async def test_prepared_audio_resources_and_boundaries(self):
+        """Functionality: Serve the exact prepared manifest/source WAVs without broad file access.
+        Inputs: Real pack, GET/HEAD, unknown paths, traversal, queries and unsupported methods.
+        Outputs: Original bytes/hashes, correct MIME/length, and explicit refusals.
+        Logic: Exercise every source resource through the actual streamed ASGI handler.
+        Constraints: No TTS provider, runtime playback, local listener or audible-speech claim.
+        """
+        software = AsyncMock()
+        app = AssistApplication(software)
+        base = "/assets/risk-audio/"
+        start, raw = await http_call(app, base + "manifest.json")
+        self.assertEqual(start["status"], 200)
+        self.assertEqual(dict(start["headers"])[b"content-type"], b"application/json")
+        self.assertEqual(raw, (FRONTEND / "assets/risk-audio/manifest.json").read_bytes())
+        manifest = json.loads(raw)
+        for clip in manifest["clips"]:
+            start, audio = await http_call(app, base + clip["path"])
+            self.assertEqual(start["status"], 200)
+            headers = dict(start["headers"])
+            self.assertEqual(headers[b"content-type"], b"audio/wav")
+            self.assertEqual(headers[b"x-content-type-options"], b"nosniff")
+            self.assertEqual(int(headers[b"content-length"]), clip["byte_length"])
+            self.assertEqual(len(audio), clip["byte_length"])
+            self.assertEqual(hashlib.sha256(audio).hexdigest(), clip["sha256"])
+        for name in ("manifest.json", manifest["clips"][0]["path"]):
+            start, raw = await http_call(app, base + name, "HEAD")
+            self.assertEqual(start["status"], 200)
+            self.assertEqual(raw, b"")
+            self.assertGreater(int(dict(start["headers"])[b"content-length"]), 0)
+            self.assertEqual((await http_call(app, base + name, "POST"))[0]["status"], 405)
+            self.assertEqual((await http_call(app, base + name, query_string=b"v=1"))[0]
+                             ["status"], 404)
+        for name in ("", "README.md", "demos/zh-CN-person-front-left-approaching.wav",
+                     "../speech-output.js", "zh-CN/../../.env", "zh-CN\\file.wav",
+                     "%2e%2e/.env", "manifest.json/", "zh-CN/en-US-prefix-" + "a" * 64 + ".wav",
+                     "zh-CN/zh-CN-prefix-" + "a" * 64 + ".wav"):
+            start, _ = await http_call(app, base + name)
+            self.assertEqual(start["status"], 404, name)
+        software.assert_not_awaited()
+
+    async def test_prepared_audio_manifest_and_file_failures(self):
+        """Functionality: Fail closed on missing, malformed or inconsistent resource packages.
+        Inputs: Temporary owned pack with unsafe metadata, missing manifest or truncated source.
+        Outputs: Fixed unavailable errors or refusal before any unrelated file access.
+        Logic: Patch only the frontend test root; do not alter prepared repository artifacts.
+        Constraints: No hidden synthesis fallback, service launch or publication of a partial WAV.
+        """
+        manifest = json.loads((FRONTEND / "assets/risk-audio/manifest.json").read_bytes())
+        app = AssistApplication(AsyncMock())
+        with TemporaryDirectory() as directory:
+            frontend = Path(directory)
+            root = frontend / "assets/risk-audio"
+            root.mkdir(parents=True)
+            with patch("integration.assist.FRONTEND", frontend):
+                start, raw = await http_call(app, "/assets/risk-audio/manifest.json")
+                self.assertEqual(start["status"], 503)
+                self.assertEqual(json.loads(raw), {"code": "risk_audio_unavailable"})
+                for value in (b"{", b"[]", b"x" * 262145):
+                    (root / "manifest.json").write_bytes(value)
+                    start, _ = await http_call(app, "/assets/risk-audio/manifest.json")
+                    self.assertEqual(start["status"], 503)
+                unsafe = json.loads(json.dumps(manifest))
+                unsafe["clips"][0]["path"] = "../private.wav"
+                (root / "manifest.json").write_text(json.dumps(unsafe), encoding="utf-8")
+                self.assertEqual((await http_call(app, "/assets/risk-audio/manifest.json"))[0]
+                                 ["status"], 503)
+                (root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+                clip = manifest["clips"][0]
+                target = root / clip["path"]
+                target.parent.mkdir()
+                target.write_bytes(b"incomplete")
+                start, raw = await http_call(app, "/assets/risk-audio/" + clip["path"])
+                self.assertEqual(start["status"], 503)
+                self.assertEqual(json.loads(raw), {"code": "risk_audio_unavailable"})
+
+    async def test_prepared_audio_mobile_mount(self):
+        """Functionality: Preserve prepared audio through the existing public mobile wrapper.
+        Inputs: Canonical resource paths after proxy mount stripping and public relay headers.
+        Outputs: Identical manifest/WAV bytes with mount-relative browser URL resolution.
+        Logic: Delegate through MobileApplication's unchanged asset permission gate.
+        Constraints: In-memory evidence does not establish remote deployment or TLS availability.
+        """
+        public = "https://47.239.50.129"
+        app = MobileApplication(AssistApplication(AsyncMock()), public_origin=public)
+        manifest = json.loads((FRONTEND / "assets/risk-audio/manifest.json").read_bytes())
+        for name in ("manifest.json", manifest["clips"][0]["path"]):
+            path = "/assets/risk-audio/" + name
+            start, raw = await http_call(
+                app, path, headers=[(b"host", b"47.239.50.129"), (b"x-prs-relay", b"1")],
+                client=("127.0.0.1", 51000), scheme="http", root_path="")
+            self.assertEqual(start["status"], 200)
+            self.assertEqual(raw, (FRONTEND / "assets/risk-audio" / name).read_bytes())
+            self.assertEqual(urljoin(public + "/mvp/maps/test", ".." + path),
+                             public + "/mvp" + path)
 
     async def test_status_preserves_health_and_announces_maps(self):
         """Functionality: Expose actual worker health without falsely describing maps as disabled.

@@ -1,16 +1,17 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
  * Implementation: Default-enabled unified outputs, entry-time temporary camera/microphone permission checks,
- * one backend bilingual voice preference,
+ * one backend bilingual voice preference, preloaded bilingual risk fragments and bounded PCM reuse,
  * synchronous user-gesture audio unlock, prioritized accepted assistant reply speech and
  * one-click product rear-camera acquisition,
  * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
  * original frame transports and passive maps snapshots; no navigation or algorithm calculations.
  * Related Modules: assist-panel.html/assist.css/assist-guidance.js; maps-navigation-bridge.js,
- * devices.js/video-replay.js/catalog.js/voice-preferences.js; original camera/navigation/speech/vibration singletons.
- * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; guidanceDiagnostic; onGuidance; applyVoice;
+ * devices.js/video-replay.js/catalog.js/voice-preferences.js/risk-speech-cache.js/risk-audio-resources.js;
+ * original camera/navigation/speech/vibration singletons.
+ * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; renderDiagnostics; guidanceDiagnostic; onGuidance; applyVoice;
  * renderSpeechActivation; activateSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; requestEntryMediaPermissions; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
- * onBoundary; speakAssistantReply; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
+ * onBoundary; speakAssistantReply; prepareRiskAudio; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
  * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
  * locks user source choice during permission/admission; permissionChoice invalidates late page-entry,
  * authorization and source permission work; fileChoice invalidates late video selection;
@@ -24,6 +25,9 @@
  * testView retains localized manual diagnostic choices; voicePreference stores backend TTS availability;
  * languageObserver watches only the document language and never starts or cancels speech;
  * cameraFailure retains a finite native error type across the core's following stop event;
+ * riskAudioResources validates the same-origin bilingual pack without speaking or acquiring media;
+ * riskSpeechCache retains bounded composed/generated warning audio, or is null without WebSocket support; speechDiagnostics
+ * retains at most 100 body-free speech transitions on the diagnostic page, never media or utterance text;
  * GUIDANCE_PHASE_LABELS provides bilingual lifecycle labels to guidanceDiagnostic.
  */
 import {cameraApp} from "../camera.js";
@@ -39,6 +43,8 @@ import {VideoReplay} from "./video-replay.js";
 import {authorizeCameraDevices, explicitDeviceId, requestPageMediaPermissions} from "./devices.js";
 import {resultText} from "./catalog.js";
 import {interfaceSpeechLanguage} from "./voice-preferences.js";
+import {RiskSpeechCache} from "./risk-speech-cache.js";
+import {RiskAudioResources} from "./risk-audio-resources.js";
 export {cameraApp} from "../camera.js";
 export {navigation} from "../navigation-ui.js";
 export {speechOutput} from "../speech-output.js";
@@ -75,6 +81,15 @@ let languageObserver = null;
 let cameraFailure = null;
 let riskOwner = null, sessionId = null, sourceStarting = null, fileReady = false, latest = null;
 let fileChoice = 0, permissionChoice = 0, boundaryStopped = false, stoppingAll = false;
+const riskAudioResources = new RiskAudioResources({fetch: window.fetch?.bind(window), crypto: window.crypto,
+  origin: window.location.origin,
+  baseUrl: new URL("assets/risk-audio/", new URL(doc.documentElement.dataset.apiBase || "../", window.location.href)).href});
+const riskSpeechCache = typeof window.WebSocket === "function" ? new RiskSpeechCache({WebSocket: window.WebSocket, origin: window.location.origin,
+  resources: riskAudioResources,
+  setTimer: window.setTimeout.bind(window), clearTimer: window.clearTimeout.bind(window),
+  queueTask: window.queueMicrotask.bind(window)}) : null;
+const speechDiagnostics = [];
+if (riskSpeechCache) speechOutput.riskSocketFactory = riskSpeechCache.createSocket.bind(riskSpeechCache);
 export const guidanceManager = new AssistGuidanceManager({speech: speechOutput, vibration: tester});
 export const speechActivation = new SpeechActivation({speech: speechOutput, manager: guidanceManager,
   config: () => ({voiceId: node("navigation-speech-voice").value,
@@ -232,6 +247,7 @@ function onSource(event, source) {
     if (riskOwner === source) {
       riskOwner = sessionId = null; latest = null;
       guidanceManager.stopRisk(event.reason || event.type);
+      riskSpeechCache?.cancelPending(event.reason || event.type);
       node("assist-status").textContent = testView ? productText("感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent.")
         : productText("环境检测已停止。", "Obstacle detection stopped.");
       setStatusText("assist-result-status", testView ? productText("感知已停止；最后画面仅供查看，不触发提醒。", "Perception stopped; the last frame is for viewing only and triggers no alerts.")
@@ -246,8 +262,30 @@ function onSource(event, source) {
   if (!testView && source === "camera" && ["stop", "ended", "error"].includes(event.type))
     setStatusText("assist-status", cameraFailure ? cameraFailureMessage(cameraFailure)
       : productText("环境检测已停止。", "Obstacle detection stopped."));
-  if (source === "video") node("assist-stats").textContent = JSON.stringify(videoReplay.stats, null, 2);
+  if (source === "video") renderDiagnostics();
   renderControls();
+}
+
+/* Functionality: Expose bounded output and cache evidence only on the diagnostic page.
+ * Inputs: Optional body-free guidance event plus current source/cache counters. Outputs: JSON in
+ * the existing statistics disclosure. Logic: Project only fixed scalar metadata and retain 100 speech
+ * transitions so repeated cancellation can be distinguished from actual start and completion.
+ * Constraints: No spoken text, model boxes, images, GPS, provider payloads or persistence; this
+ * display never changes source timestamps, algorithm settings, output decisions or audio buffers. */
+function renderDiagnostics(event = null) {
+  if (!testView) return;
+  if (event && (event.channel === "speech" || ["risk_session", "risk_stopped", "stopped"].includes(event.phase))) {
+    const fields = ["phase", "at", "channel", "kind", "request_id", "reason", "session_id", "frame_index",
+      "track_id", "alert_priority", "captured_at_ms", "capture_to_start_ms", "confirmed_track_id",
+      "confirmed_frame_index", "confirmed_capture_to_start_ms"];
+    speechDiagnostics.push(Object.fromEntries(fields.filter(field => Object.hasOwn(event, field) &&
+      (event[field] === null || ["string", "number", "boolean"].includes(typeof event[field])))
+      .map(field => [field, event[field]])));
+    if (speechDiagnostics.length > 100) speechDiagnostics.shift();
+  }
+  node("assist-stats").textContent = JSON.stringify({input: videoReplay.stats,
+    risk_audio: riskSpeechCache?.describe() ?? {supported: false},
+    prepared_audio: riskAudioResources.describe(), speech_events: speechDiagnostics}, null, 2);
 }
 
 /* Functionality: Present product output availability or localized diagnostic lifecycle and recovery controls.
@@ -256,6 +294,7 @@ function onSource(event, source) {
  * The startup gate uses the activation button; recovery appears only for a separate channel pause.
  * Constraints: Backend stream events are not physical speaker verification. */
 function onGuidance(event) {
+  renderDiagnostics(event);
   const state = guidanceManager.describe();
   const diagnostic = guidanceDiagnostic(event);
   const status = testView ? diagnostic : !speechOutput.enabled.checked
@@ -369,7 +408,8 @@ function enableDefaultOutputs() {
 /* Functionality: Apply the fixed backend voice and selected language to automatic sources.
  * Inputs: Shared backend voice/language. Outputs: Manager/manual UI configuration.
  * Logic: Preserve the exact server voice ID while applying explicit Chinese/English language.
- * Constraints: No output, enablement, readiness reset or current-utterance cancellation. */
+ * Constraints: No new output, enablement or readiness reset; changed settings invalidate queued
+ * risk playback through the existing owner, while started short sentences retain their completion policy. */
 function applyVoice() {
   const voiceId = "Cherry", language = node("navigation-speech-language").value;
   node("navigation-speech-voice").value = voiceId;
@@ -538,6 +578,7 @@ function stopPerception(reason = "user", stopOutput = true) {
   permissionChoice++; fileChoice++; riskOwner = sessionId = sourceStarting = null; latest = null;
   cameraFailure = null;
   if (stopOutput) guidanceManager.stopRisk(reason);
+  riskSpeechCache?.cancelPending(reason);
   videoReplay.stop(reason);
   if (cameraApp.mode !== "idle") cameraApp.stop();
   node("assist-status").textContent = testView ? productText("感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent.")
@@ -604,6 +645,17 @@ function onBoundary(event) {
   boundaryStopped = true; stopAll(event.type === "pagehide" ? "page_left" : "page_hidden", false);
 }
 
+/* Functionality: Preload the fixed bilingual pack independently of source and audio activation.
+ * Inputs: Same-origin resource loader. Outputs: Ready/failed content-free diagnostic state.
+ * Logic: One idempotent load; retain a failure for explicit recovery by page reload.
+ * Constraints: No synthesis fallback, retry, speaker output, media permission or navigation work. */
+async function prepareRiskAudio() {
+  try { await riskAudioResources.load(); }
+  catch (error) { window.console.error("[PRS risk audio] Resource pack unavailable", {
+    code: ["risk_audio_unavailable", "invalid_audio_resource"].includes(error?.code) ? error.code : "risk_audio_unavailable"}); }
+  renderDiagnostics();
+}
+
 /* Functionality: Bind the dedicated local integration surface to original controllers.
  * Inputs: Explicit assist document marker. Outputs: Read-only setup and user action handlers.
  * Logic: Select only local PRF2, reuse shared drivers; expose the existing ping button only on the
@@ -628,7 +680,10 @@ function initialize() {
   cameraApp.subscribe(event => onSource(event, "camera"));
   videoReplay.subscribe(event => onSource(event, "video"));
   node("navigation-speech-enabled").addEventListener("change", () => guidanceManager.setNavigationEnabled(node("navigation-speech-enabled").checked));
-  node("assist-risk-enabled").addEventListener("change", () => guidanceManager.setRiskEnabled(node("assist-risk-enabled").checked));
+  node("assist-risk-enabled").addEventListener("change", () => {
+    guidanceManager.setRiskEnabled(node("assist-risk-enabled").checked);
+    if (!node("assist-risk-enabled").checked) riskSpeechCache?.cancelPending("risk_disabled");
+  });
   node("navigation-speech-language").addEventListener("change", readVoices);
   node("navigation-speech-voice").addEventListener("change", applyVoice);
   node("navigation-voices-refresh").addEventListener("click", readVoices);
@@ -641,7 +696,10 @@ function initialize() {
   node("assist-speech-start").addEventListener("click", activateSpeech);
   if (!testView) window.addEventListener("prs-assist-voice-gesture", activateSpeech);
   speechOutput.enabled.addEventListener("change", () => {
-    if (!speechOutput.enabled.checked) guidanceManager.clearAssistantReplies("speech_disabled");
+    if (!speechOutput.enabled.checked) {
+      guidanceManager.clearAssistantReplies("speech_disabled");
+      riskSpeechCache?.cancelPending("speech_disabled");
+    }
     renderSpeechActivation(speechActivation.describe());
   });
   window.addEventListener("prs-agent-reply", speakAssistantReply);
@@ -672,6 +730,7 @@ function initialize() {
   window.addEventListener("pagehide", onBoundary, true);
   if (!testView) observeProductLanguage();
   enableDefaultOutputs(); readVoices(); renderControls();
+  void prepareRiskAudio();
   void requestEntryMediaPermissions();
 }
 
