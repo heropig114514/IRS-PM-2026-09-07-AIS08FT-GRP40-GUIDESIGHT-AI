@@ -100,10 +100,12 @@
         "elapsed_ms_including_utterance": null
       }
     ],
-    "physical_phone_verified": false,
     "required_risk_test": "Synthetic fresh risk confirmations every 250 ms; no actual camera or GPU detections.",
     "warning_audio_downloads": 5,
-    "warning_audio_bytes": 111244
+    "warning_audio_bytes": 111244,
+    "physical_phone_calibration_verified": true,
+    "physical_phone_calibration_evidence": "User confirmed hearing the activation prompt on iPhone Safari at the public /mvp/maps/test entry during this test.",
+    "physical_phone_model_risk_verified": false
   },
   "deployed": {
     "at": "2026-10-29T02:28:24.914Z",
@@ -136,7 +138,7 @@
     "passed": true
   },
   "limitations": [
-    "Public RTT samples come from the desktop connection; actual iPhone network and audio output still require a physical test.",
+    "Public RTT samples come from the desktop connection, not the iPhone. User confirmed physical iPhone calibration sound; model-triggered phone risk speech remains unverified.",
     "Current real inference capture-to-result latency cannot be measured while the original GPU is offline.",
     "Echo returns the full payload, so the 84,747-byte measurement is not equivalent to compact inference uploading one JPEG and returning small metadata.",
     "Calibration elapsed times include synthesis/download and spoken duration; they are not time to first audio.",
