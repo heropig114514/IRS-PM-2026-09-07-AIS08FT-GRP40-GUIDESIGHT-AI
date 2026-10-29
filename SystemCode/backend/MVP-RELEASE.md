@@ -2,7 +2,9 @@
 
 ## Release and scope
 
-Version: `mvp-phone-2026-10-29`. Source branch: `codex/phone-speech-recovery`.
+Version: `mvp-phone-2026-10-29.1`. Source branch: `codex/phone-speech-recovery`.
+This patch includes the CPU inference test dependencies needed by GitHub CI; the accepted
+phone/GPU runtime implementation is unchanged from the initial MVP tag.
 This release combines the phone UI/audio/transport implementation with the resident GPU
 optimization code in the repository's `SystemCode/` layout. It incorporates the current `main`
 model update. The global detector default is the colleague's 87-class `yolo26n-walk`; the accepted
@@ -74,7 +76,7 @@ export/build/validation. Unsupported shapes fail instead of silently switching t
 ## Download and prepare
 
 ```bash
-git clone --branch mvp-phone-2026-10-29 --single-branch https://github.com/heropig114514/IRS-PM-2026-09-07-AIS08FT-GRP40-GUIDESIGHT-AI.git
+git clone --branch mvp-phone-2026-10-29.1 --single-branch https://github.com/heropig114514/IRS-PM-2026-09-07-AIS08FT-GRP40-GUIDESIGHT-AI.git
 cd IRS-PM-2026-09-07-AIS08FT-GRP40-GUIDESIGHT-AI/SystemCode/backend
 ```
 

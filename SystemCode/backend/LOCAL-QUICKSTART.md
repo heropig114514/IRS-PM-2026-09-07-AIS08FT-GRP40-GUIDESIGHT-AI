@@ -25,7 +25,7 @@ Model loading and first-frame warmup remain visible in measured latency.
 Clone the explicitly selected branch:
 
 ```bash
-git clone --branch mvp-phone-2026-10-29 --single-branch https://github.com/heropig114514/IRS-PM-2026-09-07-AIS08FT-GRP40-GUIDESIGHT-AI.git
+git clone --branch mvp-phone-2026-10-29.1 --single-branch https://github.com/heropig114514/IRS-PM-2026-09-07-AIS08FT-GRP40-GUIDESIGHT-AI.git
 cd IRS-PM-2026-09-07-AIS08FT-GRP40-GUIDESIGHT-AI/SystemCode/backend
 ```
 

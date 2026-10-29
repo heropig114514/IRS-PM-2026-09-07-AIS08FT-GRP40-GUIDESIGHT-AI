@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "release": "mvp-phone-2026-10-29",
+  "release": "mvp-phone-2026-10-29.1",
   "backend": {
     "discovered": 621,
     "passed": 613,
@@ -19,11 +19,19 @@
     "Optional original local weights were present during the final backend run; model-dependent checks that previously skipped could execute",
     "CLI preflight verified the actual CUDA/TensorRT package environment",
     "Real inference/public-browser evidence is recorded separately in unified-validation.json",
-    "Physical iPhone acceptance is recorded separately in phone-acceptance.json"
+    "Physical iPhone acceptance is recorded separately in phone-acceptance.json",
+    "CI installs explicit CPU Torch/torchvision plus the pinned native test SDK; GPU and TensorRT acceptance remain separate real-hardware evidence"
   ],
   "backend_browser_benchmark_tests": {
     "tests": 5,
     "passed": 5,
     "failures": 0
+  },
+  "coverage": {
+    "backend_combined_percent_rounded": 91,
+    "frontend_lines_percent": 92.87,
+    "frontend_branches_percent": 88.26,
+    "frontend_functions_percent": 88.68,
+    "existing_thresholds_preserved": true
   }
 }

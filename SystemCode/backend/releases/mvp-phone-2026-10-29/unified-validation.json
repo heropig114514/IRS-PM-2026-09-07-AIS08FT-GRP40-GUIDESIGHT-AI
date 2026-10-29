@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "release": "mvp-phone-2026-10-29",
+  "release": "mvp-phone-2026-10-29.1",
   "scope": "One merged checkout, separate loopback ports, real GPU/TensorRT, temporary HTTPS, desktop Chrome with duplicated moving repository fixture; no physical phone/speaker claim",
   "competing_service": "Accepted original service stayed available on the same laptop; functional regression, not an isolated speed benchmark",
   "browser": {
