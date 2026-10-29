@@ -23,7 +23,6 @@ jobs:
     env:
       YOLO_OFFLINE: '1'
       YOLO_AUTOINSTALL: '0'
-      YOLO_CONFIG_DIR: ${{ runner.temp }}/prs-ultralytics
     defaults:
       run:
         working-directory: SystemCode/backend
@@ -47,6 +46,7 @@ jobs:
           import secrets
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
               env_file.write('DJANGO_SECRET_KEY=' + secrets.token_urlsafe(48) + '\n')
+              env_file.write('YOLO_CONFIG_DIR=' + os.environ['RUNNER_TEMP'] + '\n')
           PY
       - name: Check dependencies
         run: python -m pip check
