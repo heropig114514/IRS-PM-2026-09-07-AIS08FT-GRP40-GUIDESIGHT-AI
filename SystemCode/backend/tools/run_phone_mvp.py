@@ -181,7 +181,12 @@ def run(args):
     Constraints: No interactive password prompt, local Web process, Nginx changes, ORS transfer,
     GPU fallback, retry or restart.
     """
-    web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
+    web_python = python_path(".venv")
+    selected_python = getattr(args, "inference_python", None)
+    inference_python = (Path(selected_python).resolve() if selected_python is not None
+                        else python_path(".venv-inference"))
+    if selected_python is not None and not inference_python.is_file():
+        raise StartupError(f"Missing explicit inference interpreter: {inference_python}")
     inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0"})
     inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
     verify_models()
@@ -283,6 +288,8 @@ def main():
     )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--inference-port", type=int, default=8767)
+    parser.add_argument("--inference-python", type=Path,
+                        help="Explicit prepared inference interpreter; default is .venv-inference")
     parser.add_argument("--log-dir", type=Path, default=ROOT / ".venv/tmp/phone-mvp")
     args = parser.parse_args()
     try:

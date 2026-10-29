@@ -1,0 +1,7 @@
+# Responsibilities: Reproduce the isolated Web and LAN demo interpreter without GPU packages.
+# Implementation: Extend image/Web dependencies with the existing pinned certificate dependency.
+# Related Modules: tools/local_demo.py; tools/run_local_mvp.py; tools/run_lan_mvp.py.
+# Declaration Index: None.
+# Variable Index: None.
+-r requirements-vision.txt
+cryptography==50.0.2

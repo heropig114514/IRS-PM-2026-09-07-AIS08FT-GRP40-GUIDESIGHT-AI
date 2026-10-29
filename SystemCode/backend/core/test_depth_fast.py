@@ -3,7 +3,8 @@ Implementation: Known/seeded pixel planes, optional CUDA comparisons and local t
 Related Modules: realtime.depth_fast; realtime.distance; unified_evaluation.a_formal/a_performance.
 Declaration Index: FastDepthTests; FastDepthTests.test_bgr_pixels;
 FastDepthTests.test_exact_medians; FastDepthTests.test_empty_and_invalid;
-FastDepthTests.test_counterbalance_and_audit; FastDepthTests.test_coarse_timer_barrier.
+FastDepthTests.test_counterbalance_and_audit; FastDepthTests.test_coarse_timer_barrier;
+FastDepthTests.test_fast_roi_is_scoped_to_a.
 Variable Index: None. Synthetic data establishes contracts, not runtime speed.
 """
 
@@ -20,6 +21,8 @@ from model_tests.unified_evaluation.a_formal import FormalA
 from model_tests.unified_evaluation.a_performance import compare_objects, pair_order
 from realtime.depth import fuse_object_depth
 from realtime.depth_fast import fuse_depth_host, pack_bgr
+from realtime.distance import DistanceStrategy
+from realtime.distance_config import DistanceConfig
 
 
 class FastDepthTests(TestCase):
@@ -27,6 +30,25 @@ class FastDepthTests(TestCase):
     Logic: compare real original operations and inspect timing boundaries.
     Constraints: pretrained inference equality is checked separately on actual SANPO frames.
     """
+
+    def test_fast_roi_is_scoped_to_a(self):
+        """Functionality: Keep temporal depth on its original fusion after timing integration.
+        Inputs: A/C strategies with the diagnostic flag set. Outputs: selected fusion assertions.
+        Logic: the shared timed depth helper dispatches through fuse, which enforces A scope.
+        Constraints: no implicit change to C's ROI implementation or temporal schedule.
+        """
+        for mode in ("depth", "temporal_depth"):
+            strategy = DistanceStrategy(DistanceConfig(distance_mode=mode))
+            strategy.fast_roi = True
+            with (
+                self.subTest(mode=mode),
+                patch("realtime.depth_fast.fuse_depth_host", return_value="fast") as fast,
+                patch("realtime.distance.fuse_object_depth", return_value="original") as original,
+            ):
+                result = strategy.fuse("map", [], (10, 10))
+                self.assertEqual(result, "fast" if mode == "depth" else "original")
+                self.assertEqual(fast.call_count, int(mode == "depth"))
+                self.assertEqual(original.call_count, int(mode != "depth"))
 
     @skipUnless(find_spec("ultralytics"), "Optional Ultralytics loader required")
     def test_bgr_pixels(self):

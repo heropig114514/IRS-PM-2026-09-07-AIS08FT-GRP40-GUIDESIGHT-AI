@@ -1,4 +1,12 @@
-"""Serve verified fixed startup PCM; preserve the original TTS path for other wording."""
+"""Responsibilities: Serve verified startup PCM and an explicitly selected speech upstream.
+Implementation: Fixed clip hashes, canonical same-origin TTS contract and bounded PCM forwarding.
+Related Modules: core.agent.tts; integration.mobile/tunnel_asgi; frontend speech-startup assets.
+Declaration Index: load_clips; PreparedSpeechApplication; PreparedSpeechApplication.__init__;
+PreparedSpeechApplication.__call__; PreparedSpeechApplication.__call__.replay;
+PreparedSpeechApplication.__call__.accepted_send; PreparedSpeechApplication.relay;
+PreparedSpeechApplication.relay.stream.
+Variable Index: TEXTS fixes supported startup wording; ROOT is the public clip directory.
+"""
 import asyncio
 import hashlib
 import io
@@ -26,6 +34,10 @@ ROOT = Path(__file__).resolve().parents[2] / "frontend/assets/speech-startup"
 
 
 def load_clips(root=ROOT):
+    """Functionality: Validate startup clips before serving them.
+    Inputs: fixed resource directory. Outputs: language/rate/text to PCM mapping.
+    Logic: check manifest identity, WAV format and two hashes. Constraints: no generated audio.
+    """
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     if manifest.get("schema") != 1 or len(manifest.get("clips", [])) != 2:
         raise ValueError("Invalid startup audio manifest")
@@ -53,13 +65,24 @@ def load_clips(root=ROOT):
 
 
 class PreparedSpeechApplication:
+    """Functionality: Keep startup voice independent of synthesis availability.
+    Logic: intercept only canonical TTS requests. Constraints: preserve Origin and request checks.
+    """
     def __init__(self, application, *, clips=None, upstream_origin=None, opener=connect):
+        """Functionality: Freeze owned resources and optional upstream.
+        Inputs: downstream application, clips, HTTPS origin and socket opener. Outputs: wrapper.
+        Logic: validate origin immediately. Constraints: no implicit speech-service discovery.
+        """
         self.application = application
         self.clips = load_clips() if clips is None else clips
         self.upstream_origin = mobile_origin(upstream_origin) if upstream_origin else None
         self.opener = opener
 
     async def __call__(self, scope, receive, send):
+        """Functionality: Serve fixed startup speech or preserve explicit TTS handling.
+        Inputs: ASGI request/channel. Outputs: bounded PCM messages or original application.
+        Logic: validate same-origin before accepting. Constraints: no raw text or PCM logging.
+        """
         if scope["type"] != "websocket" or scope.get("path") != "/ws/tts/":
             return await self.application(scope, receive, send)
         headers = scope.get("headers", [])
@@ -91,9 +114,17 @@ class PreparedSpeechApplication:
             buffered = [first, request_event]
 
             async def replay():
+                """Functionality: Replay consumed request events to the original handler.
+                Inputs: retained events/channel. Outputs: next event. Logic: consume once.
+                Constraints: no request substitution or network retry.
+                """
                 return buffered.pop(0) if buffered else await receive()
 
             async def accepted_send(message):
+                """Functionality: Preserve the already accepted socket state.
+                Inputs: downstream message. Outputs: forwarded message except duplicate accept.
+                Logic: filter one message type. Constraints: preserve all content/errors.
+                """
                 if message["type"] != "websocket.accept":
                     await send(message)
 
@@ -108,8 +139,15 @@ class PreparedSpeechApplication:
         await send({"type": "websocket.close", "code": 1000})
 
     async def relay(self, raw, request_id, receive, send):
-        """Forward uncovered wording only to the explicitly configured project speech service."""
+        """Functionality: Forward uncovered wording to an explicitly configured speech service.
+        Inputs: validated request text/identity and ASGI channels. Outputs: PCM or explicit error.
+        Logic: race bounded streaming with disconnect. Constraints: cancel pending work; no retry.
+        """
         async def stream():
+            """Functionality: Relay one request while validating every response.
+            Inputs: selected upstream and request. Outputs: audio messages.
+            Logic: validate identity, format and length. Constraints: 55-second/byte bounds.
+            """
             url = self.upstream_origin.replace("https://", "wss://", 1) + "/mvp/ws/tts/"
             async with self.opener(url, origin=self.upstream_origin, proxy=None,
                                    open_timeout=15, close_timeout=3, max_size=1024 * 1024) as peer:

@@ -61,7 +61,7 @@ def resident(config):
     instance.tensor = np.empty((1, 3, 640, 640), dtype=np.float32)
     instance.manifest = {"names": ["person"] * 80, "source_sha256": "a" * 64}
     instance.precision, instance.backend = "FP32", "PyTorch resident CUDA"
-    instance.depth_estimator = MagicMock(model_name="yolo26n-depth")
+    instance.depth_estimator = MagicMock(model_name="yolo26n-depth", backend="torch")
     instance.depth_estimator.predict.return_value = np.full((80, 120), 3.8, dtype=np.float32)
     instance.distance_strategy = DistanceStrategy(config)
     instance.object_tracker = MagicMock(epoch=0)
@@ -94,7 +94,9 @@ class DistanceModeTests(SimpleTestCase):
             runtime = services.InferenceRuntime(factory=loader)
             try:
                 runtime.factory()
-                loader.assert_called_once_with(distance_config=config)
+                loader.assert_called_once_with(distance_config=config,
+                                               depth_config=runtime.depth_config,
+                                               detection_model=runtime.detection_model)
                 reader.assert_called_once()
             finally:
                 runtime.executor.shutdown()
@@ -264,7 +266,7 @@ class DistanceModeTests(SimpleTestCase):
     def test_shared_pipeline(self):
         """Functionality: Keep detection/packets/risk compatible for all three strategies.
         Inputs: actual JPEG/shared predict with stable synthetic model. Outputs: original boxes,
-        correct depth invocation counts, nullable distances and processing statistics.
+        correct depth invocation counts, nullable distances, additive timers and statistics.
         Logic: compare raw hashes/legacy boxes across strategies. Constraints: no GPU/FPS claim.
         """
         outputs = []
@@ -277,6 +279,13 @@ class DistanceModeTests(SimpleTestCase):
                 self.assertEqual(metadata["boxes"][0]["track_id"], 5)
                 self.assertIn("risk_level", metadata["boxes"][0])
                 self.assertGreater(metadata["boxes"][0]["distance_m"], 0)
+                if mode != "geometry":
+                    self.assertAlmostEqual(metadata["depth_ms"], metadata["decode_boxes_ms"]
+                                           + metadata["depth_predict_ms"]
+                                           + metadata["depth_fusion_ms"])
+                    self.assertGreaterEqual(metadata["depth_fusion_ms"], 0)
+                    if not metadata["depth_frame"]:
+                        self.assertEqual(metadata["depth_predict_ms"], 0)
             self.assertEqual(detector.depth_estimator.predict.call_count, count)
             self.assertEqual(metadata["performance"]["depth_model_calls"], count)
             self.assertEqual(metadata["performance"]["total_frames"], 7)
@@ -408,9 +417,10 @@ class DistanceModeTests(SimpleTestCase):
         self.assertAlmostEqual(result["fps"], 1000 / 12)
 
     def test_deployment_closure(self):
-        """Functionality: Stage all new worker dependencies and the editable geometry profile.
+        """Functionality: Preserve distance and shared 80/87-class registry deployment closure.
         Inputs: actual publisher AST. Outputs: source mapping exists on disk.
-        Logic: inspect static allowlist only. Constraints: no staging/publishing/network action.
+        Logic: inspect both allowlists and required files; frontend tests also read walk metadata.
+        Constraints: no staging/publishing/network action or remote model qualification.
         """
         root = Path(__file__).resolve().parents[1]
         tree = ast.parse((root / "tools/deploy_space.py").read_text(encoding="utf-8"))
@@ -423,6 +433,16 @@ class DistanceModeTests(SimpleTestCase):
             self.assertEqual(mapping[path], path)
             self.assertTrue((root / path).is_file())
         self.assertIn("models/distance-config.json", mapping)
+        self.assertEqual(mapping["core/detection_model.py"], "core/detection_model.py")
+        phone_tree = ast.parse((root / "tools/deploy_phone_live.py").read_text(encoding="utf-8"))
+        phone = next(ast.literal_eval(node.value) for node in phone_tree.body
+                     if isinstance(node, ast.Assign) and any(
+                         isinstance(target, ast.Name) and target.id == "BACKEND"
+                         for target in node.targets))
+        for path in ("core/detection_model.py", "core/test_walk_model.py",
+                     "models/yolo26n-walk.json"):
+            self.assertIn(path, phone)
+            self.assertTrue((root / path).is_file())
 
     def test_cli_profiles(self):
         """Functionality: Persist B calibration/no depth hash and reject C without tracking early.

@@ -1,5 +1,6 @@
 """Responsibilities: Resident YOLO26 metric depth and original-frame object/depth fusion.
-Implementation: Official DepthPredictor removes its own letterbox; ROI statistics stay on device.
+Implementation: Official SDK preparation/alignment around explicit Torch or TensorRT forward;
+ROI statistics stay on device.
 Related Modules: realtime.detector; zerogpu.app/live_worker; core.detector.DetectionError.
 Declaration Index: roi_bounds; validate_depth_map; roi_median; get_object_distance;
 fuse_object_depth; DepthEstimator; DepthEstimator.__init__; DepthEstimator.activate;
@@ -9,6 +10,8 @@ DEPTH_EDGE — explicit independent depth input size, not the detector's experim
 DepthEstimator.model/model_name/active — loaded checkpoint identity and allocation device state.
 DepthEstimator.image_size/half — explicit depth-only settings; defaults preserve baseline A.
 DepthEstimator.fast_input — opt-in direct BGR packing; default PIL ingress is retained.
+DepthEstimator.backend/engine_manifest/forward — explicit native execution and verified artifacts.
+DepthEstimator.weights_path/_predictor_factory — checkpoint source and optional SDK forward adapter.
 """
 
 import logging
@@ -146,9 +149,9 @@ class DepthEstimator:
     """
 
     def __init__(self, weights_path, expected_version, *, image_size=DEPTH_EDGE, half=False,
-                 fast_input=False):
+                 fast_input=False, backend="torch", engine_manifest=None):
         """Functionality: Load local metric depth weights once and verify task/build identity.
-        Inputs: local .pt path, pinned version, independent depth size/precision and fast_input.
+        Inputs: local .pt, pinned SDK, size/precision/input settings, backend and engine manifest.
         Outputs: loaded model, inactive device state or safe missing/load error.
         Logic: check file before YOLO construction to prevent its automatic asset downloader.
         Constraints: defaults preserve depth768/FP32; never changes detector precision or weights.
@@ -157,9 +160,17 @@ class DepthEstimator:
             raise ValueError("Depth image size must be a positive multiple of 32")
         if type(half) is not bool:
             raise ValueError("Depth half must be boolean")
+        if backend not in {"torch", "tensorrt"} or (
+                (backend == "tensorrt") != (engine_manifest is not None)):
+            raise ValueError("Choose Torch or TensorRT with an explicit engine manifest")
+        if backend == "tensorrt" and (half or image_size != DEPTH_EDGE):
+            raise ValueError("Depth TensorRT requires the verified FP32/768 policy")
         self.image_size, self.half = image_size, half
         self.fast_input = fast_input
+        self.backend, self.engine_manifest = backend, engine_manifest
+        self.forward = self._predictor_factory = None
         path = Path(weights_path)
+        self.weights_path = path
         if path.suffix != ".pt" or not path.is_file():
             logger.error("Depth model missing or invalid local weight path")
             raise DetectionError("depth_model_missing", "Provide local YOLO26 depth .pt weights.",
@@ -182,9 +193,9 @@ class DepthEstimator:
         logger.info("YOLO26 depth model loaded task=depth input_edge=%d", self.image_size)
 
     def activate(self):
-        """Functionality: Place the loaded depth model on the allocation GPU once.
-        Inputs: loaded model and actual CUDA availability. Outputs: active reusable model.
-        Logic: place source model on CUDA; predictor applies requested precision at first use.
+        """Functionality: Activate the depth model and explicitly selected backend once.
+        Inputs: loaded checkpoint, CUDA and optional manifest. Outputs: reusable SDK/backend state.
+        Logic: keep SDK metadata on CUDA; TensorRT validates and loads all prebuilt shapes first.
         Constraints: must run inside spaces.GPU on HF; idempotent within one allocation.
         """
         if self.active:
@@ -195,13 +206,21 @@ class DepthEstimator:
             if not torch.cuda.is_available():
                 raise RuntimeError("CUDA required for depth")
             self.model.to("cuda")
+            if self.backend == "tensorrt":
+                from functools import partial
+
+                from realtime.depth_predictor import AcceleratedDepthPredictor
+                from realtime.depth_runtime import TensorRTDepthPool
+
+                self.forward = TensorRTDepthPool(self.engine_manifest, self.weights_path)
+                self._predictor_factory = partial(AcceleratedDepthPredictor, forward=self.forward)
             self.active = True
         except Exception as error:
             logger.error("Depth GPU activation failed type=%s", type(error).__name__)
             raise DetectionError("depth_inference_failed", "Depth model requires usable CUDA.",
                                  503) from None
-        logger.info("Depth model activated device=cuda requested_precision=%s",
-                    "FP16" if self.half else "FP32")
+        logger.info("Depth model activated device=cuda backend=%s requested_precision=%s",
+                    self.backend, "FP16" if self.half else "FP32")
 
     def prepare_source(self, image):
         """Functionality: Select original PIL ingress or exact one-pass BGR packing.
@@ -218,7 +237,8 @@ class DepthEstimator:
     def predict(self, image):
         """Functionality: Infer dense metric depth from the same decoded RGB frame as detection.
         Inputs: PIL RGB image and activated resident model. Outputs: aligned CUDA float HxW map.
-        Logic: pinned official predictor handles its own letterbox/padding; verify original shape,
+        Logic: original SDK preprocessing/alignment surrounds the explicit forward implementation;
+        verify original shape,
         resize any remaining full-frame resolution difference with nearest on the same device.
         Constraints: reject missing/batched/CPU maps; no map download, heuristic, or detection-only
         fallback; nearest preserves invalid values so ROI filtering can exclude them.
@@ -229,10 +249,11 @@ class DepthEstimator:
             import torch
             import torch.nn.functional as functional
 
+            options = ({"predictor": self._predictor_factory} if self._predictor_factory else {})
             results = self.model.predict(source=self.prepare_source(image),
                                          imgsz=self.image_size, device="cuda",
                                          half=self.half,
-                                         verbose=False, save=False, stream=False)
+                                         verbose=False, save=False, stream=False, **options)
             if len(results) != 1 or tuple(results[0].orig_shape) != (image.height, image.width):
                 raise DetectionError("depth_map_size", "Depth result frame identity mismatch.", 502)
             depth = getattr(results[0], "depth", None)

@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "release": "mvp-phone-2026-10-29",
+  "backend": {
+    "discovered": 621,
+    "passed": 613,
+    "skipped": 8,
+    "failures": 0,
+    "manage_check": "passed",
+    "migration_dry_run": "no changes",
+    "ruff": "passed"
+  },
+  "frontend": {
+    "tests": 544,
+    "passed": 544,
+    "failures": 0
+  },
+  "notes": [
+    "Optional original local weights were present during the final backend run; model-dependent checks that previously skipped could execute",
+    "CLI preflight verified the actual CUDA/TensorRT package environment",
+    "Real inference/public-browser evidence is recorded separately in unified-validation.json",
+    "Physical iPhone acceptance is recorded separately in phone-acceptance.json"
+  ],
+  "backend_browser_benchmark_tests": {
+    "tests": 5,
+    "passed": 5,
+    "failures": 0
+  }
+}

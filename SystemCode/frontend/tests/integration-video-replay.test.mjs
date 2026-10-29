@@ -10,7 +10,7 @@
  * load; response; testFileOnly; testDrawClock; testFirstExclusive; testTotalWindow; testEof;
  * testStopEncode; testStopDecode; testProviderDuringEof; testProviderPending; testPts; testMutation;
  * testPlayFailure; testLoadCancel; testLoadDispose; testDecodeFailure; testOldSession;
- * testNativeEof; testCadence; testEncodeFailure;
+ * testNativeEof; testCadence; testEncodeFailure; testExplicitWindow; testInvalidWindow;
  * Variable Index: None; each fixture has independent state and explicit synthetic JPEG markers.
  */
 import test from "node:test";
@@ -174,6 +174,33 @@ test("total window includes JPEG encoding and dispatch remains in capture order"
   f.canvas.jobs[1].complete(); await flush(); assert.equal(f.replay.client.requests.length, 3);
   assert.ok(f.replay.client.requests[1].options.capturedAt < f.replay.client.requests[2].options.capturedAt);
   f.replay.stop(); for (const job of f.canvas.jobs.slice(3)) job.complete(); await flush();
+});
+/** Functionality: Bound low-latency admission before capture without discarding submitted work.
+ * Inputs: explicit three-job limit, stalled encoders and EOF. Outputs: three admissions and complete ordered drain.
+ * Logic: release the cold frame, fill credit, observe uncaptured skips, then resolve every admitted result.
+ * Constraints: same codec/rate/timestamp policy; this verifies ownership, not real GPU performance. */
+test("explicit smaller window counts skipped source frames and drains every admitted result", async function testExplicitWindow() {
+  const f = fixture(); await load(f); await f.replay.start({maxPending: 3});
+  f.video.present(100, 0, 1); f.canvas.jobs[0].complete(); await flush(); await response(f, 0);
+  for (let n = 1; n <= 5; n++) { f.state.time = 100 + n * 34; f.video.present(f.state.time, n / 30, n + 1); }
+  assert.equal(f.replay.stats.pendingLimit, 3); assert.equal(f.replay.stats.maxInFlight, 3);
+  assert.equal(f.replay.stats.skippedCredit, 2); assert.equal(f.canvas.jobs.length, 4);
+  const ending = f.replay.finish("eof");
+  for (const job of f.canvas.jobs.slice(1)) job.complete(); await flush();
+  for (let index = 1; index < 4; index++) await response(f, index);
+  await ending;
+  assert.equal(f.replay.stats.sent, 4); assert.equal(f.replay.stats.delivered, 4);
+  assert.equal(f.replay.stats.cancelledBeforeSend, 0); assert.equal(f.replay.stats.currentInFlight, 0);
+  assert.equal(f.state.clients.length, 1);
+});
+/** Functionality: Reject invalid admission choices before starting playback or opening transport.
+ * Inputs: out-of-range, fractional and nonnumeric limits. Outputs: rejection with no side effects.
+ * Logic: actual start boundary validates each value. Constraints: never silently clamps or selects a default. */
+test("invalid explicit admission limits fail before playback and transport", async function testInvalidWindow() {
+  const f = fixture(); await load(f);
+  for (const maxPending of [0, 13, 1.5, "3", NaN, null]) await assert.rejects(f.replay.start({maxPending}), /admission limit/);
+  assert.equal(f.video.plays, 0); assert.equal(f.state.clients.length, 0);
+  f.replay.dispose();
 });
 /** Functionality: Verify natural EOF drains every admitted encoding/response/decode.
  * Inputs: EOF while encoder waits. Outputs: stop only after delivered completion.

@@ -1,8 +1,11 @@
 """Responsibilities: Bounded JPEG decoding and unchanged YOLO26 FP32 image transforms/rendering.
-Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels.
+Implementation: Unchanged transforms/JPEG80; depth/motion labels, concise high/critical risk labels;
+optional explicit diagnostic text renderer, with direct Pillow drawing as the default.
+Decode through Pillow's JPEG factory so SDK patches cannot probe/install unrelated image plugins.
 Related Modules: realtime.detector/depth/tracking/risk; zerogpu.live_worker; realtime.protocol.
 Declaration Index: DetectionError; DetectionError.__init__; decode_frame; letterbox; decode_boxes;
-roi_crop; merge_boxes; box_iou; pedestrian_lights; mark_front_light; label_font; annotate.
+roi_crop; merge_boxes; box_iou; pedestrian_lights; mark_front_light; mark_front_light.vertical;
+label_font; annotate.
 Variable Index: INPUT_EDGE —640 model tensor edge; MAX_INPUT_EDGE —1280 accepted frame edge;
 CONFIDENCE_THRESHOLD —0.25 default; CLASS_CONF —per-class override (traffic light 0.12); the walk
 model adds its colour-class thresholds per detector (core.detection_model.light_rule);
@@ -52,16 +55,17 @@ class DetectionError(Exception):
 def decode_frame(payload):
     """Functionality: Decode only a bounded, complete camera JPEG into RGB.
     Inputs: payload bytes; Outputs: independent PIL RGB image or 400/413 DetectionError.
-    Logic: check byte size, JPEG format and dimensions before decompression, then force loading.
+    Logic: bound bytes, use the pinned JPEG factory, validate dimensions, then load and convert.
+    This avoids SDK-patched generic image discovery and unrelated plugin installation.
     Constraints: maximum edge MAX_INPUT_EDGE (1280; the full-frame pass still downsizes to 640);
     no EXIF location parsing or disk writes.
     """
-    from PIL import Image, UnidentifiedImageError
+    from PIL import Image, JpegImagePlugin
 
     if not 0 < len(payload) <= MAX_FRAME_BYTES:
         raise DetectionError("frame_size", "The image is empty or exceeds 1 MiB.", 413)
     try:
-        with Image.open(io.BytesIO(payload)) as image:
+        with JpegImagePlugin.jpeg_factory(io.BytesIO(payload)) as image:
             longest = max(image.size)
             if image.format != "JPEG" or not 0 < min(image.size) <= longest <= MAX_INPUT_EDGE:
                 raise DetectionError(
@@ -71,7 +75,7 @@ def decode_frame(payload):
                 )
             image.load()
             return image.convert("RGB")
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+    except (OSError, SyntaxError, ValueError, Image.DecompressionBombError) as error:
         raise DetectionError(
             "invalid_frame", "The JPEG image is corrupt or could not be decoded.", 400
         ) from error
@@ -249,6 +253,9 @@ def mark_front_light(boxes, image_size):
     Constraints: nothing is deleted; with no vertical candidate every light is False.
     """
     def vertical(box):
+        """Functionality: Select vertical lights. Inputs: box. Outputs: boolean.
+        Logic: compare original dimensions and label. Constraints: no new class threshold.
+        """
         x1, y1, x2, y2 = box["xyxy"]
         return box["label"] in LIGHT_LABELS and (y2 - y1) > (x2 - x1)
 
@@ -273,15 +280,17 @@ def label_font():
     return ImageFont.load_default(size=14)
 
 
-def annotate(image, boxes):
+def annotate(image, boxes, *, text_renderer=None):
     """Functionality: Draw boxes, optional depth/motion and meaningful risk into JPEG.
-    Inputs: RGB image and validated boxes; Outputs: encoded JPEG bytes or 502 size error.
-    Logic: preserve previous labels when ID/depth unavailable (pedestrian lights add their state);
+    Inputs: RGB image, validated boxes and optional explicit diagnostic text renderer.
+    Outputs: encoded JPEG bytes or 502 size error.
+    Logic: preserve prior labels when ID/depth is unavailable; pedestrian lights add their state;
     otherwise add ID/motion and
     finite signed m/s for a known motion state (unknown omits speed);
     high/critical labels replace confidence/speed with concise TTC/level; other labels stay normal;
     draw two-pixel outlines and readable backed labels, encode at explicit quality 80.
     Constraints: input remains in memory; English font is Pillow bundled, no external font download.
+    Default calls Pillow directly; experimental renderers must preserve text/coordinates and errors.
     """
     from PIL import ImageDraw
 
@@ -314,7 +323,11 @@ def annotate(image, boxes):
         draw.rectangle(
             (label_x, label_y, label_x + text_width, label_y + text_height), fill=(15, 40, 35)
         )
-        draw.text((label_x + 3, label_y + 3 - bounds[1]), label, font=font, fill="white")
+        if text_renderer is None:
+            draw.text((label_x + 3, label_y + 3 - bounds[1]), label, font=font, fill="white")
+        else:
+            text_renderer(draw, (label_x + 3, label_y + 3 - bounds[1]), label,
+                          font=font, fill="white")
     output = io.BytesIO()
     image.save(output, format="JPEG", quality=JPEG_QUALITY)
     payload = output.getvalue()

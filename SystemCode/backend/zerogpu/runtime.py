@@ -9,6 +9,8 @@ Declaration Index: configure_runtime — measured floating flags; load_model —
 export_program — contiguous-constant export;
 GraphRunner/GraphRunner.__init__/GraphRunner.__call__ — fixed-shape capture, replay and CUDA
 event forward timing, separately from the synchronized transfer-inclusive stage.
+Duration sampling uses perf_counter so sub-tick GPU calls remain measurable on Windows/Python3.12;
+this does not change any allocation or transport deadline.
 Variable Index: logger — initialization/capture/precision diagnostics. Config dtype/layout/
 benchmark are explicit; defaults preserve the original FP32 control, with no device fallback.
 """
@@ -130,7 +132,7 @@ class GraphRunner:
         """
         import torch
 
-        started = time.monotonic()
+        started = time.perf_counter()
         if tensor.shape != (1, 3, 640, 640) or str(tensor.dtype) != "float32":
             raise ValueError("Graph requires FP32 [1,3,640,640] input")
         config = {} if config is None else config
@@ -181,7 +183,7 @@ class GraphRunner:
         self.events = [torch.cuda.Event(enable_timing=True) for _ in range(2)]
         self.forward_event_ms = None
         torch.cuda.synchronize()
-        self.setup_ms = (time.monotonic() - started) * 1000
+        self.setup_ms = (time.perf_counter() - started) * 1000
         self.evidence = {"compute_dtype": str(self.dtype), "forward_dtype": forward_dtype,
                          "input_stride": list(self.input.stride()), "pinned_input": True,
                          "graph_captured": True, "gpu": torch.cuda.get_device_name(),
@@ -198,14 +200,15 @@ class GraphRunner:
         """Functionality: Replay one frame. Inputs: same-shape contiguous FP32 array.
         Outputs: independent CPU prediction array and synchronized H2D/replay/D2H milliseconds.
         Logic: fill pinned input, async H2D, CUDA events around replay only, blocking D2H,
-        copy out of reusable storage; save the independent forward_event_ms.
+        copy out of reusable storage; save the independent forward_event_ms. Use perf_counter
+        for sub-millisecond host timing; Windows GetTickCount64 can quantize short calls to zero.
         Constraints: output ownership prevents later frames overwriting earlier predictions.
         """
         import torch
 
         if tensor.shape != tuple(self.input.shape) or str(tensor.dtype) != "float32":
             raise ValueError("Graph frame shape/dtype changed")
-        started = time.monotonic()
+        started = time.perf_counter()
         with torch.inference_mode():
             self.host.copy_(torch.from_numpy(tensor))
             self.input.copy_(self.host, non_blocking=True)
@@ -216,4 +219,4 @@ class GraphRunner:
             result = self.host_output.numpy().copy()
             self.events[1].synchronize()
             self.forward_event_ms = self.events[0].elapsed_time(self.events[1])
-        return result, (time.monotonic() - started) * 1000
+        return result, (time.perf_counter() - started) * 1000

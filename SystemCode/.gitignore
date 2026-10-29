@@ -54,5 +54,6 @@ backend/models/*.pt
 backend/models/*.onnx
 backend/models/*.onnx.data
 backend/models/.build-config/
+backend/Ultralytics/
 backend/models/experiments/
 backend/models/*.tmp

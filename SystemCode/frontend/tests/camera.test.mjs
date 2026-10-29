@@ -140,14 +140,90 @@ globalThis.window = {
 };
 const { CameraApp, cameraApp, processingPath, captureProfile } = await import("../camera.js");
 
-/** Functionality: Verify explicit Echo/HF/local endpoints and retired modes stay rejected.
+/** Functionality: Preserve original mode and explicit immutable low-latency policies.
+ * Inputs: supported and invalid names. Outputs: frozen policy and rejection assertions.
+ * Logic: exact allowlist, no inherited-object keys. Constraints: no performance claim. */
+test("capture profiles preserve original settings and reject unknown configuration", function testCaptureProfiles() {
+  assert.deepEqual(captureProfile("standard"), {rate: 30, maxPending: 12});
+  assert.deepEqual(captureProfile("bounded-2"), {rate: 30, maxPending: 2});
+  assert.deepEqual(captureProfile("bounded-3"), {rate: 30, maxPending: 3});
+  assert.deepEqual(captureProfile("responsive-2"), {rate: 10, maxPending: 2});
+  assert.deepEqual(captureProfile("responsive-3"), {rate: 10, maxPending: 3});
+  assert.deepEqual(captureProfile("conservative-2"), {rate: 5, maxPending: 2});
+  assert.deepEqual(captureProfile("conservative-3"), {rate: 5, maxPending: 3});
+  assert.throws(() => { captureProfile("responsive-2").maxPending = 12; }, TypeError);
+  for (const name of ["", "unknown", "__proto__", "constructor"])
+    assert.throws(() => captureProfile(name), /采样配置无效/);
+});
+
+/** Functionality: Freeze the session profile before asynchronous permission resolves.
+ * Inputs: a page policy changed during a synthetic permission request.
+ * Outputs: original immutable session snapshot. Logic: capture the choice before awaiting.
+ * Constraints: simulated denial ends before creating a transport or changing actual permissions. */
+test("camera profile is frozen before permission and later page changes cannot alter it", async function testCaptureProfileSnapshot() {
+  let app;
+  /** Functionality: Mutate the next-session setting during permission.
+   * Inputs: none. Outputs: explicit denial. Logic: preserve the current snapshot.
+   * Constraints: no actual camera. */
+  async function requestCamera() { app.cameraProfile = "standard"; throw new Error("fixture denial"); }
+  app = makeApp(requestCamera);
+  app.processing.value = "local"; app.localDeviceId = "fixture-device";
+  app.cameraProfile = "responsive-2";
+  await app.start();
+  assert.equal(app.cameraProfile, "standard");
+  assert.deepEqual(app.sessionCaptureProfile, {rate: 10, maxPending: 2});
+});
+
+/** Functionality: Reject invalid local policies before requesting a device.
+ * Inputs: invalid explicit policy. Outputs: zero permission calls and a visible error.
+ * Logic: early configuration validation. Constraints: no fallback or actual permission prompt. */
+test("invalid camera profile fails before media authorization", async function testInvalidCaptureProfile() {
+  let requests = 0;
+  const app = makeApp(async () => { requests++; throw new Error("unexpected permission"); });
+  app.processing.value = "local"; app.localDeviceId = "fixture-device"; app.cameraProfile = "invalid";
+  await app.start();
+  assert.equal(requests, 0); assert.match(app.message.textContent, /采样配置无效/);
+});
+
+/** Functionality: Verify the actual camera controller enables pre-capture send-buffer admission.
+ * Inputs: blocked client with unchanged generation. Outputs: queue checks but no captured image.
+ * Logic: enter CameraApp.runPipeline, observe one native wait, then cancel it.
+ * Constraints: no camera authorization, socket, GPU or network-speed claim. */
+test("camera controller enables send-buffer admission", async function testCameraSendAdmission() {
+  const app = makeApp(ignoreWindowEvent);
+  let reads = 0, captures = 0;
+  /** Functionality: Observe buffer reads. Inputs: None. Outputs: one queued byte.
+   * Logic: keep admission blocked. Constraints: fixture cannot send frames. */
+  function bufferedBytes() { reads++; return 1; }
+  /** Functionality: Record unexpected capture. Inputs: None. Outputs: marker bytes.
+   * Logic: counter detects admission bypass. Constraints: no camera or codec. */
+  async function capture() { captures++; return new ArrayBuffer(1); }
+  app.capture = capture;
+  const running = app.runPipeline({bufferedBytes}, "local", app.generation);
+  /** Functionality: Yield to pipeline microtasks. Inputs: resolver. Outputs: next timer turn.
+   * Logic: no dependency on elapsed speed. Constraints: test cancels before sending. */
+  function poll(resolve) { setTimeout(resolve, 0); }
+  await new Promise(poll);
+  app.pipeline.stop(); await running;
+  assert.ok(reads > 0); assert.equal(captures, 0);
+});
+
+/** Functionality: Verify explicit Echo, HF, local and resident modes and their explanatory notes.
  * Inputs: actual mode mapping and retired/unknown enums. Outputs: fixed paths or explicit errors.
  * Logic: reject every former mode, rather than silently substituting a new provider.
  * Constraints: no external camera, socket, CPU detector or GPU request. */
-test("Explicitly support Echo, HF, and independent local video modes", function testProcessingPath() {
+test("Explicitly support Echo, HF, resident, and independent local video modes", function testProcessingPath() {
   assert.equal(processingPath("echo"), "./ws/echo/");
   assert.equal(processingPath("hf"), "./ws/detect/hf/");
+  assert.equal(processingPath("resident"), "./ws/detect/resident/");
   assert.equal(processingPath("local"), "./ws/detect/local/");
+  const app = new CameraApp();
+  for (const mode of ["echo", "hf", "resident", "local"]) {
+    app.processing.value = mode;
+    app.handleProcessingChange();
+    assert.equal(document.getElementById("hf-note").hidden, mode !== "hf");
+    assert.equal(document.getElementById("resident-note").hidden, mode !== "resident");
+  }
   for (const mode of ["detect", "stream", "hf_stream", "hf_boxes", "hf_boxes_fast", "hf_live", "unknown"])
     assert.throws(() => processingPath(mode), /未知/);
 });
@@ -592,6 +668,7 @@ test("Separate slow startup frame and include stalls in steady-state metrics", f
     captureMs: 10, transportMs: 675, renderQueueMs: 0, decodeMs: 15,
     captureToResultMs: 685, captureToDecodedMs: 700, completedAt: 1880,
     pacingLateMs: 20, creditWaitMs: 90,
+    transportWaitMs: 120, transportQueuedBytes: 65536,
   }), 2.5);
   assert.equal(app.frameTimings.steadyFrames, 2);
   assert.equal(app.frameTimings.transportTotalMs, 730);
@@ -603,6 +680,11 @@ test("Separate slow startup frame and include stalls in steady-state metrics", f
   assert.equal(app.frameTimings.pacingLateMaxMs, 20);
   assert.equal(app.frameTimings.creditWaitTotalMs, 90);
   assert.equal(app.frameTimings.creditWaitFrames, 1);
+  assert.equal(app.frameTimings.transportAdmissionFrames, 1);
+  assert.equal(app.frameTimings.transportWaitTotalMs, 120);
+  assert.equal(app.frameTimings.transportWaitMaxMs, 120);
+  assert.equal(app.frameTimings.transportQueuedMaxBytes, 65536);
+  assert.equal(app.frameTimings.transportWaitFrames, 1);
 });
 
 /** Functionality: Preserve explicit camera policy bounds. Inputs: Valid/invalid names. Outputs: Settings/errors.

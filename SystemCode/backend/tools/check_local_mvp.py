@@ -1,5 +1,6 @@
 """Responsibilities: Probe the actual local MVP with a public static image and ordered frames.
-Implementation: Independent PRF2 client, response validator, explicit stop and second session.
+Implementation: Independent PRF2 client, selected 80/87-class model, explicit stop/new session;
+verify advertised depth backend/fusion on every returned frame.
 Related Modules: integration.asgi/inference; realtime.protocol; tools.fixtures/live_benchmark.
 Declaration Index: endpoint — loopback URL check; status — read integration health;
 probe_session — validate one real stream; run — inspect two streams; main — CLI/report boundary.
@@ -9,6 +10,7 @@ No camera, ground-truth accuracy, physical speech or haptic claim is made by thi
 
 import argparse
 import asyncio
+import hashlib
 import http.client
 import json
 import statistics
@@ -17,6 +19,8 @@ import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from core.detection_model import model_files
+from integration.protocol import validate_contract, validate_result
 from realtime.protocol import MAX_PACKET_BYTES, unpack_result
 from tools.fixtures import fixture_bytes
 from tools.live_benchmark import validate
@@ -75,10 +79,12 @@ async def probe_session(url, jpeg, manifest, frames):
                        open_timeout=10, close_timeout=5) as peer:
         hello = json.loads(await asyncio.wait_for(peer.recv(), 55))
         expected = {"kind": "session", "provider": "local", "protocol_version": 2,
-                    "model": "yolo26n", "precision": "FP32", "output_precision": "FP32",
+                    "model": manifest["model"], "classes": len(manifest["names"]),
+                    "precision": "FP32", "output_precision": "FP32",
                     "backend": "PyTorch resident CUDA", "source_sha256": manifest["source_sha256"]}
         if any(hello.get(key) != value for key, value in expected.items()):
             raise ValueError("Local admission identity mismatch")
+        validate_contract(hello)
         if not isinstance(hello.get("session_id"), str) or not hello["session_id"]:
             raise ValueError("Missing local session identity")
         report["contract"] = hello
@@ -90,6 +96,10 @@ async def probe_session(url, jpeg, manifest, frames):
                 raise ValueError("Expected a complete binary inference result")
             metadata, rendered = unpack_result(packet, index)
             validate(metadata, rendered, manifest)
+            validate_result(metadata, hello, index, captured)
+            if any(metadata.get(key) != hello.get(key)
+                   for key in ("depth_backend", "depth_fusion")):
+                raise ValueError("Depth execution identity changed after admission")
             expected_result = {"provider": "local", "session_id": hello["session_id"],
                                "capture_time_s": captured, "timestamp_source": "browser_capture",
                                "output_precision": "FP32", "tracking_status": "active",
@@ -122,16 +132,18 @@ async def probe_session(url, jpeg, manifest, frames):
     return report
 
 
-async def run(url, frames):
+async def run(url, frames, input_path=None):
     """Functionality: Verify real inference, clean stop and a fresh second sequence.
-    Inputs: explicit local URL and fixture count. Outputs: reviewable structured report.
-    Logic: Reuse public bus bytes; first full probe then a one-frame new session; record health.
+    Inputs: local URL, count, optional local image and PRS_DETECTION_MODEL. Outputs: report.
+    Logic: default public bus or explicit image; full probe then a one-frame fresh session.
     Constraints: No automatic retry or replacement inference; real video motion remains unverified.
     """
-    jpeg, _ = fixture_bytes(ROOT / "model_tests/samples/bus.jpg")
-    manifest = json.loads((ROOT / "models/yolo26n.json").read_text(encoding="utf-8"))
+    input_path = ROOT / "model_tests/samples/bus.jpg" if input_path is None else input_path
+    jpeg, _ = fixture_bytes(input_path)
+    manifest = json.loads(model_files()[1].read_text(encoding="utf-8"))
     report = {"complete": False,
-              "scope": "real native dual-model inference on a public static image",
+              "scope": "real native dual-model inference on one explicitly selected static image",
+              "input": str(input_path), "input_sha256": hashlib.sha256(jpeg).hexdigest(),
               "camera_verified": False, "hardware_outputs_verified": False,
               "before": await asyncio.to_thread(status, url)}
     report["sessions"] = [await probe_session(url, jpeg, manifest, frames),
@@ -149,13 +161,14 @@ async def run(url, frames):
 
 def main(argv=None):
     """Functionality: Execute one explicit probe and optionally save a new evidence artifact.
-    Inputs: CLI URL, positive frames and optional unused output path. Outputs: exit status/JSON.
+    Inputs: CLI URL, count, optional local image and unused output path. Outputs: exit status/JSON.
     Logic: Validate before network; preserve successful full metadata; failures expose only type.
     Constraints: Existing reports cannot be overwritten; no installation or service startup.
     """
     parser = argparse.ArgumentParser(description="Validate the actual isolated local MVP")
     parser.add_argument("--url", default="ws://127.0.0.1:8766/ws/detect/local/")
     parser.add_argument("--frames", type=int, default=6)
+    parser.add_argument("--input", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
     if not 1 <= args.frames <= 300:
@@ -163,7 +176,7 @@ def main(argv=None):
     if args.output and args.output.exists():
         parser.error("Choose a new output report; existing evidence is preserved")
     try:
-        report = asyncio.run(run(endpoint(args.url), args.frames))
+        report = asyncio.run(run(endpoint(args.url), args.frames, args.input))
     except Exception as error:
         print(json.dumps({"complete": False, "error_type": type(error).__name__}))
         return 1

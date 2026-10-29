@@ -1,5 +1,6 @@
 /** Responsibilities: Bind independent local-video replay, results and shared native outputs to a simple UI.
- * Implementation: Explicit File/start/stop, lifecycle subscriptions, short class/motion alert speech with started-sentence completion,
+ * Implementation: Explicit File/start/stop and admission selection, lifecycle subscriptions,
+ * short class/motion alert speech with started-sentence completion,
  * local voice choices and existing demo controls.
  * Related Modules: video.html/video.css/video-replay.js/guidance.js/catalog.js/video-alerts.js;
  * existing /live/assets FramePipeline/LiveDetectionClient/SpeechOutput/VibrationTester single module URLs.
@@ -7,6 +8,7 @@
  * applyVoice; readVoices; selectFile; startVideo; initialize; videoReplay; guidanceManager; videoMvpReady.
  * Variable Index: doc is the current page; latest is one result, fileReady tracks explicit metadata success;
  * fileChoiceGeneration prevents late cancelled metadata promises from changing a newer user selection;
+ * video-pending-limit selects the next session's window; default12 retains original admission.
  * exported controllers provide event/stats inspection without DOM polling; no camera singleton is imported.
  */
 import {LiveDetectionClient} from "../../live/assets/live-detection-client.js";
@@ -35,6 +37,7 @@ function node(id) { return doc.getElementById(id); }
 function renderControls() {
   const idle = videoReplay.mode === "idle";
   node("video-file").disabled = !idle;
+  node("video-pending-limit").disabled = !idle;
   node("video-start").disabled = !idle || !fileReady || videoReplay.video.ended;
   node("video-stop").disabled = idle;
 }
@@ -128,10 +131,10 @@ async function selectFile() {
   renderControls();
 }
 /** Functionality: Begin one explicit replay session. Inputs: click. Outputs: connect/play or validation message.
- * Logic: early asynchronous state locks controls, faults keep their original diagnostic.
+ * Logic: freeze the selected admission window, lock controls and retain original fault diagnostics.
  * Constraints: no retry, media permissions or source seek when restarting a partially played file. */
 async function startVideo() {
-  try { const operation = videoReplay.start(); renderControls(); await operation; }
+  try { const operation = videoReplay.start({maxPending: Number(node("video-pending-limit").value)}); renderControls(); await operation; }
   catch (error) { node("video-status").textContent = `未开始：${error.message}`; node("video-status").dataset.kind = "error"; }
   renderControls();
 }

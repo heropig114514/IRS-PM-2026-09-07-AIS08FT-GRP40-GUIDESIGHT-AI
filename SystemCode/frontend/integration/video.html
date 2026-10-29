@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Responsibilities: Independent local-video inference and native-output test entry.
-Implementation: Explicit File chooser, muted1x video, shared native output controls with adjustable 2x speech default
+Implementation: Explicit File chooser/admission mode, muted1x video, shared native output controls with adjustable 2x speech default
 and short direction/category/fast-approach alert speech.
 Related Modules: video-mvp.js/video-replay.js/video-alerts.js/video.css; integration.asgi; /live/assets native controllers.
 Declaration Index: None. Variable Index: None; DOM IDs bind the replay and existing device controllers. -->
@@ -19,9 +19,12 @@ Declaration Index: None. Variable Index: None; DOM IDs bind the replay and exist
       <section class="workspace">
         <p>明确选择本机视频。原文件只在浏览器解码；发送的是最大边640、JPEG质量0.8的采样帧。本页不申请摄像头或麦克风权限。</p>
         <label>本机视频文件 <input id="video-file" type="file" accept="video/*" /></label>
+        <label>显示模式 <select id="video-pending-limit"><option value="12">标准缓冲（默认）</option><option value="3">低延迟演示</option></select></label>
+        <p>低延迟模式最多同时处理3帧，减少等待；标准模式最多12帧。满载时仅跳过尚未采集的源画面，已发送帧仍按顺序显示。模式仅在开始前选择。</p>
         <div class="video-actions"><button id="video-start" class="button primary" disabled>开始本地检测</button><button id="video-stop" class="button secondary" disabled>停止</button></div>
         <p id="video-status" role="status" aria-live="polite">请选择本机视频。</p>
-        <p>视频以1倍速前进，不循环、不跳转；首帧检测独占期间仍继续播放，未采集源帧单独统计。输入上限30FPS，总窗口12；服务端最多55秒，结束后须手动开始。已播完的视频须重新选择。</p>
+        <p>视频以1倍速前进，不循环、不跳转；首帧检测独占期间仍继续播放，未采集源帧单独统计。输入上限30FPS；服务端最多55秒，结束后须手动开始。已播完的视频须重新选择。</p>
+        <p>首次启动可能需要较长时间加载模型。演示前先运行一次，出现结果后停止，等待服务空闲，再重新选择视频开始正式演示。</p>
         <div class="video-images">
           <figure><figcaption>本地视频 · 1× · 无音频</figcaption><video id="video-source" muted playsinline preload="metadata" disablepictureinpicture></video></figure>
           <figure><figcaption>最新算法标注</figcaption><img id="video-result" alt="算法返回的最新标注画面" hidden /></figure>

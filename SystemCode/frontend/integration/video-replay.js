@@ -1,5 +1,5 @@
 /** Responsibilities: Replay an explicitly selected local video into the existing local detection transport.
- * Implementation: rVFC presentation sampling, original640/JPEG0.8,30FPS ceiling/12 total jobs,
+ * Implementation: rVFC presentation sampling, original640/JPEG0.8,30FPS ceiling, explicit1..12 total jobs,
  * first frame exclusive, encode-order dispatch, EOF drain and immediate explicit cancellation.
  * Related Modules: video-mvp.js; existing FramePipeline.dispatch/drain and LiveDetectionClient PRF2/PRS1;
  * guidance.js consumes the same structured session/frame lifecycle without cameraApp.
@@ -9,7 +9,8 @@
  * VideoReplay.schedule; VideoReplay.presented; VideoReplay.encode; VideoReplay.dispatchEncoded;
  * VideoReplay.display; VideoReplay.completed; VideoReplay.finish; VideoReplay.fail; VideoReplay.stop;
  * VideoReplay.dispose; VideoReplay.stats.
- * Variable Index: MAX_EDGE/JPEG_QUALITY/MAX_FRAME_BYTES/INPUT_FPS/MAX_PENDING keep original input contract;
+ * Variable Index: MAX_EDGE/JPEG_QUALITY/MAX_FRAME_BYTES/INPUT_FPS keep original input contract;
+ * MAX_PENDING is the original default and hard ceiling; session.maxPending freezes explicit admission.
  * dependencies inject native video/canvas/transport/pipeline for tests; generation/session isolate late callbacks;
  * objectUrl/resultUrl own Blob lifetime; loading/loadSequence cancel metadata listeners by exact owner;
  * disposed prevents off-page loading/restart; session encoding/jobs/sendTail are bounded, not a frame FIFO;
@@ -102,21 +103,24 @@ export class VideoReplay {
       this.fail(error); throw error;
     }
   }
-  /** Functionality: Start one explicitly requested local session and1x replay. Inputs: loaded file.
+  /** Functionality: Start one explicitly requested local session and1x replay.
+   * Inputs: loaded file and optional maxPending (integer1..12, original default12).
    * Outputs: session admission/playback or explicit failure. Logic: no camera module, connect same-origin before playing.
    * Constraints: ended source must be reselected manually; provider ends after55s without looping/reconnecting. */
-  async start() {
+  async start({maxPending = MAX_PENDING} = {}) {
     if (this.disposed) throw new Error("Video page has been disposed.");
     if (this.mode !== "idle") return;
+    if (!Number.isInteger(maxPending) || maxPending < 1 || maxPending > MAX_PENDING)
+      throw new Error("Video admission limit must be an integer from1 to12.");
     if (!this.file || this.video.ended) throw new Error("Select a playable local video before starting.");
     if (typeof this.video.requestVideoFrameCallback !== "function") throw new Error("This browser lacks video presentation callbacks.");
     this.validatePlayback();
     const url = new URL("../../ws/detect/local/", this.href);
     if (url.origin !== new URL(this.href).origin) throw new Error("Video detection must use the same origin.");
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    const session = {generation: ++this.generation, cancelled: false, finishing: false, sendClosed: false, encoding: 0,
+    const session = {generation: ++this.generation, maxPending, cancelled: false, finishing: false, sendClosed: false, encoding: 0,
       jobs: new Set(), sendTail: Promise.resolve(), firstComplete: false, lastMediaTime: null, lastPresented: null,
-      nextCaptureAt: this.now(), stats: {source: "local_video", sourceCallbacks: 0, observedPresentedFrames: 0,
+      nextCaptureAt: this.now(), stats: {source: "local_video", pendingLimit: maxPending, sourceCallbacks: 0, observedPresentedFrames: 0,
         callbackGaps: 0, skippedCadence: 0, skippedCredit: 0, skippedFirstFrame: 0, admitted: 0,
         encoded: 0, sent: 0, delivered: 0, cancelledBeforeSend: 0, maxInFlight: 0,
         firstSourceMediaTime: null, lastSourceMediaTime: null, lastPresentedFrames: null}};
@@ -127,7 +131,7 @@ export class VideoReplay {
       const contract = await this.client.connect();
       if (!this.active(session)) return;
       session.id = contract.session_id; session.contract = contract;
-      this.pipeline = session.pipeline = this.pipelineFactory({client: session.client, capture: null, now: this.now,
+      this.pipeline = session.pipeline = this.pipelineFactory({client: session.client, capture: null, now: this.now, maxPending,
         display: (bytes, metadata) => this.display(bytes, metadata, session),
         onFrame: (result, timing) => this.completed(result, timing, session), onSent: () => {},
         isActive: () => this.active(session), onFailure: error => this.fail(error)});
@@ -153,7 +157,7 @@ export class VideoReplay {
   /** Functionality: Observe a genuinely new presented frame and admit sampling when permitted.
    * Inputs: native callback time/metadata/session. Outputs: observation or bounded encode job.
    * Logic:1x source PTS/presented count strictly increase; cadence maintains timeline without catch-up;
-   * first result is exclusive, then total encoding+pending display jobs stays<=12.
+   * first result is exclusive, then encoding+pending display jobs stays within the frozen limit.
    * Constraints: source mediaTime is never used as PRF2 motion timestamp; skips precede canvas capture. */
   presented(callbackNow, metadata, session) {
     this.validatePlayback();
@@ -170,7 +174,7 @@ export class VideoReplay {
     session.lastMediaTime = mediaTime; session.lastPresented = presentedFrames;
     const inflight = session.encoding + this.pipeline.pending.size;
     if (!session.firstComplete && inflight) { session.stats.skippedFirstFrame++; return; }
-    if (inflight >= MAX_PENDING) { session.stats.skippedCredit++; return; }
+    if (inflight >= session.maxPending) { session.stats.skippedCredit++; return; }
     if (admissionAt < session.nextCaptureAt) { session.stats.skippedCadence++; return; }
     const interval = 1000 / INPUT_FPS;
     session.nextCaptureAt = admissionAt - session.nextCaptureAt >= interval ? admissionAt + interval : session.nextCaptureAt + interval;

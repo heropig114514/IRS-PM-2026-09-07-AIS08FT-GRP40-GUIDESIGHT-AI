@@ -1,4 +1,9 @@
-"""Loopback-only mobile entry for an explicitly configured public HTTPS tunnel."""
+"""Responsibilities: Compose the loopback-only public phone entry.
+Implementation: Optional prepared startup speech inside the exact-origin tunnel wrapper.
+Related Modules: integration.tunnel/prepared_speech/assist_asgi; tools.run_public_mvp.
+Declaration Index: None.
+Variable Index: application is the mounted public entry; assist_application is its canonical target.
+"""
 
 import os
 
