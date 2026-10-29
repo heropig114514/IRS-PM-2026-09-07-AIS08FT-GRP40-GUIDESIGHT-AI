@@ -50,18 +50,18 @@ function expectedText(variant) {
  * Inputs: Built plan. Outputs: Exact schema metadata and fragment/composition counts.
  * Logic: Check all approved classes, directions and role totals independently.
  * Constraints: Profile metadata does not claim that any WAV or audible speech already exists. */
-test("offline risk plan contains the exact approved bilingual profile and 66 natural fragments", function testPlanSchema() {
+test("offline risk plan contains the exact approved bilingual profile and 96 natural fragments", function testPlanSchema() {
   const plan = buildRiskAudioPlan();
   assert.deepEqual(Object.keys(plan), ["schema_version", "voice", "rate", "sample_rate", "format",
     "classes", "directions", "clips", "compositions"]);
-  assert.equal(plan.schema_version, 1); assert.equal(plan.voice, "Cherry");
+  assert.equal(plan.schema_version, 2); assert.equal(plan.voice, "Cherry");
   assert.equal(plan.rate, 2); assert.equal(plan.sample_rate, 24000); assert.equal(plan.format, "pcm_s16le_mono");
-  assert.deepEqual(plan.classes, ["person", "bicycle", "car", "motorcycle"]);
+  assert.deepEqual(plan.classes, ["person", "bicycle", "car", "motorcycle", "chair", "obstacle"]);
   assert.deepEqual(plan.directions, ["front", "front_left", "front_right"]);
-  assert.equal(plan.clips.length, 66); assert.equal(plan.compositions.length, 144);
-  for (const [language, counts] of [["zh-CN", {prefix: 3, clause: 24, sentence: 12}],
-    ["en-US", {prefix: 3, clause: 24, sentence: 0}]]) {
-    assert.equal(plan.compositions.filter(item => item.language === language).length, 72);
+  assert.equal(plan.clips.length, 96); assert.equal(plan.compositions.length, 216);
+  for (const [language, counts] of [["zh-CN", {prefix: 3, clause: 36, sentence: 18}],
+    ["en-US", {prefix: 3, clause: 36, sentence: 0}]]) {
+    assert.equal(plan.compositions.filter(item => item.language === language).length, 108);
     assert.equal(plan.clips.filter(item => item.language === language).length,
       Object.values(counts).reduce((sum, count) => sum + count, 0));
     for (const [kind, count] of Object.entries(counts))
@@ -71,7 +71,7 @@ test("offline risk plan contains the exact approved bilingual profile and 66 nat
 });
 
 /* Functionality: Cover every class/direction/grade/motion combination without changing its spoken text.
- * Inputs: All 144 plan compositions and an independent Cartesian expectation.
+ * Inputs: All 216 plan compositions and an independent Cartesian expectation.
  * Outputs: Exact production wording, exact transcript concatenation and full unique coverage.
  * Logic: Resolve every referenced clip and compare the complete tuple set.
  * Constraints: No risk grade, approach marker, category or Chinese medium wording is substituted. */
@@ -79,12 +79,12 @@ test("every offline composition exactly reconstructs the existing warning wordin
   const plan = buildRiskAudioPlan(), clips = new Map(plan.clips.map(clip => [clip.id, clip]));
   const expected = new Set(), actual = new Set(), used = new Set();
   for (const language of ["zh-CN", "en-US"])
-    for (const label of ["person", "bicycle", "car", "motorcycle"])
+    for (const label of ["person", "bicycle", "car", "motorcycle", "chair", "obstacle"])
       for (const direction of ["front_left", "front", "front_right"])
         for (const risk_level of ["medium", "high", "critical"])
           for (const approaching of [true, false])
             expected.add(JSON.stringify([language, label, direction, risk_level, approaching]));
-  assert.equal(new Set(plan.compositions.map(item => item.id)).size, 144);
+  assert.equal(new Set(plan.compositions.map(item => item.id)).size, 216);
   for (const composition of plan.compositions) {
     actual.add(JSON.stringify([composition.language, composition.label, composition.direction,
       composition.risk_level, composition.approaching]));
@@ -97,7 +97,7 @@ test("every offline composition exactly reconstructs the existing warning wordin
     assert.equal(parts.join(""), composition.text);
     assert.doesNotMatch(composition.text, /track_id|captured_at|\d/);
   }
-  assert.deepEqual(actual, expected); assert.equal(used.size, 66);
+  assert.deepEqual(actual, expected); assert.equal(used.size, 96);
   assert.ok(plan.compositions.some(item => item.text === "注意左前方的行人。"));
   assert.ok(plan.compositions.some(item => item.text === "注意，左前方有行人靠近。"));
   assert.ok(plan.compositions.some(item => item.text === "Warning. Person ahead left is approaching."));
@@ -110,7 +110,7 @@ test("every offline composition exactly reconstructs the existing warning wordin
  * Constraints: Text-identity hashes are not treated as audio integrity or listening evidence. */
 test("offline fragments split only after warning punctuation and use safe relative WAV paths", function testNaturalFragments() {
   const plan = buildRiskAudioPlan(), clips = new Map(plan.clips.map(clip => [clip.id, clip]));
-  assert.equal(clips.size, 66); assert.equal(new Set(plan.clips.map(clip => clip.path)).size, 66);
+  assert.equal(clips.size, 96); assert.equal(new Set(plan.clips.map(clip => clip.path)).size, 96);
   for (const clip of plan.clips) {
     assert.match(clip.id, /^(zh-CN|en-US)-(prefix|clause|sentence)-[a-f0-9]{64}$/);
     assert.equal(clip.path, `${clip.language}/${clip.id}.wav`);
@@ -163,7 +163,7 @@ test("offline plan CLI requires an explicit new output file and preserves existi
     const output = join(directory, "plan.json");
     const created = spawnSync(process.execPath, [TOOL_PATH, "--output", output], options);
     assert.equal(created.error, undefined); assert.equal(created.status, 0, created.stderr);
-    assert.deepEqual(JSON.parse(created.stdout), {created: true, clips: 66, compositions: 144});
+    assert.deepEqual(JSON.parse(created.stdout), {created: true, clips: 96, compositions: 216});
     assert.equal(readFileSync(output, "utf8"), JSON.stringify(buildRiskAudioPlan(), null, 2) + "\n");
     const existing = join(directory, "existing.json"), sentinel = '{"keep":"original"}\n';
     writeFileSync(existing, sentinel, "utf8");

@@ -1,0 +1,74 @@
+{
+  "at": "2026-10-28T16:56:47.210092+00:00",
+  "release": "/opt/prs-practice/mvp/releases/8798d60598cea8be07899ebb84b4493b6992e2eb",
+  "handoff": "/opt/prs-practice/mvp/optimization-handoffs/phone-metadata-20261029-8798d60-r3",
+  "files": [
+    {
+      "path": "backend/integration/services.py",
+      "before": "d8d569424eab7eb2353173ca3a6f91d9fd8ee2fbb748c8ca21590eb86af487cd",
+      "after": "97a22f60fa3d7cede97845c1d7b19df94172caad2517d1859244ff4330ff953e"
+    },
+    {
+      "path": "frontend/agent-client.js",
+      "before": "b6ecadd6e081cf3039b4879ebee12a425afcacd842824e8a652fd4a7a1b8af68",
+      "after": "c02b8e4319c78f6470b8537b8158191eb6350c224710c1e527428687b30754ae"
+    },
+    {
+      "path": "frontend/camera.js",
+      "before": "da041d9c98b11a56133c7609619216b2290c3e719aa41707a73cca7841566280",
+      "after": "373668a1954534c22a02be0b6207da9a64dd2562653be857f9642569668de9e0"
+    },
+    {
+      "path": "frontend/integration/assist-guidance.js",
+      "before": "5ce1154bd6e2a1d97d011972895a9bdc38b33d373cf536f93d03be56d3f2c38c",
+      "after": "6800eb523866f29faa0b40feee7b9a936962500e6a2ead561ed0cc68eec2b46b"
+    },
+    {
+      "path": "frontend/integration/assist-mvp.js",
+      "before": "d9e1e37d3ef145f352942adfbd94b49fd5c5d73a1f81e075c96882fcad07c7ca",
+      "after": "8e88b4388ebd3f5926560959197f0601e5c6c697081d4101f6f1d4ebbdb88b3b"
+    },
+    {
+      "path": "frontend/integration/assist-panel.html",
+      "before": "e4c23f48428f2cfb0a9f90dfbae842cf5fe8d399ec4649e3685cba9f211a4ffc",
+      "after": "f1eb5749a3bab663d1a4b776767baa24286885ecc69b7982912e8a20eb213bb1"
+    },
+    {
+      "path": "frontend/integration/assist-product.html",
+      "before": "1cdaafe6e66a66e67cc7fb027088bb6bd1f32bbc745b1b0c35ae5c01a5025317",
+      "after": "17f690b031dfea2bc7d5b29d4ec95402ebcacebbf0ce1c686f4d382abe2a16c4"
+    },
+    {
+      "path": "frontend/integration/speech-activation.js",
+      "before": "708fe480cade1bda68ed1d17c3dc2e7b84de8092a256f50e77452ca7c99e7224",
+      "after": "28f1c1cd23f09b012a924f2ebdadb39e52115a6f2c949c3d09d9034286b79bd2"
+    },
+    {
+      "path": "frontend/live-detection-client.js",
+      "before": "b0fc354e7568154cc5fb0ad7bb6ba521a3736b584002fbbdf3ae90f4037df8be",
+      "after": "e7663f40ca640cc6b46476770e1b7b41effb6f84b4d6a2f273141171dc1f5eb1"
+    },
+    {
+      "path": "frontend/speech-output.js",
+      "before": "56a9a8648daf38c8976273c8e769fd2397a204b13d4ea02bc5ba2704578cdd2c",
+      "after": "db6522a855ac09f7fc64a8f011e0950697b11424bff681e3e519fdc4ceaeb8ac"
+    },
+    {
+      "path": "frontend/voice-input.js",
+      "before": "181fdae445675a1be6df95d2a889759a5f5a2be9dc43da2dad57c4802b4483f5",
+      "after": "f48814913b984d584285280ac372fdf49c7a5338441a75eb7eb0694fac8320e6"
+    }
+  ],
+  "web_restarted": true,
+  "gpu_restarted": false,
+  "environment_unchanged": true,
+  "phone_default": "annotated-jpeg; compact mode available only by explicit negotiation",
+  "services": [
+    "active",
+    "active",
+    "active"
+  ],
+  "worker_ready": true,
+  "worker_busy": false,
+  "readiness_wait_seconds": 4.824601711239666
+}

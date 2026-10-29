@@ -14,9 +14,47 @@ import {readFileSync} from "node:fs";
 import {createHash, webcrypto} from "node:crypto";
 import test from "node:test";
 import {RiskAudioResources} from "../integration/risk-audio-resources.js";
+import {briefVideoAlertText, preparedVideoAlertText} from "../integration/video-alerts.js";
 
 const ROOT = new URL("../assets/risk-audio/", import.meta.url);
 const ORIGIN = "http://127.0.0.1:8766", BASE = `${ORIGIN}/mvp/assets/risk-audio/`;
+
+test("prepared content keeps direction and grade and needs no synthesis for named or generic targets", async () => {
+  const transport = fixture(), resources = owner(transport);
+  await resources.load(); const attempts = transport.calls.length;
+  const cases = [
+    [{label:"chair",direction:"front_left",risk_level:"high"},"警告，左前方有椅子。"],
+    [{label:"stairs",direction:"front_right",risk_level:"critical"},"危险，右前方有障碍物。"],
+    [{label:"person",direction:"front",risk_level:"medium"},"注意前方的行人。"],
+  ];
+  for (const [box, expected] of cases) {
+    assert.equal(preparedVideoAlertText(box,"zh-CN"),expected);
+    for (const language of ["zh-CN","en-US"]) {
+      const prepared=await resources.prepare({language,rate:2,text:preparedVideoAlertText(box,language)});
+      assert.ok(prepared?.audio_bytes > 0);
+    }
+  }
+  assert.equal(transport.calls.length,attempts); resources.dispose();
+});
+
+test("all short grades and arbitrary classes reuse exact verified PCM with no extra fetch", async () => {
+  const transport = fixture(), resources = owner(transport);
+  await resources.load();
+  const initialFetches = transport.calls.length;
+  for (const language of ["zh-CN", "en-US"])
+    for (const risk_level of ["medium", "high", "critical"])
+      for (const label of ["chair", "stairs", "person", "unmapped-object"] ) {
+        const text = briefVideoAlertText({risk_level, label}, language);
+        const prepared = await resources.prepare({text, language, rate: 2});
+        const prefix = transport.manifest.clips.find(clip => clip.language === language &&
+          clip.kind === "prefix" && clip.text === text);
+        assert.ok(prefix);
+        assert.deepEqual(Buffer.from(prepared.chunks[0]), readFileSync(new URL(prefix.path, ROOT)).subarray(44));
+      }
+  assert.equal(transport.calls.length, initialFetches);
+  assert.equal(await resources.prepare({language: "zh-CN", rate: 2, text: "警告"}), null);
+  resources.dispose();
+});
 
 /* Functionality: Serve only test-owned copies of the real local warning resource pack.
  * Inputs: Optional descriptor/body mutations and a four-clip synchronization option.
@@ -78,13 +116,13 @@ function rejectCode(promise, code) {
 /* Functionality: Exercise every real bilingual combination with unchanged packaged samples.
  * Inputs: All real source WAVs and manifest. Outputs: Exact ordered PCM and isolated consumer buffers.
  * Logic: Compare the entire corpus, not a formatter imitation. Constraints: No speaker or TTS call. */
-test("prepared pack loads 66 verified WAVs and composes all 144 exact warnings", async function testRealPack() {
+test("prepared pack loads 96 verified WAVs and composes all 216 exact warnings", async function testRealPack() {
   const transport = fixture({synchronizeClipWorkers: true}), resources = owner(transport);
   assert.equal(resources.describe().state, "idle");
   await resources.load();
-  assert.equal(transport.calls.length, 67); assert.equal(transport.clipBarrierTimedOut, false);
+  assert.equal(transport.calls.length, 97); assert.equal(transport.clipBarrierTimedOut, false);
   assert.equal(transport.maximum, 4);
-  assert.deepEqual(resources.describe(), {state: "ready", loaded_clips: 66, total_clips: 66,
+  assert.deepEqual(resources.describe(), {state: "ready", loaded_clips: 96, total_clips: 96,
     ready_bytes: transport.manifest.clips.reduce((sum, clip) => sum + clip.pcm_byte_length, 0),
     compositions: 0, failure: null});
   const clips = new Map(transport.manifest.clips.map(clip => [clip.id, clip]));
@@ -99,7 +137,7 @@ test("prepared pack loads 66 verified WAVs and composes all 144 exact warnings",
     const repeated = await resources.prepare({...composition, rate: 2});
     assert.deepEqual(Buffer.from(repeated.chunks[0]), expected);
   }
-  assert.equal(transport.calls.length, 67); assert.equal(resources.describe().compositions, 288);
+  assert.equal(transport.calls.length, 97); assert.equal(resources.describe().compositions, 432);
   assert.equal(await resources.prepare({language: "zh-CN", rate: 2, text: "未覆盖的文本。"}), null);
   assert.equal(await resources.prepare({language: "en-US", rate: 2,
     text: transport.manifest.compositions[0].text}), null);
@@ -125,7 +163,7 @@ test("concurrent load and prepare calls share one bounded load", async function 
   const first = resources.load(); assert.equal(first, resources.load());
   const [, one, two] = await Promise.all([first, resources.prepare({...item, rate: 2}),
     resources.prepare({...item, rate: 2})]);
-  assert.equal(transport.calls.length, 67); assert.notEqual(one.chunks[0], two.chunks[0]);
+  assert.equal(transport.calls.length, 97); assert.notEqual(one.chunks[0], two.chunks[0]);
   resources.dispose();
 });
 
@@ -253,5 +291,59 @@ test("missing browser capabilities fail safely without throwing at construction"
     const resources = owner(fixture(), extra);
     await rejectCode(resources.load(), "risk_audio_unavailable");
     assert.equal(resources.describe().state, "failed"); resources.dispose();
+  }
+});
+
+test("on-demand loads only requested clips, deduplicates, and preserves all bilingual PCM", async () => {
+  const transport = fixture(), resources = owner(transport, {loadPolicy: "on-demand"});
+  await resources.load();
+  assert.deepEqual(transport.calls, ["manifest.json"]);
+  assert.equal(resources.describe().loaded_clips, 0);
+  const first = transport.manifest.compositions[0];
+  const [one, two] = await Promise.all([resources.prepare({...first, rate: 2}), resources.prepare({...first, rate: 2})]);
+  assert.equal(transport.calls.length, 1 + first.clip_ids.length);
+  assert.notEqual(one.chunks[0], two.chunks[0]);
+  const clips = new Map(transport.manifest.clips.map(clip => [clip.id, clip]));
+  for (const item of transport.manifest.compositions) {
+    const result = await resources.prepare({...item, rate: 2});
+    const expected = Buffer.concat(item.clip_ids.map(id => readFileSync(new URL(clips.get(id).path, ROOT)).subarray(44)));
+    assert.deepEqual(Buffer.from(result.chunks[0]), expected);
+  }
+  assert.equal(transport.calls.length, 97);
+  assert.equal(transport.maximum, 1);
+  assert.equal(resources.describe().loaded_clips, 96);
+  resources.dispose();
+});
+
+test("on-demand rejects corrupt audio without retries, partial playback or native substitution", async () => {
+  const transport = fixture({changeBody(path, bytes) {
+    if (path !== "manifest.json") bytes[bytes.length - 1] ^= 1; return bytes;
+  }}), resources = owner(transport, {loadPolicy: "on-demand"});
+  const item = transport.manifest.compositions.find(item => item.clip_ids.length === 2);
+  await resources.load();
+  await rejectCode(resources.prepare({...item, rate: 2}), "invalid_audio_resource");
+  assert.equal(resources.describe().loaded_clips, 0);
+  assert.equal(resources.describe().state, "failed");
+  const calls = transport.calls.length;
+  await rejectCode(resources.prepare({...item, rate: 2}), "invalid_audio_resource");
+  assert.equal(transport.calls.length, calls); assert.equal(calls, 2);
+  resources.dispose();
+});
+
+test("on-demand cancellation and timeout abort pending clip work and prevent late publication", async () => {
+  for (const cause of ["dispose", "timeout"]) {
+    const transport = fixture(); let expire, signal;
+    const resources = owner(transport, {loadPolicy: "on-demand",
+      setTimer(callback, ms) { assert.equal(ms, 60000); expire = callback; return 1; }, clearTimer() {}});
+    await resources.load();
+    resources.fetch = (_url, options) => { signal = options.signal; return new Promise((_resolve, reject) =>
+      signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), {once: true})); };
+    const preparing = resources.prepare({...transport.manifest.compositions[0], rate: 2});
+    while (!signal) await new Promise(resolve => setImmediate(resolve));
+    if (cause === "dispose") resources.dispose(); else expire();
+    await rejectCode(preparing, "risk_audio_unavailable");
+    assert.equal(signal.aborted, true); assert.equal(resources.describe().loaded_clips, 0);
+    assert.equal(resources.describe().state, cause === "dispose" ? "disposed" : "failed");
+    resources.dispose();
   }
 });

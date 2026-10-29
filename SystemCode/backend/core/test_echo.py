@@ -15,7 +15,7 @@ Declaration Index:
 - EchoTests.test_capacity_and_release — reject the fifth connection and release admitted sessions.
 - CameraPageTests — HTTP page and asset allowlist tests.
 - CameraPageTests.test_page_and_script — page/modules and same-origin microphone policy.
-- CameraPageTests.test_retired_routes_and_modes — reject retired modes and HTTP routes.
+- CameraPageTests.test_retired_routes_and_modes — four modes; reject retired HTTP routes.
 - CameraPageTests.test_retired_websockets — reject retired WebSocket routes.
 - CameraPageTests.test_unknown_asset_is_not_exposed — reject unlisted files.
 Variable Index: None.
@@ -195,7 +195,7 @@ class CameraPageTests(SimpleTestCase):
         self.assertRedirects(self.client.get("/"), "/live/", fetch_redirect_response=False)
         page = self.client.get("/live/").content.decode()
         modes = re.search(r'<select id="processing"[^>]*>(.*?)</select>', page, re.S).group(1)
-        self.assertEqual(re.findall(r'value="([^"]+)"', modes), ["echo", "hf", "local"])
+        self.assertEqual(re.findall(r'value="([^"]+)"', modes), ["echo", "resident", "hf", "local"])
         self.assertRegex(modes, r'<option value="local" disabled>')
         for path in (
             "/vision/config/",

@@ -9,6 +9,9 @@ roi — optional extra centre-top traffic-light pass (sequential batch-1 replays
 light_rule — walk-model pedestrian-light colour rule from the manifest (None for COCO yolo26n).
 class_conf — decode thresholds: CLASS_CONF, plus the colour classes' threshold in walk mode only.
 depth_estimator — optional independent metric model; depth_ms includes inference/fusion.
+depth_predict_ms/depth_fusion_ms/decode_boxes_ms — nested host durations, not CUDA events.
+depth_backend — actual selected depth execution, distinct from the detection backend identity.
+depth_fusion — actual GPU reduction or explicitly selected host partition, visible in each frame.
 object_tracker — instance-owned BoT-SORT/history; tracking_ms covers association/history only.
 risk_config — immutable TTC/rule profile; risk_ms — separate stateless scalar scoring timer.
 distance_strategy/performance/performance_epoch — owned strategy and per-epoch frame statistics.
@@ -119,6 +122,9 @@ class ResidentDetector:
         production callers must supply a qualified plan before selecting lower precision.
         Failures propagate.
         Timings include server processing; graph_setup_ms is nonzero only on the first real frame.
+        Depth substages use host clocks without extra CUDA synchronization; pending device work
+        can be charged to a later stage. Fusion includes strategy/cache overhead; prediction is
+        zero on skipped temporal-depth frames. Their sum retains the existing depth_ms definition.
         """
         started = time.perf_counter()
         image = decode_frame(jpeg)
@@ -214,6 +220,12 @@ class ResidentDetector:
                 self.light_rule["class_confidence"])
         if depth_estimator is not None:
             metadata.update(depth_model=depth_estimator.model_name, depth_units="m",
+                            depth_backend=getattr(depth_estimator, "backend", "torch"),
+                            depth_fusion="host" if self.distance_strategy.fast_roi else "gpu",
+                            decode_boxes_ms=(decoded_at - inferred_at) * 1000,
+                            depth_predict_ms=self.distance_strategy.depth_predict_ms,
+                            depth_fusion_ms=((fused_at - tracked_at) * 1000
+                                             - self.distance_strategy.depth_predict_ms),
                             depth_ms=((fused_at - tracked_at) + (decoded_at - inferred_at)) * 1000)
         if object_tracker is not None:
             metadata.update(object_tracker.metadata(),

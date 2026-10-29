@@ -1,11 +1,12 @@
 /** Responsibilities: Overlap capture/transmission and ordered display without a stale-frame backlog.
  * Implementation: Planned cadence with stall resets, first frame alone, max12 working/awaiting-display frames;
- * admission precedes capture; errors/stop wake waits; sent frames are never intentionally skipped.
+ * credit and optional browser send-buffer admission precede capture; errors/stop wake waits;
+ * sent frames are never intentionally skipped.
  * Related Modules: camera.js, live-detection-client.js, integration/guidance.js; tests/frame-pipeline.test.mjs.
  * Declaration Index: clockNow; FramePipeline; FramePipeline.constructor;
  * FramePipeline.constructor.registerStop; FramePipeline.constructor.registerCancel;
  * FramePipeline.active; FramePipeline.pause;
- * FramePipeline.pause.register; FramePipeline.pause.finished; FramePipeline.run;
+ * FramePipeline.pause.register; FramePipeline.pause.finished; FramePipeline.waitForTransport; FramePipeline.run;
  * FramePipeline.dispatch; FramePipeline.dispatch.received; FramePipeline.dispatch.received.render;
  * FramePipeline.dispatch.failed; FramePipeline.dispatch.finished; FramePipeline.drain;
  * FramePipeline.finish; FramePipeline.fail; FramePipeline.stop.
@@ -17,10 +18,15 @@
  * controlled comparisons can use a smaller window within the same advertised transport ceiling.
  * Per-frame scheduledCaptureAt/pacingRequestedMs/pacingWaitMs/pacingLateMs distinguish cadence
  * timer delay; creditWaitMs/pendingBeforeAdmission expose bounded admission without media logs.
+ * SEND_BUFFER_POLL_MS/SEND_BUFFER_WAIT_MS bound optional send-buffer polling to4ms/10s;
+ * bufferedBytes is an explicit adapter or null control; transportWaitMs/transportQueuedBytes
+ * describe pre-capture browser queuing, not remote receipt, RTT or model latency.
  */
 import {MAX_INFLIGHT} from "./live-detection-client.js";
 
 export const INPUT_FPS = 30;
+const SEND_BUFFER_POLL_MS = 4;
+const SEND_BUFFER_WAIT_MS = 10000;
 
 /** Functionality: Read monotonic time. Inputs: browser performance. Outputs: milliseconds.
  * Logic: single clock for capture/result/display. Constraints: not sensor exposure or paint time. */
@@ -32,16 +38,19 @@ function clockNow() { return performance.now(); }
  * no model/codec changes, retries, auto-restart, captured-frame drops or hidden latency filtering. */
 export class FramePipeline {
   /** Functionality: Bind frame operations and optional explicit benchmark cadence/count.
-   * Inputs: client/capture/display/onFrame/onSent/isActive/onFailure, rate, frameLimit, now, maxPending.
+   * Inputs: client/capture/display/onFrame/onSent/isActive/onFailure, rate, frameLimit, now,
+   * maxPending and optional bufferedBytes callback returning native unsent WebSocket bytes.
    * Outputs: idle instance. Logic: store dependencies, initialize counters and cancellation signal.
    * Constraints: default30FPS is an input ceiling, not an achieved-output claim; finite frameLimit is
    * for controlled tests, null runs until stop/provider completion; maxPending must be1–12;
+   * null bufferedBytes preserves the original control; gating is enabled explicitly by camera.js.
    * using five/eight is an explicit historical-window comparison, never an automatic downgrade. No I/O here. */
   constructor({client, capture, display, onFrame, onSent, isActive, onFailure,
-    rate = INPUT_FPS, frameLimit = null, now = clockNow, maxPending = MAX_INFLIGHT}) {
+    rate = INPUT_FPS, frameLimit = null, now = clockNow, maxPending = MAX_INFLIGHT, bufferedBytes = null}) {
     if (!Number.isFinite(rate) || rate < 1 || rate > 60 ||
         (frameLimit !== null && (!Number.isInteger(frameLimit) || frameLimit < 1)) ||
-        !Number.isInteger(maxPending) || maxPending < 1 || maxPending > MAX_INFLIGHT)
+        !Number.isInteger(maxPending) || maxPending < 1 || maxPending > MAX_INFLIGHT ||
+        (bufferedBytes !== null && typeof bufferedBytes !== "function"))
       throw new Error("视频流水线采样配置无效。");
     this.client = client;
     this.capture = capture;
@@ -54,6 +63,7 @@ export class FramePipeline {
     this.rate = rate;
     this.frameLimit = frameLimit;
     this.maxPending = maxPending;
+    this.bufferedBytes = bufferedBytes;
     this.pending = new Set();
     this.renderTail = Promise.resolve();
     this.sent = this.received = this.maxInFlight = 0;
@@ -92,26 +102,60 @@ export class FramePipeline {
     }
     await Promise.race([new Promise(register), this.stopPromise]);
   }
+  /** Functionality: Acquire send-buffer admission before capturing a fresh image.
+   * Inputs: explicit bufferedBytes adapter and monotonic clock. Outputs: wait duration/initial bytes.
+   * Logic: poll only while bytes remain; reuse cancellable pacing, reject invalid readings or a10s
+   * stall, and retain original frame deadlines. Empty buffers incur no timer wait.
+   * Constraints: zero means handed to the network, not remotely received; no RTT/ACK estimate,
+   * captured-frame dropping, bitrate change or retry. Browser timer clamping can delay wakeup. */
+  async waitForTransport() {
+    const startedAt = this.now();
+    let transportQueuedBytes = 0;
+    if (this.bufferedBytes) {
+      while (this.active() && !this.finishing) {
+        const queued = this.bufferedBytes();
+        if (!Number.isSafeInteger(queued) || queued < 0) throw new Error("视频发送队列状态无效。");
+        if (this.now() - startedAt >= SEND_BUFFER_WAIT_MS)
+          throw new Error("视频发送队列持续阻塞，请检查网络后重新开始。");
+        if (queued === 0) break;
+        if (!transportQueuedBytes) transportQueuedBytes = queued;
+        await this.pause(SEND_BUFFER_POLL_MS);
+      }
+    }
+    return {transportQueuedBytes, transportWaitMs: transportQueuedBytes ? this.now() - startedAt : 0};
+  }
   /** Functionality: Capture only when a slot and cadence permit, then independently render results.
    * Inputs: stored operations/rate/frameLimit. Outputs: counters or original failure.
    * Logic: first frame completes alone; then permit maxPending total jobs. Keep the planned timeline
    * across sub-interval timer lateness, so ordinary timer oversleep does not accumulate every frame.
-   * Reanchor after credit waits or lateness of at least one interval; never replay missed slots.
+   * Reanchor after credit/send-buffer waits or lateness of at least one interval; never replay missed slots.
    * Finite tests drain every submitted frame; capture/transport/display retain their existing limits.
-   * Record requested/actual pacing and credit waits separately before capture; diagnostics add no
-   * additional waits and do not alter admission, measured latency or the existing acceptance rules.
+   * Record pacing, credit and send-buffer waits separately before capture. Capture-to-display age
+   * excludes pre-capture waiting; completion FPS includes it and must accompany latency comparisons.
    * Constraints: stopping returns without waiting for an uncancellable browser decode; all late
    * callbacks test active() before UI; failure is retained/reported, not changed into success. */
   async run() {
     let nextCaptureAt = this.now();
     try {
       while (this.active() && !this.finishing && (this.frameLimit === null || this.sent < this.frameLimit)) {
-        const scheduledCaptureAt = nextCaptureAt, pacingStartedAt = this.now();
+        // With one slot, wait for the result before arming any cadence timer. A timer
+        // started while transport is busy may be throttled independently on mobile.
+        // The remaining start-to-start interval is normally already consumed by RTT.
+        const admissionStartedAt = this.now();
+        const serialAdmission = this.maxPending === 1 && this.pending.size >= 1;
+        if (serialAdmission) await Promise.race([...this.pending, this.stopPromise]);
+        const serialCreditWaitMs = serialAdmission ? this.now() - admissionStartedAt : 0;
+        if (!this.active() || this.finishing) break;
+        const pacingStartedAt = this.now();
+        const scheduledCaptureAt = serialAdmission ? Math.max(nextCaptureAt, pacingStartedAt) : nextCaptureAt;
         const pacingRequestedMs = Math.max(0, scheduledCaptureAt - pacingStartedAt);
         await this.pause(pacingRequestedMs);
         const pacingEndedAt = this.now(), pendingBeforeAdmission = this.pending.size;
         if (this.pending.size >= this.maxPending)
           await Promise.race([...this.pending, this.stopPromise]);
+        if (!this.active() || this.finishing) break;
+        const creditEndedAt = this.now();
+        const transportAdmission = await this.waitForTransport();
         if (!this.active() || this.finishing) break;
         const capturedAt = this.now();
         const bytes = await this.capture();
@@ -120,15 +164,18 @@ export class FramePipeline {
         this.sent += 1;
         this.onSent(this.sent, this.received);
         const task = this.dispatch(bytes, {ordinal: this.sent, capturedAt, encodedAt,
+          previousFrameCallbackMs: this.lastFrameCallbackMs ?? null,
           inputBytes: bytes.byteLength, scheduledCaptureAt, pacingRequestedMs,
           pacingWaitMs: pacingEndedAt - pacingStartedAt,
           pacingLateMs: Math.max(0, pacingEndedAt - scheduledCaptureAt),
-          creditWaitMs: pendingBeforeAdmission >= this.maxPending ? capturedAt - pacingEndedAt : 0,
-          pendingBeforeAdmission});
+          creditWaitMs: serialAdmission ? serialCreditWaitMs
+            : pendingBeforeAdmission >= this.maxPending ? creditEndedAt - pacingEndedAt : 0,
+          pendingBeforeAdmission: serialAdmission ? 1 : pendingBeforeAdmission, ...transportAdmission});
         const interval = 1000 / this.rate;
         // Preserve phase for ordinary timer lateness; capacity stalls start a new timeline rather
         // than scheduling a sequence of overdue frames. No acquired credit is released early.
-        nextCaptureAt = pendingBeforeAdmission >= this.maxPending || capturedAt - scheduledCaptureAt >= interval
+        nextCaptureAt = pendingBeforeAdmission >= this.maxPending || transportAdmission.transportQueuedBytes > 0 ||
+          capturedAt - scheduledCaptureAt >= interval
           ? capturedAt + interval : scheduledCaptureAt + interval;
         if (this.sent === 1) {
           await Promise.race([task, this.stopPromise]);
@@ -173,6 +220,7 @@ export class FramePipeline {
           captureToResultMs: receivedAt - context.capturedAt,
           captureToDecodedMs: decodedAt - context.capturedAt,
           completedAt: decodedAt, sent: pipeline.sent, received: pipeline.received});
+        pipeline.lastFrameCallbackMs = pipeline.now() - decodedAt;
       }
       const rendering = pipeline.renderTail.then(render);
       pipeline.renderTail = rendering.catch(failed);

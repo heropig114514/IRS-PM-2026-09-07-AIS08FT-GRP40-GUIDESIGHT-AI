@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-28T13:31:05.228154+00:00",
+  "release": "/opt/prs-practice/mvp/releases/faa6383572c7e1a22e2c0ee81941f6333b2ea638",
+  "handoff": "/opt/prs-practice/mvp/optimization-handoffs/phone-risk-diagnostics-20261028-a0da47f",
+  "files": [
+    {
+      "path": "frontend/integration/assist-guidance.js",
+      "before": "5ce1154bd6e2a1d97d011972895a9bdc38b33d373cf536f93d03be56d3f2c38c",
+      "after": "6800eb523866f29faa0b40feee7b9a936962500e6a2ead561ed0cc68eec2b46b"
+    },
+    {
+      "path": "frontend/integration/assist-mvp.js",
+      "before": "e285784fdb2f4e08b776d61bea0973889f7c96a6e3422c46532f571bd8f8ae73",
+      "after": "2e58a5fb77964b66b186705b9d05be9c598f27db4ed8f7317e975812b777a2de"
+    },
+    {
+      "path": "frontend/integration/assist-panel.html",
+      "before": "e4c23f48428f2cfb0a9f90dfbae842cf5fe8d399ec4649e3685cba9f211a4ffc",
+      "after": "f1eb5749a3bab663d1a4b776767baa24286885ecc69b7982912e8a20eb213bb1"
+    },
+    {
+      "path": "frontend/integration/assist-product.html",
+      "before": "446d162cbdf3baedad9afafb513c63eff7a39bfabd163c696628db054f846d9f",
+      "after": "57516f6d14129197c4574da469c6a9c5ad65c326d6218b02a6c0c2b3d834ce3a"
+    }
+  ],
+  "pages": {
+    "/maps/": 200,
+    "/maps/test": 200
+  },
+  "environment_unchanged": true,
+  "prepared_audio_unchanged": true,
+  "web_restarted": false,
+  "web_pid_unchanged": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "worker_listening": true,
+  "gpu_requests": 0,
+  "physical_phone_audio_verified": false
+}

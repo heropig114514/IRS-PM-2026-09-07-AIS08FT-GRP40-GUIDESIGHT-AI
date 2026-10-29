@@ -1,6 +1,7 @@
 """Responsibilities: Relay one SSH-owned reverse loopback binding to the local web process.
 Implementation: Fast bounded admission, owned worker/socket cleanup, raw TCP backpressure and
-half-close; explicit failures without retry, credentials, HTTP parsing or client ownership.
+half-close; TCP_NODELAY on the local TCP peer; explicit failures without retry, credentials,
+HTTP parsing or client ownership.
 Related Modules: tools.run_phone_mvp owns SSH authentication, identity, keepalive and processes.
 Declaration Index: RelayError; RelayError.__init__; _Connection; RelayForward;
 RelayForward.__init__; RelayForward._fail; RelayForward._control; RelayForward._control.invoke;
@@ -10,6 +11,7 @@ RelayForward.stop; RelayForward.active_connections.
 Variable Index: LOOPBACK — both explicit TCP endpoints; BUFFER_BYTES — bounded per-direction
 buffer; CONNECT_SECONDS/CONTROL_SECONDS/JOIN_SECONDS/POLL_SECONDS — transport lifecycle bounds;
 logger — fixed codes/counts only; connections/threads — this instance's resources;
+channel_progress/wait_seconds — drain writable partial SSH sends without an artificial poll delay;
 slots/incoming — one shared queued+running connection bound; failure — first fatal code.
 """
 
@@ -233,7 +235,8 @@ class RelayForward:
     def _forward(self, connection):
         """Functionality: Connect exactly once to the local web listener and forward raw bytes.
         Inputs: admitted connection. Outputs: half-closed/closed owned endpoints.
-        Logic: register the socket before connect so stop can interrupt it; never inspect payloads.
+        Logic: register before connect so stop can interrupt it; disable Nagle buffering on this
+        owned TCP socket to forward small writes promptly; never inspect payloads.
         Constraints: a missing local service is fatal; peer resets end only that connection.
         """
         try:
@@ -244,6 +247,12 @@ class RelayForward:
                     return
                 connection.peer = peer
             peer.settimeout(CONNECT_SECONDS)
+            try:
+                peer.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            except OSError:
+                if not self.stop_event.is_set():
+                    self._fail("local_socket_setup_failed")
+                return
             try:
                 peer.connect((LOOPBACK, self.local_port))
             except OSError:
@@ -265,19 +274,22 @@ class RelayForward:
         """Functionality: Preserve full-duplex data and half-close under backpressure.
         Inputs: nonblocking SSH channel/socket. Outputs: no return body; endpoints remain owned.
         Logic: each direction buffers at most64KiB; channel send readiness is its SSH window,
-        not its read-notification fileno; drain pending bytes before propagating EOF.
+        not its read-notification fileno; continue writable partial sends immediately after
+        positive progress, retain bounded polling when blocked, and drain before propagating EOF.
         Constraints: no idle expiry, parsing, dropped bytes, artificial media pacing or retry.
         """
         to_peer, to_channel = bytearray(), bytearray()
         channel_open = peer_open = True
         peer_write_closed = channel_write_closed = False
         while not self.stop_event.is_set():
+            channel_progress = False
             if to_channel and channel.send_ready():
                 try:
                     count = channel.send(bytes(to_channel))
                     if count <= 0:
                         raise EOFError
                     del to_channel[:count]
+                    channel_progress = True
                 except (BlockingIOError, TimeoutError):
                     pass
             if not channel_open and not to_peer and not peer_write_closed:
@@ -292,10 +304,12 @@ class RelayForward:
             if peer_open and len(to_channel) < BUFFER_BYTES:
                 readers.append(peer)
             writers = [peer] if to_peer else []
+            wait_seconds = (0 if channel_progress and to_channel and channel.send_ready()
+                            else POLL_SECONDS)
             if not readers and not writers:
-                self.stop_event.wait(POLL_SECONDS)
+                self.stop_event.wait(wait_seconds)
                 continue
-            readable, writable, _ = select.select(readers, writers, [], POLL_SECONDS)
+            readable, writable, _ = select.select(readers, writers, [], wait_seconds)
             if peer in writable:
                 try:
                     count = peer.send(to_peer)

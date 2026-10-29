@@ -1,0 +1,57 @@
+{
+  "at": "2026-10-28T12:38:04.990495+00:00",
+  "release": "/opt/prs-practice/mvp/releases/faa6383572c7e1a22e2c0ee81941f6333b2ea638",
+  "handoff": "/opt/prs-practice/mvp/optimization-handoffs/phone-speech-20261028-faa6383",
+  "files": [
+    {
+      "path": "frontend/speech-output.js",
+      "before": "56a9a8648daf38c8976273c8e769fd2397a204b13d4ea02bc5ba2704578cdd2c",
+      "after": "db6522a855ac09f7fc64a8f011e0950697b11424bff681e3e519fdc4ceaeb8ac"
+    },
+    {
+      "path": "frontend/voice-input.js",
+      "before": "181fdae445675a1be6df95d2a889759a5f5a2be9dc43da2dad57c4802b4483f5",
+      "after": "f48814913b984d584285280ac372fdf49c7a5338441a75eb7eb0694fac8320e6"
+    },
+    {
+      "path": "frontend/agent-client.js",
+      "before": "b6ecadd6e081cf3039b4879ebee12a425afcacd842824e8a652fd4a7a1b8af68",
+      "after": "c02b8e4319c78f6470b8537b8158191eb6350c224710c1e527428687b30754ae"
+    },
+    {
+      "path": "frontend/integration/assist-mvp.js",
+      "before": "3eedd78b51da8a4135cc172e4df9e09995f27a1af9f77dac7e856c284bc655f8",
+      "after": "e285784fdb2f4e08b776d61bea0973889f7c96a6e3422c46532f571bd8f8ae73"
+    },
+    {
+      "path": "frontend/integration/speech-activation.js",
+      "before": "708fe480cade1bda68ed1d17c3dc2e7b84de8092a256f50e77452ca7c99e7224",
+      "after": "28f1c1cd23f09b012a924f2ebdadb39e52115a6f2c949c3d09d9034286b79bd2"
+    },
+    {
+      "path": "frontend/integration/product-ui.js",
+      "before": "ee5e7320474b193bbc6a1a3c48e024a46942da0c5e42d677be5c0bdee7cbc75f",
+      "after": "228c1d61d9280631f34840462b020dcfeb4638dee84a3d7eae4e0e2610a4e47f"
+    },
+    {
+      "path": "frontend/integration/assist-product.html",
+      "before": "1cdaafe6e66a66e67cc7fb027088bb6bd1f32bbc745b1b0c35ae5c01a5025317",
+      "after": "446d162cbdf3baedad9afafb513c63eff7a39bfabd163c696628db054f846d9f"
+    }
+  ],
+  "pages": {
+    "/maps/": 200,
+    "/maps/test": 200
+  },
+  "environment_unchanged": true,
+  "prepared_audio_unchanged": true,
+  "web_restarted": false,
+  "web_pid_unchanged": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "worker_listening": true,
+  "gpu_requests": 0,
+  "physical_phone_audio_verified": false
+}

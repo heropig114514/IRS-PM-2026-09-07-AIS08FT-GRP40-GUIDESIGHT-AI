@@ -1,0 +1,48 @@
+{
+  "url": "https://noble-treatment-canyon-garmin.trycloudflare.com/mvp/maps/",
+  "proxy": false,
+  "http": [
+    {
+      "path": "/mvp/maps/",
+      "status": 200,
+      "bytes": 13879,
+      "tls_verified": true,
+      "elapsed_ms": 3031
+    },
+    {
+      "path": "/mvp/maps/test",
+      "status": 200,
+      "bytes": 19126,
+      "tls_verified": true,
+      "elapsed_ms": 2141
+    },
+    {
+      "path": "/mvp/integration/status/",
+      "status": 200,
+      "bytes": 572,
+      "tls_verified": true,
+      "worker": {
+        "ready": false,
+        "busy": false,
+        "error_code": null
+      },
+      "elapsed_ms": 1250
+    },
+    {
+      "path": "/mvp/admin/",
+      "status": 404,
+      "elapsed_ms": 3078
+    },
+    {
+      "path": "/mvp/maps/",
+      "status": 403,
+      "elapsed_ms": 2250
+    }
+  ],
+  "websocket": {
+    "type": "pong",
+    "id": "phone-access-check"
+  },
+  "binary_echo": true,
+  "websocket_total_ms": 3765
+}

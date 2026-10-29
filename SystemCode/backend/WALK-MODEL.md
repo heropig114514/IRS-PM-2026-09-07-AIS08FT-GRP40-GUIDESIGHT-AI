@@ -33,6 +33,12 @@ and to the defaults of `model_tests.run_depth` (`--weights/--manifest` still ove
 PRS_DETECTION_MODEL=yolo26n-walk python -X utf8 -m model_tests.run_depth --input <images> --output <new dir> --roi --max-edge 1280
 ```
 
+The local PRF2 runtime freezes model/manifest selection before admission and uses it for health,
+lazy loading and every session; the launcher verifies the selected weights. TensorRT FP32 depth
+and explicit host ROI fusion are independent options described in [Depth deployment](DEPTH-EXPORT.md).
+Their comparisons hold this detector's weights, all class thresholds and pedestrian-light rule
+fixed. The optional model does not become the default when acceleration is selected.
+
 **Not covered:** the HF ZeroGPU app, the HF video relay and the deployment tools still read
 `models/yolo26n.json` and `models/inference-plan.json` directly. The FP16 / compiled / CUDA Graph
 acceleration plan is qualified for the original weights only. Before the walk model can use that

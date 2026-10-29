@@ -25,6 +25,7 @@
  * testIndependentSwitches; testForeignSpeech; testForeignVibration; testSynchronous;
  * testChannelFailure; testCancellationFailure; testExternalFailure; testUserCancel;
  * testVoice; testEpochReset; testSessionIsolation; testGlobalStop; testPort; testMetadata;
+ * testRiskSpeechReasons; testRiskSpeechDeadlines; testRiskSpeechOwnership; testRiskSpeechTransition;
  * testTerminalNavigation; testVibrationFailure.
  * Variable Index: None. Driver utterance bodies remain only in test memory; all sources are synthetic.
  * Constraints: Passing tests does not verify actual cameras, GPS, GPU, browser TTS or physical motors.
@@ -196,10 +197,10 @@ function navigationSnapshot(epoch, overrides = {}) {
  * Inputs: Optional source-enable flag. Outputs: Manager and explicit source helpers.
  * Logic: Voice setup is explicit; helpers never imply a native device source.
  * Constraints: Default-off behavior is tested with enable=false. */
-function fixture(enable = true) {
+function fixture(enable = true, riskMaxAgeMs = 1000, riskSpeechStyle = "detailed") {
   const clock = new Clock(), speech = new Speech(clock), vibration = new Vibration(clock), events = [];
   const manager = new AssistGuidanceManager({speech, vibration, now: clock.now, epochNow: clock.epochNow,
-    setTimer: clock.setTimer, clearTimer: clock.clearTimer});
+    setTimer: clock.setTimer, clearTimer: clock.clearTimer, riskMaxAgeMs, riskSpeechStyle});
   manager.subscribe(event => events.push(event)); manager.configure({voiceId: "Cherry", language: "zh-CN"});
   if (enable) { manager.setRiskEnabled(true); manager.setNavigationEnabled(true); }
   let frame = 0;
@@ -218,6 +219,22 @@ function fixture(enable = true) {
       return manager.ingestNavigation(navigationSnapshot(clock.epochNow(), overrides));
     }};
 }
+
+test("brief warnings cover uncommon classes and preserve the two-second and alert gates", () => {
+  const f = fixture(true, 2000, "brief");
+  f.clock.advance(3000);
+  f.risk([box({label: "chair", risk_level: "high", alert_priority: 3})], f.clock.now()-1500);
+  assert.equal(f.speech.requests[0].text, "警告，");
+  f.speech.start(); f.speech.end();
+  f.manager.stopRisk("test");
+  f.risk([box({label: "stairs", risk_level: "critical", alert_priority: 4})], f.clock.now()-2001);
+  assert.equal(f.speech.requests.length, 1);
+  f.risk([box({label: "stairs", alert_required: false, alert_priority: 0})]);
+  assert.equal(f.speech.requests.length, 1);
+  f.risk([box({label: "stairs", risk_level: "critical", alert_priority: 4})]);
+  assert.equal(f.speech.requests[1].text, "危险，");
+  f.manager.dispose();
+});
 
 // Functionality: Check explicit admission; Inputs: Both sources; Outputs: No output; Logic: Opt in separately; Constraints: No device grant.
 test("both automatic sources default disabled", function testDisabled() {
@@ -844,4 +861,67 @@ test("vibration cancellation failure retains ownership and cannot pause or repla
   f.clock.advance(1200); f.risk(); assert.deepEqual(f.vibration.attempts, [1]);
   f.manager.resume("vibration"); assert.equal(f.manager.paused.vibration, true);
   f.vibration.cancelFailure = false; f.manager.stopRisk(); f.manager.resume("vibration"); f.manager.dispose();
+});
+
+
+// Functionality: Distinguish grade labels from required output. Inputs: Existing flags. Outputs: Honest reason.
+// Logic: Inspect without scheduling. Constraints: No invented medium-risk announcement.
+test("risk speech diagnostics distinguish grade, alert flag and session", function testRiskSpeechReasons() {
+  const f=fixture(); assert.equal(f.manager.riskSpeechStatus().state,"idle");
+  f.manager.beginRisk("risk-session"); assert.equal(f.manager.riskSpeechStatus().state,"waiting");
+  f.risk([box({risk_level:"medium",alert_required:false})]);
+  assert.equal(f.manager.riskSpeechStatus().state,"no_alert");
+  assert.equal(f.manager.riskSpeechStatus().alert_count,0); assert.equal(f.speech.requests.length,0);
+  f.manager.setRiskEnabled(false); assert.equal(f.manager.riskSpeechStatus().state,"disabled"); f.manager.dispose();
+});
+
+// Functionality: Preserve exact capture freshness. Inputs: Expired/future/fresh timestamps. Outputs: Reasons.
+// Logic: No receipt-time refresh. Constraints: Diagnostics never submit or grant playback.
+test("risk speech diagnostics preserve one-second and future capture rejection", function testRiskSpeechDeadlines() {
+  const f=fixture(); f.risk([box()],f.clock.now()-1000);
+  assert.equal(f.manager.riskSpeechStatus().state,"stale"); assert.equal(f.manager.riskSpeechStatus().alert_count,1);
+  assert.equal(f.manager.riskSpeechStatus().capture_age_ms,1000); assert.equal(f.speech.requests.length,0);
+  f.risk([box()],f.clock.now()+1); assert.equal(f.manager.riskSpeechStatus().state,"stale");
+  f.risk([box()],f.clock.now()-999); assert.equal(f.manager.riskSpeechStatus().state,"preparing");
+  f.clock.advance(1); assert.equal(f.manager.riskSpeechStatus().state,"stale"); f.manager.dispose();
+});
+
+// Functionality: Distinguish scheduled/completed/paused speech. Inputs: Driver lifecycle. Outputs: Current state.
+// Logic: Respect sentence completion and start-based cooldown. Constraints: No audible-device claim.
+test("risk speech diagnostics track playback, cooldown and explicit pause", function testRiskSpeechOwnership() {
+  const f=fixture(); f.risk(); f.speech.start(); assert.equal(f.manager.riskSpeechStatus().state,"playing");
+  f.clock.advance(1100); assert.equal(f.manager.riskSpeechStatus().state,"playing");
+  f.risk(); f.speech.end(); assert.equal(f.manager.riskSpeechStatus().state,"cooldown");
+  f.manager.pause("speech","audio_context_interrupted");
+  assert.equal(f.manager.riskSpeechStatus().state,"paused");
+  assert.equal(f.manager.riskSpeechStatus().pause_reason,"audio_context_interrupted"); f.manager.dispose();
+});
+
+// Functionality: Publish expiry even when frames stop arriving. Inputs: One source and timer. Outputs: One transition.
+// Logic: Deduplicate by finite reason. Constraints: No repeated per-frame diagnostic event or capture rewrite.
+test("risk speech reason updates on expiry without flooding repeated frames", function testRiskSpeechTransition() {
+  const f=fixture(); f.risk([box({alert_required:false})]); f.risk([box({alert_required:false})]);
+  const notices=()=>f.events.filter(e=>e.phase==="risk_speech_state");
+  assert.equal(notices().filter(e=>e.reason==="no_alert").length,1);
+  f.clock.advance(1000); assert.equal(notices().at(-1).reason,"stale");
+  const prior=f.speech.requests.length; f.manager.describe(); f.manager.riskSpeechStatus();
+  assert.equal(f.speech.requests.length,prior); f.manager.dispose();
+});
+
+test("explicit two-second demo policy accepts delayed risk and expires before playback", () => {
+  const f = fixture(true, 2000);
+  f.clock.advance(2000);
+  f.risk([box()], f.clock.now() - 1500);
+  assert.equal(f.manager.riskSpeechStatus().state, "preparing");
+  assert.equal(f.speech.requests.length, 1);
+  f.speech.start();
+  assert.equal(f.manager.riskSpeechStatus().state, "playing");
+  f.manager.dispose();
+  const expired = fixture(true, 2000);
+  expired.clock.advance(2000);
+  expired.risk([box()], expired.clock.now() - 1950);
+  expired.clock.advance(50);
+  assert.equal(expired.manager.riskSpeechStatus().state, "stale");
+  assert.equal(expired.events.filter(event => event.phase === "output_start" && event.channel === "speech").length, 0);
+  expired.manager.dispose();
 });

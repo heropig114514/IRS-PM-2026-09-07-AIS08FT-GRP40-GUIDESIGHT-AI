@@ -8,7 +8,8 @@
  * fixture.manager.describe; fixture.manager.pause; fixture.manager.resume; fixture.advance;
  * testConstruction; testSynchronousGesture; testEnglish; testPrerequisites; testManualStart;
  * testUnrelatedError; testWatchdog; testCancelFailure; testStopIsolation; testReadinessRetention;
- * testReentrantEnd; testSynchronousError; testGateBeforeCancel; testDisposal; testObserverStop.
+ * testReentrantEnd; testSynchronousError; testGateBeforeCancel; testDisposal; testObserverStop;
+ * testInterruptedRecovery; testExplicitReplay; testNewerFailure; testFailedRecovery.
  * Variable Index: None. Fixture utterance bodies stay in test memory only.
  * Constraints: Synthetic start events test logic; they are never real PCM/audio acceptance evidence.
  */
@@ -42,7 +43,7 @@ function fixture(options = {}) {
     describe() { return {supported: this.supported, enabled: this.enabled, visible: this.visible,
       user_activated: this.activated, active_request: Boolean(this.current),
       engine_speaking: this.current?.started === true, engine_pending: Boolean(this.current && !this.current.started),
-      engine_paused: false, last_request: this.last && {...this.last}}; },
+      engine_paused: false, audio_context_state: state.contextState, last_request: this.last && {...this.last}}; },
     /* Functionality: Expose explicit voices. Inputs: Fixture inventory. Outputs: Copied entries.
      * Logic: Backend metadata is independently mutable. Constraints: No local synthesis or voice fallback. */
     voiceList() { return {accepted: true, voices: this.voices.map(voice => ({...voice}))}; },
@@ -272,4 +273,50 @@ test("an observer stopping queued setup prevents the synchronous driver submissi
   const f = fixture({observer(snapshot) { if (snapshot.state === "queued") activation.stop(); }});
   activation = f.activation; assert.equal(activation.activate().accepted, false);
   assert.equal(f.state.calls.length, 0); assert.equal(f.state.timers.size, 0);
+});
+
+/* Functionality: Verify interrupted audio cannot reuse historical readiness.
+ * Inputs: Completed calibration then explicit context interruption. Outputs: Gated state and new request.
+ * Logic: The state event remains effective after the completed request ID was retired.
+ * Constraints: No automatic replay or claimed audible result. */
+test("idle interruption retires readiness and explicit recovery waits for new PCM", function testInterruptedRecovery() {
+  const f = fixture({contextState:"running"}); f.activation.activate(); f.speech.start(); f.speech.end();
+  f.state.contextState = "interrupted"; f.speech.emit("interrupted", 1, "audio_context_interrupted");
+  assert.equal(f.activation.describe().ready, false); assert.equal(f.state.paused, true);
+  assert.equal(f.state.calls.length, 1); f.state.reason = "audio_context_interrupted";
+  f.activation.activate({replay:true, recover:true}); assert.equal(f.state.calls.length, 2);
+  assert.equal(f.state.paused, true); f.state.contextState = "running"; f.speech.start();
+  assert.equal(f.activation.describe().ready, true); assert.equal(f.state.paused, false);
+});
+
+/* Functionality: Verify the visible test remains useful after successful calibration.
+ * Inputs: Earlier completed playback and replay intent. Outputs: Exactly one new owned prompt.
+ * Logic: No dependence on future risks or permission callbacks. Constraints: Gesture fixture only. */
+test("explicit test replays even when historical activation was ready", function testExplicitReplay() {
+  const f=fixture(); f.activation.activate(); f.speech.start(); f.speech.end();
+  f.activation.activate({replay:true, recover:true});
+  assert.equal(f.state.calls.length,2); assert.equal(f.activation.describe().ready,false);
+  f.speech.start(); assert.equal(f.state.paused,false);
+});
+
+/* Functionality: Protect unrelated new failures during an explicit recovery.
+ * Inputs: Pause changed while calibration is queued. Outputs: New failure remains paused.
+ * Logic: Compare the captured pause reason only at matching PCM start.
+ * Constraints: Cancellation failures are never cleared by calibration. */
+test("recovery never clears newer or cancellation failures", function testNewerFailure() {
+  for (const reason of ["audio_context_interrupted", "cancel_failed"]) {
+    const f=fixture({paused:true, reason}); f.activation.activate({replay:true, recover:true});
+    f.state.reason="cancel_failed"; f.speech.start();
+    assert.equal(f.state.paused,true); assert.equal(f.state.reason,"cancel_failed");
+  }
+});
+
+/* Functionality: Keep a failed explicit test from releasing the channel.
+ * Inputs: Prior success then provider rejection. Outputs: Failed activation with no retry.
+ * Logic: Revoke historical readiness before submission. Constraints: Synthetic provider failure. */
+test("failed repeat calibration cannot retain old readiness", function testFailedRecovery() {
+  const f=fixture(); f.activation.activate(); f.speech.start(); f.speech.end();
+  f.speech.synchronous="error"; f.activation.activate({replay:true,recover:true});
+  assert.equal(f.activation.describe().ready,false); assert.equal(f.state.paused,true);
+  assert.equal(f.state.calls.length,2); assert.equal(f.state.timers.size,0);
 });

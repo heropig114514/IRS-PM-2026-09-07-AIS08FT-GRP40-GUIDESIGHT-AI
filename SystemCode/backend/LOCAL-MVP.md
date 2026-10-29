@@ -1,5 +1,9 @@
 # Local MVP Integration and Deployment
 
+For a fresh teammate setup, start with [Local low-latency quickstart](LOCAL-QUICKSTART.md).
+Its `tools/local_demo.py` entry prepares explicit environments/checkpoints and reuses the
+supervisors below; it does not require this author's environment paths or a public relay.
+
 When the phone and computer are not on the same local network, the phone can reach the same local unified entry through the existing public HTTPS guest relay. See [Phone MVP](PHONE-MVP.md) for preparation, startup, and shutdown.
 
 ## Unified Navigation and Perception Entry
@@ -52,6 +56,16 @@ The first tool uses real Chrome, MCP, and Chinese speech. GPS/ORS use explicit f
 
 ## Default Offline Mode
 
+Native depth can explicitly select the verified FP32 TensorRT implementation through
+`PRS_DEPTH_BACKEND` and `PRS_DEPTH_ENGINE_MANIFEST`; see [Depth deployment](DEPTH-EXPORT.md).
+Prepare the optional GPU dependency and exact input-shape artifacts before startup. The handshake,
+health response and result metadata identify depth separately from detection. Missing/stale engines
+or unsupported shapes fail explicitly. An unconfigured service continues to use native Torch.
+The PRF2 worker also accepts explicit `PRS_DEPTH_FUSION=host` in same-frame depth mode A.
+`PRS_DETECTION_MODEL=yolo26n-walk` selects the optional 87-class detector independently; the
+original `yolo26n` and GPU fusion remain the unconfigured defaults. The launcher, worker health
+and static service probe use the selected detector manifest, not a hard-coded COCO identity.
+
 The default algorithm remains dual-model mode A. See [distance modes](DISTANCE-MODES.md) for environment variables, startup, and output compatibility when explicitly selecting geometric mode B or low-frequency depth mode C. The dual-model requirements below apply to default A; B does not require depth weights.
 
 This stage integrates the camera/local video, algorithm results, browser alerts, and navigation examples on one computer. The integration layer adapts protocols, processes, and session lifecycle without changing detection/depth models, tracking association, distance/motion estimates, TTC, or risk rules. HF, ORS, and DashScope are not part of this local inference loop. See [ZeroGPU](ZEROGPU.md) for public-cloud mode configuration and the [operations guide](deploy/README.md) for deployment.
@@ -94,7 +108,7 @@ $localPython = 'C:\Users\Kolosin\.cache\codex-runtimes\codex-primary-runtime\dep
 .\.venv-inference\Scripts\python.exe -m pip check
 ```
 
-`requirements-inference.txt` separately pins native inference dependencies. Do not mix it with `requirements-vision-build.txt` (Torch 2.5.1/Torchvision 0.20.1), which is used for offline export. `requirements-depth.txt` remains for existing combined-model tests and is not the dependency manifest for the new pure-GPU service environment. See [PyTorch previous versions](https://pytorch.org/get-started/previous-versions/) for official installation commands. The local GPU is an NVIDIA RTX 5070 Ti Laptop GPU with 12 GB VRAM; capacity alone does not prove model throughput or latency.
+`requirements-inference.txt` separately pins native inference dependencies. Do not mix it with `requirements-vision-build.txt` (Torch 2.5.1/Torchvision 0.20.1), which is used for offline export. `requirements-depth.txt` remains for existing combined-model tests and is not the dependency manifest for the new pure-GPU service environment. See [PyTorch previous versions](https://pytorch.org/get-started/previous-versions/) for official installation commands. Inspect the actual target GPU during preflight; hardware and measurements belong in each run's report, not a shared machine-specific assumption.
 
 Place the explicitly downloaded official `v8.4.0` weights in `SystemCode/backend/models/`. The service never downloads or switches models automatically.
 
@@ -171,6 +185,76 @@ The offline MVP wrapper still blocks `/maps/`, and the launcher still clears ext
 
 ## Continuous Local Video Entry
 
+### Local demo preparation and browser validation
+
+For this workstation's already prepared TensorRT environment, select its interpreter explicitly
+instead of copying or silently substituting the standard `.venv-inference` environment. The
+launcher retains the same package/CUDA/checkpoint/port checks and still owns two separate
+processes. A custom interpreter can share installed dependencies; it does not imply package
+isolation. From `backend`:
+
+```powershell
+$env:PRS_DETECTION_MODEL = 'yolo26n'
+$env:PRS_DEPTH_BACKEND = 'tensorrt'
+$env:PRS_DEPTH_ENGINE_MANIFEST = 'models/experiments/depth-serving-fp32/manifest.json'
+$env:PRS_DEPTH_FUSION = 'host'
+.\.venv\Scripts\python.exe -B -m tools.run_local_mvp --inference-python .venv/depth-export/Scripts/python.exe --check
+.\.venv\Scripts\python.exe -B -m tools.run_local_mvp --inference-python .venv/depth-export/Scripts/python.exe --log-dir .venv/tmp/demo-server
+```
+
+Run the supervisor in a terminal and keep it open; Ctrl+C stops only its owned children. Missing
+interpreters, pins, weights or engines remain errors; the option does not install or fall back.
+The engine bundle is bound to this GPU/runtime and current depth weights. Another machine needs
+its own validated artifacts. Do not start a second supervisor on occupied ports.
+
+Use the independent `/integration/video/` entry for an offline perception demo. Prepare the
+selected model/backend before opening the page. A listening HTTP service is not a warmed model:
+the first submitted image can include Python imports, model activation and graph preparation.
+The video deliberately continues at 1x while that image is processed; a short clip can reach EOF
+before the first result arrives. Run one explicit preparation session, stop it or let it finish,
+wait for `/integration/status/` to report `ready=true`, `busy=false` and `accept_available=true`,
+then reselect the original video and start the demonstration. Do not hide this preparation cost
+in a cold-start performance claim. Stop closes the browser session immediately; native work
+already running on the GPU may finish before a new session can be admitted.
+
+The local browser fixtures are `model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4`
+and `MOT17-10-FRCNN-browser-h264.mp4` in the same directory. These explicitly transcoded public
+day/night fixtures are distinct files from the original raw-video numerical benchmarks. The
+page shows their native playback, returned annotation and actual structured object list.
+Reselect a completed file; the application does not rewind or restart it automatically.
+
+Before starting, the display-mode selector offers the original twelve-job admission window and
+a three-job low-latency demo window. The original setting remains the default. The chosen limit
+is frozen for that session and appears as `pendingLimit` in source statistics. A smaller window
+reduces queued work; it can change delivered throughput and which source frames are captured.
+It never discards a submitted frame to improve latency or changes the model, precision, input
+resolution or source clock. Compare its latency and source coverage as a separate policy
+experiment, not a model Forward improvement. Camera and unified-page defaults stay unchanged.
+
+The browser validator now records three independent sessions: startup, manual stop, and complete
+EOF playback. It checks worker release, result-panel dimensions/counts, control unlocking and
+actual native speech events, and saves a screenshot after EOF outside the timed interval:
+
+```powershell
+$env:PRS_PLAYWRIGHT_PATH = '<absolute path to installed Playwright package>'
+node ../frontend/tools/check_local_video_browser.mjs http://127.0.0.1:8766/integration/video/ `
+  benchmarks/NEW_DEMO.json model_tests/datasets/street-video/mot17/MOT17-07-FRCNN-browser-h264.mp4 --headed
+```
+
+Omit `--headed` for consistent automated comparison runs. Both modes execute the actual page,
+codec, WebSocket, native GPU pipeline, returned JPEG decoder and DOM rendering; neither replaces
+model responses. Compare model selections separately and retain all source skips, sampled PTS,
+pending counts and frame latencies. Browser playback does not capture identical frame sets across
+runs. The 10 FPS / maximum 500 ms capture-to-decode gate remains separate from functional
+completion and from the existing capture-to-alert target. Inspect actual speech-start durations
+and unstarted/cancelled requests separately. Capture-to-decode timing and screenshots do not measure physical screen paint or
+speaker audibility. Physical-camera, mobile-device and external navigation validation are separate.
+Add `--pending-limit 3` to exercise the actual low-latency selector; `--pending-limit 12` explicitly
+selects the original control. The tool still records every presented/admitted/delivered count.
+
+The [local browser demo report](benchmarks/2026-10-28/demo-browser/summary.json) retains the explicit
+configuration comparisons, initial failures, screenshots and preparation boundaries.
+
 The independent entry is `http://127.0.0.1:8766/integration/video/` and runs under the same launcher. Select a video file on the computer and explicitly start playback. The page decodes locally in the browser using File/Blob and HTMLVideo. It does not request computer-camera permission, use a fake camera, or upload the entire video file. Only captured JPEG frames and original PRF2 metadata enter the existing dual-model inference path through the same-origin WebSocket. Confirm that the selected file actually plays in the browser; the MP4 extension alone does not prove decodability. The page does not transcode or replace media implicitly.
 
 The new page reuses `LiveDetectionClient`, `FramePipeline.dispatch/drain`, Guidance, and native speech/vibration output. Camera `FramePipeline.run`, `camera.js`, and `local-mvp.js` are not rewritten for video input. To receive alerts, users must still enable Guidance and the relevant output and explicitly choose a matching local voice.
@@ -179,7 +263,7 @@ The video page uses a separate TTC/risk-level speech policy. It considers only t
 
 The video entry lets an already-started alert finish naturally; a short empty alert or an expired latest source frame does not truncate a sentence already playing. Higher-level risk can still interrupt immediately. This policy does not extend source-frame validity: not-yet-started expired requests are still cancelled, expired results create no new alert, and old targets are neither queued nor replayed. Stop, disabling Guidance, hiding the page, errors, and video completion still clear owned output; vibration policy is unchanged. Speech acceptance separately checks start, full completion, and cancellation; counting starts alone does not prove complete announcements. Camera default speech and actual navigation are unaffected; video is accepted independently and needs no navigation input.
 
-Video plays at native 1× and uses `requestVideoFrameCallback` to observe new media PTS; identical PTS values are not captured again. The 30 FPS input cap remains, and the 12-frame budget includes frames currently being encoded; the first frame is exclusive. Size 640, confidence 0.25, JPEG quality 0.8, native FP32, 55-second session/first-frame budgets, and 10-second subsequent-frame budget remain. Low-frame-rate video does not create 30 new frames by repeating the same image. Source frames that are not admitted because of the cap, first-frame wait, or full in-flight budget are counted separately as uncollected observations, not as inference requests captured and dropped. Video continues at 1× during cold loading, and source-PTS jumps after the first frame are preserved.
+Video plays at native 1× and uses `requestVideoFrameCallback` to observe new media PTS; identical PTS values are not captured again. The 30 FPS input cap remains, and the selected budget (default12, explicit low-latency3) includes frames currently being encoded; the first frame is exclusive. Size 640, confidence 0.25, JPEG quality 0.8, native FP32, 55-second session/first-frame budgets, and 10-second subsequent-frame budget remain. Low-frame-rate video does not create 30 new frames by repeating the same image. Source frames that are not admitted because of the cap, first-frame wait, or full in-flight budget are counted separately as uncollected observations, not as inference requests captured and dropped. Video continues at 1× during cold loading, and source-PTS jumps after the first frame are preserved.
 
 When the image is actually drawn to the capture canvas, `performance.now()` is recorded as PRF2 `capturedAt`, which the original algorithm uses for distance history, relative speed, and TTC. Media PTS, `presentedFrames`, and capture intervals are recorded only as observations. Media PTS is not substituted for algorithm time, and algorithm speed-estimation rules do not change. During natural 1× playback, capture intervals approximately represent elapsed source motion, but decoding stalls, browser scheduling, or cold loading can make them diverge. Reports preserve media-time intervals, capture-time intervals, and their drift separately; this replay path does not validate ground-truth speed, metric distance, or TTC accuracy.
 

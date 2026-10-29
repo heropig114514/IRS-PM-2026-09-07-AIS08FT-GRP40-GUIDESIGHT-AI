@@ -1,21 +1,22 @@
 /**
  * Responsibilities: Manage camera permission, explicit Echo/HF/local-CUDA transport, phase timing, and observable lifecycle.
- * Implementation: 640-pixel maximum edge and JPEG 0.8; after the first HF/local frame completes, capture at up to 30 FPS with a 12-frame limit and ordered display; any error stops processing and retains its browser error name for semantic status reporting.
+ * Implementation: 640-pixel maximum edge and JPEG 0.8; explicit page profiles retain the original 30 FPS/12-frame ceiling or admit one local camera frame at a time; ordered display and capture quality remain unchanged; any error stops processing and retains its browser error name for semantic status reporting.
  * Related Modules: index.html, echo-client.js, live-detection-client.js,
  * frame-pipeline.js, scene-client.js, integration/local-mvp.js; core.echo/hf_video_relay/integration.asgi;
  * tools/benchmark_phone_browser.mjs validates the real page; fixture input is not physical phone-camera evidence.
- * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; processingPath; encodeJpeg; encodeJpeg.encode;
+ * Declaration Index: SCENE_MAX_AGE_MS; cameraApp; captureProfile; processingPath; encodeJpeg; encodeJpeg.encode;
  * encodeJpeg.encode.ready;
  * CameraApp; CameraApp.constructor; CameraApp.apiUrl; CameraApp.setStatus; CameraApp.handleDisconnect;
  * CameraApp.handleProcessingChange; CameraApp.start; CameraApp.capture; CameraApp.showFrame; CameraApp.testPing;
  * CameraApp.runPipeline; CameraApp.runPipeline.display;
  * CameraApp.runPipeline.frame; CameraApp.runPipeline.sent; CameraApp.runPipeline.active;
+ * CameraApp.runPipeline.bufferedBytes;
  * CameraApp.publishFrame; CameraApp.handleSessionEnd;
  * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide.
- * Variable Index: MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
- * PROCESSING_PATHS — the three explicit WebSocket modes; app — page controller; frameTimings — first-frame and bounded aggregate statistics;
+ * Variable Index: resultTransport selects an explicit annotated or source-bound compact result; annotationCanvas draws server boxes on the exact retained frame; CAPTURE_PROFILES contains immutable standard, low-latency-1 and low-latency-2 settings; cameraProfile is explicit page policy; sessionCaptureProfile freezes it before permission; MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
+ * PROCESSING_PATHS — the four explicit WebSocket modes; app — page controller; frameTimings — first-frame and bounded aggregate statistics;
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs and creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
  * aggregate only steady-state frames with pipeline scheduling observations; serial Echo frames without observations are not counted as zero;
  * SCENE_MAX_AGE_MS — maximum age for scene-description frame/detection reuse; lastFrame/lastDetection retain only the latest
@@ -25,6 +26,10 @@
  * localDeviceId — device explicitly selected in the local UI; localFacingMode — null by default, with the integrated entry optionally requesting the rear camera using environment;
  * if both are set, explicit deviceId takes precedence; invalid non-null facing modes are rejected. localOnly prevents the local MVP from starting HF accidentally; sessionId identifies result lifecycle;
  * localSessionSeconds defaults to 55; the separate integration entry may set null for a continuous local session; HF does not accept this option.
+ * CAPTURE_PROFILES — original and explicit two/three-job five/ten/thirty-FPS policies; cameraProfile is page-selected;
+ * sessionCaptureProfile is an immutable snapshot taken before camera permission, used only by local mode.
+ * frameTimings.transportAdmissionFrames/transportWaitTotalMs/transportWaitMaxMs/transportWaitFrames/
+ * transportQueuedMaxBytes aggregate observed browser queue waits separately from returned-frame latency.
  */
 import { EchoClient, MAX_FRAME_BYTES } from "./echo-client.js";
 import { LiveDetectionClient } from "./live-detection-client.js";
@@ -34,9 +39,30 @@ const MAX_EDGE = 640;
 const JPEG_QUALITY = 0.8;
 const METRICS_LOG_INTERVAL_MS = 5000;
 export const SCENE_MAX_AGE_MS = 1000;
-const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/", local: "./ws/detect/local/"};
+const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/", resident: "./ws/detect/resident/",
+  local: "./ws/detect/local/"};
+const CAPTURE_PROFILES = Object.freeze({
+  standard: Object.freeze({rate: 30, maxPending: 12}),
+  "bounded-2": Object.freeze({rate: 30, maxPending: 2}),
+  "bounded-3": Object.freeze({rate: 30, maxPending: 3}),
+  "responsive-2": Object.freeze({rate: 10, maxPending: 2}),
+  "responsive-3": Object.freeze({rate: 10, maxPending: 3}),
+  "conservative-2": Object.freeze({rate: 5, maxPending: 2}),
+  "conservative-3": Object.freeze({rate: 5, maxPending: 3}),
+  "low-latency-1": Object.freeze({rate: 30, maxPending: 1}),
+  "low-latency-2": Object.freeze({rate: 30, maxPending: 2}),
+});
 
-/** Functionality: Resolve one of the three explicitly supported processing modes.
+/** Functionality: Resolve an explicit camera admission profile before acquiring media.
+ * Inputs: Exact profile name. Outputs: Frozen cadence and in-flight bound, or an error.
+ * Logic: Preserve standard throughput; one-slot local capture waits for the previous result before sampling.
+ * Constraints: No automatic downgrade, discarded submitted frame, model/image change or relaxed risk deadline. */
+export function captureProfile(name) {
+  if (!Object.hasOwn(CAPTURE_PROFILES, name)) throw new Error("摄像头采样配置无效。");
+  return CAPTURE_PROFILES[name];
+}
+
+/** Functionality: Resolve one of the four explicitly supported processing modes.
  * Inputs: processing enum. Outputs: fixed relative WS path; unknown values throw.
  * Logic: explicit allowlist rejects retired modes before camera authorization.
  * Constraints: no HTTP detector or automatic provider substitution. */
@@ -93,6 +119,10 @@ export class CameraApp {
     this.listeners = new Set();
     this.localDeviceId = "";
     this.localFacingMode = null;
+    this.cameraProfile = document.documentElement?.dataset?.cameraProfile || "standard";
+    this.sessionCaptureProfile = captureProfile("standard");
+    this.resultTransport = document.documentElement?.dataset?.cameraResultTransport || "annotated-jpeg";
+    this.annotationCanvas = null;
     this.localOnly = document.documentElement?.dataset?.localMvp === "true";
     this.localSessionSeconds = 55;
     this.sessionId = null;
@@ -141,9 +171,11 @@ export class CameraApp {
     return url;
   }
   /** Functionality: Show third-party image-processing and wait-budget notice. Inputs: current processing mode.
-   * Outputs: Notice visibility; Logic: visible only for hf; Constraints: no network or permission request. */
+   * Outputs: Notice visibility; Logic: show independent HF and resident notices; Constraints: no network or permission request. */
   handleProcessingChange() {
     document.getElementById("hf-note").hidden = this.processing.value !== "hf";
+    const residentNote = document.getElementById("resident-note");
+    if (residentNote) residentNote.hidden = this.processing.value !== "resident";
   }
   /** Functionality: Update status and action boundaries. Inputs: text and kind. Outputs: DOM updates.
    * Logic: mode determines control availability; Constraints: render textContent only, never insert HTML. */
@@ -173,11 +205,12 @@ export class CameraApp {
   }
   /** Functionality: Request camera access and use the explicitly selected mode. Inputs: localDeviceId, localFacingMode, facingMode, processing, and browser media APIs.
    * Outputs: Local video, returned image, round-trip timings, and post-first-frame completion rate.
-   * Logic: Clear prior failure state, preserve one in-flight job, and use the selected processing mode. HF/local modes share the 30 FPS/12-job pipeline. For local mode, explicit deviceId wins; otherwise only an entry that explicitly sets environment may request the rear camera.
+   * Logic: Clear prior failure state; snapshot the explicit local capture policy before permission;
+   * HF/resident retain 30 FPS/12 jobs. For local mode, explicit deviceId wins; otherwise only an entry that explicitly sets environment may request the rear camera.
    * Check facingMode constraint support before requesting rear-camera permission; pass localSessionSeconds locally while HF retains exact-camera behavior.
    * Constraints: Require exact camera selection; fail if unsupported or no rear camera exists, with no front/default-camera fallback.
    * Detection failure stops processing without mode switching or automatic permission retry; never discard sent frames to inflate rate.
-   * Without a fixed delay there is no 10 FPS guarantee; timing begins before drawImage and is not sensor exposure or final screen-render time. */
+   * Configured cadence is an input ceiling, not guaranteed delivered FPS; timing begins before drawImage and is not sensor exposure or final screen-render time. */
   async start() {
     if (this.mode !== "idle") return;
     this.lastErrorType = null;
@@ -191,6 +224,9 @@ export class CameraApp {
     try {
       const processing = this.processing.value;
       const path = processingPath(processing);
+      this.sessionCaptureProfile = captureProfile(processing === "local" ? this.cameraProfile : "standard");
+      const resultTransport = processing === "local" ? this.resultTransport : "annotated-jpeg";
+      if (!["annotated-jpeg", "metadata-v1"].includes(resultTransport)) throw new Error("视频结果传输配置无效。");
       if (this.localOnly && processing === "hf") throw new Error("本地 MVP 不允许调用 Hugging Face。");
       if (processing === "local" && this.localFacingMode !== null && this.localFacingMode !== "environment")
         throw new Error("本地摄像头方向配置无效，仅支持明确指定后置摄像头。");
@@ -229,7 +265,7 @@ export class CameraApp {
       url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const client = processing !== "echo"
         ? new LiveDetectionClient(url.href, this.handleDisconnect, this.handleSessionEnd,
-          {provider: processing, ...(processing === "local" ? {localSessionSeconds: this.localSessionSeconds} : {})})
+          {provider: processing, resultTransport, ...(processing === "local" ? {localSessionSeconds: this.localSessionSeconds} : {})})
         : new EchoClient(url.href, this.handleDisconnect);
       this.client = client;
       this.cameraPhase = "connect";
@@ -240,14 +276,15 @@ export class CameraApp {
       this.setStatus(processing !== "echo" ? "正在检测" : "正在回传", "live");
       this.image.alt =
         processing !== "echo"
-          ? "服务端 YOLO26 标注的摄像头图像"
+          ? "基于服务端 YOLO26 检测结果标注的摄像头图像"
           : "服务端原样返回的摄像头图像";
       document.getElementById("verified").textContent =
         processing !== "echo" ? "YOLO26 标注" : "字节一致 ✓";
       this.message.textContent =
         processing !== "echo"
-          ? processing === "local" ? "YOLO26n 本地 CUDA 检测 80 类；图像仅发送本机服务。"
-            : "YOLO26n 检测 80 类；Hugging Face ZeroGPU 返回标注图像。"
+          ? (processing === "resident" ? "YOLO26n 检测 80 类；常驻 GPU 服务返回标注图像。"
+            : processing === "local" ? "YOLO26n 本地 CUDA 检测 80 类；图像只发送到本机服务。"
+              : "YOLO26n 检测 80 类；Hugging Face ZeroGPU 返回标注图像。")
           : "每帧均经过服务端原样回传，字节校验通过后显示。";
       let sent = 0;
       let received = 0;
@@ -291,11 +328,12 @@ export class CameraApp {
       if (token === this.generation) this.handleDisconnect(error);
     }
   }
-  /** Functionality: Run the selected HF/local session without serial capture/response/display waits.
+  /** Functionality: Run the selected detection session with overlapped capture/response/display.
    * Inputs: client, processing snapshot, generation token. Outputs: pipeline completion/exception.
    * Logic: sender admits before capture; result subscribers/HUD retain original capture time and generation guards;
    * controller stop cancels the instance, and LiveDetectionClient owns provider end/error semantics.
-   * Constraints: twelve total jobs, first frame alone,30FPS input ceiling; no retry or automatic next session. */
+   * Constraints: frozen explicit cadence and at most twelve total jobs; first frame alone;
+   * no retry, mid-session adaptation or automatic next session. */
   async runPipeline(client, processing, token) {
     const app = this;
     /** Functionality: Decode the next ordered annotation. Inputs: bytes, metadata.
@@ -323,8 +361,13 @@ export class CameraApp {
     /** Functionality: Check ownership. Inputs: generation token. Outputs: boolean.
      * Logic: stopped/older operations cannot update this camera session. Constraints: no auto-resume. */
     function active() { return token === app.generation; }
+    /** Functionality: Read native outbound bytes before camera acquisition. Inputs: current client.
+     * Outputs: unsent byte count. Logic: the client validates connection state.
+     * Constraints: send-queue admission is separate from result/display credits and RTT. */
+    function bufferedBytes() { return client.bufferedBytes(); }
     this.pipeline = new FramePipeline({client, capture: this.capture.bind(this), display,
-      onFrame: frame, onSent: sent, isActive: active, onFailure: this.handleDisconnect});
+      onFrame: frame, onSent: sent, isActive: active, onFailure: this.handleDisconnect,
+      ...this.sessionCaptureProfile, bufferedBytes});
     this.cameraPhase = "pipeline";
     await this.pipeline.run();
   }
@@ -344,7 +387,7 @@ export class CameraApp {
     document.getElementById("size").textContent = (inputBytes / 1024).toFixed(1);
     document.getElementById("fps").textContent = steadyFps === null ? "—" : steadyFps.toFixed(1);
   }
-  /** Functionality: Release camera after an explicit bounded detector session end.
+  /** Functionality: Release camera after an explicit detection session end.
    * Inputs: active controller/client state. Outputs: stopped media and visible completed-session state.
    * Logic: stop admission, drain already-validated display, then release; user starts another session.
    * Constraints: forced stop/error still cancels promptly; no automatic GPU allocation. */
@@ -359,9 +402,7 @@ export class CameraApp {
     this.emit({type: "ended", sessionId: this.sessionId});
     this.stop();
     this.setStatus("本次视频会话已结束");
-    this.message.textContent = this.processing.value === "local"
-      ? "本地视频会话已结束并释放资源。再次点击开始可开启新会话。"
-      : "ZeroGPU 视频会话已结束并释放资源。再次点击开始可开启新会话。";
+    this.message.textContent = "视频会话已结束并释放资源。再次点击开始可开启新会话。";
   }
   /** Functionality: Capture JPEG while preserving aspect ratio. Inputs: Current video frame. Outputs: ArrayBuffer.
    * Logic: Limit the maximum edge to 640 pixels; resize the canvas only when dimensions change, then encode the frame.
@@ -406,7 +447,7 @@ export class CameraApp {
     return Array.isArray(boxes) ? boxes : [];
   }
   /** Functionality: Display a server JPEG validated for the current mode. Inputs: bytes, token, optional dimensions metadata.
-   * Outputs: Image decoding and URL lifecycle. Logic: HF also verifies actual naturalWidth/Height; finally release the prior frame.
+   * Outputs: Image decoding and URL lifecycle. Logic: detection modes also verify actual naturalWidth/Height; finally release the prior frame.
    * Constraints: Decode/dimension failure stops processing; never display stale frames after generation changes; this does not prove final screen rendering. */
   async showFrame(bytes, token, dimensions = null) {
     const previous = this.objectUrl;
@@ -420,6 +461,31 @@ export class CameraApp {
       if (dimensions && (this.image.naturalWidth !== dimensions.width ||
           this.image.naturalHeight !== dimensions.height))
         throw new Error("视频图像尺寸与检测结果不匹配。");
+        if (dimensions?.result_transport === "metadata-v1" &&
+            document.documentElement.dataset.cameraDisplay !== "live-overlay") {
+          this.annotationCanvas ??= document.createElement("canvas");
+          const canvas = this.annotationCanvas;
+          canvas.width = dimensions.width; canvas.height = dimensions.height;
+          const context = canvas.getContext("2d");
+          context.drawImage(this.image, 0, 0);
+          context.lineWidth = 2; context.font = "14px sans-serif";
+          for (const box of dimensions.boxes) {
+            const [x1, y1, x2, y2] = box.xyxy;
+            context.strokeStyle = box.alert_required ? "#ff7043" : "#00ff8c";
+            context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            const label = `${box.label}${Number.isFinite(box.distance_m) ? ` ${box.distance_m.toFixed(1)} m` : ""}`;
+            const top = Math.max(0, y1 - 18);
+            context.fillStyle = "#102019"; context.fillRect(x1, top, Math.min(canvas.width - x1, context.measureText(label).width + 6), 18);
+            context.fillStyle = "#ffffff"; context.fillText(label, x1 + 3, top + 14, canvas.width - x1 - 3);
+          }
+          const annotation = await encodeJpeg(canvas);
+          if (token !== this.generation) return;
+          const sourceUrl = this.objectUrl;
+          this.objectUrl = URL.createObjectURL(annotation); this.image.src = this.objectUrl;
+          URL.revokeObjectURL(sourceUrl);
+          await this.image.decode();
+          if (token !== this.generation) return;
+        }
       this.image.hidden = false;
       document.getElementById("echo-placeholder").hidden = true;
       document.getElementById("verified").hidden = false;
@@ -429,7 +495,8 @@ export class CameraApp {
   }
   /** Functionality: Aggregate one frame's phase timings and return completion rate after the first frame.
    * Inputs: processing mode; timing.capture/transport/renderQueue/decode, capture-to-result/decode milliseconds, and completedAt;
-   * the pipeline may supply pacingLateMs/creditWaitMs to distinguish late timers from bounded credit waits.
+   * the pipeline may supply pacingLateMs/creditWaitMs and transportWaitMs/transportQueuedBytes
+   * to distinguish late timers, bounded credits and browser send-buffer waits.
    * Outputs: null for the first frame or a non-positive clock interval; otherwise completion FPS. Emit summaries initially and every five seconds.
    * Logic: Retain full first-frame timing; later frames update only count, sum, and maximum, not image history or an unbounded timing list.
    * Completion FPS counts frames from first-frame completion through the current frame, includes later pauses, and does not exclude slow frames.
@@ -444,6 +511,8 @@ export class CameraApp {
         captureToResultMaxMs: 0, captureToDecodedMaxMs: 0,
         pacingFrames: 0, pacingLateTotalMs: 0, pacingLateMaxMs: 0,
         creditWaitTotalMs: 0, creditWaitMaxMs: 0, creditWaitFrames: 0,
+        transportAdmissionFrames: 0, transportWaitTotalMs: 0, transportWaitMaxMs: 0,
+        transportWaitFrames: 0, transportQueuedMaxBytes: 0,
       };
       this.reportFrameTimings("first_frame");
       return null;
@@ -465,6 +534,13 @@ export class CameraApp {
       metrics.creditWaitMaxMs = Math.max(metrics.creditWaitMaxMs, timing.creditWaitMs);
       if (timing.creditWaitMs > 0) metrics.creditWaitFrames += 1;
     }
+    if (Number.isFinite(timing.transportWaitMs) && Number.isFinite(timing.transportQueuedBytes)) {
+      metrics.transportAdmissionFrames += 1;
+      metrics.transportWaitTotalMs += timing.transportWaitMs;
+      metrics.transportWaitMaxMs = Math.max(metrics.transportWaitMaxMs, timing.transportWaitMs);
+      metrics.transportQueuedMaxBytes = Math.max(metrics.transportQueuedMaxBytes, timing.transportQueuedBytes);
+      if (timing.transportQueuedBytes > 0) metrics.transportWaitFrames += 1;
+    }
     if (timing.completedAt - metrics.lastReportAt >= METRICS_LOG_INTERVAL_MS)
       this.reportFrameTimings("periodic");
     const elapsed = timing.completedAt - metrics.first.completedAt;
@@ -472,7 +548,7 @@ export class CameraApp {
   }
   /** Functionality: Emit bounded aggregate statistics. Inputs: reason and instance frameTimings.
    * Outputs: One console.info entry. Logic: Report first frame separately from steady-state mean/max latency and completion FPS, then update log time;
-   * when scheduling observations exist, report bounded mean/max and credit-wait frame count; otherwise use null.
+   * when scheduling/send-buffer observations exist, report separate bounded aggregates; otherwise use null.
    * Constraints: Emit nothing without frames; mean is not P95; decode completion does not prove screen presentation; do not retry or trigger inference.
    */
   reportFrameTimings(reason) {
@@ -487,6 +563,7 @@ export class CameraApp {
         renderQueue: metrics.first.renderQueueMs, decode: metrics.first.decodeMs,
         captureToResult: metrics.first.captureToResultMs,
         captureToDecoded: metrics.first.captureToDecodedMs,
+        sendQueueWait: metrics.first.transportWaitMs ?? null,
       },
       steadyFrames: count, steadyFps: count && elapsed > 0 ? count * 1000 / elapsed : null,
       steadyMeanMs: count ? {
@@ -501,6 +578,11 @@ export class CameraApp {
         pacingLateMaxMs: metrics.pacingLateMaxMs, creditWaitFrames: metrics.creditWaitFrames,
         creditWaitMeanMs: metrics.creditWaitTotalMs / metrics.pacingFrames,
         creditWaitMaxMs: metrics.creditWaitMaxMs,
+      } : null,
+      steadySendQueue: metrics.transportAdmissionFrames ? {
+        frames: metrics.transportAdmissionFrames, waitedFrames: metrics.transportWaitFrames,
+        waitMeanMs: metrics.transportWaitTotalMs / metrics.transportAdmissionFrames,
+        waitMaxMs: metrics.transportWaitMaxMs, queuedMaxBytes: metrics.transportQueuedMaxBytes,
       } : null,
     });
     metrics.lastReportAt = metrics.lastCompletedAt;

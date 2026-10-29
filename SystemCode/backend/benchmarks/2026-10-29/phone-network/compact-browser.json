@@ -1,0 +1,713 @@
+{
+  "profile": "low-latency-1",
+  "result_transport": "metadata-v1",
+  "requested_frames": 8,
+  "source": "public detection-sample.jpg canvas camera; real remote GPU",
+  "physical_phone": false,
+  "errors": [],
+  "probe_calibration_control": true,
+  "selected_profile": "low-latency-1",
+  "selected_transport": "metadata-v1",
+  "fixture_sha256": "24a8dafbdd5d2e57839c9ff2d44399461ceb6d7f622c688473dd49ee219b6311",
+  "evidence": {
+    "frames": [
+      {
+        "index": 0,
+        "capture_age_ms": 1481.2999999970198,
+        "server_ms": 228.95749998860992,
+        "inference_ms": 139.999999984866,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5268,
+        "worker_packet_bytes": 98812,
+        "transport_ms": 1431.5,
+        "capture_ms": 30.5,
+        "decode_ms": 18,
+        "render_queue_ms": 0.10000000149011612,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 1,
+        "capture_age_ms": 746.5,
+        "server_ms": 32.20230000442825,
+        "inference_ms": 15.000000013969839,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5267,
+        "worker_packet_bytes": 98811,
+        "transport_ms": 722.3999999985099,
+        "capture_ms": 11.5,
+        "decode_ms": 12.100000001490116,
+        "render_queue_ms": 0,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 2,
+        "capture_age_ms": 746.8999999985099,
+        "server_ms": 32.080300006782636,
+        "inference_ms": 0,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5249,
+        "worker_packet_bytes": 98793,
+        "transport_ms": 720.3999999985099,
+        "capture_ms": 11.899999998509884,
+        "decode_ms": 14.200000002980232,
+        "render_queue_ms": 0,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 3,
+        "capture_age_ms": 944.6000000014901,
+        "server_ms": 63.72720000217669,
+        "inference_ms": 16.00000000325963,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5294,
+        "worker_packet_bytes": 100077,
+        "transport_ms": 924.2999999970198,
+        "capture_ms": 7.600000001490116,
+        "decode_ms": 12.399999998509884,
+        "render_queue_ms": 0,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 4,
+        "capture_age_ms": 777.5,
+        "server_ms": 82.74340000934899,
+        "inference_ms": 32.00000000651926,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5295,
+        "worker_packet_bytes": 100078,
+        "transport_ms": 757.2999999970198,
+        "capture_ms": 6.700000002980232,
+        "decode_ms": 13.100000001490116,
+        "render_queue_ms": 0,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 5,
+        "capture_age_ms": 876.5,
+        "server_ms": 84.16699999361299,
+        "inference_ms": 30.999999988125637,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5295,
+        "worker_packet_bytes": 100078,
+        "transport_ms": 854.0999999940395,
+        "capture_ms": 9.200000002980232,
+        "decode_ms": 12.900000005960464,
+        "render_queue_ms": 0,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 6,
+        "capture_age_ms": 780.8999999985099,
+        "server_ms": 74.68350001727231,
+        "inference_ms": 30.999999988125637,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5331,
+        "worker_packet_bytes": 100114,
+        "transport_ms": 758.8999999985099,
+        "capture_ms": 6.700000002980232,
+        "decode_ms": 15,
+        "render_queue_ms": 0,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      },
+      {
+        "index": 7,
+        "capture_age_ms": 832,
+        "server_ms": 106.20189999463037,
+        "inference_ms": 31.000000017229468,
+        "count": 5,
+        "input_bytes": 84747,
+        "result_bytes": 5295,
+        "worker_packet_bytes": 100078,
+        "transport_ms": 796.8999999985099,
+        "capture_ms": 7.700000002980232,
+        "decode_ms": 27,
+        "render_queue_ms": 0,
+        "alerts": 0,
+        "grades": [
+          "medium",
+          "medium",
+          "medium",
+          "medium",
+          "medium"
+        ],
+        "paused": false
+      }
+    ],
+    "events": [],
+    "audio_resources": [
+      {
+        "bytes": 106901,
+        "transfer_bytes": 15886,
+        "duration_ms": 683.6999999955297
+      },
+      {
+        "bytes": 16108,
+        "transfer_bytes": 16408,
+        "duration_ms": 552.6999999955297
+      },
+      {
+        "bytes": 37220,
+        "transfer_bytes": 37520,
+        "duration_ms": 629
+      },
+      {
+        "bytes": 39140,
+        "transfer_bytes": 39440,
+        "duration_ms": 485.19999999552965
+      },
+      {
+        "bytes": 35300,
+        "transfer_bytes": 35600,
+        "duration_ms": 516.4000000059605
+      },
+      {
+        "bytes": 44900,
+        "transfer_bytes": 45200,
+        "duration_ms": 497.70000000298023
+      },
+      {
+        "bytes": 42980,
+        "transfer_bytes": 43280,
+        "duration_ms": 642
+      },
+      {
+        "bytes": 41060,
+        "transfer_bytes": 41360,
+        "duration_ms": 619
+      },
+      {
+        "bytes": 16108,
+        "transfer_bytes": 16408,
+        "duration_ms": 578.6000000014901
+      },
+      {
+        "bytes": 31460,
+        "transfer_bytes": 31760,
+        "duration_ms": 499.79999999701977
+      },
+      {
+        "bytes": 42980,
+        "transfer_bytes": 43280,
+        "duration_ms": 832.2000000029802
+      },
+      {
+        "bytes": 42980,
+        "transfer_bytes": 43280,
+        "duration_ms": 934.6000000014901
+      },
+      {
+        "bytes": 48740,
+        "transfer_bytes": 49040,
+        "duration_ms": 955.7999999970198
+      },
+      {
+        "bytes": 35300,
+        "transfer_bytes": 35600,
+        "duration_ms": 830.6000000014901
+      },
+      {
+        "bytes": 48740,
+        "transfer_bytes": 49040,
+        "duration_ms": 743.1000000014901
+      },
+      {
+        "bytes": 29540,
+        "transfer_bytes": 29840,
+        "duration_ms": 685.7000000029802
+      },
+      {
+        "bytes": 39140,
+        "transfer_bytes": 39440,
+        "duration_ms": 750.2999999970198
+      },
+      {
+        "bytes": 33380,
+        "transfer_bytes": 33680,
+        "duration_ms": 608.7000000029802
+      },
+      {
+        "bytes": 56420,
+        "transfer_bytes": 56720,
+        "duration_ms": 1173.8999999985099
+      },
+      {
+        "bytes": 35300,
+        "transfer_bytes": 35600,
+        "duration_ms": 473.3999999985099
+      },
+      {
+        "bytes": 37220,
+        "transfer_bytes": 37520,
+        "duration_ms": 689
+      },
+      {
+        "bytes": 35300,
+        "transfer_bytes": 35600,
+        "duration_ms": 955
+      },
+      {
+        "bytes": 41060,
+        "transfer_bytes": 41360,
+        "duration_ms": 2069.3000000044703
+      },
+      {
+        "bytes": 39140,
+        "transfer_bytes": 39440,
+        "duration_ms": 1293.5
+      },
+      {
+        "bytes": 41060,
+        "transfer_bytes": 41360,
+        "duration_ms": 1148.2000000029802
+      },
+      {
+        "bytes": 33380,
+        "transfer_bytes": 33680,
+        "duration_ms": 817.1000000014901
+      },
+      {
+        "bytes": 42980,
+        "transfer_bytes": 43280,
+        "duration_ms": 900.7999999970198
+      },
+      {
+        "bytes": 39140,
+        "transfer_bytes": 39440,
+        "duration_ms": 692.6000000014901
+      },
+      {
+        "bytes": 16108,
+        "transfer_bytes": 16408,
+        "duration_ms": 576.4000000059605
+      },
+      {
+        "bytes": 58340,
+        "transfer_bytes": 58640,
+        "duration_ms": 2111.7999999970198
+      },
+      {
+        "bytes": 44900,
+        "transfer_bytes": 45200,
+        "duration_ms": 1812.5999999940395
+      },
+      {
+        "bytes": 37220,
+        "transfer_bytes": 37520,
+        "duration_ms": 1578.7999999970198
+      },
+      {
+        "bytes": 60260,
+        "transfer_bytes": 60560,
+        "duration_ms": 1951.2999999970198
+      },
+      {
+        "bytes": 41060,
+        "transfer_bytes": 41360,
+        "duration_ms": 531.5
+      },
+      {
+        "bytes": 39140,
+        "transfer_bytes": 39440,
+        "duration_ms": 529
+      },
+      {
+        "bytes": 42980,
+        "transfer_bytes": 43280,
+        "duration_ms": 526.8000000044703
+      },
+      {
+        "bytes": 54500,
+        "transfer_bytes": 54800,
+        "duration_ms": 977.2999999970198
+      },
+      {
+        "bytes": 33380,
+        "transfer_bytes": 33680,
+        "duration_ms": 425.79999999701977
+      },
+      {
+        "bytes": 37220,
+        "transfer_bytes": 37520,
+        "duration_ms": 623.1999999955297
+      },
+      {
+        "bytes": 42980,
+        "transfer_bytes": 43280,
+        "duration_ms": 973.3000000044703
+      },
+      {
+        "bytes": 16108,
+        "transfer_bytes": 16408,
+        "duration_ms": 712.5
+      },
+      {
+        "bytes": 25700,
+        "transfer_bytes": 26000,
+        "duration_ms": 476.29999999701977
+      },
+      {
+        "bytes": 62180,
+        "transfer_bytes": 62480,
+        "duration_ms": 513.2999999970198
+      },
+      {
+        "bytes": 35300,
+        "transfer_bytes": 35600,
+        "duration_ms": 939.3000000044703
+      },
+      {
+        "bytes": 48740,
+        "transfer_bytes": 49040,
+        "duration_ms": 633.5
+      },
+      {
+        "bytes": 58340,
+        "transfer_bytes": 58640,
+        "duration_ms": 638.6000000014901
+      },
+      {
+        "bytes": 62180,
+        "transfer_bytes": 62480,
+        "duration_ms": 649.3000000044703
+      },
+      {
+        "bytes": 16108,
+        "transfer_bytes": 16408,
+        "duration_ms": 454.80000000447035
+      },
+      {
+        "bytes": 23780,
+        "transfer_bytes": 24080,
+        "duration_ms": 477.40000000596046
+      },
+      {
+        "bytes": 41060,
+        "transfer_bytes": 41360,
+        "duration_ms": 518.2999999970198
+      },
+      {
+        "bytes": 39140,
+        "transfer_bytes": 39440,
+        "duration_ms": 674
+      },
+      {
+        "bytes": 60260,
+        "transfer_bytes": 60560,
+        "duration_ms": 618.1000000014901
+      },
+      {
+        "bytes": 39140,
+        "transfer_bytes": 39440,
+        "duration_ms": 731.1999999955297
+      },
+      {
+        "bytes": 58340,
+        "transfer_bytes": 58640,
+        "duration_ms": 642.2000000029802
+      },
+      {
+        "bytes": 25700,
+        "transfer_bytes": 26000,
+        "duration_ms": 740.1000000014901
+      },
+      {
+        "bytes": 50660,
+        "transfer_bytes": 50960,
+        "duration_ms": 732.6000000014901
+      },
+      {
+        "bytes": 31460,
+        "transfer_bytes": 31760,
+        "duration_ms": 472.8999999985099
+      },
+      {
+        "bytes": 50660,
+        "transfer_bytes": 50960,
+        "duration_ms": 502.80000000447035
+      },
+      {
+        "bytes": 25700,
+        "transfer_bytes": 26000,
+        "duration_ms": 486.70000000298023
+      },
+      {
+        "bytes": 64100,
+        "transfer_bytes": 64400,
+        "duration_ms": 502.5
+      },
+      {
+        "bytes": 27620,
+        "transfer_bytes": 27920,
+        "duration_ms": 453.59999999403954
+      },
+      {
+        "bytes": 48740,
+        "transfer_bytes": 49040,
+        "duration_ms": 1197.9000000059605
+      },
+      {
+        "bytes": 42980,
+        "transfer_bytes": 43280,
+        "duration_ms": 478.8999999985099
+      },
+      {
+        "bytes": 62180,
+        "transfer_bytes": 62480,
+        "duration_ms": 556.3000000044703
+      },
+      {
+        "bytes": 44900,
+        "transfer_bytes": 45200,
+        "duration_ms": 537.7000000029802
+      }
+    ],
+    "profile": {
+      "rate": 30,
+      "maxPending": 1
+    },
+    "contract": {
+      "kind": "session",
+      "provider": "local",
+      "protocol_version": 2,
+      "session_id": "44c7eda17f64485783996f85d73f9bc3",
+      "model": "yolo26n",
+      "precision": "FP32",
+      "backend": "PyTorch resident CUDA",
+      "output_precision": "FP32",
+      "classes": 80,
+      "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "names": [
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light",
+        "fire hydrant",
+        "stop sign",
+        "parking meter",
+        "bench",
+        "bird",
+        "cat",
+        "dog",
+        "horse",
+        "sheep",
+        "cow",
+        "elephant",
+        "bear",
+        "zebra",
+        "giraffe",
+        "backpack",
+        "umbrella",
+        "handbag",
+        "tie",
+        "suitcase",
+        "frisbee",
+        "skis",
+        "snowboard",
+        "sports ball",
+        "kite",
+        "baseball bat",
+        "baseball glove",
+        "skateboard",
+        "surfboard",
+        "tennis racket",
+        "bottle",
+        "wine glass",
+        "cup",
+        "fork",
+        "knife",
+        "spoon",
+        "bowl",
+        "banana",
+        "apple",
+        "sandwich",
+        "orange",
+        "broccoli",
+        "carrot",
+        "hot dog",
+        "pizza",
+        "donut",
+        "cake",
+        "chair",
+        "couch",
+        "potted plant",
+        "bed",
+        "dining table",
+        "toilet",
+        "tv",
+        "laptop",
+        "mouse",
+        "remote",
+        "keyboard",
+        "cell phone",
+        "microwave",
+        "oven",
+        "toaster",
+        "sink",
+        "refrigerator",
+        "book",
+        "clock",
+        "vase",
+        "scissors",
+        "teddy bear",
+        "hair drier",
+        "toothbrush"
+      ],
+      "confidence_threshold": 0.25,
+      "max_edge": 640,
+      "jpeg_quality": 0.8,
+      "max_inflight": 12,
+      "session_seconds": null,
+      "cold_seconds": 55,
+      "steady_seconds": 10,
+      "depth_model": "yolo26n-depth",
+      "depth_units": "m",
+      "tracking_model": "botsort",
+      "risk_model": "rules-v1",
+      "loaded": true,
+      "capabilities": {
+        "detection": true,
+        "depth": true,
+        "tracking": true,
+        "risk": true
+      },
+      "distance_mode": "depth",
+      "distance_units": "m",
+      "depth_interval": 1,
+      "result_transport": "metadata-v1"
+    },
+    "manager": {
+      "risk_enabled": true,
+      "navigation_enabled": true,
+      "risk_speech": {
+        "state": "no_alert",
+        "frame_index": 7,
+        "capture_age_ms": 833.7999999970198,
+        "alert_count": 0,
+        "pause_reason": null
+      },
+      "risk_session_id": "44c7eda17f64485783996f85d73f9bc3",
+      "navigation_run_id": null,
+      "queued_assistant_replies": 0,
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "reasons": {
+        "speech": null,
+        "vibration": null
+      },
+      "navigation_state": null,
+      "navigation_pending": false,
+      "active": {
+        "speech": null,
+        "vibration": null
+      },
+      "hardware_outputs_verified": false,
+      "disposed": false
+    },
+    "rendered_image": {
+      "width": 480,
+      "height": 640
+    },
+    "speech": {
+      "available": true,
+      "supported": true,
+      "enabled": true,
+      "visible": true,
+      "user_activated": true,
+      "state": "completed",
+      "active_request": false,
+      "engine_speaking": false,
+      "engine_pending": false,
+      "engine_paused": false,
+      "audio_context_state": "running",
+      "voice_count": 1,
+      "voice_query_failed": false,
+      "last_request": {
+        "id": 1,
+        "text_length": 8,
+        "language": "zh-CN",
+        "voice_id": "Cherry",
+        "rate": 2,
+        "volume": 1,
+        "service": "backend",
+        "local_service": false,
+        "audio_transport": "websocket"
+      },
+      "last_error": null,
+      "audio_output_verified": false,
+      "speech_service": "backend"
+    },
+    "status": "检测到 5 个目标，详情见下方。"
+  },
+  "complete": true
+}

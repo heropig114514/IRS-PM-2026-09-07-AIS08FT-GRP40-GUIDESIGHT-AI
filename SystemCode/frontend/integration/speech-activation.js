@@ -11,7 +11,8 @@
  * owned/generation/ignoreThrough isolate calibration IDs, late callbacks and old timers;
  * ready/firstStartedId retain the first matching driver start, never physical audibility;
  * state/reason expose recovery needs; DEFAULT_TIMEOUT_MS/timeoutMs allow up to 15 seconds to connect,
- * the browser's 55-second audio deadline and a 5-second margin before cancelling calibration.
+ * the browser's 55-second audio deadline and a 5-second margin before cancelling calibration;
+ * resumeReason isolates the pause captured by one explicit recovery from newer errors.
  * Constraints: No automatic enablement, voice substitution, retry, engine resume loop, media/GPS
  * permission, global speech cancellation, foreign request cancellation or core modifications.
  */
@@ -119,13 +120,15 @@ export class SpeechActivation {
   }
 
   /* Functionality: Calibrate once directly inside the caller's trusted click handler.
-   * Inputs: Current explicit selection and shared-driver prerequisites. Outputs: Accepted/rejected state.
-   * Logic: call existing speak synchronously, with ownership installed before synchronous driver events.
+   * Inputs: Explicit replay/recover intent, selection and driver prerequisites. Outputs: Accepted/rejected state.
+   * Logic: Recalibrate interrupted audio or explicit tests synchronously; recover only the matching
+   * paused reason after PCM starts. Preserve ownership before synchronous driver events.
    * Constraints: no await/microtask, default voice, output enablement, automatic retry or replacement speech. */
-  activate() {
+  activate({replay = false, recover = false} = {}) {
     if (this.disposed) return {...this.describe(), accepted: false, reason: "disposed"};
     if (this.owned?.cancelFailed) return this.failure("cancel_failed", "error");
-    if (this.ready) {
+    const contextState = this.speech.describe().audio_context_state;
+    if (this.ready && !replay && (!contextState || contextState === "running")) {
       this.state = "ready"; this.reason = null; this.ungate(); this.publish();
       return {...this.describe(), accepted: true};
     }
@@ -138,8 +141,10 @@ export class SpeechActivation {
     if (status.user_activated === false) return this.failure("activation_required");
     if (status.active_request || status.engine_speaking || status.engine_pending || status.engine_paused)
       return this.failure("busy");
+    this.ready = false;
     this.gate();
-    const pending = {id: null, generation: ++this.generation, started: false, cancelFailed: false};
+    const resumeReason = recover ? this.manager.describe().reasons?.speech : null;
+    const pending = {id: null, generation: ++this.generation, started: false, cancelFailed: false, resumeReason};
     this.owned = pending; this.state = "queued"; this.reason = "awaiting_audio_start"; this.publish();
     if (this.owned !== pending || pending.generation !== this.generation)
       return {...this.describe(), accepted: false, reason: "activation_cancelled"};
@@ -177,6 +182,9 @@ export class SpeechActivation {
    * Logic: only the selected backend PCM stream can unlock; stopped/old IDs cannot reopen the gate.
    * Constraints: submission alone never unlocks, foreign requests are never cancelled or adopted. */
   onDriver(event) {
+    if (!this.disposed && event.channel === "speech" && event.phase === "interrupted") {
+      this.ready = false; this.failure("audio_context_interrupted", "error"); return;
+    }
     if (this.disposed || this.cancelling || event.channel !== "speech" ||
         !Number.isSafeInteger(event.request_id) || event.request_id <= this.ignoreThrough) return;
     const own = this.owned;
@@ -189,7 +197,12 @@ export class SpeechActivation {
       if (own?.id === event.request_id) own.started = true;
       this.clearWatchdog(); this.firstStartedId ??= event.request_id;
       this.ready = true; this.state = "ready"; this.reason = null;
-      this.ungate(); this.publish(); return;
+      const output = this.manager.describe();
+      if (own?.id === event.request_id && own.resumeReason && own.resumeReason !== "cancel_failed" &&
+          output.paused?.speech && output.reasons?.speech === own.resumeReason)
+        this.manager.resume("speech");
+      else this.ungate();
+      this.publish(); return;
     }
     if (!own || own.id !== event.request_id || !["end", "cancel", "error"].includes(event.phase)) return;
     this.clearWatchdog();

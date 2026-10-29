@@ -1,6 +1,6 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
  * Implementation: Default-enabled unified outputs, entry-time temporary camera/microphone permission checks,
- * one backend bilingual voice preference, preloaded bilingual risk fragments and bounded PCM reuse,
+ * one backend bilingual voice preference, on-demand bilingual risk fragments and bounded PCM reuse,
  * synchronous user-gesture audio unlock, prioritized accepted assistant reply speech and
  * one-click product rear-camera acquisition,
  * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
@@ -9,7 +9,7 @@
  * devices.js/video-replay.js/catalog.js/voice-preferences.js/risk-speech-cache.js/risk-audio-resources.js;
  * original camera/navigation/speech/vibration singletons.
  * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; renderDiagnostics; guidanceDiagnostic; onGuidance; applyVoice;
- * renderSpeechActivation; activateSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
+ * renderRiskSpeechStatus; renderSpeechActivation; activateSpeech; testSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; requestEntryMediaPermissions; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
  * onBoundary; speakAssistantReply; prepareRiskAudio; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
  * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
@@ -51,6 +51,9 @@ export {speechOutput} from "../speech-output.js";
 
 const doc = document;
 const testView = doc.documentElement.dataset.assistView === "test";
+const preparedSpeech = doc.documentElement.dataset.preparedSpeech === "true";
+const riskMaxAgeMs = Number(doc.documentElement.dataset.riskMaxAgeMs || 1000);
+const riskSpeechStyle = preparedSpeech && doc.documentElement.dataset.cameraDisplay === "live-overlay" ? "prepared" : "detailed";
 /* Functionality: Map internal guidance lifecycle codes to fixed bilingual diagnostic labels.
  * Inputs: The finite phase values emitted by AssistGuidanceManager and configuration updates.
  * Outputs: Chinese/English label pairs consumed by guidanceDiagnostic.
@@ -62,6 +65,7 @@ const GUIDANCE_PHASE_LABELS = {
   resumed: ["输出已恢复", "Output resumed"],
   risk_enabled: ["风险提醒设置已更新", "Risk alert setting updated"],
   navigation_enabled: ["导航播报设置已更新", "Navigation announcement setting updated"],
+  risk_speech_state: ["风险语音状态已更新", "Risk speech state updated"],
   risk_session: ["风险检测会话已启动", "Risk detection session started"],
   risk_stopped: ["风险检测已停止", "Risk detection stopped"],
   navigation_run: ["导航播报已启动", "Navigation announcements started"],
@@ -82,7 +86,7 @@ let cameraFailure = null;
 let riskOwner = null, sessionId = null, sourceStarting = null, fileReady = false, latest = null;
 let fileChoice = 0, permissionChoice = 0, boundaryStopped = false, stoppingAll = false;
 const riskAudioResources = new RiskAudioResources({fetch: window.fetch?.bind(window), crypto: window.crypto,
-  origin: window.location.origin,
+  origin: window.location.origin, loadPolicy: preparedSpeech ? "full" : "on-demand",
   baseUrl: new URL("assets/risk-audio/", new URL(doc.documentElement.dataset.apiBase || "../", window.location.href)).href});
 const riskSpeechCache = typeof window.WebSocket === "function" ? new RiskSpeechCache({WebSocket: window.WebSocket, origin: window.location.origin,
   resources: riskAudioResources,
@@ -90,7 +94,7 @@ const riskSpeechCache = typeof window.WebSocket === "function" ? new RiskSpeechC
   queueTask: window.queueMicrotask.bind(window)}) : null;
 const speechDiagnostics = [];
 if (riskSpeechCache) speechOutput.riskSocketFactory = riskSpeechCache.createSocket.bind(riskSpeechCache);
-export const guidanceManager = new AssistGuidanceManager({speech: speechOutput, vibration: tester});
+export const guidanceManager = new AssistGuidanceManager({speech: speechOutput, vibration: tester, riskMaxAgeMs, riskSpeechStyle});
 export const speechActivation = new SpeechActivation({speech: speechOutput, manager: guidanceManager,
   config: () => ({voiceId: node("navigation-speech-voice").value,
     language: node("navigation-speech-language").value}), onChange: renderSpeechActivation});
@@ -171,7 +175,8 @@ function renderControls() {
   node("assist-device").disabled = busy;
   node("assist-devices-authorize").disabled = busy;
   node("assist-devices-refresh").disabled = busy;
-  node("start").disabled = busy || !camera || testView && !cameraApp.localDeviceId;
+  node("start").disabled = busy || !camera || testView && !cameraApp.localDeviceId ||
+    preparedSpeech && riskAudioResources.describe().state !== "ready";
   if (!testView) node("product-camera-start").disabled = node("start").disabled;
 }
 
@@ -218,6 +223,7 @@ function renderResults(event) {
       ? productText(`检测到 ${metadata.count} 个目标，详情见下方。`, `${metadata.count} objects detected. See details below.`)
       : productText("本帧暂未识别到目标；这不代表道路安全。", "No objects detected in this frame; this does not establish road safety.");
   setStatusText("assist-result-status", status);
+  renderRiskSpeechStatus();
 }
 
 /* Functionality: Connect original source events to the independent risk input only.
@@ -316,15 +322,43 @@ function onGuidance(event) {
   renderSpeechActivation(speechActivation.describe());
 }
 
+/* Functionality: Explain silent detections on the product and diagnostic pages.
+ * Inputs: Read-only manager eligibility and original capture age. Outputs: Localized reason and counts.
+ * Logic: Show one reason from the actual output owner; keep changing timing outside the live region.
+ * Constraints: No hidden risk threshold change, timestamp substitution, automatic recovery or safety claim. */
+function renderRiskSpeechStatus() {
+  const status = guidanceManager.riskSpeechStatus();
+  const labels = {
+    disabled: ["风险语音已关闭。", "Risk speech is off."],
+    idle: ["风险播报：开始检测后显示播报状态。", "Risk speech: start detection to see its status."],
+    waiting: ["风险播报：等待首个检测结果。", "Risk speech: waiting for the first detection result."],
+    paused: ["风险播报已暂停。请停止后重新开始检测，或前往测试页恢复语音。", "Risk speech is paused. Stop and restart detection, or restore voice on the test page."],
+    playing: ["正在播放风险提醒。", "Playing a risk alert."],
+    stale: [`检测结果已超过 ${riskMaxAgeMs / 1000} 秒有效期，暂不播报过期风险。`, `Detection results exceeded the ${riskMaxAgeMs / 1000}-second validity limit. Expired risks are not announced.`],
+    no_alert: ["本帧未达到风险提醒条件，不自动朗读每个物体；这不代表道路安全。", "This frame does not meet risk-alert conditions. Objects are not all read aloud; this does not establish road safety."],
+    unavailable: ["风险语音不可用，请保持页面在前台，停止后重新开始检测。", "Risk speech is unavailable. Keep the page visible, then stop and restart detection."],
+    preparing: ["正在准备风险语音，播放前仍需最新检测结果确认。", "Preparing a risk alert; playback still requires confirmation by a current detection."],
+    cooldown: ["同一目标处于重复提醒间隔内。", "This target is within the repeat-alert cooldown."],
+    busy: ["正在播放其他语音，风险提醒等待当前有效结果。", "Other speech is active; risk alerts require a current valid result."],
+    ready: ["风险提醒等待播放。", "A risk alert is awaiting playback."],
+  };
+  setStatusText("assist-risk-status", productText(...labels[status.state]));
+  const age = status.capture_age_ms;
+  setStatusText("assist-risk-details", status.frame_index === null ? "" : productText(
+    `最近结果距采集 ${Number.isFinite(age) && age >= 0 ? (age / 1000).toFixed(1) : "?"} 秒 · 需提醒目标 ${status.alert_count} 个`,
+    `Latest result captured ${Number.isFinite(age) && age >= 0 ? (age / 1000).toFixed(1) : "?"} s ago · ${status.alert_count} alert targets`));
+}
+
 /* Functionality: Display genuine speech activation independently of enabled output preferences.
  * Inputs: Activation metadata. Outputs: Accessible status and explicit startup control state.
  * Logic: First backend PCM playback marks ready; pending submission never claims sound or sensor access.
  * Constraints: No browser voice lookup, automatic retry, voice substitution or hardware verification. */
 function renderSpeechActivation(state) {
+  renderRiskSpeechStatus();
   const enabled = speechOutput.enabled.checked;
   const output = guidanceManager.describe();
   const gated = output.paused.speech && output.reasons.speech === "activation_required";
-  node("assist-speech-start").disabled = !speechOutput.supported || !enabled || state.ready && !gated || state.state === "queued" ||
+  node("assist-speech-start").disabled = !speechOutput.supported || !enabled || speechOutput.describe().active_request || state.state === "queued" ||
     !testView && Boolean(voicePreference.reason);
   if (!testView) {
     setStatusText("assist-speech-status", !speechOutput.supported
@@ -339,10 +373,12 @@ function renderSpeechActivation(state) {
       : state.ready
         ? gated ? productText("点击启动语音、发送助手指令，或重新开始导航、检测。", "Tap Activate voice, send an assistant request, or start navigation or detection again.")
           : output.paused.speech ? productText("语音提醒已暂停，请点击恢复语音。", "Voice alerts are paused. Tap Resume voice.")
-          : productText("语音提醒已就绪。", "Voice alerts are ready.")
+          : productText("已发送语音到设备。若没有声音，请点击试听并检查媒体音量和蓝牙输出。", "Speech was sent to your device. If silent, test voice and check media volume and Bluetooth output.")
       : state.state === "queued" ? productText("正在启用语音提醒。", "Activating voice alerts.")
       : state.state === "error"
-        ? productText("语音尚未启动，请保持页面在前台，再次点击启动语音或发送助手指令。", "Voice has not started. Keep this page open, then tap Activate voice again or send an assistant request.")
+        ? ["audio_context_interrupted", "audio_context_unavailable", "activation_required"].includes(state.reason)
+          ? productText("手机暂停了语音。请保持页面在前台，点击试听／恢复语音。", "Your phone paused audio. Keep this page open and tap Test / restore voice.")
+          : productText("语音启动失败。请检查网络后点击试听／恢复语音；检测画面可继续使用。", "Voice could not start. Check your connection, then tap Test / restore voice. Detection can continue.")
         : productText("语音跟随界面语言。点击启动语音、发送助手指令，或开始导航、检测。", "Voice follows the interface language. Tap Activate voice, send an assistant request, or start navigation or detection."));
     return;
   }
@@ -361,7 +397,8 @@ function renderSpeechActivation(state) {
 function activateSpeech() {
   boundaryStopped = false;
   if (!testView) readProductVoices();
-  const result = speechActivation.activate();
+  const result = speechActivation.activate({recover: true,
+    replay: speechActivation.describe().ready && guidanceManager.describe().paused.speech});
   renderSpeechActivation(speechActivation.describe());
   return result;
 }
@@ -371,7 +408,17 @@ function activateSpeech() {
  * Logic: An unstarted audio context must first receive explicit calibration, not asynchronous risk.
  * Constraints: Existing unrelated output errors still require the manager's explicit recovery. */
 function resumeSpeech() {
-  return speechActivation.describe().ready ? guidanceManager.resume("speech") : activateSpeech();
+  return testSpeech();
+}
+
+/* Functionality: Replay calibration and recover speech from one explicit visible control.
+ * Inputs: Trusted click. Outputs: Owned calibration result.
+ * Logic: Validate playback again even after earlier success; clear only the captured pause after PCM starts.
+ * Constraints: No camera/GPS access, automatic retry, expired alert replay or hardware-volume change. */
+function testSpeech() {
+  boundaryStopped = false;
+  if (!testView) readProductVoices();
+  return speechActivation.activate({replay: true, recover: true});
 }
 
 /* Functionality: Submit a live or matching in-flight replay reply for automatic backend speech.
@@ -518,6 +565,7 @@ async function authorizeDevices() {
  * track before enumerating labels, and discard late UI updates after a page boundary.
  * Constraints: No recording, preview, selected camera, inference, speech output or retry. */
 async function requestEntryMediaPermissions() {
+  const releaseAudio = speechOutput.reserveMicrophone();
   const choice = ++permissionChoice, target = testView ? "assist-status" : "product-camera-message";
   sourceStarting = "permission";
   setStatusText(target, productText("正在申请摄像头和麦克风权限。", "Requesting camera and microphone permission."));
@@ -538,6 +586,7 @@ async function requestEntryMediaPermissions() {
       setStatusText(target, message);
     }
   } finally {
+    releaseAudio();
     if (choice === permissionChoice) { sourceStarting = null; renderControls(); }
   }
 }
@@ -646,15 +695,19 @@ function onBoundary(event) {
   boundaryStopped = true; stopAll(event.type === "pagehide" ? "page_left" : "page_hidden", false);
 }
 
-/* Functionality: Preload the fixed bilingual pack independently of source and audio activation.
+/* Functionality: Validate the fixed bilingual manifest independently of source and audio activation.
  * Inputs: Same-origin resource loader. Outputs: Ready/failed content-free diagnostic state.
- * Logic: One idempotent load; retain a failure for explicit recovery by page reload.
+   * Logic: One idempotent load; explicit prepared mode loads all clips before detection;
+   * otherwise clips load on demand. Page reload explicitly recovers failure.
  * Constraints: No synthesis fallback, retry, speaker output, media permission or navigation work. */
 async function prepareRiskAudio() {
+  if (preparedSpeech) setStatusText("assist-status", "正在准备本地警报语音，请稍候……");
   try { await riskAudioResources.load(); }
   catch (error) { window.console.error("[PRS risk audio] Resource pack unavailable", {
     code: ["risk_audio_unavailable", "invalid_audio_resource"].includes(error?.code) ? error.code : "risk_audio_unavailable"}); }
-  renderDiagnostics();
+  if (preparedSpeech) setStatusText("assist-status", riskAudioResources.describe().state === "ready"
+    ? "警报语音已准备，可以开始检测。" : "警报语音准备失败，请重新加载页面。");
+  renderDiagnostics(); renderControls();
 }
 
 /* Functionality: Bind the dedicated local integration surface to original controllers.
@@ -694,7 +747,7 @@ function initialize() {
   node("navigation-start").addEventListener("click", activateSpeech, true);
   for (const id of ["navigation-speech-resume", "assist-resume-speech"])
     node(id).addEventListener("click", resumeSpeech);
-  node("assist-speech-start").addEventListener("click", activateSpeech);
+  node("assist-speech-start").addEventListener("click", testSpeech);
   if (!testView) window.addEventListener("prs-assist-voice-gesture", activateSpeech);
   speechOutput.enabled.addEventListener("change", () => {
     if (!speechOutput.enabled.checked) {

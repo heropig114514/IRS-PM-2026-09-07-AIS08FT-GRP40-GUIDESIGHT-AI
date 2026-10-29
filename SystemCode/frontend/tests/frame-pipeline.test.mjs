@@ -8,13 +8,53 @@
  * pacingFixture.sent; pacingFixture.active; pacingFixture.failed; pacingFixture.now;
  * pacingFixture.pause; pacingFixture.client.sendFrame; pacingFixture.client.stop;
  * testBound; testLatency; testFailure; testEnd; testCaptureStop; testPacing; testPacingStall;
- * testCreditPacing; testTwelveBound; testThirtyPacing; testCaptureTimestamp.
+ * testCreditPacing; testTwelveBound; testThirtyPacing; testCaptureTimestamp;
+ * testSendAdmission; testSendAdmission.bufferedBytes; testSendAdmission.pause;
+ * testSendCancel; testSendCancel.bufferedBytes; testSendStall; testSendStall.bufferedBytes;
+ * testSendStall.pause; testSendInvalid; testSendInvalid.bufferedBytes;
+ * testSendFailure; testSendFailure.bufferedBytes.
  * Variable Index: None. Fixture state is local to each test; no camera/network/GPU is used.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
 import {setImmediate} from "node:timers/promises";
 import {FramePipeline} from "../frame-pipeline.js";
+
+test("callback work is recorded separately from image-result latency", async () => {
+  const {state, pipeline} = fixture(2, 1);
+  pipeline.onFrame = (result, timing) => { state.frames.push(timing); state.time += 27000; };
+  const running = pipeline.run(); await flush();
+  state.requests[0].resolve({bytes: new ArrayBuffer(5)}); await flush();
+  state.requests[1].resolve({bytes: new ArrayBuffer(5)}); await running;
+  assert.equal(state.frames[0].previousFrameCallbackMs, null);
+  assert.equal(state.frames[1].previousFrameCallbackMs, 27000);
+  assert.equal(state.frames[0].captureToDecodedMs, 115);
+  assert.equal(state.frames[1].capturedAt-state.frames[0].completedAt, 27000);
+});
+
+test("one-slot capture progresses after a result even when positive pacing timers are stalled", async () => {
+  const {state, pipeline} = fixture(3, 1);
+  pipeline.rate = 30;
+  pipeline.capture = async () => { state.captures++; state.time += 5; return new ArrayBuffer(5); };
+  const waits = [];
+  pipeline.pause = async milliseconds => {
+    if (milliseconds > 0) { waits.push(milliseconds); await pipeline.stopPromise; }
+  };
+  const running = pipeline.run();
+  try {
+    await flush(); state.time = 1000;
+    state.requests[0].resolve({bytes: new ArrayBuffer(5)}); await flush();
+    assert.equal(state.requests.length, 2);
+    assert.deepEqual(waits, []);
+    state.time = 2000; state.requests[1].resolve({bytes: new ArrayBuffer(5)}); await flush();
+    assert.equal(state.requests.length, 3);
+    assert.deepEqual(waits, []);
+    state.time = 3000; state.requests[2].resolve({bytes: new ArrayBuffer(5)});
+    assert.deepEqual(await running, {sent: 3, received: 3, maxInFlight: 1});
+    assert.equal(state.frames[2].pacingLateMs, 0);
+    assert.ok(state.frames[2].creditWaitMs > 900);
+  } finally { pipeline.stop(); await running; }
+});
 
 /** Functionality: Expose one controlled completion. Inputs: None. Outputs: promise/resolve/reject.
  * Logic: caller controls timing. Constraints: never substitutes a real external operation. */
@@ -30,11 +70,11 @@ function deferred() {
 async function flush() { await setImmediate(); }
 
 /** Functionality: Inject explicit clock, capture, display and deferred transport.
- * Inputs: optional frameLimit and maxPending (five for the original-window control).
+ * Inputs: optional frameLimit, maxPending (five for the original-window control) and buffer adapter.
  * Outputs: pipeline/state. Logic: explicitly retain12FPS for the old-cadence tests; capture advances100ms,
  * exceeding default cadence so these admission tests need no synthetic pacing timer.
  * Constraints: marker bytes and deferred display do not exercise JPEG/model/browser APIs. */
-function fixture(frameLimit = null, maxPending = 5) {
+function fixture(frameLimit = null, maxPending = 5, bufferedBytes = null) {
   const state = {time: 0, captures: 0, requests: [], frames: [], errors: [], stops: 0, gate: null};
   /** Functionality: Simulate capture. Inputs: test state. Outputs: unique bytes.
    * Logic: advance100ms. Constraints: no physical sensor or encoding. */
@@ -66,8 +106,112 @@ function fixture(frameLimit = null, maxPending = 5) {
     stop() { state.stops++; },
   };
   return {state, pipeline: new FramePipeline({client, capture, display, onFrame: frame,
-    onSent: sent, isActive: active, onFailure: failed, now, frameLimit, maxPending, rate: 12})};
+    onSent: sent, isActive: active, onFailure: failed, now, frameLimit, maxPending, bufferedBytes, rate: 12})};
 }
+
+/** Functionality: Preserve source freshness and all results under an explicit upload stall.
+ * Inputs: same two-frame control and gated runs with a20ms browser queue.
+ * Outputs: unchanged order/count, fresh second timestamp and separate wait accounting.
+ * Logic: real admission/dispatch/render with a controlled send-buffer observation and clock.
+ * Constraints: synthetic queue, not a browser/WAN performance measurement. */
+test("send-buffer admission waits before capture and preserves the ungated control", async function testSendAdmission() {
+  for (const enabled of [false, true]) {
+    let queued = 0;
+    /** Functionality: Report controlled unsent bytes. Inputs: queued. Outputs: byte count.
+     * Logic: test releases them after an observed wait. Constraints: no simulated remote ACK. */
+    function bufferedBytes() { return queued; }
+    const {pipeline, state} = fixture(2, 5, enabled ? bufferedBytes : null);
+    const originalPause = pipeline.pause.bind(pipeline);
+    /** Functionality: Advance only the injected queue stall. Inputs: requested delay.
+     * Outputs: explicit clock/queue changes. Logic: assert no second capture precedes drain.
+     * Constraints: ordinary pacing still uses the actual cancellation implementation. */
+    async function pause(milliseconds) {
+      if (queued && enabled && milliseconds > 0) {
+        assert.equal(state.captures, 1);
+        assert.equal(milliseconds, 4);
+        state.time += 20; queued = 0;
+      } else await originalPause(milliseconds);
+    }
+    pipeline.pause = pause;
+    const running = pipeline.run(); await flush();
+    queued = 48000;
+    state.requests[0].resolve({bytes: new ArrayBuffer(5)}); await flush();
+    assert.equal(state.captures, 2);
+    assert.equal(state.requests[1].options.capturedAt, enabled ? 135 : 115);
+    state.requests[1].resolve({bytes: new ArrayBuffer(5)});
+    assert.deepEqual(await running, {sent: 2, received: 2, maxInFlight: 1});
+    assert.deepEqual(state.frames.map(row => row.ordinal), [1, 2]);
+    assert.equal(state.frames[0].transportWaitMs, 0);
+    assert.equal(state.frames[1].transportWaitMs, enabled ? 20 : 0);
+    assert.equal(state.frames[1].transportQueuedBytes, enabled ? 48000 : 0);
+    assert.equal(state.frames[1].creditWaitMs, 0);
+    assert.equal(state.frames[1].captureMs, 100);
+    assert.equal(state.frames[1].decodedAt - state.frames[0].decodedAt, enabled ? 135 : 115);
+  }
+});
+
+/** Functionality: Wake native send-buffer timers on explicit stop or normal finish.
+ * Inputs: permanently queued bytes before any capture. Outputs: zero sends and released timer.
+ * Logic: cancel the actual pause race. Constraints: no hidden session restart or dropped accepted frame. */
+test("stop and finish cancel send-buffer admission without capturing", async function testSendCancel() {
+  for (const action of ["stop", "finish"]) {
+    /** Functionality: Keep the browser queue blocked. Inputs: None. Outputs: one unsent byte.
+     * Logic: cancellation is the only release. Constraints: synthetic buffer only. */
+    function bufferedBytes() { return 1; }
+    const {pipeline, state} = fixture(1, 5, bufferedBytes);
+    const running = pipeline.run(); await flush();
+    assert.notEqual(pipeline.pauseTimer, null);
+    pipeline[action]();
+    assert.deepEqual(await running, {sent: 0, received: 0, maxInFlight: 0});
+    assert.equal(state.captures, 0); assert.equal(pipeline.pauseTimer, null);
+  }
+});
+
+/** Functionality: Bound a continuously stalled browser queue independently of frame submission.
+ * Inputs: explicit10s clock jump with bytes remaining. Outputs: visible failure and no capture.
+ * Logic: observe actual run failure/client stop. Constraints: no deadline extension or retry. */
+test("send-buffer stall fails within the admission budget", async function testSendStall() {
+  /** Functionality: Keep queued bytes present. Inputs: None. Outputs: ten bytes.
+   * Logic: test controls elapsed time separately. Constraints: not network simulation. */
+  function bufferedBytes() { return 10; }
+  const {pipeline, state} = fixture(1, 5, bufferedBytes);
+  /** Functionality: Advance to the admission deadline. Inputs: ignored delay. Outputs: clock.
+   * Logic: one explicit stall. Constraints: no wall-clock10s test delay. */
+  async function pause() { state.time += 10000; }
+  pipeline.pause = pause;
+  await assert.rejects(pipeline.run(), /持续阻塞/);
+  assert.equal(state.captures, 0); assert.equal(state.errors.length, 1); assert.equal(state.stops, 1);
+});
+
+/** Functionality: Reject invalid buffer adapters before sending any frame.
+ * Inputs: negative/fractional/non-finite/missing readings. Outputs: failure instead of bypass.
+ * Logic: exercise public constructor and run boundaries. Constraints: no fallback to ungated mode. */
+test("invalid send-buffer adapters fail explicitly", async function testSendInvalid() {
+  assert.throws(() => new FramePipeline({bufferedBytes: 42}), /采样配置/);
+  for (const value of [-1, 0.5, NaN, Infinity, undefined]) {
+    /** Functionality: Return an invalid queue reading. Inputs: selected value. Outputs: value.
+     * Logic: challenge validation. Constraints: never a real WebSocket. */
+    function bufferedBytes() { return value; }
+    const {pipeline, state} = fixture(1, 5, bufferedBytes);
+    await assert.rejects(pipeline.run(), /队列状态/);
+    assert.equal(state.captures, 0); assert.equal(state.errors.length, 1);
+  }
+});
+
+/** Functionality: Preserve a transport error while admission is blocked.
+ * Inputs: existing failure and a live buffer timer. Outputs: original rejection, zero capture.
+ * Logic: failure wakes the shared cancellation signal. Constraints: not converted to a normal finish. */
+test("transport failure interrupts send-buffer waiting", async function testSendFailure() {
+  /** Functionality: Hold one byte. Inputs: None. Outputs: one.
+   * Logic: never drains. Constraints: explicit failure must release the wait. */
+  function bufferedBytes() { return 1; }
+  const {pipeline, state} = fixture(1, 5, bufferedBytes);
+  const error = new Error("explicit transport failure"), running = pipeline.run();
+  const rejected = assert.rejects(running, error);
+  await flush(); pipeline.fail(error); await rejected;
+  assert.equal(state.captures, 0); assert.equal(pipeline.pauseTimer, null);
+  assert.deepEqual(state.errors, [error]);
+});
 
 /** Functionality: Verify transport receives the source timestamp before asynchronous JPEG encoding.
  * Inputs: controlled100ms encode cost and actual pipeline. Outputs:0ms source versus100ms encode-complete.

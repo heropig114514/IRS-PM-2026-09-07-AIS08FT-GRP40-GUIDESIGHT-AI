@@ -1,0 +1,53 @@
+{
+  "date_local": "2026-10-29",
+  "timezone": "Asia/Shanghai",
+  "status": "Optimizations deployed; final phone inference verification blocked by original GPU connection offline.",
+  "deployed_release": "8798d60598cea8be07899ebb84b4493b6992e2eb",
+  "tests": {
+    "frontend": {
+      "passed": 504,
+      "failed": 0
+    },
+    "backend_full_before_frontend_only_change": {
+      "run": 491,
+      "skipped": 20,
+      "failed": 0
+    },
+    "backend_final_template_and_compact": {
+      "passed": 15,
+      "failed": 0
+    },
+    "public_speech": {
+      "passed": 6,
+      "physical_audio_verified": false
+    }
+  },
+  "real_model_comparison": "transport-comparison.json",
+  "audio": {
+    "previous_pack_clips": 66,
+    "previous_pack_wav_bytes": 2696568,
+    "new_entry_load": "manifest only",
+    "diagnostic_run_verified_clips": 5,
+    "diagnostic_wav_bytes": 111244,
+    "notes": "Diagnostic explicitly exercises Chinese/English phrases and a synthetic continuously confirmed risk. Clips are exact original PCM; not a changed voice or risk policy."
+  },
+  "public_verification": "public-default-verified.json",
+  "final_worker": {
+    "ready": false,
+    "code": "local_worker_unavailable",
+    "port": 18767,
+    "route_unchanged": true
+  },
+  "deployment_receipts": [
+    "compact-deployment.json",
+    "compact-default-deployment.json"
+  ],
+  "limitations": [
+    "Physical iPhone risk audibility and latency remain unverified after these changes.",
+    "Cold warning clip retrieval may exceed one-second freshness. No expired warning is replayed; later fresh evidence must confirm the risk.",
+    "The first on-demand browser run supplied only one fresh synthetic frame and correctly stopped before playback when its clip retrieval exceeded freshness; the successful regression uses explicit ongoing synthetic confirmations.",
+    "No local inference started. The public CPU server still depends on the original colleague GPU connection.",
+    "The first default-switch precheck aborted without mutation while the GPU was offline. Frontend-only deployment then verified source hashes and Web health independently of GPU readiness.",
+    "Sandboxed final targeted checks stalled; the identical escalated local command passed 15 tests."
+  ]
+}

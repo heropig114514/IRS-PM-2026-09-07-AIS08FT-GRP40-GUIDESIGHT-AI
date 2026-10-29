@@ -1,10 +1,13 @@
 /** Responsibilities: Verify continuous file-video replay through the actual local GPU service.
- * Implementation: Native File/Blob decoding, separate speech start/end/cancel observation, stop and EOF sessions.
- * Related Modules: integration/video-mvp.js/video-replay.js/guidance.js/video-alerts.js; SystemCode/backend/integration.
- * Declaration Index: observe; observe.record; observe.recordGuidance; summarize; summarizeSpeech; session; enableSpeech;
+ * Implementation: Native File/Blob decoding, stage timings, actual result-panel screenshots,
+ * separate speech start/end/cancel observation, startup/stop/EOF sessions; explicit admission and optional visible Chrome.
+ * Related Modules: integration/video-mvp.js/video-replay.js/guidance.js/video-alerts.js; backend/integration.
+ * Declaration Index: observe; observe.record; observe.recordGuidance; distribution; summarize; summarizeSpeech;
+ * waitIdle; session; enableSpeech;
  * run; run.requested; run.observerFailed; main.
  * Variable Index: runtime resolves installed Playwright; report/result/videoProbe retain every frame;
  * no fake camera, repeated static-image source, silent retry or altered algorithm settings.
+ * Rendering evidence is a browser screenshot after EOF, not a per-frame physical paint measurement.
  * alert_speech records source fields, direction/category/motion text-match, approach/numeric booleans and rate evidence;
  * utterance bodies are inspected only in memory, never stored or logged as hardware success.
  * speech_lifecycle correlates session/request identity and reports engine completion separately from start or cancellation.
@@ -33,7 +36,7 @@ async function observe() {
    * Logic: retain all completed frames and non-body lifecycle events.
    * Constraints: test input only; inference output is never manufactured. */
   function record(event) {
-    if (event.type === "frame") window.videoProbe.frames.push(event);
+    if (event.type === "frame") window.videoProbe.frames.push({...event, result: {metadata: event.result.metadata}});
     else window.videoProbe.events.push(event);
   }
   /** Functionality: Observe actual engine-start text and rate without storing the spoken body.
@@ -61,12 +64,24 @@ async function observe() {
   module.guidanceManager.subscribe(recordGuidance);
 }
 
+/** Functionality: Preserve all samples in one timing distribution.
+ * Inputs: finite nonnegative milliseconds. Outputs: count, mean, median, p95 and maximum.
+ * Logic: sort a copy and use nearest-rank p95. Constraints: no trimming or asynchronous paint claim. */
+function distribution(values) {
+  if (!values.length || values.some(value => !Number.isFinite(value) || value < 0))
+    throw new Error("Timing evidence must contain finite nonnegative samples");
+  const sorted = [...values].sort((a, b) => a - b), middle = sorted.length >> 1;
+  return {count: sorted.length, mean_ms: values.reduce((total, value) => total + value, 0) / values.length,
+    p50_ms: sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2,
+    p95_ms: sorted[Math.ceil(sorted.length * .95) - 1], max_ms: sorted.at(-1)};
+}
+
 /** Functionality: Distinguish unique-source processing from delivered throughput and latency.
  * Inputs: every completed frame. Outputs: timing, source-PTS and motion/risk observations.
  * Logic: retain startup and every steady frame; require strict media/capture/sequence association.
  * Constraints: observed motion/risk is not ground-truth accuracy or audible-alert measurement. */
 function summarize(frames) {
-  if (frames.length < 2) throw new Error("Continuous replay returned fewer than two frames");
+  if (!frames.length) throw new Error("Replay returned no frame");
   let previous = null;
   for (const event of frames) {
     const metadata = event.result.metadata;
@@ -78,13 +93,24 @@ function summarize(frames) {
     previous = event;
   }
   const first = frames[0], last = frames.at(-1), steady = frames.slice(1);
+  if (!steady.length) return {first_frame_ms: first.timing.captureToDecodedMs, unique_source_frames: 1,
+    media_span_s: 0, capture_span_s: 0, source_sample_fps: null, delivered_fps: null,
+    steady_p95_ms: null, steady_max_ms: null, steady_above_500ms: null, stages: null, server: null,
+    meets_existing_performance_gate: null};
   const latency = steady.map(event => event.timing.captureToDecodedMs).sort((a,b) => a-b);
   const mediaSpan = last.sourceMediaTime - first.sourceMediaTime;
   const captureSpan = (last.capturedAt - first.capturedAt) / 1000;
-  return {first_frame_ms: first.timing.captureToDecodedMs,
+  const stages = Object.fromEntries(["captureMs", "transportMs", "renderQueueMs", "decodeMs",
+    "captureToResultMs", "captureToDecodedMs"].map(key => [key, distribution(steady.map(frame => frame.timing[key]))]));
+  const server = Object.fromEntries(["server_ms", "depth_predict_ms", "depth_fusion_ms", "tracking_ms", "render_ms"]
+    .map(key => [key, distribution(steady.map(frame => frame.result.metadata[key]))]));
+  const deliveredFps = steady.length * 1000 / (last.timing.decodedAt - first.timing.decodedAt);
+  return {first_frame_ms: first.timing.captureToDecodedMs, stages, server,
     unique_source_frames: frames.length, media_span_s: mediaSpan, capture_span_s: captureSpan,
     source_sample_fps: steady.length / mediaSpan,
-    delivered_fps: steady.length * 1000 / (last.timing.decodedAt - first.timing.decodedAt),
+    delivered_fps: deliveredFps,
+    meets_existing_performance_gate: deliveredFps >= 10 && latency.at(-1) <= 500 &&
+      stages.captureToResultMs.max_ms <= 500,
     media_capture_span_difference_ms: (captureSpan - mediaSpan) * 1000,
     steady_p95_ms: latency[Math.ceil(latency.length * .95) - 1],
     steady_max_ms: latency.at(-1), steady_above_500ms: latency.filter(ms => ms > 500).length,
@@ -145,8 +171,26 @@ function summarizeSpeech(guidance) {
   return {counts, requests: [...requests.values()], hardware_verified: false};
 }
 
+/** Functionality: Observe actual worker release after the page closes its previous session.
+ * Inputs: local browser request context. Outputs: elapsed milliseconds and final health.
+ * Logic: bounded read-only health observations; fail if the owned worker is not ready/idle in ten seconds.
+ * Constraints: never resend an inference request, reconnect a session, restart or suppress a busy failure. */
+async function waitIdle(page) {
+  const started = performance.now(), deadline = started + 10000;
+  while (true) {
+    const response = await page.request.get("http://" + new URL(page.url()).host + "/integration/status/", {timeout: 5000});
+    if (!response.ok()) throw new Error("Worker cleanup health is unavailable");
+    const health = await response.json();
+    if (health.ready && !health.busy && health.accept_available)
+      return {elapsed_ms: performance.now() - started, ready: true, busy: false, models: health.models};
+    if (performance.now() >= deadline) throw new Error("Worker did not release the stopped session in ten seconds");
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
+
 /** Functionality: Run one selected file with an explicit manual stop or natural EOF boundary.
- * Inputs: actual page, local filename and end mode. Outputs: all results, speech lifecycle, counters and cleanup.
+ * Inputs: actual page, local filename and startup/manual_stop/eof mode.
+ * Outputs: all results, speech lifecycle, counters and cleanup.
  * Logic: native file picker, user start click, observe bounded wait, drain EOF or stop explicitly.
  * Constraints: no loop/seek/rate edits, automatic retry, fake capture or hidden late-frame exclusion. */
 async function session(page, input, endMode) {
@@ -154,12 +198,18 @@ async function session(page, input, endMode) {
   await page.setInputFiles("#video-file", input);
   await page.waitForFunction(() => !document.getElementById("video-start").disabled);
   await page.click("#video-start");
-  await page.waitForFunction(() => window.videoProbe.events.some(event => event.type === "error") ||
-    window.videoProbe.frames.length >= 2 || window.videoProbe.events.some(event => event.type === "ended"),
-    null, {timeout: 55000});
+  const admissionLocked = await page.locator("#video-pending-limit").isDisabled();
+  if (!admissionLocked) throw new Error("Admission selection remained editable during the session");
+  await page.waitForFunction(minimum => window.videoProbe.events.some(event => event.type === "error") ||
+    window.videoProbe.frames.length >= minimum || window.videoProbe.events.some(event => event.type === "ended"),
+    endMode === "startup" ? 1 : 2, {timeout: 55000});
+  const boundary = await page.evaluate(() => ({error: window.videoProbe.events.find(event => event.type === "error"),
+    ended: window.videoProbe.events.some(event => event.type === "ended")}));
+  if (boundary.error) throw new Error(boundary.error.message);
   if (endMode === "eof") await page.waitForFunction(() => window.videoProbe.events.some(event =>
     ["ended", "error"].includes(event.type)), null, {timeout: 55000});
-  else await page.click("#video-stop");
+  else if (!boundary.ended) await page.click("#video-stop");
+  else if (endMode !== "startup") throw new Error("Video ended before manual stop could be exercised");
   const result = await page.evaluate(() => ({...window.videoProbe,
     stats: window.videoProbeController.stats,
     cleanup: {guidance_session_id: window.videoProbeGuidance.sessionId,
@@ -168,7 +218,11 @@ async function session(page, input, endMode) {
       loop: document.getElementById("video-source").loop,
       playback_rate: document.getElementById("video-source").playbackRate}}));
   result.end_mode = endMode;
+  result.admission_locked_during_session = admissionLocked;
+  result.worker_release = await waitIdle(page);
   result.summary = summarize(result.frames);
+  if (endMode !== "startup" && result.frames.length < 2)
+    throw new Error("Warm replay returned fewer than two frames");
   result.risk_engine_starts = result.guidance.filter(event => event.phase === "output_start" &&
     event.channel === "speech" && event.kind === "risk");
   result.speech_lifecycle = summarizeSpeech(result.guidance);
@@ -205,17 +259,20 @@ async function enableSpeech(page) {
 }
 
 /** Functionality: Exercise real file decoding and the complete independent local inference route.
- * Inputs: loopback page, original video and installed Playwright. Outputs: complete report.
- * Logic: two explicit sessions; fail on external requests, camera imports, errors or reused identity.
+ * Inputs: loopback page, original video, installed Playwright and explicit visibility/artifact options.
+ * Outputs: complete report and rendered EOF panel screenshot.
+ * Logic: separate startup, manual-stop and EOF sessions; fail on external requests or reused identity.
  * Constraints: does not prove metric distance/TTC accuracy, actual sound or vibration hardware. */
-async function run(url, input, runtime) {
+async function run(url, input, runtime, {headed, screenshot, pendingLimit}) {
   const require = createRequire(import.meta.url), {chromium} = require(resolve(runtime));
   const report = {complete: false, scope: "native continuous file video / Chrome / local dual-model GPU",
     hardware_outputs_verified: false, external_requests: [], camera_module_requests: [], failures: [], sessions: []};
-  const browser = await chromium.launch({channel: "chrome", headless: true});
+  const browser = await chromium.launch({channel: "chrome", headless: !headed});
+  report.browser = {version: browser.version(), headed, viewport: {width: 1440, height: 1000}};
+  report.admission_limit = pendingLimit;
   let page;
   try {
-    page = await browser.newPage();
+    page = await browser.newPage({viewport: report.browser.viewport});
     /** Functionality: Check the isolated source and network boundaries.
      * Inputs: browser request. Outputs: origin/path evidence without queries/credentials.
      * Logic: record external connections and original camera module loads.
@@ -242,11 +299,33 @@ async function run(url, input, runtime) {
     if (response.headers()["permissions-policy"] !== "camera=(), microphone=()")
       throw new Error("Video entry did not deny camera and microphone permissions");
     await page.evaluate(observe);
+    await page.selectOption("#video-pending-limit", String(pendingLimit));
     report.speech_configuration = await enableSpeech(page);
+    report.sessions.push(await session(page, input, "startup"));
     report.sessions.push(await session(page, input, "manual_stop"));
     report.sessions.push(await session(page, input, "eof"));
+    report.rendered_panel = await page.evaluate(() => {
+      const image = document.getElementById("video-result");
+      return {image_visible: !image.hidden && image.getBoundingClientRect().width > 0,
+        image_complete: image.complete, width: image.naturalWidth, height: image.naturalHeight,
+        result_rows: document.getElementById("video-results").children.length,
+        status: document.getElementById("video-result-status").textContent,
+        file_enabled: !document.getElementById("video-file").disabled,
+        start_disabled_at_eof: document.getElementById("video-start").disabled,
+        stop_disabled_at_eof: document.getElementById("video-stop").disabled};
+    });
+    const last = report.sessions.at(-1), metadata = last.frames.at(-1).result.metadata;
+    if (!report.rendered_panel.image_visible || !report.rendered_panel.image_complete ||
+        report.rendered_panel.width !== metadata.width || report.rendered_panel.height !== metadata.height ||
+        report.rendered_panel.result_rows !== Math.max(1, Math.min(50, metadata.boxes.length)) ||
+        !report.rendered_panel.file_enabled || !report.rendered_panel.start_disabled_at_eof ||
+        !report.rendered_panel.stop_disabled_at_eof || last.stats.sent !== last.stats.delivered)
+      throw new Error("Rendered result panel, EOF drain or control state is inconsistent");
+    await page.screenshot({path: screenshot, fullPage: true});
+    report.screenshot = basename(screenshot);
     const identities = report.sessions.map(item => item.events.find(event => event.type === "session")?.sessionId);
-    if (!identities.every(Boolean) || new Set(identities).size !== 2 ||
+    if (!identities.every(Boolean) || new Set(identities).size !== 3 ||
+        report.sessions.some(item => item.stats.pendingLimit !== pendingLimit || item.stats.maxInFlight > pendingLimit) ||
         report.external_requests.length || report.camera_module_requests.length || report.failures.length)
       throw new Error("Independent session or source/network isolation failed");
     report.complete = true;
@@ -262,20 +341,32 @@ async function run(url, input, runtime) {
 }
 
 /** Functionality: Validate explicit file/endpoint inputs and preserve new evidence.
- * Inputs: URL, unused JSON path, local video and PRS_PLAYWRIGHT_PATH. Outputs: report/exit status.
+ * Inputs: URL, unused JSON path, video, optional --headed/--pending-limit3|12 and PRS_PLAYWRIGHT_PATH.
+ * Outputs: report/screenshot/exit status.
  * Logic: fingerprint original file, run once and preserve all success/failure observations.
  * Constraints: no download, transformation, service start or report overwrite. */
 async function main() {
-  const [url, output, input] = process.argv.slice(2), runtime = process.env.PRS_PLAYWRIGHT_PATH;
+  const [url, output, input, ...flags] = process.argv.slice(2), runtime = process.env.PRS_PLAYWRIGHT_PATH;
   if (!url || !output || !input || !runtime) throw new Error("Use URL NEW_REPORT VIDEO; set PRS_PLAYWRIGHT_PATH");
+  let headed = false, pendingLimit = 12, limitSelected = false;
+  for (let index = 0; index < flags.length; index++) {
+    if (flags[index] === "--headed" && !headed) headed = true;
+    else if (flags[index] === "--pending-limit" && !limitSelected && ["3", "12"].includes(flags[index + 1])) {
+      pendingLimit = Number(flags[++index]); limitSelected = true;
+    } else throw new Error("Use optional --headed and --pending-limit3|12 exactly once");
+  }
   const address = new URL(url);
   if (address.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(address.hostname) ||
       address.pathname !== "/integration/video/" || address.username || address.password || address.search || address.hash)
     throw new Error("Use the loopback /integration/video/ entry");
   try { await access(output); throw new Error("Choose a new report path"); }
   catch (error) { if (error.code !== "ENOENT") throw error; }
+  const screenshot = resolve(output).replace(/\.json$/i, "") + "-eof.png";
+  try { await access(screenshot); throw new Error("Choose a new screenshot path"); }
+  catch (error) { if (error.code !== "ENOENT") throw error; }
+  await mkdir(dirname(resolve(output)), {recursive: true});
   const file = await stat(input);
-  const report = await run(url, resolve(input), runtime);
+  const report = await run(url, resolve(input), runtime, {headed, screenshot, pendingLimit});
   report.source_file = {name: basename(input), bytes: file.size,
     sha256: createHash("sha256").update(await readFile(input)).digest("hex")};
   await mkdir(dirname(resolve(output)), {recursive: true});

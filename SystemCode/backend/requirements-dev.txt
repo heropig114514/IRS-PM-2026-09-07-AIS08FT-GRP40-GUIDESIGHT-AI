@@ -1,5 +1,6 @@
 # Responsibilities: Declare local and CI check dependencies.
-# Implementation: Includes vision/web dependencies, pinned Ruff, and Paramiko for deployment tooling; tests mock external HTTP/SSH services.
+# Implementation: Includes vision/web dependencies, Ruff, Paramiko and certificate tooling;
+# tests mock external HTTP/SSH services and never install trust anchors.
 # Related Modules: requirements-vision.txt, pyproject.toml, core/test_hf.py, tools/deploy_phone_live.py, core/test_deploy_phone_live.py.
 # Declaration Index: None.
 # Variable Index: coverage==7.17.0 — deterministic branch/line coverage reporting and the CI backend threshold.
@@ -7,3 +8,4 @@
 coverage==7.17.0
 ruff==0.16.6
 paramiko==4.0.0
+cryptography==50.0.2

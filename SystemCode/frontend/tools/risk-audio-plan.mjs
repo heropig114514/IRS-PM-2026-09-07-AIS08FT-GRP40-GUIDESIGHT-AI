@@ -44,14 +44,14 @@ function splitWarning(text, language, {risk_level, approaching}) {
 }
 
 /* Functionality: Build the approved data-only bilingual warning resource plan.
- * Inputs: None. Outputs: Fresh schema-version-1 plan with 66 fragments and 144 compositions.
- * Logic: Cover four classes, three forward directions, three grades and two approach wordings
+ * Inputs: None. Outputs: Fresh schema-version-2 plan with 96 fragments and 216 compositions.
+ * Logic: Cover six presentation labels, three forward directions, three grades and two approach wordings
  * in Chinese then English. Prioritize critical/high pedestrian text, then remaining critical,
  * high and medium groups. Deduplicate natural units by language, role and exact transcript.
  * Constraints: PCM metadata describes the intended mono WAV resource content, not existing audio.
  * No service, upload, runtime cache/manager wiring, algorithm change or audio generation occurs. */
 export function buildRiskAudioPlan() {
-  const classes = ["person", "bicycle", "car", "motorcycle"];
+  const classes = ["person", "bicycle", "car", "motorcycle", "chair", "obstacle"];
   const directions = ["front", "front_left", "front_right"];
   const order = [{label: "person", risk_level: "critical"}, {label: "person", risk_level: "high"}];
   for (const risk_level of ["critical", "high", "medium"])
@@ -83,7 +83,7 @@ export function buildRiskAudioPlan() {
           compositions.push({id: `${language}-${label}-${direction}-${risk_level}-${approaching ? "approaching" : "present"}`,
             language, ...variant, text, clip_ids});
         }
-  return {schema_version: 1, voice: "Cherry", rate: 2, sample_rate: 24000,
+  return {schema_version: 2, voice: "Cherry", rate: 2, sample_rate: 24000,
     format: "pcm_s16le_mono", classes, directions, clips, compositions};
 }
 

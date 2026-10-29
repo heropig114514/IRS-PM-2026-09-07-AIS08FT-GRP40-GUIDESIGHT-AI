@@ -5,14 +5,16 @@ Declaration Index: distance_box; GeometryDistanceEstimator; GeometryDistanceEsti
 GeometryDistanceEstimator.estimate; GeometryDistanceEstimator.fuse; TemporalDepthEntry;
 TemporalDepthCache; TemporalDepthCache.__init__; TemporalDepthCache.reset;
 TemporalDepthCache.apply; DistanceStrategy; DistanceStrategy.__init__; DistanceStrategy.fuse;
-DistanceStrategy.apply.
+DistanceStrategy.apply; DistanceStrategy._fuse_depth.
 Variable Index: logger — stream lifecycle diagnostics; cache.entries — scalar history only;
 strategy.frame_index/stream_key — first-frame schedule and tracker epoch/geometry identity.
-strategy.fast_roi — explicit A-only host partition toggle; false retains original GPU medians.
+strategy.fast_roi — explicit A-only host partition; false retains original GPU medians.
+strategy.depth_predict_ms — host duration of the actual depth call, zero when skipped.
 """
 
 import logging
 import math
+import time
 from dataclasses import dataclass
 
 from realtime.depth import fuse_object_depth
@@ -145,6 +147,18 @@ class DistanceStrategy:
                          if config.distance_mode == "geometry" else None)
         self.cache = TemporalDepthCache() if config.distance_mode == "temporal_depth" else None
         self.frame_index, self.stream_key = 0, None
+        self.depth_predict_ms = 0.0
+
+    def _fuse_depth(self, image, boxes, depth_estimator):
+        """Functionality: Preserve exact depth/fusion while measuring the actual model call.
+        Inputs: original image, associated boxes and selected depth model. Outputs: fused boxes.
+        Logic: use host clocks without extra CUDA synchronization; retain unchanged ROI algorithm.
+        Constraints: pending device work may charge to fusion; this is not pure kernel timing.
+        """
+        started = time.perf_counter()
+        depth_map = depth_estimator.predict(image)
+        self.depth_predict_ms = (time.perf_counter() - started) * 1000
+        return self.fuse(depth_map, boxes, image.size)
 
     def fuse(self, depth_map, boxes, image_size):
         """Functionality: Select the unchanged A median or opt-in exact host partition.
@@ -152,7 +166,7 @@ class DistanceStrategy:
         Logic: fast mode downloads the depth plane once, then partitions valid ROI values.
         Constraints: A only; B/C keep their original path, no approximation or class filtering.
         """
-        if self.fast_roi:
+        if self.fast_roi and self.config.distance_mode == "depth":
             from realtime.depth_fast import fuse_depth_host
 
             return fuse_depth_host(depth_map, boxes, image_size)
@@ -161,15 +175,17 @@ class DistanceStrategy:
     def apply(self, image, boxes, depth_estimator, *, timestamp, epoch=0):
         """Functionality: Execute only the selected distance stage for one associated frame.
         Inputs: original image/boxes, optional model, timestamp and tracker epoch.
-        Outputs: (boxes, actual_depth_call). Logic: B uses geometry; A uses unchanged fusion;
+        Outputs: (boxes, actual_depth_call), reset per-frame depth_predict_ms.
+        Logic: B uses geometry; A uses unchanged fusion;
         C resets on stream change and invokes depth only on scheduled frames before cache update.
         Constraints: C requires a model; invalid depth raises unchanged errors, never a fallback.
         """
+        self.depth_predict_ms = 0.0
         mode = self.config.distance_mode
         if mode == "geometry":
             return self.geometry.fuse(boxes, image.size), False
         if mode == "depth":
-            return (self.fuse(depth_estimator.predict(image), boxes, image.size), True
+            return (self._fuse_depth(image, boxes, depth_estimator), True
                     ) if depth_estimator is not None else (boxes, False)
         if depth_estimator is None:
             raise ValueError("temporal_depth requires a depth estimator")
@@ -181,7 +197,7 @@ class DistanceStrategy:
                         epoch, self.config.depth_interval)
         depth_frame = self.frame_index % self.config.depth_interval == 0
         if depth_frame:
-            boxes = fuse_object_depth(depth_estimator.predict(image), boxes, image.size)
+            boxes = self._fuse_depth(image, boxes, depth_estimator)
         boxes = self.cache.apply(boxes, depth_frame=depth_frame, frame_index=self.frame_index,
                                  timestamp=timestamp)
         self.frame_index += 1

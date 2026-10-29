@@ -61,12 +61,12 @@ PCM = b"\x00\x00\xff\x7f\x00\x80"
 
 def plan_fixture():
     """Functionality: Build an independent complete structural plan fixture.
-    Inputs: None. Outputs: Sixty-six clips and all 144 valid composition identities.
+    Inputs: None. Outputs: Ninety-six clips and all 216 valid composition identities.
     Logic: Reuse two labeled fragments per composition, covering every declared clip.
     Constraints: Synthetic wording tests structure; production wording is tested separately.
     """
     clips, compositions = [], []
-    for language, count in [("zh-CN", 39), ("en-US", 27)]:
+    for language, count in [("zh-CN", 57), ("en-US", 39)]:
         local = [
             {
                 "id": f"{language}-fixture-{index}",
@@ -95,7 +95,7 @@ def plan_fixture():
                 }
             )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "voice": "Cherry",
         "rate": 2,
         "sample_rate": 24000,
@@ -409,7 +409,7 @@ class RiskAudioResourceTests(SimpleTestCase):
     async def test_complete_pack_manifest_and_previews(self):
         """Functionality: Publish complete, lossless resources before the final manifest.
         Inputs: Full corpus, scripted PCM and two worker slots.
-        Outputs: Verified 66 clips/two demos.
+        Outputs: Verified 96 clips/two demos.
         Logic: Independently read WAVs, compare samples/hashes and observe exclusive write order.
         Constraints: Temporary resources and fixture PCM do not establish actual speech quality.
         """
@@ -438,10 +438,10 @@ class RiskAudioResourceTests(SimpleTestCase):
                     plan, URL, output, report_path, concurrency=2, opener=opener
                 )
             self.assertTrue(report["complete"])
-            self.assertEqual(report["completed"], 66)
+            self.assertEqual(report["completed"], 96)
             self.assertEqual(report["unstarted"], 0)
             self.assertEqual(report["failures"], [])
-            self.assertEqual(len(opener.peers), 66)
+            self.assertEqual(len(opener.peers), 96)
             self.assertEqual(opener.maximum, 2)
             self.assertEqual(opener.active, 0)
             self.assertTrue(all(peer.closed for peer in opener.peers))
@@ -449,9 +449,9 @@ class RiskAudioResourceTests(SimpleTestCase):
             self.assertEqual(json.loads(report_path.read_text(encoding="utf-8")), report)
             manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["compositions"], plan["compositions"])
-            self.assertEqual(len(manifest["clips"]), 66)
+            self.assertEqual(len(manifest["clips"]), 96)
             self.assertEqual(len(manifest["demos"]), len(LANGUAGES))
-            self.assertEqual(len(list(output.rglob("*.wav"))), 68)
+            self.assertEqual(len(list(output.rglob("*.wav"))), 98)
             source_pcm = {}
             for record in manifest["clips"] + manifest["demos"]:
                 audio = (output / record["path"]).read_bytes()
@@ -537,7 +537,7 @@ class RiskAudioResourceTests(SimpleTestCase):
         """Functionality: Preserve completed clips without publishing a failed pack as complete.
         Inputs: First-worker provider error and one already admitted successful peer.
         Outputs: One preserved WAV, safe report, no manifest or later synthesis calls.
-        Logic: The second admitted worker may finish; the remaining 64 clips never start.
+        Logic: The second admitted worker may finish; the remaining 94 clips never start.
         Constraints: Scripted outcomes prove failure admission and cleanup, not real TTS.
         """
         plan, opener = plan_fixture(), FakeOpener(["error", "valid"])
@@ -551,7 +551,7 @@ class RiskAudioResourceTests(SimpleTestCase):
             self.assertFalse(report["complete"])
             self.assertEqual(len(opener.peers), 2)
             self.assertEqual(report["completed"], 1)
-            self.assertEqual(report["unstarted"], 64)
+            self.assertEqual(report["unstarted"], 94)
             self.assertEqual(report["failures"][0]["code"], "tts_upstream_error")
             self.assertFalse((output / "manifest.json").exists())
             self.assertFalse((output / "demos").exists())

@@ -9,6 +9,17 @@
  * Variable Index: translations — fixed Chinese-to-English UI dictionary; contains no coordinates or image data.
  */
 export const translations = {
+  "常驻 GPU · 80 类": "Resident GPU · 80 classes",
+  "YOLO26n 检测 80 类；常驻 GPU 服务返回标注图像。": "YOLO26n detects 80 classes; the resident GPU service returns annotated images.",
+  "图像由本机或自有服务器的常驻 GPU 处理。首帧可能等待初始化；每次只接收一个视频会话，持续运行直到停止或出错。不会自动切换至其他服务。": "Images are processed by the resident GPU on your computer or server. The first frame may wait for initialization. One video session runs until stopped or an error occurs. The service never switches automatically.",
+  "视频会话已结束并释放资源。再次点击开始可开启新会话。": "Video session ended and resources were released. Click start to open a new session.",
+  "常驻 GPU 服务正在处理另一个视频，请稍后手动开始。": "The resident GPU is processing another video. Start again manually later.",
+  "常驻 GPU 服务未就绪，请检查服务端启动和推理日志。": "The resident GPU is unavailable. Check server startup and inference logs.",
+  "常驻 GPU 视频处理失败，请检查服务端日志后重新开始。": "Resident GPU video processing failed. Check server logs before starting again.",
+  "常驻 GPU 会话配置无效，请检查服务端。": "Invalid resident GPU session configuration. Check the server.",
+  "常驻 GPU 返回的工作负载与会话不匹配。": "The resident GPU result workload does not match the session.",
+  "常驻 GPU 会话结束计数不完整。": "Resident GPU session completion counts are incomplete.",
+  "未知视频会话协议。": "Unknown video session protocol.",
   "导航语音": "Navigation speech",
   "启用导航播报（默认关闭）": "Enable navigation speech (off by default)",
   "启用导航播报（默认开启）": "Enable navigation announcements (on by default)",
@@ -186,7 +197,6 @@ export const translations = {
   "视频结果包大小无效。": "Invalid video result size.",
   "视频会话类别配置无效。": "Invalid video class configuration.",
   "视频会话配置无效，请检查服务端。": "Invalid video session configuration. Check the server.",
-  "ZeroGPU 视频会话已结束并释放资源。再次点击开始可开启新会话。": "ZeroGPU video session ended and resources were released. Click start to open a new session.",
   "本次视频会话已结束": "Video session ended",
   "等待首帧检测": "Waiting for the first detection",
   "路线接口仅接受本页面的同源请求。": "The route endpoint only accepts same-origin requests from this page.",

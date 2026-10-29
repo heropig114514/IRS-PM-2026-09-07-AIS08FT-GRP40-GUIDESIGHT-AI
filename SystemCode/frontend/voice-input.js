@@ -4,7 +4,8 @@
  * Related Modules: voice-worklet.js, agent-client.js, SystemCode/backend/core/agent/provider.py.
  * Declaration Index: encodeWav; VoiceInput; VoiceInput.constructor; VoiceInput.start;
  * VoiceInput.finish; VoiceInput.release; VoiceInput.cancel.
- * Variable Index: None; chunks/context/stream/node/generation are per-recorder state. */
+ * Variable Index: chunks/context/stream/node/generation are per-recorder state;
+ * reserveAudio/releaseAudio bound optional shared playback coordination to owned microphone capture. */
 
 /* Functionality: Encode captured mono samples into PCM16 WAV.
  * Inputs: Float32Array samples and native sample rate; Outputs: base64 WAV at 16000Hz.
@@ -45,10 +46,10 @@ export function encodeWav(samples, rate) {
  * Logic: Generation isolates late permission callbacks; cleanup releases all audio resources.
  * Constraints: No automatic listening/restart, browser SpeechRecognition or persistent audio. */
 export class VoiceInput {
-  /* Functionality: Initialize recorder. Inputs: onLimit callback; Outputs: inactive recorder.
+  /* Functionality: Initialize recorder. Inputs: onLimit and optional audio reservation factory; Outputs: inactive recorder.
    * Logic: Keep recording state local; Constraints: does not request permissions. */
-  constructor(onLimit) {
-    this.onLimit = onLimit;
+  constructor(onLimit, reserveAudio = () => () => {}) {
+    this.onLimit = onLimit; this.reserveAudio = reserveAudio; this.releaseAudio = null;
     this.generation = 0;
     this.chunks = [];
   }
@@ -68,10 +69,11 @@ export class VoiceInput {
       error.name = "NotSupportedError";
       throw error;
     }
-    this.context = new AudioContext();
     let mediaRequest;
     let stream = null;
     try {
+      this.releaseAudio = this.reserveAudio();
+      this.context = new AudioContext();
       mediaRequest = navigator.mediaDevices.getUserMedia({video: false,
         audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}});
       const resumeRequest = this.context.resume();
@@ -134,7 +136,8 @@ export class VoiceInput {
     }
   }
   /* Functionality: Release graph/device resources. Inputs: owned resources; Outputs: cleared state.
-   * Logic: Stop tracks before closing context; Constraints: close errors propagate to caller. */
+   * Logic: Stop tracks before closing context, then release the capture reservation even on close failure.
+   * Constraints: Close errors propagate; releasing never starts speech. */
   async release() {
     this.stream?.getTracks().forEach(track => track.stop());
     this.node?.disconnect();
@@ -142,7 +145,9 @@ export class VoiceInput {
     const context = this.context;
     this.stream = this.node = this.source = this.context = null;
     this.chunks = [];
-    if (context && context.state !== "closed") await context.close();
+    const releaseAudio = this.releaseAudio; this.releaseAudio = null;
+    try { if (context && context.state !== "closed") await context.close(); }
+    finally { releaseAudio?.(); }
   }
   /* Functionality: Cancel pending/current recording. Inputs: generation/resources.
    * Outputs: released device; Logic: invalidate first; Constraints: never sends captured audio. */

@@ -1,0 +1,192 @@
+{
+  "physical_audio_verified": false,
+  "checks": [
+    {
+      "label": "Chinese visible control",
+      "elapsed_ms": 3663,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 1,
+          "text_length": 8,
+          "language": "zh-CN",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "websocket"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "已发送语音到设备。若没有声音，请点击试听并检查媒体音量和蓝牙输出。"
+    },
+    {
+      "label": "Explicit recovery after AudioContext suspend",
+      "elapsed_ms": 3778,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 2,
+          "text_length": 8,
+          "language": "zh-CN",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "websocket"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "已发送语音到设备。若没有声音，请点击试听并检查媒体音量和蓝牙输出。"
+    },
+    {
+      "label": "English recovery after AudioContext close",
+      "elapsed_ms": 4321,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 3,
+          "text_length": 25,
+          "language": "en-US",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "websocket"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "Speech was sent to your device. If silent, test voice and check media volume and Bluetooth output."
+    }
+  ],
+  "errors": [],
+  "interrupted": {
+    "driver": {
+      "available": true,
+      "supported": true,
+      "enabled": true,
+      "visible": true,
+      "user_activated": true,
+      "state": "completed",
+      "active_request": false,
+      "engine_speaking": false,
+      "engine_pending": false,
+      "engine_paused": false,
+      "audio_context_state": "suspended",
+      "voice_count": 1,
+      "voice_query_failed": false,
+      "last_request": {
+        "id": 1,
+        "text_length": 8,
+        "language": "zh-CN",
+        "voice_id": "Cherry",
+        "rate": 2,
+        "volume": 1,
+        "service": "backend",
+        "local_service": false,
+        "audio_transport": "websocket"
+      },
+      "last_error": null,
+      "audio_output_verified": false,
+      "speech_service": "backend"
+    },
+    "activation": {
+      "ready": false,
+      "state": "error",
+      "reason": "audio_context_interrupted",
+      "request_id": 1,
+      "owned_request_id": null,
+      "cancel_failed": false,
+      "disposed": false
+    },
+    "paused": {
+      "speech": true,
+      "vibration": false
+    },
+    "status": "手机暂停了语音。请保持页面在前台，点击试听／恢复语音。"
+  }
+}

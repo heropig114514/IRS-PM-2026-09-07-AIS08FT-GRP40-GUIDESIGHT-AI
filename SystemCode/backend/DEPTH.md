@@ -4,6 +4,9 @@ This document describes the unchanged default A fusion. Explicit geometry (B) an
 depth (C), configuration, cache lifecycle and performance reporting are documented in
 [DISTANCE-MODES.md](DISTANCE-MODES.md). A keeps the same algorithms and fields.
 
+For explicit ONNX/TensorRT FP32 forward experiments and the final-weight re-export contract, see
+[DEPTH-EXPORT.md](DEPTH-EXPORT.md). Exported runtime candidates are separate from default services.
+
 The insertion point is `ResidentDetector.predict()` after unchanged object detection and
 inverse-letterbox box decoding, before JPEG annotation. `AllocatedDetector` inherits this method,
 so native CUDA and HF ZeroGPU use the same fusion code. Echo remains an image-byte diagnostic.

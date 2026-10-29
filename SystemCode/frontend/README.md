@@ -1,5 +1,8 @@
 # Camera Frontend
 
+The independent resident GPU entry explicitly adds `/ws/detect/resident/` as a fourth camera mode;
+see [resident service](../backend/RESIDENT.md). Its native FP32 contract remains distinct from HF and local PRF2.
+
 ## Unified Navigation and Perception
 
 Start the backend launcher in explicit --assist mode and open http://127.0.0.1:8766/maps/. The entry uses integration/assist-product.html and dedicated product styles with the existing maps-page.js, navigation-ui.js, camera.js, VideoReplay, speech/vibration drivers, and MCP integration. It does not change navigation or algorithm calculations. Setup and startup differences from the offline entry are documented in ../backend/LOCAL-MVP.md.

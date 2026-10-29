@@ -1,0 +1,386 @@
+{
+  "physical_audio_verified": false,
+  "checks": [
+    {
+      "label": "Chinese visible control",
+      "elapsed_ms": 3687,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 1,
+          "text_length": 8,
+          "language": "zh-CN",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "websocket"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "后端语音已开始播放，助手回复、导航和风险提醒可自动播报；请确认设备实际声音。"
+    },
+    {
+      "label": "Explicit recovery after AudioContext suspend",
+      "elapsed_ms": 3091,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 2,
+          "text_length": 8,
+          "language": "zh-CN",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "websocket"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "后端语音已开始播放，助手回复、导航和风险提醒可自动播报；请确认设备实际声音。"
+    },
+    {
+      "label": "English recovery after AudioContext close",
+      "elapsed_ms": 3162,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 3,
+          "text_length": 8,
+          "language": "zh-CN",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "websocket"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "Backend speech playback has started and can announce assistant replies, navigation and risk alerts. Confirm that sound is audible on the device."
+    },
+    {
+      "label": "Prepared risk phrase zh-CN",
+      "synthetic_risk": true,
+      "tts_sockets": 0,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 4,
+          "text_length": 9,
+          "language": "zh-CN",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "risk_cache"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "Backend speech playback has started and can announce assistant replies, navigation and risk alerts. Confirm that sound is audible on the device."
+    },
+    {
+      "label": "Prepared risk phrase en-US",
+      "synthetic_risk": true,
+      "tts_sockets": 0,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 5,
+          "text_length": 21,
+          "language": "en-US",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "risk_cache"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "Backend speech playback has started and can announce assistant replies, navigation and risk alerts. Confirm that sound is audible on the device."
+    },
+    {
+      "label": "Manager rejects expired/non-alert input; continuously confirmed required risk completes",
+      "synthetic_risk": true,
+      "synthetic_confirmation_interval_ms": 250,
+      "driver": {
+        "available": true,
+        "supported": true,
+        "enabled": true,
+        "visible": true,
+        "user_activated": true,
+        "state": "completed",
+        "active_request": false,
+        "engine_speaking": false,
+        "engine_pending": false,
+        "engine_paused": false,
+        "audio_context_state": "running",
+        "voice_count": 1,
+        "voice_query_failed": false,
+        "last_request": {
+          "id": 6,
+          "text_length": 9,
+          "language": "zh-CN",
+          "voice_id": "Cherry",
+          "rate": 2,
+          "volume": 1,
+          "service": "backend",
+          "local_service": false,
+          "audio_transport": "risk_cache"
+        },
+        "last_error": null,
+        "audio_output_verified": false,
+        "speech_service": "backend"
+      },
+      "activation": {
+        "ready": true,
+        "state": "ready",
+        "reason": null,
+        "request_id": 1,
+        "owned_request_id": null,
+        "cancel_failed": false,
+        "disposed": false
+      },
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "status": "Backend speech playback has started and can announce assistant replies, navigation and risk alerts. Confirm that sound is audible on the device."
+    }
+  ],
+  "errors": [],
+  "interrupted": {
+    "driver": {
+      "available": true,
+      "supported": true,
+      "enabled": true,
+      "visible": true,
+      "user_activated": true,
+      "state": "completed",
+      "active_request": false,
+      "engine_speaking": false,
+      "engine_pending": false,
+      "engine_paused": false,
+      "audio_context_state": "suspended",
+      "voice_count": 1,
+      "voice_query_failed": false,
+      "last_request": {
+        "id": 1,
+        "text_length": 8,
+        "language": "zh-CN",
+        "voice_id": "Cherry",
+        "rate": 2,
+        "volume": 1,
+        "service": "backend",
+        "local_service": false,
+        "audio_transport": "websocket"
+      },
+      "last_error": null,
+      "audio_output_verified": false,
+      "speech_service": "backend"
+    },
+    "activation": {
+      "ready": false,
+      "state": "error",
+      "reason": "audio_context_interrupted",
+      "request_id": 1,
+      "owned_request_id": null,
+      "cancel_failed": false,
+      "disposed": false
+    },
+    "paused": {
+      "speech": true,
+      "vibration": false
+    },
+    "status": "语音提醒已开启，尚未启动（audio_context_interrupted）。点击“启动语音”、发送助手指令或开始导航、检测。"
+  },
+  "audio_resources": [
+    {
+      "manifest": true,
+      "bytes": 106901,
+      "transfer_bytes": 15886,
+      "duration_ms": 584.3999999999069
+    },
+    {
+      "manifest": true,
+      "bytes": 106901,
+      "transfer_bytes": 15886,
+      "duration_ms": 913.3999999999069
+    },
+    {
+      "manifest": false,
+      "bytes": 16108,
+      "transfer_bytes": 16408,
+      "duration_ms": 521
+    },
+    {
+      "manifest": false,
+      "bytes": 37220,
+      "transfer_bytes": 37520,
+      "duration_ms": 586.7000000000698
+    },
+    {
+      "manifest": true,
+      "bytes": 106901,
+      "transfer_bytes": 15886,
+      "duration_ms": 935.2000000000698
+    },
+    {
+      "manifest": false,
+      "bytes": 16108,
+      "transfer_bytes": 16408,
+      "duration_ms": 512.9000000000233
+    },
+    {
+      "manifest": false,
+      "bytes": 25700,
+      "transfer_bytes": 26000,
+      "duration_ms": 522.8000000000466
+    },
+    {
+      "manifest": false,
+      "bytes": 16108,
+      "transfer_bytes": 16408,
+      "duration_ms": 511.9000000000233
+    }
+  ]
+}

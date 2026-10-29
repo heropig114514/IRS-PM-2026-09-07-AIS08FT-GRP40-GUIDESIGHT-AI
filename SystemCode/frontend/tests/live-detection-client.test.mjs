@@ -2,17 +2,20 @@
  * Implementation: Explicit socket fixtures, production plan admission, real WebCrypto and synthetic
  * JPEG markers; no GPU/network.
  * Related Modules: live-detection-client.js; actual image decoding/public-service tests are separate.
- * Declaration Index: FakeSocket; FakeSocket.constructor; FakeSocket.send; FakeSocket.close;
+ * Declaration Index: testBufferedBytes; FakeSocket; FakeSocket.constructor; FakeSocket.send; FakeSocket.close;
  * FakeSocket.message; packet; fixture; fixture.socketFactory; fixture.failed; fixture.ended;
  * admitted; testBinary; testInvalid; testOrder; testStop; testBudgets; testFinal; testHello;
  * testSelectedPrecision; testDepthResult; testDepthFailures; testDepthCapacity;
  * trackingMetadata; testTrackingResults; testTrackingFailures; testTrackingCapacity;
- * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity; testLocalHello; testLocalCapture; testLocalCorrelation;
- * testDistanceModes; testDistanceModeFailures; testLocalContinuous; testSessionDurationAdmission;
- * testSessionDurationOptions; testHfDurationIsolation; testWalkModel; testWalkModelFailures.
- * Variable Index: manifest/contract — original public model identity; walkManifest/walkContract — opt-in
- * 87-class walking-aid identity (backend models/yolo26n-walk.json); plan — current deployment's
- * compute/quality contract; localContract is independent local capability admission; JPEG — synthetic markers;
+ * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity;
+ * testResidentAdmission; testResidentIdentity; testResidentWorkload; testResidentEnd; testResidentErrors;
+ * testLocalHello; testLocalCapture; testLocalCorrelation; testDistanceModes; testDistanceModeFailures;
+ * testProviderIsolation; testLocalContinuous; testSessionDurationAdmission;
+ * testSessionDurationOptions; testHfDurationIsolation; testWalkModel; testWalkModelFailures;
+ * testWalkProviderBoundary.
+ * Variable Index: manifest/contract — original public model identity; walkManifest/walkContract —
+ * opt-in 87-class walking-aid identity; plan — deployment compute/quality contract;
+ * residentContract/localContract — independent native admissions; JPEG — synthetic markers;
  * duration options exercise explicit continuous-local admission with virtual timers, never actual long-running inference.
  */
 import assert from "node:assert/strict";
@@ -31,11 +34,41 @@ const contract = {kind: "session", model: "yolo26n", precision: "FP32", classes:
   source_sha256: manifest.source_sha256, names: manifest.names, confidence_threshold: 0.25,
   max_edge: 640, jpeg_quality: 0.8, max_inflight: 12, session_seconds: 55, cold_seconds: 55, steady_seconds: 10};
 const JPEG = Uint8Array.from([255, 216, 1, 255, 217]);
+const residentContract = {...contract, protocol: "resident-v1", mode: "detection",
+  session_seconds: null, idle_seconds: 15, model_load_ms: 100};
+for (const key of ["validation", "cold_seconds", "steady_seconds"]) delete residentContract[key];
 const localContract = {...contract, provider: "local", protocol_version: 2, session_id: "1".repeat(32),
   depth_model: "yolo26n-depth", depth_units: "m", distance_mode: "depth", distance_units: "m",
   depth_interval: 1, tracking_model: "botsort", risk_model: "rules-v1",
   capabilities: {detection: true, depth: true, tracking: true, risk: true}};
 delete localContract.validation;
+
+/** Functionality: Keep all three provider contracts isolated after shared-client integration.
+ * Inputs: each valid hello against each explicit provider and local lifetime, plus conflicting selectors.
+ * Outputs: only matching admission succeeds. Logic: exercise provider API and legacy resident alias.
+ * Constraints: synthetic admission verifies protocol separation, not model readiness or quality. */
+test("HF, local and resident contracts cannot substitute for each other", async function testProviderIsolation() {
+  for (const localSessionSeconds of [55, null]) {
+    const contracts = {hf: contract, local: {...localContract, session_seconds: localSessionSeconds},
+      resident: residentContract};
+    for (const [provider, hello] of Object.entries(contracts)) {
+      for (const selected of Object.keys(contracts)) {
+        const f = fixture(selected, {localSessionSeconds});
+        if (selected === provider) {
+          await admitted(f, hello); f.client.stop();
+        } else {
+          const waiting = assert.rejects(f.client.connect());
+          f.socket.message(JSON.stringify(hello)); await waiting;
+          assert.equal(f.socket.sent.length, 0);
+        }
+      }
+    }
+  }
+  assert.throws(() => new LiveDetectionClient("wss://test.invalid/", null, null,
+    {provider: "local", protocol: "resident-v1"}), /协议/);
+  assert.throws(() => new LiveDetectionClient("wss://test.invalid/", null, null,
+    {provider: "resident", protocol: "hf"}), /协议/);
+});
 
 /** Functionality: Admit and decode complete local B/C outputs through unchanged distance/risk fields.
  * Inputs: explicit mode identities and independent existing risk fixtures. Outputs: valid distance and Track ID.
@@ -249,6 +282,31 @@ class FakeSocket {
   message(data) { this.onmessage({data}); }
 }
 
+/** Functionality: Expose only validated native send-buffer readings on an admitted open session.
+ * Inputs: controlled socket state/count. Outputs: exact bytes or visible error.
+ * Logic: observe no send or sequence change; test closed, stopped and malformed readings.
+ * Constraints: synthetic socket, not a network throughput measurement. */
+test("buffered bytes require an admitted open socket and never send", async function testBufferedBytes() {
+  const f = fixture();
+  assert.throws(() => f.client.bufferedBytes(), /尚未就绪/);
+  await admitted(f);
+  const sent = f.socket.sent.length;
+  for (const value of [0, 65536]) {
+    f.socket.bufferedAmount = value;
+    assert.equal(f.client.bufferedBytes(), value);
+  }
+  for (const value of [-1, NaN, Infinity, 1.5, undefined]) {
+    f.socket.bufferedAmount = value;
+    assert.throws(() => f.client.bufferedBytes(), /队列状态/);
+    assert.throws(() => f.client.sendFrame(JPEG.slice().buffer), /队列状态/);
+  }
+  assert.equal(f.socket.sent.length, sent); assert.equal(f.client.sequence, 0);
+  f.socket.readyState = 3;
+  assert.throws(() => f.client.bufferedBytes(), /尚未就绪/);
+  f.client.stop();
+  assert.throws(() => f.client.bufferedBytes(), /尚未就绪/);
+});
+
 /** Functionality: Build an independent Python-compatible response fixture.
  * Inputs: index, metadata overrides, JPEG bytes. Outputs: ArrayBuffer PRS1 packet.
  * Logic: Node crypto produces independent checksum; typed header is big-endian.
@@ -271,9 +329,10 @@ function packet(index, overrides = {}, jpeg = JPEG) {
 }
 
 /** Functionality: Bind actual client to explicit socket/lifecycle fixtures.
- * Inputs: provider(hf default), optional local-session policy. Outputs: client/socket/state. Logic: callbacks collect diagnostics.
+ * Inputs: provider or resident-v1 alias, HF by default, optional local duration. Outputs: client/socket/state.
+ * Logic: collect diagnostics and exercise both selection APIs.
  * Constraints: never fetches HF quota or requests a GPU. */
-function fixture(provider = "hf", options = {}) {
+function fixture(protocol = "hf", options = {}) {
   const socket = new FakeSocket(), state = {errors: [], ends: 0};
   /** Functionality: Return injected socket. Inputs: ignored url. Outputs: fixture.
    * Logic: no new socket. Constraints: explicitly synthetic. */
@@ -284,9 +343,94 @@ function fixture(provider = "hf", options = {}) {
   /** Functionality: Record bounded end. Inputs: None. Outputs: end count.
    * Logic: no auto-start. Constraints: no actual resource-release proof. */
   function ended() { state.ends += 1; }
-  return {client: new LiveDetectionClient(`wss://test.invalid/ws/detect/${provider}/`, failed, ended,
-    {...options, socketFactory, provider}), socket, state};
+  return {client: new LiveDetectionClient("wss://test.invalid/ws/detect/fixture/", failed, ended,
+    {...options, socketFactory, ...(protocol === "resident-v1" ? {protocol} : {provider: protocol})}), socket, state};
 }
+
+/** Functionality: Admit all explicit native workloads and verify an actual envelope response.
+ * Inputs: resident hello and appropriate synthetic metadata. Outputs: no quality-plan dependency.
+ * Logic: actual client/hash validation; full workload retains risk/track/depth checks.
+ * Constraints: no GPU/accuracy claim; all frame parameters remain unchanged. */
+test("resident admission is explicit and supports its three workloads", async function testResidentAdmission() {
+  for (const mode of ["detection", "depth", "full"]) {
+    const selected = {...residentContract, mode};
+    const {client, socket, state} = await admitted(fixture("resident-v1"), selected);
+    try {
+      const result = client.sendFrame(JPEG.slice().buffer);
+      const extra = mode === "full" ? riskMetadata() : mode === "depth" ?
+        {depth_model: "yolo26n-depth", depth_units: "m", depth_ms: 2} : {};
+      socket.message(packet(0, {...extra, resident_queue_ms: 0.1}));
+      assert.equal((await result).metadata.precision, "FP32");
+      assert.equal(client.contract.session_seconds, null);
+      assert.deepEqual(state.errors, []);
+    } finally { client.stop(); }
+  }
+});
+
+/** Functionality: Reject cross-provider hello and unapproved native configurations.
+ * Inputs: HF/resident substitutions and mutated native contract. Outputs: pre-frame failures.
+ * Logic: protocol is selected by caller, never inferred from provider data.
+ * Constraints: no weakening of existing HF COCO/precision checks. */
+test("resident cannot bypass HF admission or accept a changed native plan", async function testResidentIdentity() {
+  const cases = [["hf", residentContract], ["resident-v1", contract]];
+  for (const change of [{precision: "FP16"}, {mode: "unknown"}, {session_seconds: 55},
+    {idle_seconds: 0}, {model_load_ms: -1}, {validation: contract.validation},
+    {cold_seconds: 55}, {max_inflight: 8}, {token: "synthetic"}, {protocol: undefined}])
+    cases.push(["resident-v1", {...residentContract, ...change}]);
+  for (const [protocol, selected] of cases) {
+    const {client, socket, state} = fixture(protocol);
+    const rejected = assert.rejects(client.connect());
+    socket.message(JSON.stringify(selected));
+    await rejected;
+    assert.equal(state.errors.length, 1);
+    assert.equal(socket.sent.length, 0);
+  }
+});
+
+/** Functionality: Reject omitted or added stages and invalid resident queue timings.
+ * Inputs: synthetic full metadata and staged removals. Outputs: validation failures.
+ * Logic: declared workload must match every frame, including no-detection frames.
+ * Constraints: does not infer successful depth/tracking from labels alone. */
+test("resident per-frame stages must match the admitted workload", async function testResidentWorkload() {
+  const selected = {...residentContract, mode: "full"};
+  const full = {...riskMetadata(), resident_queue_ms: 0};
+  for (const field of ["depth_model", "tracking_model", "risk_model", "resident_queue_ms"]) {
+    const changed = {...full}; delete changed[field];
+    await assert.rejects(decodeResult(packet(0, changed), 0, selected));
+  }
+  await assert.rejects(decodeResult(packet(0, {...full, resident_queue_ms: -1}), 0, selected));
+  await assert.rejects(decodeResult(packet(0, full), 0, residentContract));
+});
+
+/** Functionality: Verify resident final counts after asynchronous JPEG hashing finishes.
+ * Inputs: final result followed by correct/incorrect drain summaries. Outputs: end or failure.
+ * Logic: match sent/verified counts on the message chain. Constraints: partial success is not ended. */
+test("resident end preserves final JPEG and checks complete delivery", async function testResidentEnd() {
+  for (const count of [1, 0, 2]) {
+    const {client, socket, state} = await admitted(fixture("resident-v1"), residentContract);
+    const result = client.sendFrame(JPEG.slice().buffer);
+    socket.message(packet(0, {resident_queue_ms: 0}));
+    socket.message(JSON.stringify({kind: "ended", received: count, delivered: count}));
+    socket.onclose({code: 1000});
+    await result; await client.messageChain;
+    assert.equal(state.ends, count === 1 ? 1 : 0);
+    assert.equal(state.errors.length, count === 1 ? 0 : 1);
+  }
+});
+
+/** Functionality: Show actionable resident busy/unavailable diagnostics without auto-reconnect.
+ * Inputs: safe server error codes. Outputs: rejected hello and one user-facing error.
+ * Logic: use fixed client text, retain one socket. Constraints: no provider substitution or retries. */
+test("resident errors identify busy and unavailable service", async function testResidentErrors() {
+  for (const code of ["resident_busy", "resident_unavailable", "resident_stream_failed"]) {
+    const {client, socket, state} = fixture("resident-v1");
+    const rejected = assert.rejects(client.connect(), /常驻 GPU/);
+    socket.message(JSON.stringify({kind: "error", code}));
+    await rejected;
+    assert.equal(state.errors.length, 1);
+    assert.equal(socket.sent.length, 0);
+  }
+});
 
 /** Functionality: Resolve explicit public hello. Inputs: fixture and explicit contract.
  * Outputs: admitted fixture.
@@ -597,7 +741,7 @@ test("tracking supports 300 objects with complete motion fields", async function
   assert.deepEqual(result.metadata.boxes, data.boxes);
 });
 
-const walkContract = {...contract, model: "yolo26n-walk", classes: 87, names: walkManifest.names,
+const walkContract = {...localContract, model: "yolo26n-walk", classes: 87, names: walkManifest.names,
   source_sha256: walkManifest.source_sha256};
 
 /** Functionality: Admit the opt-in walk model, its neutral pedestrian-light box and lowered class thresholds.
@@ -605,15 +749,20 @@ const walkContract = {...contract, model: "yolo26n-walk", classes: 87, names: wa
  * Logic: thresholds come from the result's declared class_confidence_thresholds (never above 0.25).
  * Constraints: synthetic protocol fixtures; no colour accuracy is established here. */
 test("walk model admits 87 classes, pedestrian-light state and declared lower thresholds", async function testWalkModel() {
-  const value = await admitted(fixture(), walkContract);
+  const value = await admitted(fixture("local"), walkContract);
   assert.deepEqual(value.state.errors, []);
   const signal = {class_id: 84, label: "pedestrian light", score: 0.07, xyxy: [1, 1, 3, 8],
     light_state: "red", light_scores: {red: 0.07, green: 0, off: 0}};
   const light = {class_id: 9, label: "traffic light", score: 0.13, xyxy: [4, 1, 6, 8]};
   const pole = {class_id: 80, label: "pole", score: 0.6, xyxy: [7, 0, 9, 9]};
   const thresholds = {"traffic light": 0.12, ped_red: 0.05, ped_green: 0.05, ped_off: 0.05, "pedestrian light": 0.05};
-  const result = await decodeResult(packet(0, {model: "yolo26n-walk", classes: 87, source_sha256: walkManifest.source_sha256,
-    class_confidence_thresholds: thresholds, count: 3, boxes: [signal, light, pole]}), 0, walkContract);
+  const base = riskMetadata();
+  const boxes = [signal, light, pole].map((box, index) => ({...base.boxes[0], ...box,
+    track_id: index + 1, class_name: box.label, confidence: box.score, bbox: box.xyxy}));
+  const result = await decodeResult(packet(0, {...base, model: "yolo26n-walk", classes: 87,
+    source_sha256: walkManifest.source_sha256, provider: "local", session_id: walkContract.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture",
+    class_confidence_thresholds: thresholds, count: 3, boxes}), 0, walkContract, {captureTimeS: 2});
   assert.deepEqual(result.metadata.boxes.map(box => box.label), ["pedestrian light", "traffic light", "pole"]);
   // The COCO model keeps working with its own declared traffic-light threshold.
   const coco = await decodeResult(packet(0, {class_confidence_thresholds: {"traffic light": 0.12}, count: 1,
@@ -625,11 +774,13 @@ test("walk model admits 87 classes, pedestrian-light state and declared lower th
  * Inputs: corrupted hello/result fixtures. Outputs: errors before display.
  * Logic: one boundary per case. Constraints: no fallback to the COCO identity. */
 test("walk model rejects forged identities, labels and thresholds", async function testWalkModelFailures() {
-  const forged = fixture();
+  const forged = fixture("local");
   const connected = forged.client.connect();
   forged.socket.message(JSON.stringify({...walkContract, names: manifest.names}));
   await assert.rejects(connected);
-  const walkResult = {model: "yolo26n-walk", classes: 87, source_sha256: walkManifest.source_sha256};
+  const walkResult = {...riskMetadata(), model: "yolo26n-walk", classes: 87,
+    source_sha256: walkManifest.source_sha256, provider: "local", session_id: walkContract.session_id,
+    capture_time_s: 2, timestamp_source: "browser_capture"};
   const signal = {class_id: 84, label: "pedestrian light", score: 0.07, xyxy: [1, 1, 3, 8], light_state: "red"};
   const cases = [
     [contract, {class_confidence_thresholds: {"pedestrian light": 0.05}, count: 1, boxes: [signal]}],
@@ -644,5 +795,58 @@ test("walk model rejects forged identities, labels and thresholds", async functi
     [walkContract, {...walkResult, count: 1, boxes: [{class_id: 85, label: "ped_green", score: 0.9, xyxy: [1, 1, 3, 8]}]}],
   ];
   for (const [selected, overrides] of cases)
-    await assert.rejects(decodeResult(packet(0, overrides), 0, selected));
+    await assert.rejects(decodeResult(packet(0, overrides), 0, selected, {captureTimeS: 2}));
+});
+
+/** Functionality: Prevent original-model HF qualification from admitting optional walk weights.
+ * Inputs: walk identity substituted into valid HF/resident contracts. Outputs: admission failure.
+ * Logic: keep local 87-class support separate from other providers. Constraints: no GPU claims. */
+test("walk weights require explicit local admission", async function testWalkProviderBoundary() {
+  for (const provider of ["hf", "resident"]) {
+    const value = fixture(provider);
+    const connected = value.client.connect();
+    const base = provider === "hf" ? contract : residentContract;
+    value.socket.message(JSON.stringify({...base, model: "yolo26n-walk", classes: 87,
+      names: walkManifest.names, source_sha256: walkManifest.source_sha256}));
+    await assert.rejects(connected);
+  }
+});
+
+
+function compactPacket(overrides = {}) {
+  const full = packet(0, {...riskMetadata(), provider:"local", session_id:localContract.session_id,
+    capture_time_s:2, timestamp_source:"browser_capture"});
+  const size = new DataView(full).getUint32(4);
+  const metadata = JSON.parse(new TextDecoder().decode(new Uint8Array(full,8,size)));
+  const encoded = new TextEncoder().encode(JSON.stringify({...metadata,result_transport:"metadata-v1",
+    source_jpeg_sha256:createHash("sha256").update(JPEG).digest("hex"),worker_packet_bytes:full.byteLength,...overrides}));
+  const result=new Uint8Array(encoded.length+8),header=new DataView(result.buffer);
+  header.setUint32(0,0x50524d31);header.setUint32(4,encoded.length);result.set(encoded,8);return result.buffer;
+}
+
+test("compact results retain risk metadata and verify the locally retained JPEG", async function testCompactResults() {
+  const selected={...localContract,result_transport:"metadata-v1"};
+  const result=await decodeResult(compactPacket(),0,selected,{captureTimeS:2,sourceBytes:JPEG.slice().buffer});
+  assert.deepEqual(result.metadata.boxes,riskMetadata().boxes);assert.deepEqual(new Uint8Array(result.bytes),JPEG);
+  assert.equal(result.metadata.capture_time_s,2);
+  for(const options of [{captureTimeS:2},{captureTimeS:3,sourceBytes:JPEG.slice().buffer},
+    {captureTimeS:2,sourceBytes:new Uint8Array([255,216,9,255,217]).buffer}])
+    await assert.rejects(decodeResult(compactPacket(),0,selected,options));
+  for(const overrides of [{source_jpeg_sha256:"f".repeat(64)},{result_transport:"annotated-jpeg"},{worker_packet_bytes:0}])
+    await assert.rejects(decodeResult(compactPacket(overrides),0,selected,{captureTimeS:2,sourceBytes:JPEG.slice().buffer}));
+  await assert.rejects(decodeResult(compactPacket(),0,localContract,{captureTimeS:2,sourceBytes:JPEG.slice().buffer}));
+  const extra=new Uint8Array(compactPacket().byteLength+1);extra.set(new Uint8Array(compactPacket()));
+  await assert.rejects(decodeResult(extra.buffer,0,selected,{captureTimeS:2,sourceBytes:JPEG.slice().buffer}));
+});
+
+test("compact transport requires explicit admission and freezes the input bytes", async function testCompactAdmission() {
+  const f=fixture("local",{resultTransport:"metadata-v1"});
+  await admitted(f,{...localContract,result_transport:"metadata-v1"});
+  try {
+    const input=JPEG.slice();const result=f.client.sendFrame(input.buffer,{capturedAt:2000});input[2]=9;
+    f.socket.message(compactPacket());assert.deepEqual(new Uint8Array((await result).bytes),JPEG);
+  } finally {f.client.stop();}
+  const mismatch=fixture("local",{resultTransport:"metadata-v1"});
+  await assert.rejects(admitted(mismatch,localContract),/传输配置/);mismatch.client.stop();
+  assert.throws(()=>fixture("hf",{resultTransport:"metadata-v1"}),/传输配置/);
 });

@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "voice": "Cherry",
   "rate": 2,
   "sample_rate": 24000,
@@ -8,7 +8,9 @@
     "person",
     "bicycle",
     "car",
-    "motorcycle"
+    "motorcycle",
+    "chair",
+    "obstacle"
   ],
   "directions": [
     "front",
@@ -355,6 +357,162 @@
       "duration_ms": 894.5
     },
     {
+      "id": "zh-CN-clause-e70588a5ada26495bb02c152555902ce92d238a28018ad25be9b52fe35474eab",
+      "language": "zh-CN",
+      "text": "前方有椅子。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-e70588a5ada26495bb02c152555902ce92d238a28018ad25be9b52fe35474eab.wav",
+      "sha256": "65ab3df4000f8ebb30cc8a1ce2d3c3fd5a5541513770c06f50edbb4089b81997",
+      "pcm_sha256": "b1b76f7131c1f1a5e54c0aa27ca839970980de9997cb4dc2bd3c6044c7600b9d",
+      "byte_length": 33380,
+      "pcm_byte_length": 33336,
+      "samples": 16668,
+      "duration_ms": 694.5
+    },
+    {
+      "id": "zh-CN-clause-c67364293d7eb7a3f5fd1f063a32546793a574325b94349969a8f6c17c6f02f8",
+      "language": "zh-CN",
+      "text": "前方有椅子靠近。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-c67364293d7eb7a3f5fd1f063a32546793a574325b94349969a8f6c17c6f02f8.wav",
+      "sha256": "eb4a614b2a535be7ddef37d64167b69ac462db17b16126922d5646ed19ea7ef2",
+      "pcm_sha256": "da016387a01d6583feaf94b1e359728e427a301e99693db66e748ea9a66b7636",
+      "byte_length": 41060,
+      "pcm_byte_length": 41016,
+      "samples": 20508,
+      "duration_ms": 854.5
+    },
+    {
+      "id": "zh-CN-clause-80189b98a49d73eb364edf6571b00ac812de7d0cc4a63aa1f76b265d90f7af0e",
+      "language": "zh-CN",
+      "text": "左前方有椅子。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-80189b98a49d73eb364edf6571b00ac812de7d0cc4a63aa1f76b265d90f7af0e.wav",
+      "sha256": "b7c184a82fa58465b93329fa7f9e6cd10686ff43614068996e4e63d6fc59c21d",
+      "pcm_sha256": "5a2b19aa14950bd3f4a737ff9f189de9011a7c20ef0ed3b97669b52369f4d3ba",
+      "byte_length": 37220,
+      "pcm_byte_length": 37176,
+      "samples": 18588,
+      "duration_ms": 774.5
+    },
+    {
+      "id": "zh-CN-clause-496d66065850a0ec1b482ed4c21b389d2f62d33a9f9bb14d87244ecc3c3980f2",
+      "language": "zh-CN",
+      "text": "左前方有椅子靠近。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-496d66065850a0ec1b482ed4c21b389d2f62d33a9f9bb14d87244ecc3c3980f2.wav",
+      "sha256": "e054a4d67a2cf93253f05c9a3a85b548b3c216c1aa2b7adc604096f6771ed30c",
+      "pcm_sha256": "a1b39658e23bce4f432bda79fc0b71138628559c239176fbb6dfddb2714a5b3a",
+      "byte_length": 37220,
+      "pcm_byte_length": 37176,
+      "samples": 18588,
+      "duration_ms": 774.5
+    },
+    {
+      "id": "zh-CN-clause-d563cd8563209b04159be841954c8c88bb5699d11ca66985e6be8677e82395cc",
+      "language": "zh-CN",
+      "text": "右前方有椅子。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-d563cd8563209b04159be841954c8c88bb5699d11ca66985e6be8677e82395cc.wav",
+      "sha256": "7a37e2301b106350fac6c93d9b069895e6815ebe034092e836569ee0cd16fe16",
+      "pcm_sha256": "97d897b363f2e73f36ed396841728d41bd3ba0539b805ebd880b3ba13688f5d6",
+      "byte_length": 37220,
+      "pcm_byte_length": 37176,
+      "samples": 18588,
+      "duration_ms": 774.5
+    },
+    {
+      "id": "zh-CN-clause-75098213e02adedc30ecfb2601b76362622456f5b7f8bffde535d43f31dc6fe9",
+      "language": "zh-CN",
+      "text": "右前方有椅子靠近。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-75098213e02adedc30ecfb2601b76362622456f5b7f8bffde535d43f31dc6fe9.wav",
+      "sha256": "73a644f405dad8485b6592d50c0a5c4674a02a118f98b07dc7523fe7cdf3946d",
+      "pcm_sha256": "92c52805e65473b653887196e2a5fbd6ce62f7456ca4456551bc18fffab2e692",
+      "byte_length": 37220,
+      "pcm_byte_length": 37176,
+      "samples": 18588,
+      "duration_ms": 774.5
+    },
+    {
+      "id": "zh-CN-clause-85b4b9f561b2986009b4501aecc6533bfb34845477588814f168c3d739febf38",
+      "language": "zh-CN",
+      "text": "前方有障碍物。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-85b4b9f561b2986009b4501aecc6533bfb34845477588814f168c3d739febf38.wav",
+      "sha256": "06ae38786406708666219232d94215d1ac644f00196d2991903e45c246e2d7af",
+      "pcm_sha256": "f2f2f448d0327d5eb2c0b26427a45f37e50c78a1dd92106d225611eabe3b8c92",
+      "byte_length": 35300,
+      "pcm_byte_length": 35256,
+      "samples": 17628,
+      "duration_ms": 734.5
+    },
+    {
+      "id": "zh-CN-clause-5a3303f853781d1735ddb97c0ea732134f202b6800af4023b6b3a9b882f0f1fb",
+      "language": "zh-CN",
+      "text": "前方有障碍物靠近。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-5a3303f853781d1735ddb97c0ea732134f202b6800af4023b6b3a9b882f0f1fb.wav",
+      "sha256": "6a11af8d01700f3a11a3b653910229700736314f49a21b366639078f860227f0",
+      "pcm_sha256": "0483a91b3a6c0e253f4497a65d54e18b10ae612791e81f74c6f2a097b7fb1230",
+      "byte_length": 44900,
+      "pcm_byte_length": 44856,
+      "samples": 22428,
+      "duration_ms": 934.5
+    },
+    {
+      "id": "zh-CN-clause-900bb108ff1535fcfc9078ed5b65a5f3783a7733f51f07345bae10d281f03b1d",
+      "language": "zh-CN",
+      "text": "左前方有障碍物。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-900bb108ff1535fcfc9078ed5b65a5f3783a7733f51f07345bae10d281f03b1d.wav",
+      "sha256": "e5c37ff0cb8d436d2e4a8ce8dbf2ba7bb883567e19d4d91a4cc34d263072ed99",
+      "pcm_sha256": "cac0d2cf44e0cda0fc5605ef07c4b4f71a3de328ef6ee0defcd32cf4032a4478",
+      "byte_length": 33380,
+      "pcm_byte_length": 33336,
+      "samples": 16668,
+      "duration_ms": 694.5
+    },
+    {
+      "id": "zh-CN-clause-d253d4cb7718deeda72ac6a0f40313f70bbab985a8d53d596549168344fd6c6b",
+      "language": "zh-CN",
+      "text": "左前方有障碍物靠近。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-d253d4cb7718deeda72ac6a0f40313f70bbab985a8d53d596549168344fd6c6b.wav",
+      "sha256": "dc3ef9ee3f244eddb958ddfb99c423521d063b908064e4a34558d195bd0ffa52",
+      "pcm_sha256": "6e4a7e9a2801492399474a8840e61ec378a568ad7d5e88d3d46f7e31d1cc9cbb",
+      "byte_length": 39140,
+      "pcm_byte_length": 39096,
+      "samples": 19548,
+      "duration_ms": 814.5
+    },
+    {
+      "id": "zh-CN-clause-d0bee1a9ddd0290802275b9ac982289e506d4c4966ba4707f13f39df2625205f",
+      "language": "zh-CN",
+      "text": "右前方有障碍物。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-d0bee1a9ddd0290802275b9ac982289e506d4c4966ba4707f13f39df2625205f.wav",
+      "sha256": "be255f63a6173002e31ec21d3918f19b2849ebcac429eb0673ec6b42f9570652",
+      "pcm_sha256": "1b166f2be047db9b67d3cd2f58e31213718e2c2cbd22b319dbb4bfbc41dba3d4",
+      "byte_length": 37220,
+      "pcm_byte_length": 37176,
+      "samples": 18588,
+      "duration_ms": 774.5
+    },
+    {
+      "id": "zh-CN-clause-c65b3c2b45ccf3bf7e707558b6f6feca77ee67b7f08db5e64711e32036c57ef7",
+      "language": "zh-CN",
+      "text": "右前方有障碍物靠近。",
+      "kind": "clause",
+      "path": "zh-CN/zh-CN-clause-c65b3c2b45ccf3bf7e707558b6f6feca77ee67b7f08db5e64711e32036c57ef7.wav",
+      "sha256": "bf92db233ef72b9eb4020b3847a690229950d3d12a41a87bfecf85d9027bbd24",
+      "pcm_sha256": "527c5743b112d40c0a5a331781c1c08d616fc8c3c97d6d829b49cdb31745994b",
+      "byte_length": 48740,
+      "pcm_byte_length": 48696,
+      "samples": 24348,
+      "duration_ms": 1014.5
+    },
+    {
       "id": "zh-CN-sentence-69c0a126ffa4467f98122d635948457891dda940a182f09f855873cc91dacf45",
       "language": "zh-CN",
       "text": "注意前方的行人。",
@@ -522,6 +680,84 @@
       "pcm_byte_length": 42936,
       "samples": 21468,
       "duration_ms": 894.5
+    },
+    {
+      "id": "zh-CN-sentence-a1792f3e6e50c6be1db934cb6a834da7420771874502317d0b1cfd23a5840c30",
+      "language": "zh-CN",
+      "text": "注意前方的椅子。",
+      "kind": "sentence",
+      "path": "zh-CN/zh-CN-sentence-a1792f3e6e50c6be1db934cb6a834da7420771874502317d0b1cfd23a5840c30.wav",
+      "sha256": "ab0c7f2dd191c370b1721e02558af04e53242d93189af94d95cb3fe5b045da35",
+      "pcm_sha256": "3922955d9144400ea5406b92af902f88aed54c8c1fb101d38ec383b2ad954c12",
+      "byte_length": 31460,
+      "pcm_byte_length": 31416,
+      "samples": 15708,
+      "duration_ms": 654.5
+    },
+    {
+      "id": "zh-CN-sentence-55af7cd0bb3fb4dfe065df22d353f7db2de2f89a75cb345c81bdd08fd67368d2",
+      "language": "zh-CN",
+      "text": "注意左前方的椅子。",
+      "kind": "sentence",
+      "path": "zh-CN/zh-CN-sentence-55af7cd0bb3fb4dfe065df22d353f7db2de2f89a75cb345c81bdd08fd67368d2.wav",
+      "sha256": "7607b51b4ad9f0e4c834723458d58d76e6955c2543311437738999260d2470f6",
+      "pcm_sha256": "5d5f3accd31332c0af167df814142ec2e58081df456964e4a232a484e15aa2e2",
+      "byte_length": 39140,
+      "pcm_byte_length": 39096,
+      "samples": 19548,
+      "duration_ms": 814.5
+    },
+    {
+      "id": "zh-CN-sentence-8f76baada27db316ebaf2dc4333feb4070a45fb2b6304911add387d990cb2e4a",
+      "language": "zh-CN",
+      "text": "注意右前方的椅子。",
+      "kind": "sentence",
+      "path": "zh-CN/zh-CN-sentence-8f76baada27db316ebaf2dc4333feb4070a45fb2b6304911add387d990cb2e4a.wav",
+      "sha256": "b29fba7c548dd2ad88f22f1337c1e677294e8eb9df01e5d568cb444ba014fdad",
+      "pcm_sha256": "04f4325681dc0ae672f475bc02b487de6d58b550379bd482500015b90bdf9bd6",
+      "byte_length": 42980,
+      "pcm_byte_length": 42936,
+      "samples": 21468,
+      "duration_ms": 894.5
+    },
+    {
+      "id": "zh-CN-sentence-f6b819092e5490d0b9ef928b1dfddde86854dffb6c6e1b16918fa6ca34ceba91",
+      "language": "zh-CN",
+      "text": "注意前方的障碍物。",
+      "kind": "sentence",
+      "path": "zh-CN/zh-CN-sentence-f6b819092e5490d0b9ef928b1dfddde86854dffb6c6e1b16918fa6ca34ceba91.wav",
+      "sha256": "78eada79cd4b18f9e2038dc4f03b4d689837e43efec23f1f34da106972a78490",
+      "pcm_sha256": "a2a4336d6daa68ae239cc42e5c4e1cf3185b5f2ab475e6349046bc4014e804c4",
+      "byte_length": 37220,
+      "pcm_byte_length": 37176,
+      "samples": 18588,
+      "duration_ms": 774.5
+    },
+    {
+      "id": "zh-CN-sentence-0498ceacec68f78bd30589d3d41a6f79bb356483b8fa17b1ec8230966f344eeb",
+      "language": "zh-CN",
+      "text": "注意左前方的障碍物。",
+      "kind": "sentence",
+      "path": "zh-CN/zh-CN-sentence-0498ceacec68f78bd30589d3d41a6f79bb356483b8fa17b1ec8230966f344eeb.wav",
+      "sha256": "e8c7ace6fe12ceb60356de4ca73646293dc0cfd84b4a3fa75e6c07dc8e65a756",
+      "pcm_sha256": "24644477552e888138a6b42f77a4c65e99e878e070d428f2021a3840c3768bdf",
+      "byte_length": 42980,
+      "pcm_byte_length": 42936,
+      "samples": 21468,
+      "duration_ms": 894.5
+    },
+    {
+      "id": "zh-CN-sentence-dc9f31afc14b5183ab622061bd12da8de1ed8e470aa654c97abe22006401caa0",
+      "language": "zh-CN",
+      "text": "注意右前方的障碍物。",
+      "kind": "sentence",
+      "path": "zh-CN/zh-CN-sentence-dc9f31afc14b5183ab622061bd12da8de1ed8e470aa654c97abe22006401caa0.wav",
+      "sha256": "56794330afe69751e352a7b9ac4c77377e5d7699a9b0e5a5146b2908f06fae81",
+      "pcm_sha256": "b853820c5eb53c159f4337be2c09c56ccd661bf5f34bbe2b95738503e9b90cc9",
+      "byte_length": 37220,
+      "pcm_byte_length": 37176,
+      "samples": 18588,
+      "duration_ms": 774.5
     },
     {
       "id": "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
@@ -860,6 +1096,162 @@
       "pcm_byte_length": 81336,
       "samples": 40668,
       "duration_ms": 1694.5
+    },
+    {
+      "id": "en-US-clause-3cca110e578b7a41ecba657b3c34bec6748947a5adad9788203cf24fcc4d5411",
+      "language": "en-US",
+      "text": "Chair ahead.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-3cca110e578b7a41ecba657b3c34bec6748947a5adad9788203cf24fcc4d5411.wav",
+      "sha256": "791c0630114d21d594fdbbe0965a5ecab36bbc3bf562a199b6673e145e103e67",
+      "pcm_sha256": "69e5b028382572d8b712818105722c2f4e630670dbc70ba4ae8eca8fc0466983",
+      "byte_length": 27620,
+      "pcm_byte_length": 27576,
+      "samples": 13788,
+      "duration_ms": 574.5
+    },
+    {
+      "id": "en-US-clause-56c90f3ab42a751da0984c04473337d6fd0e0eab86f38d27ec85b08391ee269d",
+      "language": "en-US",
+      "text": "Chair ahead is approaching.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-56c90f3ab42a751da0984c04473337d6fd0e0eab86f38d27ec85b08391ee269d.wav",
+      "sha256": "ddfe31f979ed8f584ff8e0546c21c45b4b8fbcd451990eb7ca220031077d9825",
+      "pcm_sha256": "d031899d93af97b587d42899e93214fbb781324b80c56178c8855080e255966f",
+      "byte_length": 39140,
+      "pcm_byte_length": 39096,
+      "samples": 19548,
+      "duration_ms": 814.5
+    },
+    {
+      "id": "en-US-clause-644a3ab3d02824555333f488dac953bb258fcb45575d34998f2f2785ecf8242f",
+      "language": "en-US",
+      "text": "Chair ahead left.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-644a3ab3d02824555333f488dac953bb258fcb45575d34998f2f2785ecf8242f.wav",
+      "sha256": "e0252faaef5d4f94eea02f4d1eb793395af3e3aac46e45614f2be1fdd1193d94",
+      "pcm_sha256": "575de251c0be1c0c5c01dc37a1e93b66fb2ff6b32199af38a2e55142508ece9a",
+      "byte_length": 42980,
+      "pcm_byte_length": 42936,
+      "samples": 21468,
+      "duration_ms": 894.5
+    },
+    {
+      "id": "en-US-clause-67895ef3370bef7374a26be39396bb8ee438d4ceb37dac45617c7a7e7c9c8da1",
+      "language": "en-US",
+      "text": "Chair ahead left is approaching.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-67895ef3370bef7374a26be39396bb8ee438d4ceb37dac45617c7a7e7c9c8da1.wav",
+      "sha256": "89c4de70f9e66ad956af0be48690e280443dd4eb769a29b92da4078470456ec6",
+      "pcm_sha256": "5cc8b97a497ecff08f845bddf5f06ba419fd92ed3e980df4c17803a805e271f7",
+      "byte_length": 75620,
+      "pcm_byte_length": 75576,
+      "samples": 37788,
+      "duration_ms": 1574.5
+    },
+    {
+      "id": "en-US-clause-a8b38ac3127e24d7d9308673956485399d549636142d74e5a52ca646c6315afd",
+      "language": "en-US",
+      "text": "Chair ahead right.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-a8b38ac3127e24d7d9308673956485399d549636142d74e5a52ca646c6315afd.wav",
+      "sha256": "22a517b70a49d33e56f2f25c50f308e16ae1d92396c94e1f578a20b1e45ca941",
+      "pcm_sha256": "439415ac9ae7f4c54687561baeb7c0470d5e4a4ad1356332ecd4e1ad437c177e",
+      "byte_length": 46820,
+      "pcm_byte_length": 46776,
+      "samples": 23388,
+      "duration_ms": 974.5
+    },
+    {
+      "id": "en-US-clause-640993c8355755edeaa7c5725cf802596c120e41fc228241e2986a5c56ca03b4",
+      "language": "en-US",
+      "text": "Chair ahead right is approaching.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-640993c8355755edeaa7c5725cf802596c120e41fc228241e2986a5c56ca03b4.wav",
+      "sha256": "24a4f25d9706d7d271eb08ce96ba05352a9bb60afcd01637f8d5938a8b7216be",
+      "pcm_sha256": "e1a4c2064f2c2b21c5845b52c8719830b4daf84ca0ed5e97d5e9b0a5a8455eaf",
+      "byte_length": 48740,
+      "pcm_byte_length": 48696,
+      "samples": 24348,
+      "duration_ms": 1014.5
+    },
+    {
+      "id": "en-US-clause-72d3ab419faa9f49c2d7fe123ebe1682d06eee0836100a58373bed59e02a2f5a",
+      "language": "en-US",
+      "text": "Obstacle ahead.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-72d3ab419faa9f49c2d7fe123ebe1682d06eee0836100a58373bed59e02a2f5a.wav",
+      "sha256": "6d536eae6e4f6cef7bcde615d20a1a47f8558b276ec87611c446ff6dec1ef599",
+      "pcm_sha256": "c4923b4002fcdd062e372deb4b6be0516fb5f166af2b01d8f8336f8785251da5",
+      "byte_length": 25700,
+      "pcm_byte_length": 25656,
+      "samples": 12828,
+      "duration_ms": 534.5
+    },
+    {
+      "id": "en-US-clause-05663650b8ceec5bafc270f869d10240eed1e5c04e6970ccc523f2efb3041ce7",
+      "language": "en-US",
+      "text": "Obstacle ahead is approaching.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-05663650b8ceec5bafc270f869d10240eed1e5c04e6970ccc523f2efb3041ce7.wav",
+      "sha256": "891f9940713fc4fdfec01ae5b9727d7c7f2b4817d470c48af71e0714a397dc2a",
+      "pcm_sha256": "5b890000a9a2aa485d757abd2a8cfef8daeb27c9fd8897e65cbd804b8d0c8e0a",
+      "byte_length": 50660,
+      "pcm_byte_length": 50616,
+      "samples": 25308,
+      "duration_ms": 1054.5
+    },
+    {
+      "id": "en-US-clause-abc743c29c23d753eaa88029894617796d17debe83a76d721e0502516a2d947c",
+      "language": "en-US",
+      "text": "Obstacle ahead left.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-abc743c29c23d753eaa88029894617796d17debe83a76d721e0502516a2d947c.wav",
+      "sha256": "9b31b5dd6dfcb83e116ab0c5eb97ebabca2cd92532b019fb87a990a9e7ea6300",
+      "pcm_sha256": "2a34ffe8d6def6b344c327470a5dfc5170607ebf32a0eadeebbeeec16e28887e",
+      "byte_length": 35300,
+      "pcm_byte_length": 35256,
+      "samples": 17628,
+      "duration_ms": 734.5
+    },
+    {
+      "id": "en-US-clause-814277fd22f9e4039bc6dcaafad0d2fb0d726c98f85c595ef28d40ba0f3956d3",
+      "language": "en-US",
+      "text": "Obstacle ahead left is approaching.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-814277fd22f9e4039bc6dcaafad0d2fb0d726c98f85c595ef28d40ba0f3956d3.wav",
+      "sha256": "986da55eefef84383325cee8856d61f8219bc3b2da45b3f9fdc0c68a7066f71d",
+      "pcm_sha256": "7eaa899dd3145b38561931933494df9af3853f0542506adfdbb569ef3915a24b",
+      "byte_length": 66020,
+      "pcm_byte_length": 65976,
+      "samples": 32988,
+      "duration_ms": 1374.5
+    },
+    {
+      "id": "en-US-clause-b9eef6745c86d34d3e298c220496ebc3e2d1e7fefee8a2456b44f7f6a4250dff",
+      "language": "en-US",
+      "text": "Obstacle ahead right.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-b9eef6745c86d34d3e298c220496ebc3e2d1e7fefee8a2456b44f7f6a4250dff.wav",
+      "sha256": "fee4eaea3baa89aa4f6af9d3d27c279cda0e36140d53ada7621c61c617a44085",
+      "pcm_sha256": "1159206c55349d5a66a9bdb7e14bed70996283232db1387caecdbd230c208323",
+      "byte_length": 58340,
+      "pcm_byte_length": 58296,
+      "samples": 29148,
+      "duration_ms": 1214.5
+    },
+    {
+      "id": "en-US-clause-e3c2389f9003fb4cef8d6ccb80c63ed07d88c814c37cbb792bd9a0927ea662df",
+      "language": "en-US",
+      "text": "Obstacle ahead right is approaching.",
+      "kind": "clause",
+      "path": "en-US/en-US-clause-e3c2389f9003fb4cef8d6ccb80c63ed07d88c814c37cbb792bd9a0927ea662df.wav",
+      "sha256": "0faf85b5951d20819807ed7429a90ae4d05ada985af2a198644608457825162f",
+      "pcm_sha256": "2144ecea4e4a22c71d8faa3d9df228caadcc2865e1514b714b56d0c8e2073a7a",
+      "byte_length": 73700,
+      "pcm_byte_length": 73656,
+      "samples": 36828,
+      "duration_ms": 1534.5
     },
     {
       "id": "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
@@ -1267,6 +1659,162 @@
       ]
     },
     {
+      "id": "zh-CN-chair-front-critical-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "危险，前方有椅子。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-e70588a5ada26495bb02c152555902ce92d238a28018ad25be9b52fe35474eab"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front-critical-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "危险，前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-c67364293d7eb7a3f5fd1f063a32546793a574325b94349969a8f6c17c6f02f8"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_left-critical-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "危险，左前方有椅子。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-80189b98a49d73eb364edf6571b00ac812de7d0cc4a63aa1f76b265d90f7af0e"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_left-critical-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "危险，左前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-496d66065850a0ec1b482ed4c21b389d2f62d33a9f9bb14d87244ecc3c3980f2"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_right-critical-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "危险，右前方有椅子。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-d563cd8563209b04159be841954c8c88bb5699d11ca66985e6be8677e82395cc"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_right-critical-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "危险，右前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-75098213e02adedc30ecfb2601b76362622456f5b7f8bffde535d43f31dc6fe9"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front-critical-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "危险，前方有障碍物。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-85b4b9f561b2986009b4501aecc6533bfb34845477588814f168c3d739febf38"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front-critical-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "危险，前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-5a3303f853781d1735ddb97c0ea732134f202b6800af4023b6b3a9b882f0f1fb"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_left-critical-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "危险，左前方有障碍物。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-900bb108ff1535fcfc9078ed5b65a5f3783a7733f51f07345bae10d281f03b1d"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_left-critical-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "危险，左前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-d253d4cb7718deeda72ac6a0f40313f70bbab985a8d53d596549168344fd6c6b"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_right-critical-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "危险，右前方有障碍物。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-d0bee1a9ddd0290802275b9ac982289e506d4c4966ba4707f13f39df2625205f"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_right-critical-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "危险，右前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9bb3ac1b5dd5bc6006ef49ccd3724a6c0f4c979f30dcbe8235c97e6ae71efa8b",
+        "zh-CN-clause-c65b3c2b45ccf3bf7e707558b6f6feca77ee67b7f08db5e64711e32036c57ef7"
+      ]
+    },
+    {
       "id": "zh-CN-bicycle-front-high-present",
       "language": "zh-CN",
       "label": "bicycle",
@@ -1498,6 +2046,162 @@
       "clip_ids": [
         "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
         "zh-CN-clause-2f93ebd92c487a15b79804ae7ab5f49e0b7835162da5d2b7cba71b043aac914b"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front-high-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "警告，前方有椅子。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-e70588a5ada26495bb02c152555902ce92d238a28018ad25be9b52fe35474eab"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front-high-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "警告，前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-c67364293d7eb7a3f5fd1f063a32546793a574325b94349969a8f6c17c6f02f8"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_left-high-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "警告，左前方有椅子。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-80189b98a49d73eb364edf6571b00ac812de7d0cc4a63aa1f76b265d90f7af0e"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_left-high-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "警告，左前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-496d66065850a0ec1b482ed4c21b389d2f62d33a9f9bb14d87244ecc3c3980f2"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_right-high-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "警告，右前方有椅子。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-d563cd8563209b04159be841954c8c88bb5699d11ca66985e6be8677e82395cc"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_right-high-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "警告，右前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-75098213e02adedc30ecfb2601b76362622456f5b7f8bffde535d43f31dc6fe9"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front-high-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "警告，前方有障碍物。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-85b4b9f561b2986009b4501aecc6533bfb34845477588814f168c3d739febf38"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front-high-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "警告，前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-5a3303f853781d1735ddb97c0ea732134f202b6800af4023b6b3a9b882f0f1fb"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_left-high-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "警告，左前方有障碍物。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-900bb108ff1535fcfc9078ed5b65a5f3783a7733f51f07345bae10d281f03b1d"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_left-high-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "警告，左前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-d253d4cb7718deeda72ac6a0f40313f70bbab985a8d53d596549168344fd6c6b"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_right-high-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "警告，右前方有障碍物。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-d0bee1a9ddd0290802275b9ac982289e506d4c4966ba4707f13f39df2625205f"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_right-high-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "警告，右前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-b0a6ab9312ba72fdd71c5bf40741eeb24a34e5dc0a2d1cfffc7e1f1d4778266a",
+        "zh-CN-clause-c65b3c2b45ccf3bf7e707558b6f6feca77ee67b7f08db5e64711e32036c57ef7"
       ]
     },
     {
@@ -1798,6 +2502,156 @@
       "clip_ids": [
         "zh-CN-prefix-9291c6cea0812ec219795eea81a6c6adafdb8ecfaa6b133f9fa391d24565e22b",
         "zh-CN-clause-2f93ebd92c487a15b79804ae7ab5f49e0b7835162da5d2b7cba71b043aac914b"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front-medium-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "注意前方的椅子。",
+      "clip_ids": [
+        "zh-CN-sentence-a1792f3e6e50c6be1db934cb6a834da7420771874502317d0b1cfd23a5840c30"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front-medium-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "注意，前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9291c6cea0812ec219795eea81a6c6adafdb8ecfaa6b133f9fa391d24565e22b",
+        "zh-CN-clause-c67364293d7eb7a3f5fd1f063a32546793a574325b94349969a8f6c17c6f02f8"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_left-medium-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "注意左前方的椅子。",
+      "clip_ids": [
+        "zh-CN-sentence-55af7cd0bb3fb4dfe065df22d353f7db2de2f89a75cb345c81bdd08fd67368d2"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_left-medium-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "注意，左前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9291c6cea0812ec219795eea81a6c6adafdb8ecfaa6b133f9fa391d24565e22b",
+        "zh-CN-clause-496d66065850a0ec1b482ed4c21b389d2f62d33a9f9bb14d87244ecc3c3980f2"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_right-medium-present",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "注意右前方的椅子。",
+      "clip_ids": [
+        "zh-CN-sentence-8f76baada27db316ebaf2dc4333feb4070a45fb2b6304911add387d990cb2e4a"
+      ]
+    },
+    {
+      "id": "zh-CN-chair-front_right-medium-approaching",
+      "language": "zh-CN",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "注意，右前方有椅子靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9291c6cea0812ec219795eea81a6c6adafdb8ecfaa6b133f9fa391d24565e22b",
+        "zh-CN-clause-75098213e02adedc30ecfb2601b76362622456f5b7f8bffde535d43f31dc6fe9"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front-medium-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "注意前方的障碍物。",
+      "clip_ids": [
+        "zh-CN-sentence-f6b819092e5490d0b9ef928b1dfddde86854dffb6c6e1b16918fa6ca34ceba91"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front-medium-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "注意，前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9291c6cea0812ec219795eea81a6c6adafdb8ecfaa6b133f9fa391d24565e22b",
+        "zh-CN-clause-5a3303f853781d1735ddb97c0ea732134f202b6800af4023b6b3a9b882f0f1fb"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_left-medium-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "注意左前方的障碍物。",
+      "clip_ids": [
+        "zh-CN-sentence-0498ceacec68f78bd30589d3d41a6f79bb356483b8fa17b1ec8230966f344eeb"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_left-medium-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "注意，左前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9291c6cea0812ec219795eea81a6c6adafdb8ecfaa6b133f9fa391d24565e22b",
+        "zh-CN-clause-d253d4cb7718deeda72ac6a0f40313f70bbab985a8d53d596549168344fd6c6b"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_right-medium-present",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "注意右前方的障碍物。",
+      "clip_ids": [
+        "zh-CN-sentence-dc9f31afc14b5183ab622061bd12da8de1ed8e470aa654c97abe22006401caa0"
+      ]
+    },
+    {
+      "id": "zh-CN-obstacle-front_right-medium-approaching",
+      "language": "zh-CN",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "注意，右前方有障碍物靠近。",
+      "clip_ids": [
+        "zh-CN-prefix-9291c6cea0812ec219795eea81a6c6adafdb8ecfaa6b133f9fa391d24565e22b",
+        "zh-CN-clause-c65b3c2b45ccf3bf7e707558b6f6feca77ee67b7f08db5e64711e32036c57ef7"
       ]
     },
     {
@@ -2191,6 +3045,162 @@
       ]
     },
     {
+      "id": "en-US-chair-front-critical-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "Danger. Chair ahead.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-3cca110e578b7a41ecba657b3c34bec6748947a5adad9788203cf24fcc4d5411"
+      ]
+    },
+    {
+      "id": "en-US-chair-front-critical-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "Danger. Chair ahead is approaching.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-56c90f3ab42a751da0984c04473337d6fd0e0eab86f38d27ec85b08391ee269d"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_left-critical-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "Danger. Chair ahead left.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-644a3ab3d02824555333f488dac953bb258fcb45575d34998f2f2785ecf8242f"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_left-critical-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "Danger. Chair ahead left is approaching.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-67895ef3370bef7374a26be39396bb8ee438d4ceb37dac45617c7a7e7c9c8da1"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_right-critical-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "Danger. Chair ahead right.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-a8b38ac3127e24d7d9308673956485399d549636142d74e5a52ca646c6315afd"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_right-critical-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "Danger. Chair ahead right is approaching.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-640993c8355755edeaa7c5725cf802596c120e41fc228241e2986a5c56ca03b4"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front-critical-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "Danger. Obstacle ahead.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-72d3ab419faa9f49c2d7fe123ebe1682d06eee0836100a58373bed59e02a2f5a"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front-critical-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "Danger. Obstacle ahead is approaching.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-05663650b8ceec5bafc270f869d10240eed1e5c04e6970ccc523f2efb3041ce7"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_left-critical-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "Danger. Obstacle ahead left.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-abc743c29c23d753eaa88029894617796d17debe83a76d721e0502516a2d947c"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_left-critical-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "Danger. Obstacle ahead left is approaching.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-814277fd22f9e4039bc6dcaafad0d2fb0d726c98f85c595ef28d40ba0f3956d3"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_right-critical-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": false,
+      "text": "Danger. Obstacle ahead right.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-b9eef6745c86d34d3e298c220496ebc3e2d1e7fefee8a2456b44f7f6a4250dff"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_right-critical-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "critical",
+      "approaching": true,
+      "text": "Danger. Obstacle ahead right is approaching.",
+      "clip_ids": [
+        "en-US-prefix-bc5d6ad25a3b78dd556116326e8343916700b26116ab4a5144bc4eb5ee08453b",
+        "en-US-clause-e3c2389f9003fb4cef8d6ccb80c63ed07d88c814c37cbb792bd9a0927ea662df"
+      ]
+    },
+    {
       "id": "en-US-bicycle-front-high-present",
       "language": "en-US",
       "label": "bicycle",
@@ -2422,6 +3432,162 @@
       "clip_ids": [
         "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
         "en-US-clause-c1f6fc11a790f856f5af564760dbbbd386105e0bc5eb9fed3ee3ae6de2b2186e"
+      ]
+    },
+    {
+      "id": "en-US-chair-front-high-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "Warning. Chair ahead.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-3cca110e578b7a41ecba657b3c34bec6748947a5adad9788203cf24fcc4d5411"
+      ]
+    },
+    {
+      "id": "en-US-chair-front-high-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "Warning. Chair ahead is approaching.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-56c90f3ab42a751da0984c04473337d6fd0e0eab86f38d27ec85b08391ee269d"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_left-high-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "Warning. Chair ahead left.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-644a3ab3d02824555333f488dac953bb258fcb45575d34998f2f2785ecf8242f"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_left-high-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "Warning. Chair ahead left is approaching.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-67895ef3370bef7374a26be39396bb8ee438d4ceb37dac45617c7a7e7c9c8da1"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_right-high-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "Warning. Chair ahead right.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-a8b38ac3127e24d7d9308673956485399d549636142d74e5a52ca646c6315afd"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_right-high-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "Warning. Chair ahead right is approaching.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-640993c8355755edeaa7c5725cf802596c120e41fc228241e2986a5c56ca03b4"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front-high-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "Warning. Obstacle ahead.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-72d3ab419faa9f49c2d7fe123ebe1682d06eee0836100a58373bed59e02a2f5a"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front-high-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "Warning. Obstacle ahead is approaching.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-05663650b8ceec5bafc270f869d10240eed1e5c04e6970ccc523f2efb3041ce7"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_left-high-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "Warning. Obstacle ahead left.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-abc743c29c23d753eaa88029894617796d17debe83a76d721e0502516a2d947c"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_left-high-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "Warning. Obstacle ahead left is approaching.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-814277fd22f9e4039bc6dcaafad0d2fb0d726c98f85c595ef28d40ba0f3956d3"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_right-high-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": false,
+      "text": "Warning. Obstacle ahead right.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-b9eef6745c86d34d3e298c220496ebc3e2d1e7fefee8a2456b44f7f6a4250dff"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_right-high-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "high",
+      "approaching": true,
+      "text": "Warning. Obstacle ahead right is approaching.",
+      "clip_ids": [
+        "en-US-prefix-591cd6c2ef5a50c97a8a493e4e12f0754518a139c2573f0c159eb676d198ac27",
+        "en-US-clause-e3c2389f9003fb4cef8d6ccb80c63ed07d88c814c37cbb792bd9a0927ea662df"
       ]
     },
     {
@@ -2735,6 +3901,162 @@
         "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
         "en-US-clause-c1f6fc11a790f856f5af564760dbbbd386105e0bc5eb9fed3ee3ae6de2b2186e"
       ]
+    },
+    {
+      "id": "en-US-chair-front-medium-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "Caution. Chair ahead.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-3cca110e578b7a41ecba657b3c34bec6748947a5adad9788203cf24fcc4d5411"
+      ]
+    },
+    {
+      "id": "en-US-chair-front-medium-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "Caution. Chair ahead is approaching.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-56c90f3ab42a751da0984c04473337d6fd0e0eab86f38d27ec85b08391ee269d"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_left-medium-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "Caution. Chair ahead left.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-644a3ab3d02824555333f488dac953bb258fcb45575d34998f2f2785ecf8242f"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_left-medium-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "Caution. Chair ahead left is approaching.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-67895ef3370bef7374a26be39396bb8ee438d4ceb37dac45617c7a7e7c9c8da1"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_right-medium-present",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "Caution. Chair ahead right.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-a8b38ac3127e24d7d9308673956485399d549636142d74e5a52ca646c6315afd"
+      ]
+    },
+    {
+      "id": "en-US-chair-front_right-medium-approaching",
+      "language": "en-US",
+      "label": "chair",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "Caution. Chair ahead right is approaching.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-640993c8355755edeaa7c5725cf802596c120e41fc228241e2986a5c56ca03b4"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front-medium-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "Caution. Obstacle ahead.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-72d3ab419faa9f49c2d7fe123ebe1682d06eee0836100a58373bed59e02a2f5a"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front-medium-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "Caution. Obstacle ahead is approaching.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-05663650b8ceec5bafc270f869d10240eed1e5c04e6970ccc523f2efb3041ce7"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_left-medium-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "Caution. Obstacle ahead left.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-abc743c29c23d753eaa88029894617796d17debe83a76d721e0502516a2d947c"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_left-medium-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_left",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "Caution. Obstacle ahead left is approaching.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-814277fd22f9e4039bc6dcaafad0d2fb0d726c98f85c595ef28d40ba0f3956d3"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_right-medium-present",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": false,
+      "text": "Caution. Obstacle ahead right.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-b9eef6745c86d34d3e298c220496ebc3e2d1e7fefee8a2456b44f7f6a4250dff"
+      ]
+    },
+    {
+      "id": "en-US-obstacle-front_right-medium-approaching",
+      "language": "en-US",
+      "label": "obstacle",
+      "direction": "front_right",
+      "risk_level": "medium",
+      "approaching": true,
+      "text": "Caution. Obstacle ahead right is approaching.",
+      "clip_ids": [
+        "en-US-prefix-3ef986240477489f6771bbb347126e098e4fc3846376464d417e98c2baa612a2",
+        "en-US-clause-e3c2389f9003fb4cef8d6ccb80c63ed07d88c814c37cbb792bd9a0927ea662df"
+      ]
     }
   ],
   "model": "qwen3-tts-flash-realtime",
@@ -2774,5 +4096,5 @@
       ]
     }
   ],
-  "pack_sha256": "c7877865696b304f99270c281a852f3bd6c780ee26be1c4d81a6059fd8b28518"
+  "pack_sha256": "8301d59639cc012d84a557f1c521c557252c835fd89c48d61fedc77e01c6b6e2"
 }

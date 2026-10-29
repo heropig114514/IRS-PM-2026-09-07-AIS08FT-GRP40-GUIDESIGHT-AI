@@ -4,7 +4,8 @@ service, start the inference ASGI process, then reverse-forward its loopback por
 Related Modules: integration.inference.asgi; integration.phone_deploy/relay;
 tools.deploy_phone_live.connect_server; tools.run_local_mvp; deploy/prs-mvp-web.service;
 PHONE-MVP.md.
-Declaration Index: public_ready; check_remote_binding; check_remote_health; check_web_service;
+Declaration Index: proxy_endpoint; connect_interactive; public_ready; check_remote_binding;
+check_remote_health; check_web_service;
 verify_inference_port; supervise; run; main.
 Variable Index: ROOT/STOP_REQUESTED and child helpers are reused from the local launcher;
 WEB_PORT/INFERENCE_REMOTE_PORT separate the permanent app-server Web listener from the laptop
@@ -13,15 +14,22 @@ tools.deploy_phone_live.connect_server reads server_info.txt credentials without
 """
 
 import argparse
+import asyncio
+import getpass
 import http.client
 import json
+import os
 import signal
 import socket
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlsplit
 from uuid import uuid4
 
+import paramiko
+
+from integration.mobile import mobile_origin
 from integration.phone_deploy import (
     INFERENCE_REMOTE_PORT,
     MOUNT,
@@ -32,7 +40,7 @@ from integration.phone_deploy import (
     remote_command,
 )
 from integration.relay import RelayError, RelayForward
-from tools.deploy_phone_live import connect_server
+from tools.deploy_phone_live import PinnedHost, connect_server
 from tools.run_local_mvp import (
     INFERENCE_PACKAGES,
     ROOT,
@@ -51,14 +59,77 @@ from tools.run_local_mvp import (
 )
 
 
-def public_ready():
+def proxy_endpoint(value):
+    """Functionality: Validate an explicit HTTP CONNECT proxy without exposing credentials.
+    Inputs: Optional proxy origin. Outputs: hostname/port pair or None.
+    Logic: Accept only a canonical HTTP authority with an explicit port.
+    Constraints: No proxy discovery, credentials, paths, redirects or implicit fallback.
+    """
+    if not value:
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (not value.isascii() or any(char.isspace() for char in value)
+                or parsed.scheme != "http" or not parsed.hostname or not parsed.port
+                or parsed.username is not None or parsed.password is not None
+                or parsed.path or parsed.query or parsed.fragment
+                or any(char in parsed.netloc for char in "*\\")
+                or value != "http://" + parsed.netloc):
+            raise ValueError
+        return parsed.hostname, parsed.port
+    except (ValueError, TypeError):
+        raise StartupError(
+            "Use an HTTP proxy origin with a port and no credentials or path."
+        ) from None
+
+
+def connect_interactive(proxy=None):
+    """Functionality: Open a pinned SSH session using a hidden operator password prompt.
+    Inputs: Optional validated HTTP CONNECT proxy. Outputs: Authenticated SSH client.
+    Logic: Tunnel only the fixed server SSH port, validate its host identity, then authenticate.
+    Constraints: No password argument/file, discovery, retries or automatic alternate route.
+    """
+    password = getpass.getpass(f"SSH password for root@{SERVER}: ")
+    if not password:
+        raise StartupError("An SSH password is required.")
+    client, connection, stream = paramiko.SSHClient(), None, None
+    try:
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(PinnedHost())
+        if proxy:
+            connection = http.client.HTTPConnection(*proxy, timeout=15)
+            connection.set_tunnel(SERVER, 22)
+            connection.connect()
+            stream, connection.sock = connection.sock, None
+            stream.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        client.connect(SERVER, port=22, username="root", password=password,
+                       allow_agent=False, look_for_keys=False, timeout=15,
+                       banner_timeout=15, auth_timeout=15, sock=stream)
+        return client
+    except Exception:
+        client.close()
+        if stream is not None:
+            stream.close()
+        raise
+    finally:
+        password = None
+        if connection is not None:
+            connection.close()
+
+
+def public_ready(origin=PUBLIC_ORIGIN, proxy=None):
     """Functionality: Verify the public product page on the independent app-server service.
-    Inputs: Fixed public HTTPS target. Outputs: Nonsecret status and permission metadata.
+    Inputs: Explicit HTTPS origin and optional CONNECT proxy. Outputs: Safe permission metadata.
     Logic: One CA-verified unauthenticated GET checks page identity, WSS policy and device policy.
     Constraints: No redirects, retries, TLS bypass, device requests or page-body logging; this
     check does not exercise the inference worker.
     """
-    connection = http.client.HTTPSConnection(SERVER, timeout=15)
+    target = urlsplit(mobile_origin(origin))
+    if proxy:
+        connection = http.client.HTTPSConnection(*proxy, timeout=15)
+        connection.set_tunnel(target.hostname, target.port or 443)
+    else:
+        connection = http.client.HTTPSConnection(target.netloc, timeout=15)
     try:
         connection.request("GET", MOUNT + "/maps/")
         response = connection.getresponse()
@@ -69,7 +140,7 @@ def public_ready():
             response.status != 200
             or len(raw) > 1048576
             or b'data-assist="true"' not in raw
-            or "wss://" + SERVER not in csp
+            or "wss://" + target.netloc not in csp
             or "camera=(self)" not in policy
             or "geolocation=(self)" not in policy
         ):
@@ -174,14 +245,27 @@ def supervise(relay, children):
 def run(args):
     """Functionality: Preflight or supervise laptop inference through the app-server tunnel.
     Inputs: Local check flag, inference port, log path and the ignored server_info.txt credential
-    file consumed by the pinned SSH helper. Outputs: bounded readiness then service until explicit
+    file or hidden prompt consumed by the pinned SSH helper. Outputs: readiness then service until
     stop, child exit or SSH failure.
     Logic: Verify the Web unit first, launch only the CUDA worker, bind remote loopback 18767, and
     validate tunneled health plus the already-running public page; the password remains in memory.
-    Constraints: No interactive password prompt, local Web process, Nginx changes, ORS transfer,
+    Constraints: No local Web process, Nginx changes, ORS transfer,
     GPU fallback, retry or restart.
     """
-    web_python, inference_python = python_path(".venv"), python_path(".venv-inference")
+    origin = mobile_origin(getattr(args, "public_origin", PUBLIC_ORIGIN))
+    proxy = proxy_endpoint(getattr(args, "http_proxy", None))
+    interactive = getattr(args, "password_prompt", False)
+    if proxy and not interactive:
+        raise StartupError("An explicit proxy requires --password-prompt for SSH authentication.")
+    selected_web = getattr(args, "web_python", None)
+    web_python = Path(selected_web).resolve() if selected_web else python_path(".venv")
+    if selected_web and not web_python.is_file():
+        raise StartupError("The explicit Web/relay interpreter does not exist.")
+    selected_python = getattr(args, "inference_python", None)
+    inference_python = (Path(selected_python).resolve() if selected_python is not None
+                        else python_path(".venv-inference"))
+    if selected_python is not None and not inference_python.is_file():
+        raise StartupError(f"Missing explicit inference interpreter: {inference_python}")
     inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0"})
     inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
     verify_models()
@@ -201,8 +285,9 @@ def run(args):
     children, log_handles = [], []
     report = {
         "running": False,
-        "product_url": PUBLIC_ORIGIN + MOUNT + "/maps/",
-        "test_url": PUBLIC_ORIGIN + MOUNT + "/maps/test",
+        "product_url": origin + MOUNT + "/maps/",
+        "test_url": origin + MOUNT + "/maps/test",
+        "explicit_proxy": bool(proxy),
         "remote_inference_binding": f"127.0.0.1:{INFERENCE_REMOTE_PORT}",
         "web_service_on_application_server": True,
         "credential_saved": False,
@@ -211,7 +296,7 @@ def run(args):
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
     try:
-        client = connect_server()
+        client = connect_interactive(proxy) if interactive else connect_server()
         client.get_transport().set_keepalive(20)
         check_web_service(client)
         environment = child_environment(
@@ -228,6 +313,13 @@ def run(args):
         )
         children.append(child)
         wait_listener(child, args.inference_port)
+        if getattr(args, "warmup", False):
+            from tools.run_public_mvp import warmup
+
+            report["warmup"] = asyncio.run(warmup(
+                WEB_PORT, args.inference_port,
+                expected_backend=environment.get("PRS_DEPTH_BACKEND", "torch"),
+            ))
         health = read_health(args.inference_port, "/health/")
         report["local_inference_health"] = {
             "status": health["status"],
@@ -241,7 +333,11 @@ def run(args):
         ).start()
         check_remote_binding(client)
         report["remote_inference_health"] = check_remote_health(client)
-        report.update(public_ready())
+        report.update(public_ready(origin, proxy))
+        report["inference_profile"] = {name: os.environ.get(name, "") for name in (
+            "PRS_DETECTION_MODEL", "PRS_DEPTH_BACKEND", "PRS_DEPTH_FUSION",
+            "PRS_DISTANCE_MODE", "PRS_DEPTH_INTERVAL",
+        )}
         report["running"] = True
         (directory / "runtime.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print("Product URL: " + report["product_url"], flush=True)
@@ -275,7 +371,7 @@ def main():
     """Functionality: Parse the laptop inference supervisor CLI and report safe failures.
     Inputs: Explicit local flags; normal startup reads credentials through the pinned helper.
     Outputs: process exit status. Logic: check mode performs preflight only; normal mode owns one
-    worker and one tunnel. Constraints: No password argument or prompt, Nginx installer, public Web
+    worker and one tunnel. Constraints: No password argument, Nginx installer, public Web
     process or automatic restart.
     """
     parser = argparse.ArgumentParser(
@@ -283,6 +379,15 @@ def main():
     )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--inference-port", type=int, default=8767)
+    parser.add_argument("--inference-python", type=Path,
+                        help="Explicit prepared inference interpreter; default is .venv-inference")
+    parser.add_argument("--web-python", type=Path,
+                        help="Explicit prepared Web/relay interpreter; default is .venv")
+    parser.add_argument("--public-origin", default=PUBLIC_ORIGIN)
+    parser.add_argument("--http-proxy", help="Explicit HTTP CONNECT proxy for SSH and HTTPS checks")
+    parser.add_argument("--password-prompt", action="store_true")
+    parser.add_argument("--warmup", action="store_true",
+                        help="Verify eight real frames before ready")
     parser.add_argument("--log-dir", type=Path, default=ROOT / ".venv/tmp/phone-mvp")
     args = parser.parse_args()
     try:

@@ -1,5 +1,9 @@
 # Phone Navigation and Local Inference MVP
 
+For the current optimized server relay, selected entry, direct-IP reachability limits and
+comparison settings, see [SERVER-RELAY.md](SERVER-RELAY.md). The canonical IP entry below
+describes the original topology; verify reachability before distributing it to phone testers.
+
 The phone uses the existing server's trusted HTTPS endpoint to access the public guest version of the unified MVP; the phone and laptop do not need to share a local network. The only public page entries are [Phone Navigation and Detection](https://47.239.50.129/mvp/maps/) and [Phone MVP Tests](https://47.239.50.129/mvp/maps/test). Neither page requires a username or password. The application server permanently hosts both pages and their map APIs. Detection, depth, tracking, and risk inference run only on the laptop GPU while its inference worker and SSH tunnel are active. The existing `/prs/` service, navigation core, and algorithms remain independent.
 
 ## Connection and Responsibilities
@@ -51,6 +55,52 @@ The depth checkpoint must have SHA-256 `befed1b8561d8b2eaa66274b070cdfc9c44853bd
 
 The permanent Web port is 18766 on the application server. The laptop worker defaults to `127.0.0.1:8767`; the pinned SSH connection maps that worker to server loopback port 18767. An occupied local port fails explicitly. The launcher does not kill processes, start a Web service, edit Nginx, or select another port.
 
+An existing verified GPU interpreter can be selected explicitly with `--inference-python`.
+The default remains `.venv-inference`; an invalid explicit path fails without substitution.
+This option preserves package/CUDA/checkpoint/port checks and interactive SSH authentication.
+For the prepared local TensorRT environment, use the following from `backend` after stopping
+the owned offline demo launcher to release port 8767:
+
+```powershell
+$env:PRS_DETECTION_MODEL = 'yolo26n'
+$env:PRS_DISTANCE_MODE = 'depth'
+$env:PRS_DEPTH_BACKEND = 'tensorrt'
+$env:PRS_DEPTH_ENGINE_MANIFEST = 'models/experiments/depth-serving-fp32/manifest.json'
+$env:PRS_DEPTH_FUSION = 'host'
+.\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --inference-python .venv/depth-export/Scripts/python.exe --check
+.\.venv\Scripts\python.exe -B -m tools.run_phone_mvp --inference-python .venv/depth-export/Scripts/python.exe
+```
+
+The engine bundle must match this worker's weights/runtime/GPU and cover the phone's actual
+preprocessed input shapes. Unsupported shapes fail explicitly. This configuration does not
+change the camera's admission policy or establish phone/network latency from local-video results.
+
+### Temporary GPU replacement
+
+When another operator already owns the server's port 18767, keep that tunnel running. Validate
+the selected replacement worker on its local port, allocate a separate server loopback binding
+(18768 for the temporary RTX 3060 setup), and verify health through that binding before changing
+only `LOCAL_INFERENCE_URL` in `/etc/prs-mvp-web/app.env`. Preserve a private backup of the
+original route and all other environment values. Restart only `prs-mvp-web`, then wait for its
+18766 listener and routed worker health; a systemd `active` state alone is insufficient.
+An inference-source archive can be stored separately under
+`/opt/prs-practice/mvp/inference-releases/`; uploading it does not activate GPU execution.
+
+Acceptance must check the public WSS contract and real returned frames for the selected GPU,
+model, precision, depth backend and fusion mode. Use one fixed image geometry per session and
+the browser's bounded streaming admission. A sequential request/response test can exhaust the
+worker's five-second input-idle budget when WAN round-trip time exceeds that budget. Preserve
+such failures as network/test evidence; do not extend deadlines or claim a model speedup from
+changing the input schedule. Actual phone camera and mobile-network acceptance remain separate.
+
+The replacement's supervisor owns only its GPU child and independent SSH binding. Keep the
+laptop powered, awake and connected while the phone uses it. To restore the original target,
+first check that the previous worker is available, restore the original inference URL, restart
+the named Web service and verify the routed health, then stop the replacement's owned resources.
+Do not terminate the colleague's tunnel. A lost replacement tunnel does not silently switch
+providers; recover or restore explicitly. Runtime process identities, source hashes, selected
+proxy paths and private-backup locations belong in the structured deployment report.
+
 After `prs-mvp-web.service` is active, run the following on the laptop to start inference and connect it to the app server:
 
 ```powershell
@@ -60,6 +110,139 @@ After `prs-mvp-web.service` is active, run the following on the laptop to start 
 The launcher reads the app-server target and password from the ignored `SystemCode/backend/server_info.txt` through the existing pinned deployment helper. It validates the fixed server and SSH port, verifies the pinned server fingerprint, enables SSH keepalive, and never prints, places, or saves the password in command arguments or the run report. It checks that `prs-mvp-web.service` is already active, starts only `integration.inference.asgi` on the laptop, and establishes the loopback-only reverse tunnel. It reports model state from health without loading the model; native initialization begins only on the first real input. Logs and run details stay under the locally ignored `.venv/tmp/phone-mvp/` directory; `--log-dir` may select another directory under `backend`.
 
 ## iPhone Operation
+
+The existing public HTTPS entry is the shared teammate entry; the optional LAN certificate
+workflow is not required for it. The browser needs only its normal camera permission. The
+temporary setup still sends frames through the public Web server to the laptop GPU, so the
+laptop must remain awake and the selected tunnel must stay connected. A trusted HTTPS page
+does not establish acceptable inference latency.
+
+### Camera admission and relay configuration
+
+Set `PRS_CAMERA_PROFILE` on the Web service, then restart that service and reload the page
+before starting a new session. `integration.assist` validates the exact name and renders it on
+both product and diagnostic pages. `CameraApp` freezes the policy before requesting permission;
+changing the page setting cannot change an active session. An unknown name fails explicitly.
+
+| Profile | Capture ceiling | Outstanding frames |
+| --- | ---: | ---: |
+| `standard` (unset default/control) | 30 FPS | 12 |
+| `bounded-2` (measured low-queue candidate) | 30 FPS | 2 |
+| `bounded-3` | 30 FPS | 3 |
+| `responsive-2` / `responsive-3` | 10 FPS | 2 / 3 |
+| `conservative-2` / `conservative-3` | 5 FPS | 2 / 3 |
+
+The profile applies only to local inference. Other processing modes keep their original
+policy. Capture remains max640/JPEG0.8, with the first frame alone, ordered results, original
+timestamps and no discarded accepted frames. The protocol's twelve-frame ceiling is unchanged;
+the selected browser window may be smaller. Capture FPS is a ceiling, not delivered throughput.
+The five-second worker input-idle budget and ten-second steady-frame deadline are unchanged.
+If the first result takes longer than the idle budget to return, the worker can end before the
+next input arrives; a smaller queue does not solve that transport delay.
+
+`integration.relay.RelayForward` drains a writable partial SSH send immediately after positive
+progress. It retains bounded polling under backpressure, bounded buffers, full-duplex forwarding
+and half-close handling. Start a new owned relay to load changed Python code; editing the source
+does not change an already-running relay. Use a separate loopback binding for comparison, verify
+its routed worker identity, and change only the Web inference URL for activation. Never stop
+another operator's tunnel or the supervisor that still owns the selected GPU.
+
+### Browser send-buffer admission and TCP forwarding
+
+Camera sessions using `LiveDetectionClient` check `WebSocket.bufferedAmount` after result/display
+credit becomes available and before acquiring the next image. A nonempty browser buffer delays
+capture, so the next submitted image is fresh when the local queue clears. Polling uses a cancellable
+4ms timer only while bytes remain; an empty queue adds no timer. A persistent10s admission stall
+fails visibly. Existing first/steady frame deadlines still apply to every accepted frame, and
+stop/provider-end wakes the wait. JPEG quality, dimensions, model settings and accepted-frame order
+are unchanged. This covers the live camera pipeline, not the independent native-video replay sampler
+or serial Echo diagnostic path.
+
+The [browser buffer counter](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/bufferedAmount)
+counts unsent application bytes. Zero does not establish remote receipt or reveal all TCP/router
+queues; retain the selected outstanding-frame bound as a separate control. Browser timer clamping
+may make waits longer than4ms. Compare completion FPS and end-to-end frame age together, including
+first-frame behavior and failures. `transportWaitMs`/`transportQueuedBytes` report admission waiting
+separately from `creditWaitMs`, capture/encode, request/result transport and JPEG decode. Console
+summaries expose `firstFrameMs.sendQueueWait` and `steadySendQueue`; no image or device identity is
+logged. Frame age begins at actual capture, so a shorter frame age alone is not a throughput gain.
+
+For an explicit code-level control, instantiate `FramePipeline` with `bufferedBytes: null` (its
+original default). `CameraApp.runPipeline` enables the adapter for live HF/local/resident cameras.
+Use identical capture profile, codec, models, source and network conditions for a comparison; do
+not change these conditions or omit slow/failed frames when reporting an improvement.
+
+`RelayForward` enables `TCP_NODELAY` on its owned local TCP peer, and `connect_server` enables it
+on the owned SSH TCP socket after verifying the host identity. This removes Nagle's small-write
+coalescing delay; it may increase small packets and cannot remove propagation time, packet loss or
+bandwidth limits. See the [TCP socket option contract](https://man7.org/linux/man-pages/man7/tcp.7.html).
+Socket configuration failure is explicit, closes owned endpoints and never silently retries with
+a different policy. New relay connections/processes are needed to load these changes; restarting
+the Web service cannot update a separately owned GPU-side SSH process.
+
+Deploy `camera.js`, `frame-pipeline.js` and `live-detection-client.js` together to avoid a mixed
+client/adapter contract, then reload the phone page. Preserve the current server route and the
+colleague's independent UI/audio changes. TCP changes must also be integrated at the GPU tunnel
+owner; a source archive on the Web server does not activate them. These mechanisms are regression
+verified, but new WAN/phone latency gains require an available GPU worker and on-device acceptance.
+
+For rollback, verify the current route and source hashes against the activation report. Restore
+the two changed source files from their recorded backups, and restore only `LOCAL_INFERENCE_URL`
+and `PRS_CAMERA_PROFILE` to their prior values while preserving unrelated environment changes.
+Restart only `prs-mvp-web`, wait for its listener and routed health, then stop the candidate relay.
+If the original temporary GPU supervisor must also be removed, first restore its expected route;
+only then use its owned restore-and-stop control to return to the colleague's worker.
+
+A temporary release overlay is not durable across an independent deployment. Guard both the
+resolved release directory and source hashes, preserve new features when reapplying a minimal
+overlay, and verify the actual rendered profile after every release switch. Carry the camera
+and template changes into the authoritative release source before relying on automated deploys.
+The profile environment variable alone has no effect on an older template/camera implementation.
+
+The browser benchmark below uses the real capture/encode/WS/inference/hash/decode pipeline with
+an explicitly selected public fixture. Use an unused output path. `-` selects normal public
+Chrome certificate validation and the explicitly configured development proxy at127.0.0.1:7897;
+it does not install a trust anchor or ignore certificate errors. The LAN mode uses the dedicated
+CA directory and an exact leaf pin confined to the disposable browser. Both modes retain errors
+and first-frame timing separately. Desktop fixture tests do not establish phone radio, camera,
+display latency, risk accuracy or physical speech output.
+
+```powershell
+$env:PRS_PLAYWRIGHT_PATH = '<absolute path to installed Playwright package>'
+node frontend/tools/benchmark_lan_camera.mjs https://47.239.50.129/mvp/maps/test 24 bounded-2 backend/model_tests/samples/bus.jpg - backend/.venv/tmp/NEW_PUBLIC_CAMERA.json
+```
+
+Measured trials and failures live under `backend/benchmarks/2026-10-28/lan-camera/` and
+`backend/benchmarks/2026-10-28/phone-latency/`. Compare identical fixture/count/quality conditions
+before attributing changes to the queue or relay. LAN measurements exclude the public relay;
+server-origin WSS measurements exclude the phone-to-server leg.
+
+### Optional direct LAN diagnostic
+
+`tools.run_lan_mvp` reuses a ready continuous GPU process and owns only two local Web children.
+It requires an explicit RFC1918 IPv4 address and a /24 or narrower subnet, exact Host/Origin,
+direct HTTPS and the existing mobile API allowlist. It rejects forwarding headers and unrelated
+paths. Install `requirements-phone.txt` in the Web environment; its pinned cryptography dependency
+generates a dedicated seven-day CA and exact-IP server certificate. The CA signing key is never
+serialized, and no operating-system trust or firewall configuration changes automatically.
+
+From `backend`, substitute the actual interface and new runtime paths:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m tools.run_lan_mvp --address 192.168.10.8 --subnet 192.168.10.0/24 --state-dir .venv/tmp/lan-demo/NEW_RUN --prepare-certificate
+.\.venv\Scripts\python.exe -B -m tools.run_lan_mvp --address 192.168.10.8 --subnet 192.168.10.0/24 --state-dir .venv/tmp/lan-demo/NEW_RUN --camera-profile bounded-2 --check
+.\.venv\Scripts\python.exe -B -m tools.run_lan_mvp --address 192.168.10.8 --subnet 192.168.10.0/24 --state-dir .venv/tmp/lan-demo/NEW_RUN --camera-profile bounded-2
+```
+
+The default TLS directory must be new for preparation; select a new `--tls-dir` explicitly when
+renewing. The canonical Web origin defaults to port18766 and must match the existing worker.
+The setup listener at8080 serves only instructions and public certificate/profile bytes; it
+does not serve the leaf private key or arbitrary files. A physical iPhone would need to install
+and fully trust this dedicated certificate. This is optional and is not the shared public route.
+Use Ctrl+C or `stop.request` in the selected state directory to stop only these Web children.
+Certificates expire after seven days; do not copy the public server's TLS private keys locally.
+
+### Phone interaction
 
 1. Open the HTTPS entry above in foreground Safari; no website login is required. The certificate must be trusted by iPhone; opening the page in a desktop test that ignores certificate errors does not establish that phone permissions work.
 2. The unified page enables speech output, navigation announcements, and risk alerts by default. Vibration is also enabled when the browser supports its API. iPhone Safari does not support that API and does not switch to another vibration method. Speech is synthesized by the app-server's configured Qwen realtime service and streamed as PCM through the same-origin TTS socket; the browser plays the stream using Web Audio and does not depend on installed local voices. Assistant replies use automatic Chinese/English detection; navigation and risk announcements follow the interface language. Select “Start speech” and wait for the status to report that streamed audio playback has started. Product speech rate is fixed at 2× and app volume at 100%; adjust actual volume with the phone buttons.
@@ -107,6 +290,14 @@ Safari camera access requires an HTTPS secure context; see [WebKit media-access 
 
 The laptop must remain powered on, connected to the network, and running the inference launcher for detection. Press `Ctrl+C` in that terminal to stop only the GPU worker and tunnel. The app-server Web service continues serving both pages and map APIs. Without the laptop tunnel, page requests still work, while detection reports an unavailable inference connection; there is no provider fallback, reconnect or retry.
 
-A 502 for either page means the app-server Nginx upstream at `127.0.0.1:18766` or `prs-mvp-web.service` is unavailable; the laptop GPU ports do not cause a page 502. An inference connection error while the pages load means the loopback tunnel at server port 18767 is unavailable. Check the corresponding service only. `/mvp/` does not fall back to `/prs/` or another inference provider.
+A 502 for either page means the app-server Nginx upstream at `127.0.0.1:18766` or `prs-mvp-web.service` is unavailable; the laptop GPU ports do not cause a page 502. An inference connection error while the pages load requires checking the loopback tunnel selected by `LOCAL_INFERENCE_URL` (18767 for the baseline, or the explicitly selected replacement). Check the corresponding service only. `/mvp/` does not fall back to `/prs/` or another inference provider.
+
+For a browser connection timeout before any page appears, compare direct TCP80/443 reachability
+with a separately labeled proxy path, then inspect Nginx/Web state, public listeners, certificate
+identity/expiry and host firewall. A successful proxy request does not prove a phone can connect
+directly. If both Wi-Fi and cellular fail while the service and host admission are healthy, inspect
+cloud security-group/public-access rules and upstream routing using the provider console. SSH
+root access does not expose those cloud control-plane rules. Do not disable TLS, broaden unrelated
+ports, install a private phone certificate or alter inference deadlines to mask a TCP-path failure.
 
 The user must still verify the physical iPhone camera, precise location, audible speaker output, and navigation/detection integration over a mobile network. HTTPS page checks, synthetic location, model results, and browser PCM lifecycle events do not replace acceptance on an actual phone.

@@ -1,0 +1,17 @@
+{
+  "release": "/opt/prs-practice/mvp/releases/8798d60598cea8be07899ebb84b4493b6992e2eb",
+  "service": [
+    "MainPID=585087",
+    "ExecMainStatus=0",
+    "WorkingDirectory=/opt/prs-practice/mvp/current/backend",
+    "ActiveState=active",
+    "SubState=running"
+  ],
+  "web": {
+    "error": "HTTPError"
+  },
+  "gpu": {
+    "error": "URLError"
+  },
+  "diagnostics": []
+}
