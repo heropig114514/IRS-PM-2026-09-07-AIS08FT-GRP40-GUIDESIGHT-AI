@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-29T02:28:24.914Z",
+  "assets": [
+    {
+      "name": "integration/assist-mvp.js",
+      "status": 200,
+      "sha256": "029472575e72f733d8b9be05c6c14010bf4c1bdec6c12fd4aa0662122bdf8e84",
+      "matches_local": true
+    },
+    {
+      "name": "integration/risk-audio-resources.js",
+      "status": 200,
+      "sha256": "1e5529302be87a78b253e7ad457c3b59c6470e020f31e69daa8282b53084a2d3",
+      "matches_local": true
+    }
+  ],
+  "inference_started": false,
+  "page": {
+    "status": 200,
+    "single_frame": true,
+    "compact": true
+  },
+  "worker": {
+    "http_status": 503,
+    "ready": false,
+    "available": false,
+    "code": "local_worker_unavailable"
+  },
+  "passed": true
+}

@@ -1,0 +1,145 @@
+{
+  "checked_at_local": "2026-10-29 10:28 Asia/Shanghai",
+  "client": "Windows desktop, direct public route, no proxy",
+  "inference_test": "Not run: original colleague GPU unavailable (HTTP 503 local_worker_unavailable).",
+  "network": {
+    "kind": "WebSocket echo round trip; same payload uploaded and returned; excludes inference",
+    "samples": 30,
+    "complete": true,
+    "connection_ms": 2146.477899999809,
+    "groups": [
+      {
+        "bytes": 32,
+        "n": 5,
+        "median_ms": 343.02130000014586,
+        "min_ms": 342.7828000003501,
+        "max_ms": 344.5983999999953,
+        "p95_ms": 344.4444600000679
+      },
+      {
+        "bytes": 5287,
+        "n": 5,
+        "median_ms": 348.67039999971894,
+        "min_ms": 347.997999999734,
+        "max_ms": 369.8501000003489,
+        "p95_ms": 366.7519400002675
+      },
+      {
+        "bytes": 16384,
+        "n": 5,
+        "median_ms": 383.0537999997432,
+        "min_ms": 381.60830000015267,
+        "max_ms": 389.8442999998224,
+        "p95_ms": 388.9403399998628
+      },
+      {
+        "bytes": 65536,
+        "n": 5,
+        "median_ms": 474.0530999997645,
+        "min_ms": 471.70100000039383,
+        "max_ms": 588.510000000042,
+        "p95_ms": 565.7860400000573
+      },
+      {
+        "bytes": 84747,
+        "n": 5,
+        "median_ms": 519.6320000000014,
+        "min_ms": 505.36600000032195,
+        "max_ms": 526.176200000009,
+        "p95_ms": 525.434899999982
+      },
+      {
+        "bytes": 131072,
+        "n": 5,
+        "median_ms": 536.9324000002962,
+        "min_ms": 530.4895999997825,
+        "max_ms": 615.1911000001746,
+        "p95_ms": 603.8074400001278
+      }
+    ]
+  },
+  "speech": {
+    "checks_passed": 6,
+    "failure": null,
+    "page_errors": [],
+    "checks": [
+      {
+        "label": "Chinese visible control",
+        "state": "completed",
+        "synthetic_risk": false,
+        "elapsed_ms_including_utterance": 3796
+      },
+      {
+        "label": "Explicit recovery after AudioContext suspend",
+        "state": "completed",
+        "synthetic_risk": false,
+        "elapsed_ms_including_utterance": 3347
+      },
+      {
+        "label": "English recovery after AudioContext close",
+        "state": "completed",
+        "synthetic_risk": false,
+        "elapsed_ms_including_utterance": 3382
+      },
+      {
+        "label": "Prepared risk phrase zh-CN",
+        "state": "completed",
+        "synthetic_risk": true,
+        "elapsed_ms_including_utterance": null
+      },
+      {
+        "label": "Prepared risk phrase en-US",
+        "state": "completed",
+        "synthetic_risk": true,
+        "elapsed_ms_including_utterance": null
+      },
+      {
+        "label": "Manager rejects expired/non-alert input; continuously confirmed required risk completes",
+        "state": "completed",
+        "synthetic_risk": true,
+        "elapsed_ms_including_utterance": null
+      }
+    ],
+    "physical_phone_verified": false,
+    "required_risk_test": "Synthetic fresh risk confirmations every 250 ms; no actual camera or GPU detections.",
+    "warning_audio_downloads": 5,
+    "warning_audio_bytes": 111244
+  },
+  "deployed": {
+    "at": "2026-10-29T02:28:24.914Z",
+    "assets": [
+      {
+        "name": "integration/assist-mvp.js",
+        "status": 200,
+        "sha256": "029472575e72f733d8b9be05c6c14010bf4c1bdec6c12fd4aa0662122bdf8e84",
+        "matches_local": true
+      },
+      {
+        "name": "integration/risk-audio-resources.js",
+        "status": 200,
+        "sha256": "1e5529302be87a78b253e7ad457c3b59c6470e020f31e69daa8282b53084a2d3",
+        "matches_local": true
+      }
+    ],
+    "inference_started": false,
+    "page": {
+      "status": 200,
+      "single_frame": true,
+      "compact": true
+    },
+    "worker": {
+      "http_status": 503,
+      "ready": false,
+      "available": false,
+      "code": "local_worker_unavailable"
+    },
+    "passed": true
+  },
+  "limitations": [
+    "Public RTT samples come from the desktop connection; actual iPhone network and audio output still require a physical test.",
+    "Current real inference capture-to-result latency cannot be measured while the original GPU is offline.",
+    "Echo returns the full payload, so the 84,747-byte measurement is not equivalent to compact inference uploading one JPEG and returning small metadata.",
+    "Calibration elapsed times include synthesis/download and spoken duration; they are not time to first audio.",
+    "Six speech checks validate actual browser PCM completion and recovery; they do not establish physical audibility or current model-generated warning behavior."
+  ]
+}
