@@ -1,0 +1,292 @@
+{
+  "client_location": "Ubuntu relay server",
+  "source": "public sample resized by Pillow; identical bytes across server legs",
+  "input_bytes": 85436,
+  "fixture_sha256": "3c442142afd7ec266b05568d13abbd1f68e04711085cf2070878f5c04e193998",
+  "echo": [
+    {
+      "name": "loopback-web",
+      "samples": [
+        {
+          "bytes": 32,
+          "rtt_ms": 0.4773554392158985
+        },
+        {
+          "bytes": 32,
+          "rtt_ms": 0.3420710563659668
+        },
+        {
+          "bytes": 32,
+          "rtt_ms": 0.4023290239274502
+        },
+        {
+          "bytes": 16384,
+          "rtt_ms": 0.362900085747242
+        },
+        {
+          "bytes": 16384,
+          "rtt_ms": 0.30882610008120537
+        },
+        {
+          "bytes": 16384,
+          "rtt_ms": 0.24037668481469154
+        },
+        {
+          "bytes": 65536,
+          "rtt_ms": 0.8372599259018898
+        },
+        {
+          "bytes": 65536,
+          "rtt_ms": 0.39417995139956474
+        },
+        {
+          "bytes": 65536,
+          "rtt_ms": 0.37340493872761726
+        },
+        {
+          "bytes": 131072,
+          "rtt_ms": 1.1402787640690804
+        },
+        {
+          "bytes": 131072,
+          "rtt_ms": 0.5788160488009453
+        },
+        {
+          "bytes": 131072,
+          "rtt_ms": 0.5408166907727718
+        }
+      ]
+    },
+    {
+      "name": "cloudflare-roundtrip",
+      "samples": [
+        {
+          "bytes": 32,
+          "rtt_ms": 8.243178948760033
+        },
+        {
+          "bytes": 32,
+          "rtt_ms": 9.145186748355627
+        },
+        {
+          "bytes": 32,
+          "rtt_ms": 10.294035077095032
+        },
+        {
+          "bytes": 16384,
+          "rtt_ms": 12.765013612806797
+        },
+        {
+          "bytes": 16384,
+          "rtt_ms": 9.82121704146266
+        },
+        {
+          "bytes": 16384,
+          "rtt_ms": 9.95651725679636
+        },
+        {
+          "bytes": 65536,
+          "rtt_ms": 47.1156882122159
+        },
+        {
+          "bytes": 65536,
+          "rtt_ms": 10.405434761196375
+        },
+        {
+          "bytes": 65536,
+          "rtt_ms": 11.133566964417696
+        },
+        {
+          "bytes": 131072,
+          "rtt_ms": 12.13944610208273
+        },
+        {
+          "bytes": 131072,
+          "rtt_ms": 14.576282817870378
+        },
+        {
+          "bytes": 131072,
+          "rtt_ms": 11.356617789715528
+        }
+      ]
+    }
+  ],
+  "inference": [
+    {
+      "name": "server-to-original-gpu",
+      "frames": [
+        {
+          "index": 0,
+          "rtt_ms": 280.5734253488481,
+          "server_ms": 86.01559998351149,
+          "inference_ms": 15.999999974155799,
+          "output_bytes": 98806,
+          "alerts": 0
+        },
+        {
+          "index": 1,
+          "rtt_ms": 264.2848240211606,
+          "server_ms": 67.17909997678362,
+          "inference_ms": 16.00000000325963,
+          "output_bytes": 98802,
+          "alerts": 0
+        },
+        {
+          "index": 2,
+          "rtt_ms": 272.07491220906377,
+          "server_ms": 83.80379999289289,
+          "inference_ms": 16.00000000325963,
+          "output_bytes": 98793,
+          "alerts": 0
+        },
+        {
+          "index": 3,
+          "rtt_ms": 262.6489703543484,
+          "server_ms": 74.63980000466108,
+          "inference_ms": 14.999999984866008,
+          "output_bytes": 100090,
+          "alerts": 0
+        },
+        {
+          "index": 4,
+          "rtt_ms": 260.3960791602731,
+          "server_ms": 69.82080001034774,
+          "inference_ms": 16.00000000325963,
+          "output_bytes": 100089,
+          "alerts": 0
+        },
+        {
+          "index": 5,
+          "rtt_ms": 263.3450496941805,
+          "server_ms": 64.609199995175,
+          "inference_ms": 16.00000000325963,
+          "output_bytes": 100083,
+          "alerts": 0
+        }
+      ],
+      "contract": {
+        "model": "yolo26n",
+        "classes": 80,
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "depth_backend": null,
+        "depth_interval": 1,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+      },
+      "stop": {
+        "kind": "ended",
+        "frames": 6,
+        "received": 6,
+        "delivered": 6
+      }
+    },
+    {
+      "name": "server-via-web-to-gpu",
+      "frames": [
+        {
+          "index": 0,
+          "rtt_ms": 264.6456263028085,
+          "server_ms": 67.00720000662841,
+          "inference_ms": 16.00000000325963,
+          "output_bytes": 98801,
+          "alerts": 0
+        },
+        {
+          "index": 1,
+          "rtt_ms": 266.02929877117276,
+          "server_ms": 67.88479999522679,
+          "inference_ms": 14.999999984866008,
+          "output_bytes": 98797,
+          "alerts": 0
+        },
+        {
+          "index": 2,
+          "rtt_ms": 344.27316673099995,
+          "server_ms": 155.77020001364872,
+          "inference_ms": 62.999999994644895,
+          "output_bytes": 98798,
+          "alerts": 0
+        },
+        {
+          "index": 3,
+          "rtt_ms": 231.64381878450513,
+          "server_ms": 45.767400006297976,
+          "inference_ms": 16.00000000325963,
+          "output_bytes": 100089,
+          "alerts": 0
+        },
+        {
+          "index": 4,
+          "rtt_ms": 247.39082343876362,
+          "server_ms": 47.58059998857789,
+          "inference_ms": 0.0,
+          "output_bytes": 100073,
+          "alerts": 0
+        },
+        {
+          "index": 5,
+          "rtt_ms": 248.86424979195,
+          "server_ms": 51.704399986192584,
+          "inference_ms": 0.0,
+          "output_bytes": 100076,
+          "alerts": 0
+        }
+      ],
+      "contract": {
+        "model": "yolo26n",
+        "classes": 80,
+        "backend": "PyTorch resident CUDA",
+        "precision": "FP32",
+        "depth_backend": null,
+        "depth_interval": 1,
+        "source_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef"
+      },
+      "stop": {
+        "kind": "ended",
+        "frames": 6,
+        "received": 6,
+        "forwarded": 6,
+        "worker_received": 6,
+        "worker_verified": 6,
+        "delivered": 6
+      }
+    }
+  ],
+  "before": {
+    "prs-phone-access": {
+      "cpu.stat": "usage_usec 4190529\nuser_usec 2591987\nsystem_usec 1598542\nnr_periods 3208\nnr_throttled 12\nthrottled_usec 829551",
+      "cpu.max": "20000 100000",
+      "memory.current": "16539648"
+    },
+    "prs-mvp-web": {
+      "cpu.stat": "usage_usec 8871849\nuser_usec 7969826\nsystem_usec 902023\nnr_periods 10069\nnr_throttled 53\nthrottled_usec 3634076",
+      "cpu.max": "30000 100000",
+      "memory.current": "80338944"
+    }
+  },
+  "worker": {
+    "busy": false,
+    "ready": true,
+    "accept_available": true,
+    "error_code": null,
+    "last_inference": {
+      "session_id": "f4d9914f98d84614a4e10a6ed3e12098",
+      "index": 143,
+      "completed_at_unix_s": 1793203976.5118928,
+      "capture_time_s": 77.862,
+      "server_ms": 59.81590002193116
+    }
+  },
+  "after": {
+    "prs-phone-access": {
+      "cpu.stat": "usage_usec 4205208\nuser_usec 2601718\nsystem_usec 1603489\nnr_periods 3214\nnr_throttled 12\nthrottled_usec 829551",
+      "cpu.max": "20000 100000",
+      "memory.current": "16670720"
+    },
+    "prs-mvp-web": {
+      "cpu.stat": "usage_usec 8916042\nuser_usec 8009591\nsystem_usec 906451\nnr_periods 10103\nnr_throttled 53\nthrottled_usec 3634076",
+      "cpu.max": "30000 100000",
+      "memory.current": "80347136"
+    }
+  }
+}

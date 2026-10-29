@@ -1,12 +1,12 @@
 /* Responsibilities: Load the fixed local bilingual warning pack and compose validated PCM on demand.
- * Implementation: One bounded same-origin load validates the corpus and every source WAV/hash before
- * exposing exact text/language/rate matches. Composition copies samples without resampling or playback.
+ * Implementation: Explicit full-pack or on-demand loading validates the corpus and each required WAV/hash
+ * before exposing exact text/language/rate matches. Composition copies samples without resampling or playback.
  * Related Modules: video-alerts.js; assets/risk-audio/manifest.json; risk-speech-cache.js.
  * Declaration Index: resourceError; exactKeys; textKey; expectedText; validateManifest; pcmFromWav;
  * RiskAudioResources; RiskAudioResources.constructor; RiskAudioResources.describe;
  * RiskAudioResources.read; RiskAudioResources.digest; RiskAudioResources.load;
  * RiskAudioResources.initialize; RiskAudioResources.initialize.worker;
- * RiskAudioResources.prepare; RiskAudioResources.dispose.
+ * RiskAudioResources.loadClip; RiskAudioResources.prepare; RiskAudioResources.dispose.
  * Variable Index: LANGUAGES/CLASSES/DIRECTIONS/GRADES constrain the prepared corpus;
  * MAX_MANIFEST_BYTES/MAX_CLIP_BYTES/MAX_PACK_BYTES bound transfers and retained PCM;
  * HASH/CLIP_ID validate content identities; each instance owns one load, controller, timer and PCM map.
@@ -127,30 +127,31 @@ function pcmFromWav(bytes, clip) {
 }
 
 /* Functionality: Own one prepared audio pack independently of any live warning or audio player.
- * Logic: Validate all resources before publishing readiness, then compose fresh sample copies.
+ * Logic: Validate the manifest, load all or requested clips explicitly, then compose fresh sample copies.
  * Constraints: No retries, TTS fallback, risk state, speaker access or automatic output. */
 export class RiskAudioResources {
   /* Functionality: Bind same-origin resource transport and bounded lifecycle controls.
    * Inputs: Fetch, Web Crypto, explicit pack base URL/origin and optional timer implementations.
    * Outputs: Idle resource owner. Logic: Validate configuration without issuing requests.
    * Constraints: Only the fixed risk-audio directory suffix is allowed; no credentials/query/fragment. */
-  constructor({fetch = null, crypto = null, baseUrl,
+  constructor({fetch = null, crypto = null, baseUrl, loadPolicy = "full",
     origin = globalThis.location?.origin, setTimer = globalThis.setTimeout.bind(globalThis),
     clearTimer = globalThis.clearTimeout.bind(globalThis)} = {}) {
     const base = new URL(baseUrl, origin);
-    if (typeof setTimer !== "function" || typeof clearTimer !== "function" ||
+    if (!["full", "on-demand"].includes(loadPolicy) || typeof setTimer !== "function" || typeof clearTimer !== "function" ||
         !["http:", "https:"].includes(base.protocol) || base.origin !== origin ||
         base.username || base.password || base.search || base.hash ||
         !base.pathname.endsWith("/assets/risk-audio/") || base.pathname.includes("//"))
       throw new TypeError("Invalid prepared audio configuration");
-    Object.assign(this, {fetch, crypto, baseUrl: base.href, setTimer, clearTimer});
+    Object.assign(this, {fetch, crypto, baseUrl: base.href, loadPolicy, setTimer, clearTimer});
     this.state = "idle"; this.promise = null; this.controller = null; this.timer = null;
     this.clips = new Map(); this.compositions = new Map(); this.pcm = new Map();
     this.bytes = 0; this.failure = null; this.composed = 0;
+    this.clipPromises = new Map(); this.clipTail = Promise.resolve();
   }
   /* Functionality: Expose readiness and bounded counts without utterances or media.
    * Inputs: Owner state. Outputs: Content-free snapshot. Logic: Report only retained resources.
-   * Constraints: Ready means validated data, never audio activation or physical audibility. */
+   * Constraints: Ready means the manifest is valid; loaded_clips reports available PCM, not physical audibility. */
   describe() {
     return {state: this.state, loaded_clips: this.pcm.size, total_clips: 66, ready_bytes: this.bytes,
       compositions: this.composed, failure: this.failure};
@@ -188,9 +189,9 @@ export class RiskAudioResources {
     return Array.from(new Uint8Array(await this.crypto.subtle.digest("SHA-256", bytes)),
       value => value.toString(16).padStart(2, "0")).join("");
   }
-  /* Functionality: Share one explicit whole-pack load across preload and simultaneous warnings.
+  /* Functionality: Share manifest initialization and the explicitly selected whole-pack/on-demand policy.
    * Inputs: None. Outputs: Stable promise for validated owner or fixed failure.
-   * Logic: One 60-second abort deadline; four workers; failed/disposed loads never restart.
+   * Logic: One 60-second initialization deadline; full mode uses four workers; no failed-load restart.
    * Constraints: Failure releases all PCM and prevents a partially validated pack from playback. */
   load() {
     if (this.state === "disposed") return Promise.reject(resourceError("risk_audio_unavailable"));
@@ -222,6 +223,7 @@ export class RiskAudioResources {
     catch (error) { if (error?.code) throw error; throw resourceError(); }
     const validated = validateManifest(manifest), pending = [...validated.clips.values()];
     this.clips = validated.clips; this.compositions = validated.compositions; let next = 0;
+    if (this.loadPolicy === "on-demand") return;
     /* Functionality: Load one admitted source at a time within the four-worker budget.
      * Inputs: Shared fixed pending list/index. Outputs: Verified retained PCM.
      * Logic: Check cancellation before admission and after asynchronous hash operations.
@@ -247,16 +249,49 @@ export class RiskAudioResources {
     if (failure) throw failure.reason;
     if (this.pcm.size !== 66) throw resourceError("risk_audio_unavailable");
   }
+  // Deduplicate exact clips and serialize network work. A corrupt/failed clip invalidates this
+  // owner, just as a failed full-pack load does; reload is the explicit recovery boundary.
+  loadClip(id) {
+    if (this.clipPromises.has(id)) return this.clipPromises.get(id);
+    const pending = this.clipTail.then(async () => {
+      if (this.state !== "ready" || this.controller.signal.aborted)
+        throw resourceError(this.failure || "risk_audio_unavailable");
+      const clip = this.clips.get(id);
+      const timer = this.setTimer(() => this.controller.abort(), 60000);
+      try {
+        const identity = new TextEncoder().encode(`${clip.language}\0${clip.kind}\0${clip.text}`);
+        if (!clip.id.endsWith(await this.digest(identity))) throw resourceError();
+        const bytes = await this.read(clip.path, clip.byte_length);
+        if (await this.digest(bytes) !== clip.sha256) throw resourceError();
+        const pcm = pcmFromWav(bytes, clip);
+        if (await this.digest(pcm) !== clip.pcm_sha256) throw resourceError();
+        if (this.state !== "ready" || this.controller.signal.aborted) throw resourceError("risk_audio_unavailable");
+        this.pcm.set(id, pcm); this.bytes += pcm.length;
+      } catch (error) {
+        const code = error?.code === "invalid_audio_resource" ? error.code : "risk_audio_unavailable";
+        this.controller.abort(); this.pcm.clear(); this.bytes = 0;
+        if (this.state !== "disposed") { this.state = "failed"; this.failure = code; }
+        throw resourceError(code);
+      } finally { this.clearTimer(timer); }
+    });
+    this.clipPromises.set(id, pending);
+    this.clipTail = pending.catch(() => {});
+    return pending;
+  }
   /* Functionality: Compose one exact supported warning as an independent PCM block.
    * Inputs: Existing command language/rate/text. Outputs: PCM protocol payload or explicit uncovered null.
-   * Logic: Require full readiness; concatenate ordered samples, preserving already synthesized 2x rate.
+   * Logic: Require verified clips; concatenate ordered samples, preserving already synthesized 2x rate.
    * Constraints: Uncovered profile/text is distinct from failure; no WAV-header joins, TTS or output start. */
   async prepare(request) {
     if (request?.rate !== 2 || !LANGUAGES.includes(request?.language)) return null;
     await this.load();
-    if (this.state !== "ready") throw resourceError("risk_audio_unavailable");
+    if (this.state !== "ready") throw resourceError(this.failure || "risk_audio_unavailable");
     const composition = this.compositions.get(textKey(request.language, request.text));
     if (!composition) return null;
+    if (this.loadPolicy === "on-demand") {
+      await Promise.all(composition.clip_ids.map(id => this.loadClip(id)));
+      if (this.state !== "ready") throw resourceError(this.failure || "risk_audio_unavailable");
+    }
     const parts = composition.clip_ids.map(id => this.pcm.get(id));
     const bytes = new Uint8Array(parts.reduce((total, part) => total + part.length, 0)); let offset = 0;
     for (const part of parts) { bytes.set(part, offset); offset += part.length; }
@@ -269,5 +304,6 @@ export class RiskAudioResources {
   dispose() {
     this.state = "disposed"; this.controller?.abort(); this.clearTimer(this.timer); this.timer = null;
     this.pcm.clear(); this.clips.clear(); this.compositions.clear(); this.bytes = 0;
+    this.clipPromises.clear();
   }
 }

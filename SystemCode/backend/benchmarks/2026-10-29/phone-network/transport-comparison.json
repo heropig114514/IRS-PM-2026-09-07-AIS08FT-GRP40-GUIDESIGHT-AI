@@ -1,0 +1,34 @@
+{
+  "annotated-verified": {
+    "frames": 8,
+    "median_ms": 1038.4499999955297,
+    "p95_ms": 1491.805000000447,
+    "under_1000ms": 4,
+    "input_bytes": [
+      84747
+    ],
+    "mean_result_bytes": 99598.875,
+    "all_errors": [],
+    "real_risk_alerts": 0
+  },
+  "compact-browser": {
+    "frames": 8,
+    "median_ms": 806.4499999992549,
+    "p95_ms": 1293.4549999985843,
+    "under_1000ms": 7,
+    "input_bytes": [
+      84747
+    ],
+    "mean_result_bytes": 5286.75,
+    "all_errors": [],
+    "real_risk_alerts": 0
+  },
+  "median_reduction_percent": 22.340988973689,
+  "result_bytes_reduction_percent": 94.6919581169968,
+  "limitations": [
+    "Eight-frame sequential desktop public-route trials; not a physical phone measurement or general throughput guarantee.",
+    "Both trials use the same single-frame profile, exact fixture and identical input encoding. Network and worker warmup vary.",
+    "No required risk alerts in this real model fixture; synthetic playback is tested separately.",
+    "On-demand audio is not part of this matched transport comparison."
+  ]
+}

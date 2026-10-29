@@ -93,14 +93,22 @@ async function checkRiskEligibility() {
   assert.equal((await snapshot()).driver.last_request.id,prior);
   await page.evaluate(()=>{
     const {box,guidanceManager}=window.__riskFixture;
+    let index=2;
     guidanceManager.ingestRisk({sessionId:'synthetic-browser-risk',capturedAt:performance.now(),
-      metadata:{index:2,tracking_epoch:1,boxes:[box]}});
+      metadata:{index:index++,tracking_epoch:1,boxes:[box]}});
+    // An uncached phrase may take longer than one frame's lifetime to download. Feed
+    // explicitly synthetic fresh confirmations while it prepares, like an ongoing source.
+    window.__riskConfirmTimer=setInterval(()=>guidanceManager.ingestRisk({sessionId:'synthetic-browser-risk',
+      capturedAt:performance.now(),metadata:{index:index++,tracking_epoch:1,boxes:[box]}}),250);
   });
-  await page.waitForFunction(previous=>window.__speechUnderTest.lastRequest?.id>previous &&
-    ['completed','error','stopped'].includes(window.__speechUnderTest.phase),prior,{timeout:20000});
+  try {
+    await page.waitForFunction(previous=>window.__speechUnderTest.lastRequest?.id>previous &&
+      ['completed','error','stopped'].includes(window.__speechUnderTest.phase),prior,{timeout:20000});
+  } finally { await page.evaluate(()=>clearInterval(window.__riskConfirmTimer)); }
   const result=await snapshot();assert.equal(result.driver.state,'completed',JSON.stringify(result));
   assert.equal(result.driver.last_request.audio_transport,'risk_cache');
-  report.checks.push({label:'Manager rejects expired/non-alert input; fresh required risk completes',synthetic_risk:true,...result});
+  report.checks.push({label:'Manager rejects expired/non-alert input; continuously confirmed required risk completes',
+    synthetic_risk:true,synthetic_confirmation_interval_ms:250,...result});
   await page.evaluate(()=>window.__riskFixture.guidanceManager.stopRisk('synthetic_check_completed'));
 }
 
@@ -122,6 +130,9 @@ try {
   await playRiskFixture('zh-CN');
   await playRiskFixture('en-US');
   await checkRiskEligibility();
+  report.audio_resources=await page.evaluate(()=>performance.getEntriesByType('resource')
+    .filter(e=>e.name.includes('/assets/risk-audio/'))
+    .map(e=>({manifest:e.name.endsWith('/manifest.json'),bytes:e.decodedBodySize,transfer_bytes:e.transferSize,duration_ms:e.duration})));
   await page.screenshot({path:output+'.png',fullPage:false});
 } catch(error) {report.failure={name:error.name,message:error.message.slice(0,1600)};process.exitCode=1;}
 finally {await browser.close();await writeFile(output,JSON.stringify(report,null,2)+'\n',{flag:'wx'});}

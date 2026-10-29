@@ -255,3 +255,57 @@ test("missing browser capabilities fail safely without throwing at construction"
     assert.equal(resources.describe().state, "failed"); resources.dispose();
   }
 });
+
+test("on-demand loads only requested clips, deduplicates, and preserves all bilingual PCM", async () => {
+  const transport = fixture(), resources = owner(transport, {loadPolicy: "on-demand"});
+  await resources.load();
+  assert.deepEqual(transport.calls, ["manifest.json"]);
+  assert.equal(resources.describe().loaded_clips, 0);
+  const first = transport.manifest.compositions[0];
+  const [one, two] = await Promise.all([resources.prepare({...first, rate: 2}), resources.prepare({...first, rate: 2})]);
+  assert.equal(transport.calls.length, 1 + first.clip_ids.length);
+  assert.notEqual(one.chunks[0], two.chunks[0]);
+  const clips = new Map(transport.manifest.clips.map(clip => [clip.id, clip]));
+  for (const item of transport.manifest.compositions) {
+    const result = await resources.prepare({...item, rate: 2});
+    const expected = Buffer.concat(item.clip_ids.map(id => readFileSync(new URL(clips.get(id).path, ROOT)).subarray(44)));
+    assert.deepEqual(Buffer.from(result.chunks[0]), expected);
+  }
+  assert.equal(transport.calls.length, 67);
+  assert.equal(transport.maximum, 1);
+  assert.equal(resources.describe().loaded_clips, 66);
+  resources.dispose();
+});
+
+test("on-demand rejects corrupt audio without retries, partial playback or native substitution", async () => {
+  const transport = fixture({changeBody(path, bytes) {
+    if (path !== "manifest.json") bytes[bytes.length - 1] ^= 1; return bytes;
+  }}), resources = owner(transport, {loadPolicy: "on-demand"});
+  const item = transport.manifest.compositions.find(item => item.clip_ids.length === 2);
+  await resources.load();
+  await rejectCode(resources.prepare({...item, rate: 2}), "invalid_audio_resource");
+  assert.equal(resources.describe().loaded_clips, 0);
+  assert.equal(resources.describe().state, "failed");
+  const calls = transport.calls.length;
+  await rejectCode(resources.prepare({...item, rate: 2}), "invalid_audio_resource");
+  assert.equal(transport.calls.length, calls); assert.equal(calls, 2);
+  resources.dispose();
+});
+
+test("on-demand cancellation and timeout abort pending clip work and prevent late publication", async () => {
+  for (const cause of ["dispose", "timeout"]) {
+    const transport = fixture(); let expire, signal;
+    const resources = owner(transport, {loadPolicy: "on-demand",
+      setTimer(callback, ms) { assert.equal(ms, 60000); expire = callback; return 1; }, clearTimer() {}});
+    await resources.load();
+    resources.fetch = (_url, options) => { signal = options.signal; return new Promise((_resolve, reject) =>
+      signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), {once: true})); };
+    const preparing = resources.prepare({...transport.manifest.compositions[0], rate: 2});
+    while (!signal) await new Promise(resolve => setImmediate(resolve));
+    if (cause === "dispose") resources.dispose(); else expire();
+    await rejectCode(preparing, "risk_audio_unavailable");
+    assert.equal(signal.aborted, true); assert.equal(resources.describe().loaded_clips, 0);
+    assert.equal(resources.describe().state, cause === "dispose" ? "disposed" : "failed");
+    resources.dispose();
+  }
+});

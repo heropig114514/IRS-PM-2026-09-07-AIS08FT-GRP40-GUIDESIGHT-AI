@@ -1,6 +1,6 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
  * Implementation: Default-enabled unified outputs, entry-time temporary camera/microphone permission checks,
- * one backend bilingual voice preference, preloaded bilingual risk fragments and bounded PCM reuse,
+ * one backend bilingual voice preference, on-demand bilingual risk fragments and bounded PCM reuse,
  * synchronous user-gesture audio unlock, prioritized accepted assistant reply speech and
  * one-click product rear-camera acquisition,
  * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
@@ -83,7 +83,7 @@ let cameraFailure = null;
 let riskOwner = null, sessionId = null, sourceStarting = null, fileReady = false, latest = null;
 let fileChoice = 0, permissionChoice = 0, boundaryStopped = false, stoppingAll = false;
 const riskAudioResources = new RiskAudioResources({fetch: window.fetch?.bind(window), crypto: window.crypto,
-  origin: window.location.origin,
+  origin: window.location.origin, loadPolicy: "on-demand",
   baseUrl: new URL("assets/risk-audio/", new URL(doc.documentElement.dataset.apiBase || "../", window.location.href)).href});
 const riskSpeechCache = typeof window.WebSocket === "function" ? new RiskSpeechCache({WebSocket: window.WebSocket, origin: window.location.origin,
   resources: riskAudioResources,
@@ -691,9 +691,9 @@ function onBoundary(event) {
   boundaryStopped = true; stopAll(event.type === "pagehide" ? "page_left" : "page_hidden", false);
 }
 
-/* Functionality: Preload the fixed bilingual pack independently of source and audio activation.
+/* Functionality: Validate the fixed bilingual manifest independently of source and audio activation.
  * Inputs: Same-origin resource loader. Outputs: Ready/failed content-free diagnostic state.
- * Logic: One idempotent load; retain a failure for explicit recovery by page reload.
+ * Logic: One idempotent manifest load; clips load on demand; page reload explicitly recovers failure.
  * Constraints: No synthesis fallback, retry, speaker output, media permission or navigation work. */
 async function prepareRiskAudio() {
   try { await riskAudioResources.load(); }

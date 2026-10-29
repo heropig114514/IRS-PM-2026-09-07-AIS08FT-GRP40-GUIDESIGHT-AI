@@ -393,8 +393,10 @@ test("formal and diagnostic pages select backend bilingual speech", async functi
   const bindings = product.indexOf('id="product-driver-bindings"');
   for (const id of ["assist-speech-start", "assist-speech-status", "assist-resume-speech"]) {
     assert.equal(product.split(`id="${id}"`).length, 2, "one binding per control");
-    assert.ok(product.indexOf(`id="${id}"`) < bindings, "recovery must be outside hidden bindings");
+    assert.ok(product.indexOf(`id="${id}"`) > bindings, "product retains hidden controller bindings");
+    assert.match(panel, new RegExp(`id="${id}"`), "diagnostic controls remain available");
   }
+  assert.ok(product.indexOf('id="assist-risk-status"') < bindings, "risk suppression is visible");
   assert.match(product, /id="speech-language"[^>]*>[\s\S]*?value="auto"/);
   assert.match(map, /id="speech-voice"[^>]*>[\s\S]*?value="Cherry"/);
   assert.match(map, /id="speech-language"[^>]*>[\s\S]*?value="auto"/);

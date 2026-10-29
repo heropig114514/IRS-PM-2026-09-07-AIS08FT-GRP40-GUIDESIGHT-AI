@@ -41,6 +41,8 @@ try {
  }
  await page.waitForFunction(()=>window.__riskApp.speechActivation.describe().ready,{},{timeout:80000});
  await page.waitForFunction(()=>window.__riskApp.speechOutput.phase==='completed',{},{timeout:20000});
+ const capable=await page.evaluate(()=>Boolean(window.__riskApp.cameraApp.sessionCaptureProfile) && typeof window.__riskApp.cameraApp.resultTransport==="string");
+ if(!capable)throw new Error("Deployed camera lacks explicit profile/transport support; comparison not run");
  if(profile!=="deployed")await page.evaluate(profile=>{window.__riskApp.cameraApp.cameraProfile=profile;},profile);
  if(resultTransport!=="deployed")await page.evaluate(value=>{window.__riskApp.cameraApp.resultTransport=value;},resultTransport);
  report.selected_profile=await page.evaluate(()=>window.__riskApp.cameraApp.cameraProfile);
@@ -79,7 +81,7 @@ try {
  await page.waitForFunction(()=>window.__riskApp.cameraApp.pipeline || window.__riskEvidence.events.some(e=>e.phase==='camera_error'),{},{timeout:15000});
  await page.evaluate(()=>{if(window.__riskApp.cameraApp.pipeline)window.__riskApp.cameraApp.pipeline.frameLimit=8;});
  await page.waitForFunction(()=>window.__riskEvidence.frames.length>=8 || window.__riskEvidence.events.some(e=>e.phase==='camera_error'),{},{timeout:60000});
- report.evidence=await page.evaluate(()=>({...window.__riskEvidence,profile:window.__riskApp.cameraApp.sessionCaptureProfile,contract:window.__riskApp.cameraApp.pipeline?.client.contract,manager:window.__riskApp.guidanceManager.describe(),
+ report.evidence=await page.evaluate(()=>({...window.__riskEvidence,audio_resources:performance.getEntriesByType("resource").filter(e=>e.name.includes("/assets/risk-audio/")).map(e=>({bytes:e.decodedBodySize,transfer_bytes:e.transferSize,duration_ms:e.duration})),profile:window.__riskApp.cameraApp.sessionCaptureProfile,contract:window.__riskApp.cameraApp.pipeline?.client.contract,manager:window.__riskApp.guidanceManager.describe(),
   rendered_image:{width:window.__riskApp.cameraApp.image.naturalWidth,height:window.__riskApp.cameraApp.image.naturalHeight},
   speech:window.__riskApp.speechOutput.describe(),status:document.getElementById('assist-result-status').textContent}));
  await page.screenshot({path:output+'.png',fullPage:true});

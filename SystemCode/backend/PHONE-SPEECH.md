@@ -59,9 +59,11 @@ are synthetic transport checks, not model detections. A PNG accompanies the JSON
 ## Deployment and rollback
 
 Apply only source files whose old hashes match the inspected release. Frontend files and
-HTML are read per request with `no-store`; this repair needs no Web or GPU restart. Existing
-open tabs need a full reload. The deployment receipt records exact old/new hashes and the
-server handoff directory. Its `backup/` holds the original seven files and `source/` the repair.
+HTML are read per request with `no-store`; frontend-only changes need no service restart.
+The compact transport also changes the Python relay and requires a Web restart with a bounded
+readiness check; the GPU service is unchanged. Existing open tabs need a full reload. The
+deployment receipt records exact old/new hashes and the server handoff directory. Its `backup/`
+holds exactly the original files enumerated in that receipt and `source/` the repair.
 For rollback, verify the current release and each live hash against that receipt, then restore
 only the corresponding backed-up files, preserving ownership. Do not overwrite a later release
 or colleague edits. Credentials and model weights are outside this repair.
@@ -95,7 +97,7 @@ node frontend/tools/check_phone_risk_browser.mjs HTTPS_MAPS_URL SINGLE_REPORT.js
 Use the same explicit `PRS_PLAYWRIGHT_PATH` runtime as the speech regression command. Each run
 opens an isolated browser, uses the checked-in public image as a synthetic camera and sends exactly
 eight frames through the real remote model. It does not record personal media or fabricate risk
-results. A busy worker aborts without retry. An optional final camera-source path overrides only the
+results. A busy worker aborts without retry. An optional camera-source path overrides only the
 test tab and records its SHA-256. The report keeps every completed frame, failures and unchanged
 model/session contracts. Close phone detection during this comparison; resume testing afterward.
 
@@ -115,6 +117,9 @@ source time and complete model/risk contract before drawing boxes on that exact 
 labels are client-side presentation; the image is not claimed to match the omitted server annotation
 pixel for pixel. No metadata mode is silently selected or retried, and an incompatible hello fails.
 
+The product explicitly selects metadata mode after the matched public-route comparison; the diagnostic
+page retains the original transport. To repeat a matched test, append `- annotated-jpeg` or
+`- metadata-v1` after `low-latency-1` in the browser command (`-` means no source override).
 The phone's one-frame profile limits retained input memory and prioritizes fresh results. Other
 profiles remain bounded by the original 12-frame capacity. Legacy PRS1 clients retain their exact
 wire format. Compact mode only removes the returned JPEG on the relay-to-browser leg; original
@@ -124,3 +129,18 @@ fits the one-second deadline before claiming real-time risk speech is available.
 The end-to-end browser probe adds a temporary diagnostic-only calibration button to its isolated
 product tab when the production control is intentionally hidden. That trusted click prepares audio
 before the timed model trial; it does not publish a control or change the production UI.
+
+## Prepared warning downloads
+
+The integrated page explicitly selects `RiskAudioResources`'s `on-demand` policy. Page entry loads
+only the validated manifest; a covered warning downloads its one or two exact required WAV fragments.
+Requests are serialized and deduplicated for the page lifetime. Text identity, WAV hash/container,
+PCM hash, size bounds and the original samples are preserved. Each active download retains a bounded
+deadline; a corrupt or failed clip invalidates the resource owner until explicit page reload. There
+is no fallback synthesis on a covered-resource failure. The original `full` policy remains available
+as the loader default for controlled comparisons.
+
+This avoids downloading all 66 bilingual clips (about 2.7 MB plus manifest) before any risk audio
+can be prepared. An uncached first phrase still requires network time. A warning that expires while
+loading stays silent until a fresh result confirms it; downloading audio never refreshes its capture
+timestamp. Subsequent matching phrases reuse verified PCM without another download.
