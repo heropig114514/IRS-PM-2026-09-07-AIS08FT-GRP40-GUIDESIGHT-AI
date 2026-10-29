@@ -1,8 +1,8 @@
-# Walking-aid detection model (`yolo26n-walk`, opt-in)
+# Walking-aid detection model (`yolo26n-walk`, default)
 
 An 87-class fine-tune of the COCO `yolo26n`: the 80 COCO classes keep their ids and names, and seven
-classes are added for blind-pedestrian navigation. The original COCO model stays the default
-everywhere; the walk model is selected explicitly per process.
+classes are added for blind-pedestrian navigation. The walk model is the default;
+the original COCO model is selected explicitly with `PRS_DETECTION_MODEL=yolo26n`.
 
 ## Classes
 
@@ -21,8 +21,8 @@ everywhere; the walk model is selected explicitly per process.
 
 | value | weights / manifest |
 |---|---|
-| unset, blank or `yolo26n` | `models/yolo26n.pt` / `models/yolo26n.json` (default, unchanged) |
-| `yolo26n-walk` | `models/yolo26n-walk.pt` / `models/yolo26n-walk.json` |
+| `yolo26n` | `models/yolo26n.pt` / `models/yolo26n.json` (original COCO, explicit) |
+| unset, blank or `yolo26n-walk` | `models/yolo26n-walk.pt` / `models/yolo26n-walk.json` (default) |
 
 Unknown values fail at startup; there is no fallback model. The selection applies to the local
 inference worker (`integration.inference.services.load_detector`, local session hello and results)

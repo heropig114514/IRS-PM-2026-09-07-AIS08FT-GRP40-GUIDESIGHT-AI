@@ -43,10 +43,13 @@ class WalkModelTests(SimpleTestCase):
     def test_selection(self):
         """Functionality: Default, explicit and unknown PRS_DETECTION_MODEL values.
         Inputs: environment mappings. Outputs: profile names / files or ValueError.
-        Logic: blank means COCO. Constraints: unknown names never fall back.
+        Logic: blank means walk; yolo26n selects COCO. Constraints: unknown names never fall back.
         """
-        self.assertEqual(detection_model.selected_model({}), "yolo26n")
-        self.assertEqual(detection_model.selected_model({"PRS_DETECTION_MODEL": " "}), "yolo26n")
+        self.assertEqual(detection_model.selected_model({}), "yolo26n-walk")
+        self.assertEqual(
+            detection_model.selected_model({"PRS_DETECTION_MODEL": " "}), "yolo26n-walk")
+        self.assertEqual(
+            detection_model.selected_model({"PRS_DETECTION_MODEL": "yolo26n"}), "yolo26n")
         self.assertEqual(detection_model.selected_model({"PRS_DETECTION_MODEL": "yolo26n-walk"}),
                          "yolo26n-walk")
         with self.assertRaises(ValueError):
@@ -138,7 +141,8 @@ class WalkModelTests(SimpleTestCase):
             contract = protocol.model_contract("a" * 32, manifest, session_seconds=55)
         self.assertEqual((contract["model"], contract["classes"]), ("yolo26n-walk", 87))
         self.assertIs(protocol.validate_contract(contract), contract)
-        coco = protocol.model_contract("a" * 32, protocol.read_manifest(), session_seconds=55)
+        with patch.dict("os.environ", {"PRS_DETECTION_MODEL": "yolo26n"}):
+            coco = protocol.model_contract("a" * 32, protocol.read_manifest(), session_seconds=55)
         self.assertEqual((coco["model"], coco["classes"]), ("yolo26n", 80))
         for forged in (dict(contract, names=COCO_MANIFEST["names"]), dict(contract, classes=80)):
             with self.assertRaises(IntegrationError):
