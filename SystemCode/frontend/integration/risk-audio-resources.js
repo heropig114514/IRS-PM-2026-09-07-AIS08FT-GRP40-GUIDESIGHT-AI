@@ -14,7 +14,7 @@
  */
 import {videoAlertText} from "./video-alerts.js";
 
-const LANGUAGES = ["zh-CN", "en-US"], CLASSES = ["person", "bicycle", "car", "motorcycle"];
+const LANGUAGES = ["zh-CN", "en-US"], CLASSES = ["person", "bicycle", "car", "motorcycle", "chair", "obstacle"];
 const DIRECTIONS = ["front", "front_left", "front_right"], GRADES = ["medium", "high", "critical"];
 const MAX_MANIFEST_BYTES = 256 * 1024, MAX_CLIP_BYTES = 512 * 1024, MAX_PACK_BYTES = 4 * 1024 * 1024;
 const HASH = /^[a-f0-9]{64}$/, CLIP_ID = /^(zh-CN|en-US)-(prefix|clause|sentence)-([a-f0-9]{64})$/;
@@ -58,13 +58,13 @@ function expectedText(item) {
 function validateManifest(value) {
   if (!exactKeys(value, ["schema_version", "voice", "rate", "sample_rate", "format", "classes",
     "directions", "clips", "compositions", "model", "demos", "pack_sha256"]) ||
-      value.schema_version !== 1 || value.voice !== "Cherry" || value.rate !== 2 ||
+      value.schema_version !== 2 || value.voice !== "Cherry" || value.rate !== 2 ||
       value.sample_rate !== 24000 || value.format !== "pcm_s16le_mono" ||
       value.model !== "qwen3-tts-flash-realtime" || !HASH.test(value.pack_sha256) ||
       JSON.stringify(value.classes) !== JSON.stringify(CLASSES) ||
       JSON.stringify(value.directions) !== JSON.stringify(DIRECTIONS) ||
-      !Array.isArray(value.clips) || value.clips.length !== 66 ||
-      !Array.isArray(value.compositions) || value.compositions.length !== 144 ||
+      !Array.isArray(value.clips) || value.clips.length !== 96 ||
+      !Array.isArray(value.compositions) || value.compositions.length !== 216 ||
       !Array.isArray(value.demos) || value.demos.length !== 2) throw resourceError();
   const clips = new Map(), counts = {"zh-CN": 0, "en-US": 0}; let total = 0;
   for (const clip of value.clips) {
@@ -83,7 +83,7 @@ function validateManifest(value) {
     total += clip.byte_length; if (total > MAX_PACK_BYTES) throw resourceError();
     clips.set(clip.id, clip); counts[clip.language]++;
   }
-  if (counts["zh-CN"] !== 39 || counts["en-US"] !== 27) throw resourceError();
+  if (counts["zh-CN"] !== 57 || counts["en-US"] !== 39) throw resourceError();
   const compositions = new Map(), tuples = new Set(), ids = new Set(), used = new Set();
   for (const item of value.compositions) {
     if (!exactKeys(item, ["id", "language", "label", "direction", "risk_level", "approaching",
@@ -104,7 +104,7 @@ function validateManifest(value) {
     if (tuples.has(tuple) || compositions.has(key)) throw resourceError();
     tuples.add(tuple); ids.add(item.id); item.clip_ids.forEach(id => used.add(id)); compositions.set(key, item);
   }
-  if (tuples.size !== 144 || used.size !== 66) throw resourceError();
+  if (tuples.size !== 216 || used.size !== 96) throw resourceError();
   return {clips, compositions};
 }
 
@@ -153,7 +153,7 @@ export class RiskAudioResources {
    * Inputs: Owner state. Outputs: Content-free snapshot. Logic: Report only retained resources.
    * Constraints: Ready means the manifest is valid; loaded_clips reports available PCM, not physical audibility. */
   describe() {
-    return {state: this.state, loaded_clips: this.pcm.size, total_clips: 66, ready_bytes: this.bytes,
+    return {state: this.state, loaded_clips: this.pcm.size, total_clips: 96, ready_bytes: this.bytes,
       compositions: this.composed, failure: this.failure};
   }
   /* Functionality: Fetch one exact same-origin resource with streaming size enforcement.
@@ -247,7 +247,7 @@ export class RiskAudioResources {
     const failure = results.find(result => result.status === "rejected" && result.reason?.code === "invalid_audio_resource") ||
       results.find(result => result.status === "rejected");
     if (failure) throw failure.reason;
-    if (this.pcm.size !== 66) throw resourceError("risk_audio_unavailable");
+    if (this.pcm.size !== 96) throw resourceError("risk_audio_unavailable");
   }
   // Deduplicate exact clips and serialize network work. A corrupt/failed clip invalidates this
   // owner, just as a failed full-pack load does; reload is the explicit recovery boundary.
@@ -286,7 +286,12 @@ export class RiskAudioResources {
     if (request?.rate !== 2 || !LANGUAGES.includes(request?.language)) return null;
     await this.load();
     if (this.state !== "ready") throw resourceError(this.failure || "risk_audio_unavailable");
-    const composition = this.compositions.get(textKey(request.language, request.text));
+    // Explicit short-warning mode reuses the verified grade prefix for every class.
+    // No fuzzy matching: only an exact prepared prefix is admitted here.
+    const prefix = [...this.clips.values()].find(clip => clip.kind === "prefix" &&
+      clip.language === request.language && clip.text === request.text);
+    const composition = this.compositions.get(textKey(request.language, request.text)) ||
+      (prefix ? {clip_ids: [prefix.id]} : null);
     if (!composition) return null;
     if (this.loadPolicy === "on-demand") {
       await Promise.all(composition.clip_ids.map(id => this.loadClip(id)));

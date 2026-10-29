@@ -197,10 +197,10 @@ function navigationSnapshot(epoch, overrides = {}) {
  * Inputs: Optional source-enable flag. Outputs: Manager and explicit source helpers.
  * Logic: Voice setup is explicit; helpers never imply a native device source.
  * Constraints: Default-off behavior is tested with enable=false. */
-function fixture(enable = true) {
+function fixture(enable = true, riskMaxAgeMs = 1000, riskSpeechStyle = "detailed") {
   const clock = new Clock(), speech = new Speech(clock), vibration = new Vibration(clock), events = [];
   const manager = new AssistGuidanceManager({speech, vibration, now: clock.now, epochNow: clock.epochNow,
-    setTimer: clock.setTimer, clearTimer: clock.clearTimer});
+    setTimer: clock.setTimer, clearTimer: clock.clearTimer, riskMaxAgeMs, riskSpeechStyle});
   manager.subscribe(event => events.push(event)); manager.configure({voiceId: "Cherry", language: "zh-CN"});
   if (enable) { manager.setRiskEnabled(true); manager.setNavigationEnabled(true); }
   let frame = 0;
@@ -219,6 +219,22 @@ function fixture(enable = true) {
       return manager.ingestNavigation(navigationSnapshot(clock.epochNow(), overrides));
     }};
 }
+
+test("brief warnings cover uncommon classes and preserve the two-second and alert gates", () => {
+  const f = fixture(true, 2000, "brief");
+  f.clock.advance(3000);
+  f.risk([box({label: "chair", risk_level: "high", alert_priority: 3})], f.clock.now()-1500);
+  assert.equal(f.speech.requests[0].text, "警告，");
+  f.speech.start(); f.speech.end();
+  f.manager.stopRisk("test");
+  f.risk([box({label: "stairs", risk_level: "critical", alert_priority: 4})], f.clock.now()-2001);
+  assert.equal(f.speech.requests.length, 1);
+  f.risk([box({label: "stairs", alert_required: false, alert_priority: 0})]);
+  assert.equal(f.speech.requests.length, 1);
+  f.risk([box({label: "stairs", risk_level: "critical", alert_priority: 4})]);
+  assert.equal(f.speech.requests[1].text, "危险，");
+  f.manager.dispose();
+});
 
 // Functionality: Check explicit admission; Inputs: Both sources; Outputs: No output; Logic: Opt in separately; Constraints: No device grant.
 test("both automatic sources default disabled", function testDisabled() {
@@ -890,4 +906,22 @@ test("risk speech reason updates on expiry without flooding repeated frames", fu
   f.clock.advance(1000); assert.equal(notices().at(-1).reason,"stale");
   const prior=f.speech.requests.length; f.manager.describe(); f.manager.riskSpeechStatus();
   assert.equal(f.speech.requests.length,prior); f.manager.dispose();
+});
+
+test("explicit two-second demo policy accepts delayed risk and expires before playback", () => {
+  const f = fixture(true, 2000);
+  f.clock.advance(2000);
+  f.risk([box()], f.clock.now() - 1500);
+  assert.equal(f.manager.riskSpeechStatus().state, "preparing");
+  assert.equal(f.speech.requests.length, 1);
+  f.speech.start();
+  assert.equal(f.manager.riskSpeechStatus().state, "playing");
+  f.manager.dispose();
+  const expired = fixture(true, 2000);
+  expired.clock.advance(2000);
+  expired.risk([box()], expired.clock.now() - 1950);
+  expired.clock.advance(50);
+  assert.equal(expired.manager.riskSpeechStatus().state, "stale");
+  assert.equal(expired.events.filter(event => event.phase === "output_start" && event.channel === "speech").length, 0);
+  expired.manager.dispose();
 });

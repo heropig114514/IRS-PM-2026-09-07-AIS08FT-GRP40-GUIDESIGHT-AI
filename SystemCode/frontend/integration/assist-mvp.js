@@ -51,6 +51,9 @@ export {speechOutput} from "../speech-output.js";
 
 const doc = document;
 const testView = doc.documentElement.dataset.assistView === "test";
+const preparedSpeech = doc.documentElement.dataset.preparedSpeech === "true";
+const riskMaxAgeMs = Number(doc.documentElement.dataset.riskMaxAgeMs || 1000);
+const riskSpeechStyle = preparedSpeech && doc.documentElement.dataset.cameraDisplay === "live-overlay" ? "prepared" : "detailed";
 /* Functionality: Map internal guidance lifecycle codes to fixed bilingual diagnostic labels.
  * Inputs: The finite phase values emitted by AssistGuidanceManager and configuration updates.
  * Outputs: Chinese/English label pairs consumed by guidanceDiagnostic.
@@ -83,7 +86,7 @@ let cameraFailure = null;
 let riskOwner = null, sessionId = null, sourceStarting = null, fileReady = false, latest = null;
 let fileChoice = 0, permissionChoice = 0, boundaryStopped = false, stoppingAll = false;
 const riskAudioResources = new RiskAudioResources({fetch: window.fetch?.bind(window), crypto: window.crypto,
-  origin: window.location.origin, loadPolicy: "on-demand",
+  origin: window.location.origin, loadPolicy: preparedSpeech ? "full" : "on-demand",
   baseUrl: new URL("assets/risk-audio/", new URL(doc.documentElement.dataset.apiBase || "../", window.location.href)).href});
 const riskSpeechCache = typeof window.WebSocket === "function" ? new RiskSpeechCache({WebSocket: window.WebSocket, origin: window.location.origin,
   resources: riskAudioResources,
@@ -91,7 +94,7 @@ const riskSpeechCache = typeof window.WebSocket === "function" ? new RiskSpeechC
   queueTask: window.queueMicrotask.bind(window)}) : null;
 const speechDiagnostics = [];
 if (riskSpeechCache) speechOutput.riskSocketFactory = riskSpeechCache.createSocket.bind(riskSpeechCache);
-export const guidanceManager = new AssistGuidanceManager({speech: speechOutput, vibration: tester});
+export const guidanceManager = new AssistGuidanceManager({speech: speechOutput, vibration: tester, riskMaxAgeMs, riskSpeechStyle});
 export const speechActivation = new SpeechActivation({speech: speechOutput, manager: guidanceManager,
   config: () => ({voiceId: node("navigation-speech-voice").value,
     language: node("navigation-speech-language").value}), onChange: renderSpeechActivation});
@@ -172,7 +175,8 @@ function renderControls() {
   node("assist-device").disabled = busy;
   node("assist-devices-authorize").disabled = busy;
   node("assist-devices-refresh").disabled = busy;
-  node("start").disabled = busy || !camera || testView && !cameraApp.localDeviceId;
+  node("start").disabled = busy || !camera || testView && !cameraApp.localDeviceId ||
+    preparedSpeech && riskAudioResources.describe().state !== "ready";
   if (!testView) node("product-camera-start").disabled = node("start").disabled;
 }
 
@@ -330,7 +334,7 @@ function renderRiskSpeechStatus() {
     waiting: ["风险播报：等待首个检测结果。", "Risk speech: waiting for the first detection result."],
     paused: ["风险播报已暂停。请停止后重新开始检测，或前往测试页恢复语音。", "Risk speech is paused. Stop and restart detection, or restore voice on the test page."],
     playing: ["正在播放风险提醒。", "Playing a risk alert."],
-    stale: ["检测结果已超过 1 秒有效期，暂不播报过期风险；画面仅供查看。请检查网络延迟。", "Detection results exceeded the one-second validity limit. Expired risks are not announced; images are for inspection only. Check network latency."],
+    stale: [`检测结果已超过 ${riskMaxAgeMs / 1000} 秒有效期，暂不播报过期风险。`, `Detection results exceeded the ${riskMaxAgeMs / 1000}-second validity limit. Expired risks are not announced.`],
     no_alert: ["本帧未达到风险提醒条件，不自动朗读每个物体；这不代表道路安全。", "This frame does not meet risk-alert conditions. Objects are not all read aloud; this does not establish road safety."],
     unavailable: ["风险语音不可用，请保持页面在前台，停止后重新开始检测。", "Risk speech is unavailable. Keep the page visible, then stop and restart detection."],
     preparing: ["正在准备风险语音，播放前仍需最新检测结果确认。", "Preparing a risk alert; playback still requires confirmation by a current detection."],
@@ -693,13 +697,17 @@ function onBoundary(event) {
 
 /* Functionality: Validate the fixed bilingual manifest independently of source and audio activation.
  * Inputs: Same-origin resource loader. Outputs: Ready/failed content-free diagnostic state.
- * Logic: One idempotent manifest load; clips load on demand; page reload explicitly recovers failure.
+   * Logic: One idempotent load; explicit prepared mode loads all clips before detection;
+   * otherwise clips load on demand. Page reload explicitly recovers failure.
  * Constraints: No synthesis fallback, retry, speaker output, media permission or navigation work. */
 async function prepareRiskAudio() {
+  if (preparedSpeech) setStatusText("assist-status", "正在准备本地警报语音，请稍候……");
   try { await riskAudioResources.load(); }
   catch (error) { window.console.error("[PRS risk audio] Resource pack unavailable", {
     code: ["risk_audio_unavailable", "invalid_audio_resource"].includes(error?.code) ? error.code : "risk_audio_unavailable"}); }
-  renderDiagnostics();
+  if (preparedSpeech) setStatusText("assist-status", riskAudioResources.describe().state === "ready"
+    ? "警报语音已准备，可以开始检测。" : "警报语音准备失败，请重新加载页面。");
+  renderDiagnostics(); renderControls();
 }
 
 /* Functionality: Bind the dedicated local integration surface to original controllers.

@@ -25,7 +25,7 @@
  * AssistGuidanceManager.submitSpeech; AssistGuidanceManager.submitVibration;
  * AssistGuidanceManager.outputEvent; AssistGuidanceManager.armTimer;
  * AssistGuidanceManager.pump; AssistGuidanceManager.stop; AssistGuidanceManager.dispose.
- * Variable Index: riskSpeechState bounds public diagnostic transitions without changing scheduling; RISK_TTL_MS/COOLDOWN_MS retain existing output policies; PATTERNS retains
+ * Variable Index: riskText selects explicit brief or detailed speech; riskSpeechState bounds public diagnostic transitions without changing scheduling; RISK_TTL_MS/COOLDOWN_MS retain existing output policies; PATTERNS retains
  * existing driver pattern names/durations. latestRisk/latestNavigation are bounded sources;
  * active/pendingSubmission preserve ownership; pumpRequested coalesces synchronous lifecycle reentry;
  * histories separate speech/vibration actual starts;
@@ -40,7 +40,7 @@
 import {EventBus} from "./events.js";
 import {languageOf} from "./catalog.js";
 import {MAX_TEXT_LENGTH} from "../speech-output.js";
-import {selectVideoAlert, videoAlertText} from "./video-alerts.js";
+import {briefVideoAlertText, preparedVideoAlertText, selectVideoAlert, videoAlertText} from "./video-alerts.js";
 import {navigationSpeechText} from "./navigation-speech.js";
 import {NAVIGATION_POLICY} from "../navigation.js";
 
@@ -75,9 +75,14 @@ export class AssistGuidanceManager {
    * Logic: Subscribe once per driver and expose a navigation-only port for the existing bridge.
    * Constraints: Do not instantiate other automatic output managers over these same drivers. */
   constructor({speech, vibration, now = () => performance.now(), epochNow = Date.now,
+    riskMaxAgeMs = RISK_TTL_MS, riskSpeechStyle = "detailed",
     setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
     clearTimer = timer => globalThis.clearTimeout(timer)} = {}) {
-    Object.assign(this, {speech, vibration, now, epochNow, setTimer, clearTimer});
+    if (![1000, 2000].includes(riskMaxAgeMs)) throw new TypeError("Unsupported risk freshness policy");
+    if (!["brief", "prepared", "detailed"].includes(riskSpeechStyle)) throw new TypeError("Unsupported risk speech style");
+    this.riskText = riskSpeechStyle === "brief" ? briefVideoAlertText
+      : riskSpeechStyle === "prepared" ? preparedVideoAlertText : videoAlertText;
+    Object.assign(this, {speech, vibration, now, epochNow, setTimer, clearTimer, riskMaxAgeMs});
     this.events = new EventBus();
     this.riskEnabled = this.navigationEnabled = false;
     this.voiceId = ""; this.language = "zh-CN";
@@ -120,7 +125,7 @@ export class AssistGuidanceManager {
   /* Functionality: Explain current risk speech eligibility without changing output decisions.
    * Inputs: Original capture clock, server alert flags, ownership and driver state.
    * Outputs: Finite reason, frame age/count and pause code without objects, media or utterance text.
-   * Logic: Preserve one-second freshness, algorithm-required selection and per-track cooldown;
+   * Logic: Preserve configured capture freshness, algorithm-required selection and per-track cooldown;
    * distinguish completion of already-started speech from admission of a new warning.
    * Constraints: Read-only; no risk reclassification, timestamp refresh, retry or physical-audio claim. */
   riskSpeechStatus() {
@@ -324,18 +329,18 @@ export class AssistGuidanceManager {
   }
 
   /* Functionality: Check perception source age on the monotonic clock. Inputs: Latest source.
-   * Outputs: Boolean. Logic: Existing one-second TTL, rejecting future/nonfinite ages.
+   * Outputs: Boolean. Logic: Configured capture TTL, rejecting future/nonfinite ages.
    * Constraints: Started short risk speech may finish without extending new-submission eligibility. */
   riskFresh() {
     const age = this.latestRisk ? this.now() - this.latestRisk.capturedAt : Infinity;
-    return Number.isFinite(age) && age >= 0 && age < RISK_TTL_MS;
+    return Number.isFinite(age) && age >= 0 && age < this.riskMaxAgeMs;
   }
 
   /* Functionality: Bound pending risk synthesis without treating preparation as audible guidance.
    * Inputs: Owned descriptor and latest original frame. Outputs: Boolean.
    * Logic: Require a fresh frame and unchanged session/generation/epoch/language/voice while
    * permitting transient changes in target identity, direction and risk meaning during synthesis.
-   * Constraints: The one-second capture TTL remains strict; playback needs separate current semantic
+   * Constraints: The configured capture TTL remains strict; playback needs separate current semantic
    * confirmation. Higher global priority, stop/disable and available lower-priority work are handled by pump. */
   riskPreparationCurrent(descriptor) {
     return Boolean(this.riskEnabled && this.riskSessionId && this.riskFresh() &&
@@ -356,7 +361,7 @@ export class AssistGuidanceManager {
     const boxes = this.latestRisk.metadata.boxes, highest = selectVideoAlert(boxes);
     if (!highest || highest.alert_priority !== descriptor.box.alert_priority) return null;
     const matches = boxes.filter(box => box.alert_required === true && box.alert_priority === highest.alert_priority &&
-      videoAlertText(box, this.language) === descriptor.speechText && this.eligible(box, "speech"));
+      this.riskText(box, this.language) === descriptor.speechText && this.eligible(box, "speech"));
     return matches.find(box => box.track_id === descriptor.box.track_id) || selectVideoAlert(matches);
   }
 
@@ -597,7 +602,7 @@ export class AssistGuidanceManager {
     if (this.disposed) return;
     const delays = [];
     if (this.riskEnabled && this.latestRisk && this.riskFresh())
-      delays.push(RISK_TTL_MS - (this.now() - this.latestRisk.capturedAt));
+      delays.push(this.riskMaxAgeMs - (this.now() - this.latestRisk.capturedAt));
     if (this.navigationEnabled && this.navigation && this.navigation.notice !== "error")
       delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - this.navigation.snapshot.position.timestamp));
     const speech = this.active.speech;
@@ -656,7 +661,7 @@ export class AssistGuidanceManager {
         const descriptor = {kind: "risk", box, generation: this.riskGeneration,
           source: Object.freeze({session_id: this.riskSessionId, frame_index: this.latestRisk.metadata.index,
             captured_at_ms: this.latestRisk.capturedAt, tracking_epoch: this.trackingEpoch})};
-        if (!this.active.speech && this.eligible(box, "speech")) this.submitSpeech(descriptor, videoAlertText(box, this.language));
+        if (!this.active.speech && this.eligible(box, "speech")) this.submitSpeech(descriptor, this.riskText(box, this.language));
         if (!this.active.vibration && this.eligible(box, "vibration")) this.submitVibration(descriptor);
       } else if (!this.active.speech && this.assistantReplies.length) {
         const reply = this.assistantReplies[0];

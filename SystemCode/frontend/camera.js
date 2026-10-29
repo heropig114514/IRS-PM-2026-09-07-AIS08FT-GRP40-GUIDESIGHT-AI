@@ -14,7 +14,7 @@
  * CameraApp.latestJpeg; CameraApp.latestBoxes; CameraApp.subscribe; CameraApp.emit;
  * CameraApp.recordFrameTimings; CameraApp.reportFrameTimings; CameraApp.stop;
  * CameraApp.handleCameraEnded; CameraApp.handleVisibility; CameraApp.handlePageHide.
- * Variable Index: resultTransport selects an explicit annotated or source-bound compact result; annotationCanvas draws server boxes on the exact retained frame; CAPTURE_PROFILES contains immutable standard and low-latency-1 settings; cameraProfile is explicit page policy; sessionCaptureProfile freezes it before permission; MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
+ * Variable Index: resultTransport selects an explicit annotated or source-bound compact result; annotationCanvas draws server boxes on the exact retained frame; CAPTURE_PROFILES contains immutable standard, low-latency-1 and low-latency-2 settings; cameraProfile is explicit page policy; sessionCaptureProfile freezes it before permission; MAX_EDGE/JPEG_QUALITY — capture settings; METRICS_LOG_INTERVAL_MS — summary-log interval;
  * PROCESSING_PATHS — the three explicit WebSocket modes; app — page controller; frameTimings — first-frame and bounded aggregate statistics;
  * pacingFrames/pacingLateTotalMs/pacingLateMaxMs and creditWaitTotalMs/creditWaitMaxMs/creditWaitFrames
  * aggregate only steady-state frames with pipeline scheduling observations; serial Echo frames without observations are not counted as zero;
@@ -39,6 +39,7 @@ const PROCESSING_PATHS = {echo: "./ws/echo/", hf: "./ws/detect/hf/", local: "./w
 const CAPTURE_PROFILES = Object.freeze({
   standard: Object.freeze({rate: 30, maxPending: 12}),
   "low-latency-1": Object.freeze({rate: 30, maxPending: 1}),
+  "low-latency-2": Object.freeze({rate: 30, maxPending: 2}),
 });
 
 /** Functionality: Resolve an explicit camera admission profile before acquiring media.
@@ -441,7 +442,8 @@ export class CameraApp {
       if (dimensions && (this.image.naturalWidth !== dimensions.width ||
           this.image.naturalHeight !== dimensions.height))
         throw new Error("视频图像尺寸与检测结果不匹配。");
-        if (dimensions?.result_transport === "metadata-v1") {
+        if (dimensions?.result_transport === "metadata-v1" &&
+            document.documentElement.dataset.cameraDisplay !== "live-overlay") {
           this.annotationCanvas ??= document.createElement("canvas");
           const canvas = this.annotationCanvas;
           canvas.width = dimensions.width; canvas.height = dimensions.height;

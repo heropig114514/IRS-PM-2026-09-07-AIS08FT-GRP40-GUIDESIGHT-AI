@@ -3,7 +3,7 @@
  * short local speech without numeric estimates; no risk reclassification or new speed thresholds.
  * Related Modules: video-mvp.js, guidance.js, catalog.js; SystemCode/backend/realtime/risk.py;
  * tests/integration-video-alerts.test.mjs.
- * Declaration Index: usableTtc; usableDistance; selectVideoAlert; isFastApproaching; locationText; videoAlertText.
+ * Declaration Index: usableTtc; usableDistance; selectVideoAlert; isFastApproaching; locationText; videoAlertText; briefVideoAlertText; preparedVideoAlertText.
  * Variable Index: DIRECTIONS contains camera-relative positions; ZH_LABELS translates the 80 COCO labels plus the
  * walk model's obstacle and pedestrian-light labels;
  * PREFIXES contains existing grade words. No algorithm thresholds, scores, voice settings or cooldowns change.
@@ -20,6 +20,7 @@ const DIRECTIONS = {
   unknown: [null, "in an unknown direction"],
 };
 const ZH_LABELS = {
+  obstacle: "障碍物",
   person: "行人", bicycle: "自行车", car: "汽车", motorcycle: "摩托车", airplane: "飞机", bus: "巴士",
   train: "火车", truck: "货车", boat: "船", "traffic light": "交通信号灯", "fire hydrant": "消防栓",
   "stop sign": "停车标志", "parking meter": "停车计时器", bench: "长椅", bird: "鸟", cat: "猫", dog: "狗",
@@ -109,4 +110,23 @@ export function videoAlertText(box, language) {
   const fastApproach = isFastApproaching(box);
   const prefix = prefixes[zh ? 0 : 1] + (zh && box.risk_level === "medium" && fastApproach ? "，" : "");
   return prefix + locationText(box, zh, fastApproach);
+}
+
+/** Functionality: Produce an explicit short warning without waiting for a target-name synthesis.
+ * Inputs: Existing server risk grade and interface language. Outputs: Exact prepared warning prefix.
+ * Logic: Preserve grade; target details remain in the detection list.
+ * Constraints: No new alert, severity, direction or movement claim; detailed wording stays available. */
+export function briefVideoAlertText(box, language) {
+  const prefixes = PREFIXES[box.risk_level];
+  if (!prefixes) throw new TypeError("Video speech requires a validated alert grade");
+  return languageOf(language) === "zh-CN" ? prefixes[0] + (box.risk_level === "medium" ? "，" : "") : prefixes[1];
+}
+
+/** Functionality: Describe direction and target with the preloaded demo vocabulary.
+ * Inputs: Server alert and interface language. Outputs: Full warning text.
+ * Logic: Keep named prepared classes; describe other classes as obstacles while the list keeps their names.
+ * Constraints: Preserve grade, camera direction and confirmed approach; never infer a safer route. */
+export function preparedVideoAlertText(box, language) {
+  const label = ["person", "bicycle", "car", "motorcycle", "chair"].includes(box.label) ? box.label : "obstacle";
+  return videoAlertText({...box, label}, language);
 }

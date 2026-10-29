@@ -27,7 +27,7 @@ from urllib.parse import urlsplit
 
 from websockets.asyncio.client import connect
 
-CLASSES = ["person", "bicycle", "car", "motorcycle"]
+CLASSES = ["person", "bicycle", "car", "motorcycle", "chair", "obstacle"]
 DIRECTIONS = ["front", "front_left", "front_right"]
 LANGUAGES = ["zh-CN", "en-US"]
 GRADES = ["medium", "high", "critical"]
@@ -148,7 +148,7 @@ def valid_text(value, limit):
 def validate_plan(value):
     """Functionality: Validate the complete fixed resource plan before starting any synthesis.
     Inputs: Decoded plan JSON. Outputs: Detached validated plan.
-    Logic: Require 66 unique clips (39 Chinese/27 English), all 144 explicit four-class/front
+    Logic: Require 96 unique clips (57 Chinese/39 English), all 216 explicit six-label/front
     direction/grade/motion/language compositions, and exact concatenated text/part identities.
     Constraints: No inferred phrase, class removal, fallback language, traversal or
     unused synthesis.
@@ -169,7 +169,7 @@ def validate_plan(value):
             not isinstance(value, dict)
             or set(value) != fields
             or type(value["schema_version"]) is not int
-            or value["schema_version"] != 1
+            or value["schema_version"] != 2
             or value["voice"] != VOICE
             or isinstance(value["rate"], bool)
             or value["rate"] != RATE
@@ -179,9 +179,9 @@ def validate_plan(value):
             or value["classes"] != CLASSES
             or value["directions"] != DIRECTIONS
             or not isinstance(value["clips"], list)
-            or len(value["clips"]) != 66
+            or len(value["clips"]) != 96
             or not isinstance(value["compositions"], list)
-            or len(value["compositions"]) != 144
+            or len(value["compositions"]) != 216
         ):
             raise ValueError
         clips, paths, counts = {}, set(), {language: 0 for language in LANGUAGES}
@@ -204,7 +204,7 @@ def validate_plan(value):
             paths.add(path.casefold())
             clips[clip["id"]] = clip
             counts[clip["language"]] += 1
-        if counts != {"zh-CN": 39, "en-US": 27}:
+        if counts != {"zh-CN": 57, "en-US": 39}:
             raise ValueError
         identities, ids, used = set(), set(), set()
         for composition in value["compositions"]:

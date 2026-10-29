@@ -611,6 +611,7 @@ test("Separate slow startup frame and include stalls in steady-state metrics", f
 test("camera profiles retain original throughput and explicitly bound phone work", function testCaptureProfiles() {
   assert.deepEqual(captureProfile("standard"), {rate:30,maxPending:12});
   assert.deepEqual(captureProfile("low-latency-1"), {rate:30,maxPending:1});
+  assert.deepEqual(captureProfile("low-latency-2"), {rate:30,maxPending:2});
   assert.throws(()=>{captureProfile("low-latency-1").maxPending=12;},TypeError);
   for(const value of ["", "auto", "__proto__", null, undefined]) assert.throws(()=>captureProfile(value),/采样配置无效/);
 });

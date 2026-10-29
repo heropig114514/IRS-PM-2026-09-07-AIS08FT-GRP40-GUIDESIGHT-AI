@@ -16,6 +16,42 @@ import test from "node:test";
 import {setImmediate} from "node:timers/promises";
 import {FramePipeline} from "../frame-pipeline.js";
 
+test("callback work is recorded separately from image-result latency", async () => {
+  const {state, pipeline} = fixture(2, 1);
+  pipeline.onFrame = (result, timing) => { state.frames.push(timing); state.time += 27000; };
+  const running = pipeline.run(); await flush();
+  state.requests[0].resolve({bytes: new ArrayBuffer(5)}); await flush();
+  state.requests[1].resolve({bytes: new ArrayBuffer(5)}); await running;
+  assert.equal(state.frames[0].previousFrameCallbackMs, null);
+  assert.equal(state.frames[1].previousFrameCallbackMs, 27000);
+  assert.equal(state.frames[0].captureToDecodedMs, 115);
+  assert.equal(state.frames[1].capturedAt-state.frames[0].completedAt, 27000);
+});
+
+test("one-slot capture progresses after a result even when positive pacing timers are stalled", async () => {
+  const {state, pipeline} = fixture(3, 1);
+  pipeline.rate = 30;
+  pipeline.capture = async () => { state.captures++; state.time += 5; return new ArrayBuffer(5); };
+  const waits = [];
+  pipeline.pause = async milliseconds => {
+    if (milliseconds > 0) { waits.push(milliseconds); await pipeline.stopPromise; }
+  };
+  const running = pipeline.run();
+  try {
+    await flush(); state.time = 1000;
+    state.requests[0].resolve({bytes: new ArrayBuffer(5)}); await flush();
+    assert.equal(state.requests.length, 2);
+    assert.deepEqual(waits, []);
+    state.time = 2000; state.requests[1].resolve({bytes: new ArrayBuffer(5)}); await flush();
+    assert.equal(state.requests.length, 3);
+    assert.deepEqual(waits, []);
+    state.time = 3000; state.requests[2].resolve({bytes: new ArrayBuffer(5)});
+    assert.deepEqual(await running, {sent: 3, received: 3, maxInFlight: 1});
+    assert.equal(state.frames[2].pacingLateMs, 0);
+    assert.ok(state.frames[2].creditWaitMs > 900);
+  } finally { pipeline.stop(); await running; }
+});
+
 /** Functionality: Expose one controlled completion. Inputs: None. Outputs: promise/resolve/reject.
  * Logic: caller controls timing. Constraints: never substitutes a real external operation. */
 function deferred() {

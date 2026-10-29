@@ -26,6 +26,12 @@ from .services import FRONTEND, IntegrationApplication
 
 logger = logging.getLogger(__name__)
 ASSIST_ASSETS = {
+    "live-latency.js": "text/javascript",
+    "live-camera-overlay.js": "text/javascript",
+    "local-motion.js": "text/javascript",
+    "motion-worker.js": "text/javascript",
+    "motion-core.js": "text/javascript",
+    "jsfeat.min.js": "text/javascript",
     "assist-mvp.js": "text/javascript",
     "assist-guidance.js": "text/javascript",
     "risk-speech-cache.js": "text/javascript",
@@ -87,6 +93,19 @@ def render_assist_page(frontend=FRONTEND, *, view="product"):
         html = html.replace("还需启用下方语音输出。", "语音输出默认开启，首次请点击启动语音。")
     if html.count("<html ") != 1:
         raise ValueError("Assist template contract changed")
+    if view == "product" and os.environ.get("PRS_LATENCY_PANEL") == "1":
+        html = html.replace('data-camera-profile="low-latency-1"',
+                            'data-camera-profile="low-latency-2"', 1)
+        age = os.environ.get("PRS_RISK_TTL_MS", "1000")
+        if age not in {"1000", "2000"}:
+            raise ValueError("Unsupported demo warning age")
+        prepared = "true" if os.environ.get("PRS_PREPARED_SPEECH") == "1" else "false"
+        html = html.replace("<html ", f'<html data-camera-display="live-overlay" '
+                            f'data-risk-max-age-ms="{age}" data-prepared-speech="{prepared}" ', 1)
+        panel = (frontend / "integration/live-latency.html").read_text(encoding="utf-8")
+        if html.count("</main>") != 1:
+            raise ValueError("Assist template contract changed")
+        html = html.replace("</main>", panel + "\n</main>", 1)
     nonce = secrets.token_urlsafe(24)
     html = html.replace("<html ", '<html data-local-mvp="true" data-assist="true" '
                         f'data-assist-view="{view}" data-api-base="../" ', 1)
@@ -106,7 +125,7 @@ async def assist_response(send, status, body, content_type="application/json", *
     sockets = " ".join(item.replace("https://", "wss://").replace("http://", "ws://")
                        for item in web_origins())
     style_nonce = f" 'nonce-{nonce}'" if nonce is not None else ""
-    csp = ("default-src 'self'; script-src 'self' https://unpkg.com; "
+    csp = ("default-src 'self'; script-src 'self' https://unpkg.com; worker-src 'self'; "
            f"style-src 'self'{style_nonce} https://unpkg.com; "
            "img-src 'self' blob: https://tile.openstreetmap.org data:; "
            f"media-src 'self' blob:; connect-src 'self' {sockets}; "
@@ -128,7 +147,7 @@ async def assist_response(send, status, body, content_type="application/json", *
 def risk_audio_manifest():
     """Functionality: Read the owned manifest and its exact source-clip publication allowlist.
     Inputs: Fixed repository asset root. Outputs: Root, original JSON bytes and clip byte lengths.
-    Logic: Bound manifest reads and require 66 unique canonical language/hash paths.
+    Logic: Bound manifest reads and require the version-2 pack's 96 canonical language/hash paths.
     Constraints: No directory listing, preview/document exposure, arbitrary paths or credentials;
     browser validation remains responsible for complete profile, composition and audio hashes.
     """
@@ -142,7 +161,8 @@ def risk_audio_manifest():
         raise ValueError("Oversized resource manifest")
     manifest = json.loads(raw)
     clips = manifest.get("clips") if isinstance(manifest, dict) else None
-    if not isinstance(clips, list) or len(clips) != 66:
+    if (not isinstance(manifest, dict) or manifest.get("schema_version") != 2
+            or not isinstance(clips, list) or len(clips) != 96):
         raise ValueError("Invalid resource clip count")
     paths = {}
     for clip in clips:

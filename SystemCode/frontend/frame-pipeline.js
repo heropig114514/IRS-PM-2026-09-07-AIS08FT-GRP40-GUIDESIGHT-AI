@@ -106,7 +106,16 @@ export class FramePipeline {
     let nextCaptureAt = this.now();
     try {
       while (this.active() && !this.finishing && (this.frameLimit === null || this.sent < this.frameLimit)) {
-        const scheduledCaptureAt = nextCaptureAt, pacingStartedAt = this.now();
+        // With one slot, wait for the result before arming any cadence timer. A timer
+        // started while transport is busy may be throttled independently on mobile.
+        // The remaining start-to-start interval is normally already consumed by RTT.
+        const admissionStartedAt = this.now();
+        const serialAdmission = this.maxPending === 1 && this.pending.size >= 1;
+        if (serialAdmission) await Promise.race([...this.pending, this.stopPromise]);
+        const serialCreditWaitMs = serialAdmission ? this.now() - admissionStartedAt : 0;
+        if (!this.active() || this.finishing) break;
+        const pacingStartedAt = this.now();
+        const scheduledCaptureAt = serialAdmission ? Math.max(nextCaptureAt, pacingStartedAt) : nextCaptureAt;
         const pacingRequestedMs = Math.max(0, scheduledCaptureAt - pacingStartedAt);
         await this.pause(pacingRequestedMs);
         const pacingEndedAt = this.now(), pendingBeforeAdmission = this.pending.size;
@@ -120,11 +129,13 @@ export class FramePipeline {
         this.sent += 1;
         this.onSent(this.sent, this.received);
         const task = this.dispatch(bytes, {ordinal: this.sent, capturedAt, encodedAt,
+          previousFrameCallbackMs: this.lastFrameCallbackMs ?? null,
           inputBytes: bytes.byteLength, scheduledCaptureAt, pacingRequestedMs,
           pacingWaitMs: pacingEndedAt - pacingStartedAt,
           pacingLateMs: Math.max(0, pacingEndedAt - scheduledCaptureAt),
-          creditWaitMs: pendingBeforeAdmission >= this.maxPending ? capturedAt - pacingEndedAt : 0,
-          pendingBeforeAdmission});
+          creditWaitMs: serialAdmission ? serialCreditWaitMs
+            : pendingBeforeAdmission >= this.maxPending ? capturedAt - pacingEndedAt : 0,
+          pendingBeforeAdmission: serialAdmission ? 1 : pendingBeforeAdmission});
         const interval = 1000 / this.rate;
         // Preserve phase for ordinary timer lateness; capacity stalls start a new timeline rather
         // than scheduling a sequence of overdue frames. No acquired credit is released early.
@@ -173,6 +184,7 @@ export class FramePipeline {
           captureToResultMs: receivedAt - context.capturedAt,
           captureToDecodedMs: decodedAt - context.capturedAt,
           completedAt: decodedAt, sent: pipeline.sent, received: pipeline.received});
+        pipeline.lastFrameCallbackMs = pipeline.now() - decodedAt;
       }
       const rendering = pipeline.renderTail.then(render);
       pipeline.renderTail = rendering.catch(failed);

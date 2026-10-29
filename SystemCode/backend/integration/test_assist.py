@@ -138,6 +138,7 @@ class AssistTests(SimpleTestCase):
         self.assertRegex(headers[b"content-security-policy"], rb"'nonce-[A-Za-z0-9_-]+'")
         self.assertIn(b"https://tile.openstreetmap.org", headers[b"content-security-policy"])
         self.assertIn(b"media-src 'self' blob:", headers[b"content-security-policy"])
+        self.assertIn(b"worker-src 'self'", headers[b"content-security-policy"])
         self.assertIn(b"ws://127.0.0.1:8766", headers[b"content-security-policy"])
         self.assertEqual(body.count(b'integrity="sha256-'), 2)
         head, empty = await http_call(app, "/maps/", "HEAD")

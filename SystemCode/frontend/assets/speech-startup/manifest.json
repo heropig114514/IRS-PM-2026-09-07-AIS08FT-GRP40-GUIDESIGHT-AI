@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "clips": [
+    {
+      "language": "zh-CN",
+      "text": "语音提醒已开启。",
+      "rate": 2,
+      "voice": "Cherry",
+      "path": "zh-CN.wav",
+      "sha256": "34c09014ede6a7b6ec423b82339e3323152bab3dd61e6f2030a69612ad0aa2cf",
+      "pcm_sha256": "1e09dc2062eadd81e229196525773c8dfa30a3665dbf1069eeed2ed4f703de63",
+      "pcm_bytes": 41016
+    },
+    {
+      "language": "en-US",
+      "text": "Voice alerts are enabled.",
+      "rate": 2,
+      "voice": "Cherry",
+      "path": "en-US.wav",
+      "sha256": "4561260cc019120dc615b13ce2119333483a8898f7db26567fbdbde0ac996be2",
+      "pcm_sha256": "6f70a49485a3a0d9f582cf2685b09fd39682043b08e76ff23b4ff14cd3f07066",
+      "pcm_bytes": 41016
+    }
+  ]
+}
