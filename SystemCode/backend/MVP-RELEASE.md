@@ -1,5 +1,8 @@
 # Phone perception MVP
 
+For the current server-Web plus local-GPU route, use [SERVER-RELAY.md](SERVER-RELAY.md).
+This document retains the tagged direct-laptop preset and its original phone acceptance evidence.
+
 ## Release and scope
 
 Version: `mvp-phone-2026-10-29.1`. Source branch: `codex/phone-speech-recovery`.

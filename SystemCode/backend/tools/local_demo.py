@@ -1,7 +1,8 @@
 """Responsibilities: Prepare and launch a reproducible teammate local inference demo.
 Implementation: Explicit venv/package/model preparation, fixed profiles and existing supervisors;
-standard-library bootstrap, no system package installation or server relay dependency.
-Related Modules: deploy/local-demo.toml; tools.run_local_mvp/run_lan_mvp; LOCAL-QUICKSTART.md.
+standard-library bootstrap, explicit local/LAN/server-relay entries and no system package install.
+Related Modules: deploy/local-demo.toml; tools.run_local_mvp/run_lan_mvp/run_phone_mvp;
+LOCAL-QUICKSTART.md; SERVER-RELAY.md.
 Declaration Index: LocalDemoError; settings; interpreter; execute; ensure_environment;
 file_digest; provision_models; prepare; local_environment; profile_environment;
 launch_command; parse_args; main.
@@ -207,7 +208,7 @@ def profile_environment(args):
 
 def launch_command(args):
     """Functionality: Build an explicit existing-supervisor command for the selected entry.
-    Inputs: check/run/LAN CLI arguments. Outputs: argv and isolated child environment.
+    Inputs: check/run/LAN/phone CLI arguments. Outputs: argv and isolated child environment.
     Logic: all relative paths are backend-relative; align LAN Origin with the local Web port.
     Constraints: no implicit certificate trust, public tunnel, alternate GPU or optional API.
     """
@@ -217,6 +218,9 @@ def launch_command(args):
         environment.update(selected)
     else:
         environment, selected = profile_environment(args)
+    if args.command == "phone":
+        selected.pop("PRS_CAMERA_PROFILE", None)
+        environment.pop("PRS_CAMERA_PROFILE", None)
     web = interpreter(ROOT / ".venv")
     if not web.is_file():
         raise LocalDemoError("Missing Web venv; run the explicit prepare command first.")
@@ -231,6 +235,18 @@ def launch_command(args):
             command.append("--prepare-certificate")
         if args.check:
             command.append("--check")
+    elif args.command == "phone":
+        command = [str(web), "-B", "-m", "tools.run_phone_mvp", "--warmup",
+                   "--inference-port", str(args.inference_port),
+                   "--public-origin", args.public_origin]
+        if args.inference_python:
+            command += ["--inference-python", str((ROOT / args.inference_python).resolve())]
+        if args.http_proxy:
+            command += ["--http-proxy", args.http_proxy]
+        if args.password_prompt:
+            command.append("--password-prompt")
+        if args.check:
+            command.append("--check")
     else:
         command = [str(web), "-B", "-m", "tools.run_local_mvp", "--web-port", str(args.web_port),
                    "--inference-port", str(args.inference_port)]
@@ -243,7 +259,7 @@ def launch_command(args):
         else:
             command += ["--log-dir", str(ROOT / ".venv/tmp/local-demo")]
     print(json.dumps({"profile": getattr(args, "profile", None), "settings": selected,
-                      "command": args.command, "local_only": True}), flush=True)
+                      "command": args.command, "local_only": args.command != "phone"}), flush=True)
     return command, environment
 
 
@@ -254,7 +270,7 @@ def parse_args(argv=None):
     Constraints: LAN requires a chosen address/subnet and fresh owned state path.
     """
     root_parser = argparse.ArgumentParser(
-        description="Prepare and run local GPU tests without a relay."
+        description="Prepare local GPU inference and select a local, LAN or server-relay demo."
     )
     commands = root_parser.add_subparsers(dest="command", required=True)
     installation = commands.add_parser(
@@ -263,7 +279,7 @@ def parse_args(argv=None):
     installation.add_argument("--cuda", choices=sorted(CUDA_INDEXES), default="cu128")
     installation.add_argument("--with-tensorrt", action="store_true")
     commands.add_parser("models", help="Explicitly provision only missing hash-verified weights")
-    for name in ("check", "run", "lan"):
+    for name in ("check", "run", "lan", "phone"):
         parser = commands.add_parser(name)
         parser.add_argument("--web-port", type=int, default=8766)
         parser.add_argument("--inference-port", type=int, default=8767)
@@ -283,8 +299,14 @@ def parse_args(argv=None):
             parser.add_argument("--detector", choices=("yolo26n", "yolo26n-walk"),
                                 default="yolo26n")
             parser.add_argument("--engine-manifest", type=Path)
-            parser.add_argument("--mode", choices=("assist", "video"), default="assist")
+            parser.add_argument("--mode", choices=("assist",) if name == "phone"
+                                else ("assist", "video"), default="assist")
             parser.add_argument("--inference-python", type=Path)
+            if name == "phone":
+                parser.add_argument("--public-origin", default="https://47.239.50.129")
+                parser.add_argument("--http-proxy")
+                parser.add_argument("--password-prompt", action="store_true")
+                parser.add_argument("--check", action="store_true")
     return root_parser.parse_args(argv)
 
 
@@ -305,7 +327,7 @@ def main(argv=None):
             provision_models()
         else:
             command, environment = launch_command(args)
-            if args.command == "check" or args.command == "lan" and args.check:
+            if args.command == "check" or args.command in {"lan", "phone"} and args.check:
                 return subprocess.run(command, cwd=ROOT, env=environment, check=False).returncode
             os.chdir(ROOT)
             os.execve(command[0], command, environment)

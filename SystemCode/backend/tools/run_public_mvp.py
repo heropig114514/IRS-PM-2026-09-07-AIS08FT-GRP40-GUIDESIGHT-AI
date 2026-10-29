@@ -135,9 +135,9 @@ def read_json(port, path, host=None):
         connection.close()
 
 
-async def warmup(web_port, inference_port):
-    """Functionality: Verify real FP32 engine inference before advertising the phone URL.
-    Inputs: owned ports and repository fixture. Outputs: eight timing records.
+async def warmup(web_port, inference_port, *, expected_backend="tensorrt"):
+    """Functionality: Verify the selected inference backend before advertising the phone URL.
+    Inputs: owned ports, explicit backend and repository fixture. Outputs: eight timing records.
     Logic: one PRF2 session validates frame/session identities and returned JPEG hashes.
     Constraints: warms fixture shapes only; no phone or physical-speaker verification claim.
     """
@@ -159,7 +159,7 @@ async def warmup(web_port, inference_port):
             meta = json.loads(raw[8:8 + size])
             if (meta["index"] != index or meta["session_id"] != hello["session_id"]
                     or meta["jpeg_sha256"] != hashlib.sha256(raw[8 + size:]).hexdigest()
-                    or meta["depth_backend"] != "tensorrt"):
+                    or meta["depth_backend"] != expected_backend):
                 raise StartupError("Warmup frame identity/backend validation failed.")
             records.append({"rtt_ms": (time.perf_counter() - started) * 1000,
                             **{key: meta.get(key) for key in

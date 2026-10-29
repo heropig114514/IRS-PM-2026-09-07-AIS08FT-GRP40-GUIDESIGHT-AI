@@ -1,0 +1,317 @@
+{
+  "schema": "prs-server-relay-delivery-v1",
+  "date": "2026-10-29",
+  "route": [
+    "phone",
+    "Cloudflare server-side entry",
+    "47.239.50.129 nginx",
+    "server Web 127.0.0.1:18766",
+    "server SSH reverse binding 127.0.0.1:18767",
+    "explicit HTTP CONNECT proxy for local SSH",
+    "local GPU 127.0.0.1:8877"
+  ],
+  "public_origin": "https://noble-treatment-canyon-garmin.trycloudflare.com",
+  "direct_ip_reachable_from_operator": false,
+  "direct_icmp_probes": {
+    "sent": 4,
+    "received": 0
+  },
+  "direct_tcp_22_80_443": "timed out",
+  "server_firewall_listener_certificate_checks": "passed",
+  "network_root_cause": "Not established; cloud perimeter/ISP route not verified",
+  "manual_stage": "relay-20261029-a55214b56f51",
+  "archive_sha256": "a55214b56f51f544b3d59a5f8670edc94b7b3c2a76b1b46f521e46eb5d8359f0",
+  "automatic_deployment": {
+    "trigger": "main push after checks",
+    "workflow": ".github/workflows/backend.yml",
+    "unit": "prs-mvp-web.service",
+    "preserves": [
+      "private server environment",
+      "nginx",
+      "GPU SSH binding"
+    ]
+  },
+  "operator_launcher": {
+    "running": true,
+    "product_url": "https://noble-treatment-canyon-garmin.trycloudflare.com/mvp/maps/",
+    "test_url": "https://noble-treatment-canyon-garmin.trycloudflare.com/mvp/maps/test",
+    "explicit_proxy": true,
+    "remote_inference_binding": "127.0.0.1:18767",
+    "web_service_on_application_server": true,
+    "credential_saved": false,
+    "warmup": [
+      {
+        "rtt_ms": 6443.88120000076,
+        "server_ms": 819.6746999965399,
+        "inference_ms": 5.851200003235135,
+        "depth_ms": 191.1642999984906,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      },
+      {
+        "rtt_ms": 40.945799999462906,
+        "server_ms": 36.66990000056103,
+        "inference_ms": 5.382600000302773,
+        "depth_ms": 16.49879999604309,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      },
+      {
+        "rtt_ms": 33.498500000860076,
+        "server_ms": 30.12789999775123,
+        "inference_ms": 5.92049999977462,
+        "depth_ms": 11.798999999882653,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      },
+      {
+        "rtt_ms": 34.14920000068378,
+        "server_ms": 30.464600000414066,
+        "inference_ms": 5.8829999979934655,
+        "depth_ms": 12.179399993328843,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      },
+      {
+        "rtt_ms": 33.972800003539305,
+        "server_ms": 30.52459999889834,
+        "inference_ms": 5.7008999938261695,
+        "depth_ms": 12.234600006195251,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      },
+      {
+        "rtt_ms": 37.40749999997206,
+        "server_ms": 33.5380000033183,
+        "inference_ms": 5.71940000372706,
+        "depth_ms": 14.178900004480965,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      },
+      {
+        "rtt_ms": 36.871399999654386,
+        "server_ms": 33.106800001405645,
+        "inference_ms": 5.808900001284201,
+        "depth_ms": 12.508200001320802,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      },
+      {
+        "rtt_ms": 35.46219999407185,
+        "server_ms": 31.379299995023757,
+        "inference_ms": 5.393799998273607,
+        "depth_ms": 12.392300006467849,
+        "execution": {
+          "compute_dtype": "torch.float32",
+          "forward_dtype": "torch.float32",
+          "input_stride": [
+            1228800,
+            409600,
+            640,
+            1
+          ],
+          "pinned_input": true,
+          "graph_captured": true,
+          "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+          "capability": [
+            8,
+            6
+          ],
+          "torch": "2.8.0+cu126",
+          "cuda": "12.6",
+          "cpu_threads": 1,
+          "cpu_interop_threads": 1,
+          "tf32_matmul": false,
+          "tf32_cudnn": false,
+          "cudnn_benchmark": false
+        }
+      }
+    ],
+    "local_inference_health": {
+      "status": "ok",
+      "model_loaded": true
+    },
+    "remote_inference_health": {
+      "health_status": "ok",
+      "model_loaded": true,
+      "model_ready": true
+    },
+    "https_verified": true,
+    "public_page_status": 200,
+    "camera_geolocation_policy": true,
+    "inference_profile": {
+      "PRS_DETECTION_MODEL": "yolo26n",
+      "PRS_DEPTH_BACKEND": "tensorrt",
+      "PRS_DEPTH_FUSION": "host",
+      "PRS_DISTANCE_MODE": "depth",
+      "PRS_DEPTH_INTERVAL": "1"
+    },
+    "scope": "Real versioned run_phone_mvp with explicit existing interpreters; 8 GPU warmup frames, pinned proxy SSH and public HTTPS checks",
+    "websocket_queue_limit": 5
+  },
+  "baseline_launcher_queue_limit": 1,
+  "automated_checks": {
+    "backend_total": 633,
+    "backend_skipped": 8,
+    "backend_failed": 0,
+    "backend_core_coverage_percent": 91,
+    "django_check": "passed",
+    "migration_dry_run": "passed",
+    "ruff": "passed"
+  },
+  "physical_phone_acceptance": "Pending for this route; previous laptop route is a separate baseline"
+}

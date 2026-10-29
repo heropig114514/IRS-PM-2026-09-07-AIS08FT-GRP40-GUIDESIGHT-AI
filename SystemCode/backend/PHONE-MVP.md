@@ -1,5 +1,9 @@
 # Phone Navigation and Local Inference MVP
 
+For the current optimized server relay, selected entry, direct-IP reachability limits and
+comparison settings, see [SERVER-RELAY.md](SERVER-RELAY.md). The canonical IP entry below
+describes the original topology; verify reachability before distributing it to phone testers.
+
 The phone uses the existing server's trusted HTTPS endpoint to access the public guest version of the unified MVP; the phone and laptop do not need to share a local network. The only public page entries are [Phone Navigation and Detection](https://47.239.50.129/mvp/maps/) and [Phone MVP Tests](https://47.239.50.129/mvp/maps/test). Neither page requires a username or password. The application server permanently hosts both pages and their map APIs. Detection, depth, tracking, and risk inference run only on the laptop GPU while its inference worker and SSH tunnel are active. The existing `/prs/` service, navigation core, and algorithms remain independent.
 
 ## Connection and Responsibilities

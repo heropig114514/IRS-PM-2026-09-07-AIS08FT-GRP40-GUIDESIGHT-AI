@@ -19,6 +19,7 @@ The [`Video/`](Video/README.md) directory is reserved for the project demonstrat
 ## SECTION 5 : USER GUIDE
 
 - [System code guide](SystemCode/README.md)
+- [Current phone deployment: Ubuntu relay and local GPU](SystemCode/backend/SERVER-RELAY.md)
 - [Accepted phone MVP: deployment and reproducible startup](SystemCode/backend/MVP-RELEASE.md)
 - [Backend setup and checks](SystemCode/backend/README.md)
 - [Frontend guide](SystemCode/frontend/README.md)
@@ -41,12 +42,13 @@ This repository contains the frontend and backend under `SystemCode/`. The backe
 
 The code root contains `SystemCode/backend/` and `SystemCode/frontend/`; run commands from the relevant directory. The local MVP connects existing software and algorithms through a separate web process and CUDA inference process. See [Local MVP](SystemCode/backend/LOCAL-MVP.md) for environment setup, official weights, launchers, and verification boundaries.
 
-The accepted phone MVP serves the webpage and GPU inference on one laptop behind a temporary
-Cloudflare HTTPS entry. See [MVP release](SystemCode/backend/MVP-RELEASE.md) for the current
-architecture, fixed preset, accepted measurements and startup commands. The older
-`47.239.50.129` server/SSH-relay deployment remains documented in
-[Phone MVP](SystemCode/backend/PHONE-MVP.md); it is not the accepted image-processing path.
-The existing `/prs/` service remains independent.
+The current phone deployment serves the webpage on the Ubuntu relay `47.239.50.129` and sends
+inference through an owned reverse SSH connection to the operator's local NVIDIA GPU. See
+[Server relay](SystemCode/backend/SERVER-RELAY.md) for the actual public entry, explicit proxy
+path, matching low-latency settings and operation. The tagged
+[MVP release](SystemCode/backend/MVP-RELEASE.md) retains the accepted direct-laptop deployment
+and its physical-phone measurement as a separate comparison baseline. The existing `/prs/`
+service remains independent.
 
 ```text
 .

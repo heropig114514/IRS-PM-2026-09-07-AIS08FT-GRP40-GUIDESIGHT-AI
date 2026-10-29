@@ -1,0 +1,25 @@
+{
+  "scope": "Independent server-relay browser audio check with synthetic fresh/stale risk metadata; not a physical speaker or network latency acceptance",
+  "errors": [],
+  "ttsSockets": 1,
+  "profile": {
+    "cameraProfile": "low-latency-2",
+    "localMvp": "true",
+    "assist": "true",
+    "assistView": "product",
+    "apiBase": "../",
+    "cameraDisplay": "live-overlay",
+    "riskMaxAgeMs": "2000",
+    "preparedSpeech": "true",
+    "cameraResultTransport": "metadata-v1",
+    "aiConnected": "true"
+  },
+  "startupPlayback": true,
+  "content": [
+    "语音提醒已开启。",
+    "警告，左前方有行人靠近。"
+  ],
+  "noPerWarningTtsRequest": true,
+  "expiredSuppressed": true,
+  "passed": true
+}
