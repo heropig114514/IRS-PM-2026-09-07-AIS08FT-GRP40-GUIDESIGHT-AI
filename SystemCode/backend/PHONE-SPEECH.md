@@ -144,3 +144,44 @@ This avoids downloading all 66 bilingual clips (about 2.7 MB plus manifest) befo
 can be prepared. An uncached first phrase still requires network time. A warning that expires while
 loading stays silent until a fresh result confirms it; downloading audio never refreshes its capture
 timestamp. Subsequent matching phrases reuse verified PCM without another download.
+
+## LAN image network test without GPU
+
+From `SystemCode/backend`, use the existing Python environment with `uvicorn` and run:
+
+```text
+python -B tools/image_network_server.py --host YOUR_COMPUTER_WIFI_IPV4 --port 8080
+```
+
+The host must be an explicit private IPv4 address; wildcard binding is rejected. On the phone,
+join the same Wi-Fi and open `http://YOUR_COMPUTER_WIFI_IPV4:8080/`. Use the photo/file picker,
+then start the test and keep Safari in the foreground. A local HTTP page supports selecting an
+existing photo without certificate installation. The capture picker depends on browser support;
+select a photo from the library when necessary. Continuous `getUserMedia` camera streaming is
+outside this test and still needs a trusted secure context.
+
+The page compares maximum edges 320/480/640 and JPEG qualities 0.6/0.8/0.9 with ten interleaved
+rounds, one image in flight, and exact returned-byte validation. It measures encoding, full-image
+upload/echo RTT, decoding, median and P95. It never starts inference or stores uploaded images.
+Exported JSON contains settings, source dimensions, user agent and scalar measurements, not image
+bytes, photo names, location or EXIF. Results from a desktop accessing its own LAN address are
+functional tests only; they do not establish phone/Wi-Fi latency. Smaller images need separate
+accuracy validation before changing inference defaults.
+
+The standalone server serves only four fixed assets and `/ws/echo/`, rejects foreign Host/Origin,
+caps frames at 1 MiB and connections at four, and logs no image bodies. No repository application
+settings, weights, secrets or public-server changes are needed. Stop it with Ctrl+C. If Windows
+blocks phone access, an administrator may allow only the selected TCP port on the Wi-Fi interface
+from that Wi-Fi subnet; do not disable the firewall or change the network category. Remove a
+test-specific rule after testing. Do not use router port forwarding for this LAN test.
+
+For a controlled desktop public-route comparison of the same checked-in sample, from `SystemCode`:
+
+```text
+node frontend/tools/check_image_network_browser.mjs HTTPS_MVP_MAPS_TEST_URL NEW_REPORT.json 10
+```
+
+Set `PRS_PLAYWRIGHT_PATH` as above. This uses an isolated browser shell and the existing remote
+echo route, without changing the remote page or invoking the model. It retains all rounds and
+reports partial failures. A returned full JPEG is a different workload from compact inference
+returning only metadata; neither test can independently measure one-way network latency.

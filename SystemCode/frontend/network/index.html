@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRS · 图像网络时延测试</title><link rel="stylesheet" href="/network.css">
+<script type="module" src="/network.js"></script></head>
+<body><main>
+<p class="eyebrow">PRS · 局域网测试</p><h1>图像传输要多久？</h1>
+<p>手机和这台电脑连接同一 Wi-Fi。选择一张照片，逐项比较编码、上传并回传、解码耗时。无需启动 GPU 模型。</p>
+<section><h2>1. 选择图片</h2>
+<p>可以拍一张照片或从相册选择。图片只在内存中回传，不保存到服务器；导出报告只含大小、时间和设置。</p>
+<div class="actions"><label class="button">拍照<input id="capture" type="file" accept="image/*" capture="environment"></label>
+<label class="button secondary">从相册选择<input id="file" type="file" accept="image/*"></label></div>
+<img id="preview" alt="待测试照片预览" hidden><p id="source">尚未选择图片</p>
+</section>
+<section><h2>2. 开始对照测试</h2>
+<p>测试 320、480、640 像素长边，JPEG 质量 0.6、0.8、0.9，共 9 组。每组 10 次，每次仅发送一张图片。按轮次交错测试，减少网络波动对某一组的偏差。</p>
+<label>当前手机网络 <select id="network"><option>同一 Wi-Fi</option><option>其他网络</option></select></label>
+<div class="actions"><button id="start" disabled>开始测试</button><button id="stop" class="secondary" disabled>停止</button><button id="download" class="secondary" disabled>导出 JSON</button></div>
+<p id="status" role="status">请选择图片后开始。</p><progress id="progress" max="90" value="0"></progress>
+<p id="connection"></p>
+</section>
+<section><h2>3. 查看结果</h2>
+<p>“网络往返”包含上传图片和完整图片回传，不是单向上传延迟。当前推理服务只回传小型检测数据，因此这项测试不等于推理端到端延迟。降低质量是否影响识别，需要另做模型精度测试。</p>
+<p id="baseline">参考配置：640 像素长边、JPEG 质量 0.8，等待测试。</p>
+<p>表格可左右滑动查看全部指标。</p>
+<div class="table-wrap"><table><thead><tr><th>长边 / 质量</th><th>网络中位 ms</th><th>网络 P95 ms</th><th>图片 KB</th><th>编码 ms</th><th>总计中位 ms</th><th>次数</th></tr></thead><tbody id="results"></tbody></table></div>
+</section></main></body></html>

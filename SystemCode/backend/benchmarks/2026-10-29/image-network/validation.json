@@ -1,0 +1,35 @@
+{
+  "date_local": "2026-10-29",
+  "requested_route": "iPhone and GPU computer on the same Wi-Fi",
+  "entry": "http://192.168.10.8:8080/",
+  "runtime": "standalone image echo test; no GPU or model process started",
+  "binding": "192.168.10.8:8080 only",
+  "phone_result": "Awaiting user-run photo test; no physical-phone latency claim.",
+  "windows_firewall": {
+    "attempted_rule": "PRS-ImageNetwork-LAN-8080",
+    "applied": false,
+    "reason": "Windows OS denied firewall administration to the current process; not an automatic approval-review rejection.",
+    "scope_requested": "TCP 8080, WLAN, local 192.168.10.8, remote 192.168.10.0/24, Public profile",
+    "network_category_changed": false
+  },
+  "checks": {
+    "unit_tests_passed": 4,
+    "ruff": "passed",
+    "browser_functional_passed": true,
+    "browser_errors": [],
+    "stop_restart_export": "passed",
+    "complete_jpeg_echo_frames": 90
+  },
+  "desktop_public_baseline": {
+    "complete": true,
+    "samples": 90,
+    "reference_report": "desktop-public-jpeg.json",
+    "note": "Completed before user selected LAN. Not the requested phone LAN measurement."
+  },
+  "limits": [
+    "Desktop access to its own WLAN IP verifies functionality only and does not traverse the phone Wi-Fi link.",
+    "Full-JPEG echo includes image upload and image download; not one-way delay and not compact-inference latency.",
+    "JPEG size/quality changes are test-only. Model accuracy and production capture defaults are unchanged.",
+    "Keep phone Safari in foreground; stopping or hiding cancels the current run. Reports contain no image bodies."
+  ]
+}
