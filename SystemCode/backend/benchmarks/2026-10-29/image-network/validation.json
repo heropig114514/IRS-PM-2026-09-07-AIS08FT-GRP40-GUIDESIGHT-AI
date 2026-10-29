@@ -4,13 +4,14 @@
   "entry": "http://192.168.10.8:8080/",
   "runtime": "standalone image echo test; no GPU or model process started",
   "binding": "192.168.10.8:8080 only",
-  "phone_result": "Awaiting user-run photo test; no physical-phone latency claim.",
+  "phone_result": "Physical iPhone photo test completed: 90/90 byte-verified transfers; analysis in phone-lan-analysis.json.",
   "windows_firewall": {
     "attempted_rule": "PRS-ImageNetwork-LAN-8080",
     "applied": false,
     "reason": "Windows OS denied firewall administration to the current process; not an automatic approval-review rejection.",
     "scope_requested": "TCP 8080, WLAN, local 192.168.10.8, remote 192.168.10.0/24, Public profile",
-    "network_category_changed": false
+    "network_category_changed": false,
+    "additional_rule_required_for_this_completed_test": false
   },
   "checks": {
     "unit_tests_passed": 4,
@@ -31,5 +32,7 @@
     "Full-JPEG echo includes image upload and image download; not one-way delay and not compact-inference latency.",
     "JPEG size/quality changes are test-only. Model accuracy and production capture defaults are unchanged.",
     "Keep phone Safari in foreground; stopping or hiding cancels the current run. Reports contain no image bodies."
-  ]
+  ],
+  "phone_access_confirmed": true,
+  "phone_analysis": "phone-lan-analysis.json"
 }
