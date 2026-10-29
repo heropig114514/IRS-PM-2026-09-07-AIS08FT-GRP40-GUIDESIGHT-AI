@@ -1,10 +1,11 @@
 """Responsibilities: Name the admitted detection models and select one explicitly at startup.
 Implementation: Fixed profile table (weights, manifest, class count); PRS_DETECTION_MODEL selects a
-profile, default the original COCO yolo26n; strict manifest identity check without Torch.
+profile, default the fine-tuned yolo26n-walk (COCO yolo26n stays selectable); strict manifest
+identity check without Torch.
 Related Modules: zerogpu.runtime.load_model; integration.protocol/inference.services;
 model_tests.run_depth; realtime.detector; core.detector.pedestrian_lights; WALK-MODEL.md.
 Declaration Index: selected_model; model_files; validate_manifest; light_rule.
-Variable Index: ORIGINAL — default COCO model name; WALK — fine-tuned walking-aid model name;
+Variable Index: ORIGINAL — COCO model name; WALK — default fine-tuned walking-aid model name;
 PROFILES — model name -> (weights path, manifest path, class count) relative to backend root;
 ROOT — backend source root.
 """
@@ -25,11 +26,11 @@ PROFILES = {
 def selected_model(environ=None):
     """Functionality: Resolve the detection model chosen for this process.
     Inputs: optional environment mapping (default os.environ). Outputs: profile name.
-    Logic: PRS_DETECTION_MODEL, blank or absent means the original yolo26n.
+    Logic: PRS_DETECTION_MODEL, blank or absent means the walk model; `yolo26n` selects COCO.
     Constraints: unknown names fail; read once at startup, never per frame; no fallback model.
     """
     environment = os.environ if environ is None else environ
-    name = environment.get("PRS_DETECTION_MODEL", "").strip() or ORIGINAL
+    name = environment.get("PRS_DETECTION_MODEL", "").strip() or WALK
     if name not in PROFILES:
         raise ValueError(f"Unknown PRS_DETECTION_MODEL {name!r}; "
                          f"expected one of {sorted(PROFILES)}")

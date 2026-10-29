@@ -37,9 +37,9 @@ ImVisible does not annotate signal boxes. "Detected" therefore means that at lea
 
 Latency (Colab T4, mean over 57 static images): detection 23 → 53 ms; end-to-end 79 → 114 ms with ROI enabled.
 
-> The opt-in walking-aid model `yolo26n-walk` (`PRS_DETECTION_MODEL=yolo26n-walk`) detects
+> The default walking-aid model `yolo26n-walk` (`PRS_DETECTION_MODEL=yolo26n-walk`) detects
 > pedestrian-signal colour itself (green threshold 0.364) and does not use the crop classifier below;
-> see [WALK-MODEL.md](WALK-MODEL.md). The default COCO model is unchanged.
+> see [WALK-MODEL.md](WALK-MODEL.md). The original COCO model remains available via `PRS_DETECTION_MODEL=yolo26n`.
 
 ## 2. Pedestrian-Signal Color Classifier (Offline Experiment)
 

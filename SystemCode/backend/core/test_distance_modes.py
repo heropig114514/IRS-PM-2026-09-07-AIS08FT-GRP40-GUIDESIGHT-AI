@@ -360,6 +360,7 @@ class DistanceModeTests(SimpleTestCase):
             with patch.object(services, "ROOT", root), \
                     patch.object(services, "read_distance_config", return_value=config), \
                     patch.object(services, "read_manifest", return_value=manifest), \
+                    patch.dict("os.environ", {"PRS_DETECTION_MODEL": "yolo26n"}), \
                     patch.dict(sys.modules, {"torch": torch}), \
                     patch("realtime.depth.DepthEstimator") as depth, \
                     patch("realtime.detector.ResidentDetector") as factory:
