@@ -31,6 +31,7 @@ CAMERA_PROFILES = frozenset({
 })
 ASSIST_ASSETS = {
     "live-latency.js": "text/javascript",
+    "live-camera.css": "text/css",
     "live-camera-overlay.js": "text/javascript",
     "local-motion.js": "text/javascript",
     "motion-worker.js": "text/javascript",
@@ -68,7 +69,8 @@ def render_assist_page(frontend=FRONTEND, *, view="product", camera_profile=None
     Inputs: fixed frontend root, exact view and explicit profile or PRS_CAMERA_PROFILE environment.
     Outputs: HTML and fresh style nonce.
     Logic: both views use the same controller IDs and sibling document URL base; only diagnostics
-    compose the original map template. Constraints: no core source edits, user HTML or fallback.
+    compose the original map template and latency controls. Live preview and speech recovery remain
+    shared. Constraints: no core source edits, user HTML or fallback.
     """
     if view not in {"product", "test"}:
         raise ValueError("Unknown assist view")
@@ -104,14 +106,19 @@ def render_assist_page(frontend=FRONTEND, *, view="product", camera_profile=None
         html = html.replace("还需启用下方语音输出。", "语音输出默认开启，首次请点击启动语音。")
     if html.count("<html ") != 1:
         raise ValueError("Assist template contract changed")
-    if view == "product" and os.environ.get("PRS_LATENCY_PANEL") == "1":
-        age = os.environ.get("PRS_RISK_TTL_MS", "1000")
+    if os.environ.get("PRS_LATENCY_PANEL") == "1":
+        age = os.environ.get("PRS_RISK_TTL_MS", "1000") if view == "product" else "1000"
         if age not in {"1000", "2000"}:
             raise ValueError("Unsupported demo warning age")
-        prepared = "true" if os.environ.get("PRS_PREPARED_SPEECH") == "1" else "false"
+        prepared = ("true" if view == "product" and os.environ.get("PRS_PREPARED_SPEECH") == "1"
+                    else "false")
         html = html.replace("<html ", f'<html data-camera-display="live-overlay" '
                             f'data-risk-max-age-ms="{age}" data-prepared-speech="{prepared}" ', 1)
-        panel = (frontend / "integration/live-latency.html").read_text(encoding="utf-8")
+        panel = (frontend / "integration/live-camera.html").read_text(encoding="utf-8")
+        if view == "test":
+            panel += (frontend / "integration/live-latency.html").read_text(encoding="utf-8")
+        html = html.replace("</head>", '<link rel="stylesheet" '
+                            'href="../assets/integration/live-camera.css"></head>', 1)
         if html.count("</main>") != 1:
             raise ValueError("Assist template contract changed")
         html = html.replace("</main>", panel + "\n</main>", 1)

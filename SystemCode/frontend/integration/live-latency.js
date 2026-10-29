@@ -1,10 +1,11 @@
-/* Responsibilities: Present one live preview, optional local box tracking and honest latency metrics.
- * Implementation: Exact-source motion seeds never enter guidance; collect inference timings first.
+/* Responsibilities: Present shared live preview/speech recovery and test-page latency diagnostics.
+ * Implementation: Exact-source motion seeds never enter guidance; only diagnostic views collect timings.
  * Related Modules: camera.js, local-motion.js, live-camera-overlay.js, assist-mvp.js.
- * Declaration Index: recordDisplay; recordTracking; motionStatus; renderHint; renderOverlay; mirrorSpeech;
+ * Declaration Index: ui; trackingEnabled; recordDisplay; recordTracking; motionStatus; renderHint; renderOverlay; mirrorSpeech;
  * attachPreview; clearPreview; finite; format; percentile; summary; render.
  * Variable Index: motion owns visual estimates; overlay owns the short visible lifetime;
- * samples/speechEvents are bounded scalar diagnostics; owner isolates inference sessions.
+ * samples/speechEvents are bounded test-page diagnostics; owner isolates inference sessions;
+ * diagnostics gates all timing collection without changing preview, tracking or speech ownership.
  */
 import {cameraApp} from "../camera.js";
 import {LiveCameraOverlay} from "./live-camera-overlay.js";
@@ -13,17 +14,25 @@ import {guidanceManager, speechActivation} from "./assist-mvp.js";
 
 const output = document.getElementById("live-latency-values");
 const download = document.getElementById("live-latency-export");
+const diagnostics = Boolean(output && download);
 const preview = document.getElementById("live-camera-preview");
 const previewFigure = document.getElementById("live-camera-figure");
-const resultFigure = document.getElementById("echo")?.closest("figure");
-if (previewFigure && resultFigure) resultFigure.before(previewFigure);
+const resultFigure = document.getElementById("echo")?.closest("figure, .media");
+const speechControls = document.getElementById("live-speech-controls");
+if (previewFigure && resultFigure) resultFigure.before(speechControls, previewFigure);
 const singleView = document.documentElement.dataset.cameraDisplay === "live-overlay";
 if (singleView && resultFigure) { resultFigure.hidden = true; resultFigure.setAttribute("aria-hidden", "true"); }
+const sourceFigure = cameraApp.video.closest?.(".media");
+if (singleView && sourceFigure) { sourceFigure.hidden = true; sourceFigure.setAttribute("aria-hidden", "true"); }
 const sampleByIndex = new Map();
 let latestDisplay = null;
+/** Functionality: Select display wording independently of speech settings. Inputs: bilingual text.
+ * Outputs: current interface text. Logic: read document language. Constraints: no output request. */
+const ui = (zh, en) => document.documentElement.lang.startsWith("zh") ? zh : en;
 /** Functionality: Attach scalar drawing evidence to its source row. Inputs: layer counts.
  * Outputs: bounded per-frame diagnostics. Logic: epoch/index guards. Constraints: no geometry retained. */
 function recordDisplay(metrics) {
+  if (!diagnostics) return;
   latestDisplay = metrics;
   const row = sampleByIndex.get(metrics.frame_index);
   if (row && row.tracking_epoch === metrics.tracking_epoch) row.box_display = {...metrics};
@@ -31,6 +40,7 @@ function recordDisplay(metrics) {
 /** Functionality: Explain tracking eligibility/loss separately from drawing. Inputs: worker counts.
  * Outputs: source-row diagnostic. Logic: latest matching epoch/index. Constraints: no target identities. */
 function recordTracking(diagnostic) {
+  if (!diagnostics) return;
   const row = sampleByIndex.get(diagnostic.index);
   if (row && row.tracking_epoch === diagnostic.epoch) row.tracking_diagnostics = {...diagnostic};
 }
@@ -38,13 +48,20 @@ const overlay = new LiveCameraOverlay({video: preview, canvas: document.getEleme
   label: document.getElementById("live-camera-age"), onMetrics: recordDisplay,
   maxAgeMs: Number(document.documentElement.dataset.riskMaxAgeMs || 1000)});
 const motionEnabled = document.getElementById("live-motion-enabled");
+/** Functionality: Preserve default tracking when product diagnostic controls are absent.
+ * Inputs: optional diagnostic checkbox. Outputs: enabled boolean. Logic: explicit unchecked disables.
+ * Constraints: only controls visual tracking, never inference or risk. */
+const trackingEnabled = () => motionEnabled?.checked !== false;
 /** Functionality: Explain tracking state. Inputs: statistics. Outputs: visible status.
  * Logic: separate local refresh from inference. Constraints: never claims a fresh detection. */
 function motionStatus(stats) {
-  document.getElementById("live-motion-status").textContent = !motionEnabled.checked ? "本地跟踪已关闭；只闪现检测原位置。"
-    : stats.state === "unavailable" ? "本地跟踪不可用；已识别目标仍短暂显示虚线框，检测与语音继续。"
-    : stats.state === "running" ? `本地跟踪运行中 · 框更新 ${stats.visual_updates_fps?.toFixed(1) ?? "—"} 次/秒（含检测校正，不是识别帧率）`
-    : "跟踪已停止。";
+  const status = document.getElementById("live-motion-status");
+  if (!status) return;
+  const fps = stats.visual_updates_fps?.toFixed(1) ?? "—";
+  status.textContent = !trackingEnabled() ? ui("本地跟踪已关闭；只闪现检测原位置。", "Local tracking is off; brief detection hints remain.")
+    : stats.state === "unavailable" ? ui("本地跟踪不可用；检测与语音继续。", "Local tracking is unavailable; detection and speech continue.")
+    : stats.state === "running" ? ui(`本地跟踪运行中 · 框更新 ${fps} 次/秒（不是识别帧率）`, `Local tracking active · ${fps} box updates/s (not detection FPS)`)
+    : ui("跟踪已停止。", "Tracking stopped.");
 }
 const motion = new LocalMotion({video: preview, sourceImage: cameraApp.image, onState: motionStatus, onDiagnostic: recordTracking,
   onResult: result => {
@@ -53,8 +70,8 @@ const motion = new LocalMotion({video: preview, sourceImage: cameraApp.image, on
       result: {metadata: {width: result.width, height: result.height, boxes: result.boxes,
         index: result.index, tracking_epoch: result.epoch}}});
   }});
-motionEnabled.addEventListener("change", () => {
-  if (motionEnabled.checked && cameraApp.stream && !ended) motion.start(); else motion.stop();
+motionEnabled?.addEventListener("change", () => {
+  if (trackingEnabled() && cameraApp.stream && !ended) motion.start(); else motion.stop();
   motionStatus(motion.describe());
 });
 /** Functionality: Admit all detections as brief hints and optionally track selected boxes.
@@ -62,7 +79,7 @@ motionEnabled.addEventListener("change", () => {
  * Constraints: original counts/quality and risk decisions are unchanged. */
 function renderHint(event) {
   renderOverlay(event);
-  if (singleView && motionEnabled.checked) motion.ingest(event);
+  if (singleView && trackingEnabled()) motion.ingest(event);
 }
 /** Functionality: Draw a bounded hint. Inputs: visual event. Outputs: overlay or counted error.
  * Logic: isolate visualization errors. Constraints: original telemetry already collected. */
@@ -95,7 +112,7 @@ function attachPreview() {
   preview.srcObject = cameraApp.stream;
   previewFigure.hidden = false;
   void preview.play().catch(() => { previewFigure.hidden = true; });
-  if (owner && !ended && motionEnabled.checked && !motion.worker && motion.stats.state !== "unavailable") motion.start();
+  if (owner && !ended && trackingEnabled() && !motion.worker && motion.stats.state !== "unavailable") motion.start();
 }
 /** Functionality: Release visual state. Inputs: motion and preview. Outputs: cleared bindings.
  * Logic: stop worker before clearing media. Constraints: CameraApp releases hardware. */
@@ -109,7 +126,7 @@ cameraApp.video.addEventListener("playing", attachPreview);
 let owner = null, startedAt = null, samples = [], ended = false, timer = null;
 let speechEvents = [], previousCompletedAt = null, warningStarts = 0, overlayErrors = 0;
 guidanceManager.subscribe(event => {
-  if (!owner || ended || event.channel !== "speech" && event.phase !== "risk_speech_state") return;
+  if (!diagnostics || !owner || ended || event.channel !== "speech" && event.phase !== "risk_speech_state") return;
   if (event.phase === "output_start" && event.kind === "risk") warningStarts++;
   const fields = ["phase", "reason", "kind", "at", "capture_to_start_ms", "confirmed_capture_to_start_ms"];
   speechEvents.push(Object.fromEntries(fields.filter(key => Object.hasOwn(event, key)).map(key => [key, event[key]])));
@@ -154,31 +171,35 @@ function summary() {
  * Logic: bounded update timer. Constraints: preserves all original frame measurements. */
 function render() {
   timer = null;
+  if (!diagnostics) return;
   motionStatus(motion.describe());
   const stats = summary();
-  output.textContent = `${ended ? "已停止" : "检测中"} · 已统计 ${stats.frames} 帧\n`
-    + `最近一帧：${format(samples.at(-1)?.capture_to_decoded_ms ?? null)} ms\n`
-    + `首帧：${format(stats.first_frame_ms)} ms\n`
-    + `后续帧中位数：${format(stats.steady_p50_ms)} ms · P95：${format(stats.steady_p95_ms)} ms\n`
-    + `后续帧最大值：${format(stats.steady_max_ms)} ms\n`
-    + `服务端处理中位数：${format(stats.server_p50_ms)} ms\n`
-    + `采帧间空档最大值：${format(stats.capture_gap_max_ms)} ms · 已启动风险播报：${stats.warning_starts} 次\n`
-    + `检测结果刷新（不含本地取景）：${format(stats.completion_fps)} FPS`;
+  output.textContent = ui(`${ended ? "已停止" : "检测中"} · 已统计 ${stats.frames} 帧`,
+    `${ended ? "Stopped" : "Detecting"} · ${stats.frames} frames recorded`) + "\n"
+    + ui(`最近一帧：${format(samples.at(-1)?.capture_to_decoded_ms ?? null)} ms`, `Latest frame: ${format(samples.at(-1)?.capture_to_decoded_ms ?? null)} ms`) + "\n"
+    + ui(`首帧：${format(stats.first_frame_ms)} ms`, `First frame: ${format(stats.first_frame_ms)} ms`) + "\n"
+    + ui(`后续帧中位数：${format(stats.steady_p50_ms)} ms · P95：${format(stats.steady_p95_ms)} ms`, `Steady median: ${format(stats.steady_p50_ms)} ms · P95: ${format(stats.steady_p95_ms)} ms`) + "\n"
+    + ui(`后续帧最大值：${format(stats.steady_max_ms)} ms`, `Steady maximum: ${format(stats.steady_max_ms)} ms`) + "\n"
+    + ui(`服务端处理中位数：${format(stats.server_p50_ms)} ms`, `Server median: ${format(stats.server_p50_ms)} ms`) + "\n"
+    + ui(`采帧间空档最大值：${format(stats.capture_gap_max_ms)} ms · 已启动风险播报：${stats.warning_starts} 次`, `Maximum capture gap: ${format(stats.capture_gap_max_ms)} ms · Risk announcements started: ${stats.warning_starts}`) + "\n"
+    + ui(`检测结果刷新（不含本地取景）：${format(stats.completion_fps)} FPS`, `Detection results (excluding local preview): ${format(stats.completion_fps)} FPS`);
   download.disabled = !samples.length;
   const counts = latestDisplay;
   const diagnostic = counts ? sampleByIndex.get(counts.frame_index)?.tracking_diagnostics : null;
   const reasons = {...diagnostic?.excluded};
   for (const [reason, count] of Object.entries(diagnostic?.lost ?? {})) reasons[reason] = (reasons[reason] || 0) + count;
-  const names = {tracking_budget: "超过6个跟踪名额", small_target: "目标较小", insufficient_features: "纹理不足",
-    flow_unreliable: "跟踪丢失", inconsistent_motion: "运动不一致", outside_frame: "移出画面",
-    sampling_gap: "本地采样中断", detection_expired: "检测过期", aspect_mismatch: "画面方向变化",
-    preview_unavailable: "取景未就绪", source_mismatch: "原图尺寸不匹配", tracking_unavailable: "跟踪不可用",
-    invalid_geometry: "框坐标异常", worker_error: "跟踪出错", superseded_detection: "更新检测已到达",
-    tracking_stopped: "跟踪已停止"};
+  const names = {tracking_budget: ["超过6个跟踪名额", "Tracking limit reached"], small_target: ["目标较小", "Small target"], insufficient_features: ["纹理不足", "Insufficient features"],
+    flow_unreliable: ["跟踪丢失", "Tracking lost"], inconsistent_motion: ["运动不一致", "Inconsistent motion"], outside_frame: ["移出画面", "Outside frame"],
+    sampling_gap: ["本地采样中断", "Sampling interrupted"], detection_expired: ["检测过期", "Detection expired"], aspect_mismatch: ["画面方向变化", "Orientation changed"],
+    preview_unavailable: ["取景未就绪", "Preview unavailable"], source_mismatch: ["原图尺寸不匹配", "Source size mismatch"], tracking_unavailable: ["跟踪不可用", "Tracking unavailable"],
+    invalid_geometry: ["框坐标异常", "Invalid box geometry"], worker_error: ["跟踪出错", "Tracking error"], superseded_detection: ["更新检测已到达", "Newer detection received"],
+    tracking_stopped: ["跟踪已停止", "Tracking stopped"]};
   document.getElementById("live-box-counts").textContent = counts
-    ? `最近结果：检出 ${counts.detected_count} 个 · 至少绘制过 ${counts.displayed_unique_count} 个 · 持续跟踪峰值 ${counts.tracked_peak_count} 个 · 完全未绘制 ${counts.never_displayed_count} 个。`
-      + (Object.keys(reasons).length ? ` 未持续跟踪原因：${Object.entries(reasons).map(([reason,count])=>`${names[reason] || reason} ${count}`).join("；")}。` : "")
-    : "等待检测目标统计。";
+    ? ui(`最近结果：检出 ${counts.detected_count} 个 · 至少绘制过 ${counts.displayed_unique_count} 个 · 持续跟踪峰值 ${counts.tracked_peak_count} 个 · 完全未绘制 ${counts.never_displayed_count} 个。`,
+      `Latest result: ${counts.detected_count} detected · ${counts.displayed_unique_count} displayed · ${counts.tracked_peak_count} peak tracked · ${counts.never_displayed_count} never displayed.`)
+      + (Object.keys(reasons).length ? ui(" 未持续跟踪原因：", " Tracking exclusions: ") + Object.entries(reasons)
+        .map(([reason,count]) => `${names[reason] ? ui(...names[reason]) : reason} ${count}`).join("; ") : "")
+    : ui("等待检测目标统计。", "Waiting for detection counts.");
 }
 cameraApp.subscribe(event => {
   if (event.type === "session") {
@@ -190,6 +211,7 @@ cameraApp.subscribe(event => {
     attachPreview();
     render();
   } else if (event.type === "frame" && event.sessionId === owner && !ended) {
+    if (!diagnostics) { renderHint(event); return; }
     if (samples.length >= 3000) { renderHint(event); return; }
     const timing = event.timing, meta = event.result?.metadata ?? {};
     if (!timing || finite(timing.captureToDecodedMs) === null || finite(timing.completedAt) === null) return;
@@ -202,7 +224,7 @@ cameraApp.subscribe(event => {
       completed_at_ms: finite(timing.completedAt), input_bytes: finite(timing.inputBytes),
       frame_index: meta.index ?? null,
       tracking_epoch: meta.tracking_epoch, detected_count: meta.boxes?.length ?? 0,
-      box_display: null, tracking_diagnostics: {status: motionEnabled.checked ? "pending" : "disabled"},
+      box_display: null, tracking_diagnostics: {status: trackingEnabled() ? "pending" : "disabled"},
       server_ms: finite(meta.server_ms), inference_ms: finite(meta.inference_ms), depth_ms: finite(meta.depth_ms),
       capture_gap_ms: previousCompletedAt === null ? null : finite(timing.capturedAt - previousCompletedAt),
       pacing_wait_ms: finite(timing.pacingWaitMs), pacing_late_ms: finite(timing.pacingLateMs),
@@ -220,7 +242,7 @@ cameraApp.subscribe(event => {
     ended = true; clearTimeout(timer); render();
   }
 });
-download.addEventListener("click", () => {
+download?.addEventListener("click", () => {
   if (!samples.length) return;
   const report = {
     schema: "prs-live-latency-v1", started_at: startedAt, stopped: ended,
@@ -231,7 +253,7 @@ download.addEventListener("click", () => {
     risk_speech_style: document.documentElement.dataset.preparedSpeech === "true" ? "prepared" : "detailed", overlay_max_ms: 150,
     display: document.documentElement.dataset.cameraDisplay || "annotated",
     box_display_policy: "tiered-v1",
-    local_tracking: {...motion.describe(), enabled: motionEnabled.checked, sample_fps_limit: 12, max_edge: 320},
+    local_tracking: {...motion.describe(), enabled: trackingEnabled(), sample_fps_limit: 12, max_edge: 320},
     sample_limit: 3000, summary: summary(), samples, speech_events: speechEvents,
   };
   const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], {type: "application/json"}));
@@ -240,3 +262,12 @@ download.addEventListener("click", () => {
   document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 });
+
+// Refresh diagnostic text on language changes without acquiring media or announcing speech.
+new MutationObserver(() => {
+  if (timer !== null) clearTimeout(timer);
+  render();
+  if (owner && !ended) overlay.redraw();
+})
+  .observe(document.documentElement, {attributes: true, attributeFilter: ["lang"]});
+render();

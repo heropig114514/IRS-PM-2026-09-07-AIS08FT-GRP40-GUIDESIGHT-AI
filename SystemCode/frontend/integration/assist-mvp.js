@@ -12,7 +12,8 @@
  * renderRiskSpeechStatus; renderSpeechActivation; activateSpeech; testSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; requestEntryMediaPermissions; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
  * onBoundary; speakAssistantReply; prepareRiskAudio; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
- * Variable Index: riskOwner/sessionId identify the active perception generation; sourceStarting
+ * Variable Index: presentation retains bounded bilingual display state independently of speech;
+ * riskOwner/sessionId identify the active perception generation; sourceStarting
  * locks user source choice during permission/admission; permissionChoice invalidates late page-entry,
  * authorization and source permission work; fileChoice invalidates late video selection;
  * boundaryStopped prevents repeated lifecycle cancellation;
@@ -41,7 +42,7 @@ import {SpeechActivation} from "./speech-activation.js";
 import {MapsNavigationSpeechBridge} from "./maps-navigation-bridge.js";
 import {VideoReplay} from "./video-replay.js";
 import {authorizeCameraDevices, explicitDeviceId, requestPageMediaPermissions} from "./devices.js";
-import {resultText} from "./catalog.js";
+import {AssistPresentation} from "./catalog.js";
 import {interfaceSpeechLanguage} from "./voice-preferences.js";
 import {RiskSpeechCache} from "./risk-speech-cache.js";
 import {RiskAudioResources} from "./risk-audio-resources.js";
@@ -50,6 +51,7 @@ export {navigation} from "../navigation-ui.js";
 export {speechOutput} from "../speech-output.js";
 
 const doc = document;
+const presentation = new AssistPresentation(doc);
 const testView = doc.documentElement.dataset.assistView === "test";
 const preparedSpeech = doc.documentElement.dataset.preparedSpeech === "true";
 const riskMaxAgeMs = Number(doc.documentElement.dataset.riskMaxAgeMs || 1000);
@@ -149,14 +151,11 @@ function guidanceDiagnostic(event) {
   return fragments.join(" · ");
 }
 
-/* Functionality: Update an accessible status only when its user-facing text changes.
- * Inputs: Fixed status ID and prepared string. Outputs: At most one textContent mutation.
- * Logic: Lifecycle events and inventory refreshes can describe the same visible state repeatedly.
- * Constraints: Does not suppress distinct errors, alter diagnostic text or trigger speech output. */
-function setStatusText(id, text) {
-  const target = node(id);
-  if (target.textContent !== text) target.textContent = text;
-}
+/* Functionality: Retain the current bilingual accessible status and render changed text only.
+ * Inputs: Fixed status ID and Chinese/English strings. Outputs: Current interface-language text.
+ * Logic: Passive presentation survives language changes after stop and during queued calibration.
+ * Constraints: No diagnostic suppression, source restart, audio action or risk timestamp change. */
+function setStatusText(id, chinese, english = chinese) { presentation.setText(id, chinese, english); }
 
 /* Functionality: Reflect mutually exclusive perception ownership without affecting navigation.
  * Inputs: Camera/replay states and explicit source choice. Outputs: Disabled/hidden controls.
@@ -191,18 +190,18 @@ function startProductCamera() {
 }
 
 /* Functionality: Explain native camera failures without hiding the controller's detailed message.
- * Inputs: Retained error type. Outputs: Fixed localized action. Logic: Permission guidance points
+ * Inputs: Retained error type. Outputs: Fixed bilingual action. Logic: Permission guidance points
  * to browser site settings when no prompt appears and to the visible click target only when the
  * browser requires direct activation; device and busy states remain distinct. Constraints: No
  * permission change or retry. */
 function cameraFailureMessage(reason) {
   if (reason === "NotAllowedError" || reason === "SecurityError")
-    return productText("浏览器未授予摄像头权限。若没有出现权限弹窗，请在浏览器网站设置中允许摄像头；若浏览器要求直接操作，请点按本页“开启环境感知”。", "The browser did not grant camera access. If no permission prompt appeared, allow camera access in the site's browser settings; if the browser requires a direct gesture, tap Start environment awareness on this page.");
+    return ["浏览器未授予摄像头权限。若没有出现权限弹窗，请在浏览器网站设置中允许摄像头；若浏览器要求直接操作，请点按本页“开启环境感知”。", "The browser did not grant camera access. If no permission prompt appeared, allow camera access in the site's browser settings; if the browser requires a direct gesture, tap Start environment awareness on this page."];
   if (reason === "NotFoundError" || reason === "OverconstrainedError")
-    return productText("未能打开后置摄像头。请使用带后置摄像头的手机，或进入测试页手动选择镜头。", "The rear camera is unavailable. Use a phone with a rear camera, or choose a camera manually on the test page.");
+    return ["未能打开后置摄像头。请使用带后置摄像头的手机，或进入测试页手动选择镜头。", "The rear camera is unavailable. Use a phone with a rear camera, or choose a camera manually on the test page."];
   if (reason === "NotReadableError" || reason === "AbortError")
-    return productText("摄像头暂时无法使用。请关闭其他占用摄像头的应用后再次点击开始检测。", "The camera is unavailable. Close other apps using it, then tap Start detection again.");
-  return productText("摄像头启动或检测连接失败，请查看提示后重新开始。", "The camera or detection connection failed. Check the message and start again.");
+    return ["摄像头暂时无法使用。请关闭其他占用摄像头的应用后再次点击开始检测。", "The camera is unavailable. Close other apps using it, then tap Start detection again."];
+  return ["摄像头启动或检测连接失败，请查看提示后重新开始。", "The camera or detection connection failed. Check the message and start again."];
 }
 
 /* Functionality: Render validated frame metadata for the product and diagnostic views.
@@ -210,19 +209,16 @@ function cameraFailureMessage(reason) {
  * diagnostic capture-age line. Logic: Product users see current detections without transport metrics;
  * the test view retains frame number and age. Constraints: No repeated inference or safety claim. */
 function renderResults(event) {
-  const list = node("assist-results"), metadata = event.result.metadata;
-  list.replaceChildren();
-  for (const box of metadata.boxes.slice(0, 50)) {
-    const item = doc.createElement("li");
-    item.textContent = resultText(box, node("navigation-speech-language").value); list.append(item);
-  }
+  const metadata = event.result.metadata;
+  presentation.setResults("assist-results", metadata.boxes);
   const age = performance.now() - event.capturedAt;
   const status = testView
-    ? `${metadata.count} objects · frame ${metadata.index} · ${age.toFixed(0)} ms capture age · ${age >= 0 && age < 1000 ? "fresh" : "stale"}`
+    ? [`${metadata.count} 个目标 · 帧 ${metadata.index} · 距采集 ${age.toFixed(0)} ms · ${age >= 0 && age < riskMaxAgeMs ? "有效" : "过期"}`,
+      `${metadata.count} objects · frame ${metadata.index} · ${age.toFixed(0)} ms capture age · ${age >= 0 && age < riskMaxAgeMs ? "fresh" : "stale"}`]
     : metadata.count
-      ? productText(`检测到 ${metadata.count} 个目标，详情见下方。`, `${metadata.count} objects detected. See details below.`)
-      : productText("本帧暂未识别到目标；这不代表道路安全。", "No objects detected in this frame; this does not establish road safety.");
-  setStatusText("assist-result-status", status);
+      ? [`检测到 ${metadata.count} 个目标，详情见下方。`, `${metadata.count} objects detected. See details below.`]
+      : ["本帧暂未识别到目标；这不代表道路安全。", "No objects detected in this frame; this does not establish road safety."];
+  setStatusText("assist-result-status", ...status);
   renderRiskSpeechStatus();
 }
 
@@ -236,11 +232,11 @@ function onSource(event, source) {
     riskOwner = source; sessionId = event.sessionId; sourceStarting = null; boundaryStopped = false;
     if (source === "camera") cameraFailure = null;
     guidanceManager.beginRisk(sessionId);
-    node("assist-results").replaceChildren();
-    setStatusText("assist-result-status", testView ? productText("等待本地检测结果。", "Waiting for local detection results.")
-      : productText("正在等待首个识别结果。", "Waiting for the first detection result."));
-    node("assist-status").textContent = source === "video" ? productText("本地视频检测中；视频位置不代表设备位置。", "Local video detection is running; video position does not represent device location.")
-      : productText("正在留意周围障碍物。", "Monitoring nearby obstacles.");
+    presentation.setResults("assist-results", []);
+    setStatusText("assist-result-status", ...(testView ? ["等待本地检测结果。", "Waiting for local detection results."]
+      : ["正在等待首个识别结果。", "Waiting for the first detection result."]));
+    setStatusText("assist-status", ...(source === "video" ? ["本地视频检测中；视频位置不代表设备位置。", "Local video detection is running; video position does not represent device location."]
+      : ["正在留意周围障碍物。", "Monitoring nearby obstacles."]));
   } else if (event.type === "frame") {
     const controller = source === "video" ? videoReplay : cameraApp;
     if (riskOwner !== source || sessionId !== event.sessionId || event.generation !== controller.generation ||
@@ -255,20 +251,21 @@ function onSource(event, source) {
       riskOwner = sessionId = null; latest = null;
       guidanceManager.stopRisk(event.reason || event.type);
       riskSpeechCache?.cancelPending(event.reason || event.type);
-      node("assist-status").textContent = testView ? productText("感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent.")
-        : productText("环境检测已停止。", "Obstacle detection stopped.");
-      setStatusText("assist-result-status", testView ? productText("感知已停止；最后画面仅供查看，不触发提醒。", "Perception stopped; the last frame is for viewing only and triggers no alerts.")
-        : productText("检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."));
+      setStatusText("assist-status", ...(testView ? ["感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent."]
+        : ["环境检测已停止。", "Obstacle detection stopped."]));
+      setStatusText("assist-result-status", ...(testView ? ["感知已停止；最后画面仅供查看，不触发提醒。", "Perception stopped; the last frame is for viewing only and triggers no alerts."]
+        : ["检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."]));
     }
-    if (source === "video") node("assist-video-status").textContent = event.type === "error"
-      ? productText(`视频已停止：${event.message || "请检查本机服务。"}`, `Video stopped: ${event.message || "Check the local service."}`)
-      : productText("视频会话已停止，需手动开始或重新选择视频。", "Video session stopped. Start it manually or choose a video again.");
+    if (source === "video") setStatusText("assist-video-status", ...(event.type === "error"
+      ? [`视频已停止：${event.message || "请检查本机服务。"}`, `Video stopped: ${event.message || "Check the local service."}`]
+      : ["视频会话已停止，需手动开始或重新选择视频。", "Video session stopped. Start it manually or choose a video again."]));
     // CameraApp publishes stop before clearing mode; read its completed transition once.
     if (source === "camera") queueMicrotask(renderControls);
   }
-  if (!testView && source === "camera" && ["stop", "ended", "error"].includes(event.type))
-    setStatusText("assist-status", cameraFailure ? cameraFailureMessage(cameraFailure)
-      : productText("环境检测已停止。", "Obstacle detection stopped."));
+  if (!testView && source === "camera" && ["stop", "ended", "error"].includes(event.type)) {
+    if (cameraFailure) setStatusText("assist-status", ...cameraFailureMessage(cameraFailure));
+    else setStatusText("assist-status", "环境检测已停止。", "Obstacle detection stopped.");
+  }
   if (source === "video") renderDiagnostics();
   renderControls();
 }
@@ -471,8 +468,6 @@ function applyVoice() {
  * first backend playback so a concurrent UI language change cannot relabel that request.
  * Constraints: No synthesis request, cancellation, readiness reset, voice fallback or retry. */
 function readProductVoices() {
-  if (["感知尚未开始。", "Obstacle detection has not started."].includes(node("assist-status").textContent))
-    setStatusText("assist-status", productText("感知尚未开始。", "Obstacle detection has not started."));
   if (speechActivation.describe().state === "queued") return;
   const language = interfaceSpeechLanguage(doc.documentElement.lang);
   const voiceId = "Cherry";
@@ -488,15 +483,19 @@ function readProductVoices() {
   if (latest) renderResults(latest);
 }
 
-/* Functionality: Follow UI language changes after the current calibration completes.
- * Inputs: Product document and shared driver lifecycle. Outputs: Future language settings.
- * Logic: Observe only lang; first backend playback releases a deferred calibration setting update.
- * Constraints: No browser voice inventory, output, manager resume, cancellation or readiness reset. */
+/* Functionality: Refresh display language immediately and product speech after calibration allows it.
+ * Inputs: Document and shared driver lifecycle. Outputs: Current text and future product voice settings.
+ * Logic: Presentation always follows lang; diagnostic voice selection stays independent, and queued
+ * product calibration retains its original voice language until the existing lifecycle releases it.
+ * Constraints: No source restart, new output, manager resume, cancellation or readiness reset. */
 function observeProductLanguage() {
-  languageObserver = new MutationObserver(() => readProductVoices());
+  languageObserver = new MutationObserver(() => {
+    presentation.refresh(); renderSpeechActivation(speechActivation.describe());
+    if (!testView) readProductVoices();
+  });
   languageObserver.observe(doc.documentElement, {attributes: true, attributeFilter: ["lang"]});
   speechOutput.subscribe(event => {
-    if (["start", "end", "cancel", "error"].includes(event.phase) && speechActivation.describe().state !== "queued")
+    if (!testView && ["start", "end", "cancel", "error"].includes(event.phase) && speechActivation.describe().state !== "queued")
       readProductVoices();
   });
 }
@@ -533,9 +532,9 @@ async function readDevices(devices) {
     }
     select.value = explicitDeviceId(inventory, selected); cameraApp.localDeviceId = select.value;
   } catch (error) {
-    if (choice === permissionChoice) node("assist-status").textContent = testView
-      ? productText(`读取摄像头失败（${error.name}），请检查浏览器权限。`, `Camera list failed (${error.name}). Check browser permissions.`)
-      : productText("无法读取摄像头，请检查浏览器的摄像头权限。", "Cannot list cameras. Check the browser's camera permission.");
+    if (choice === permissionChoice) setStatusText("assist-status", ...(testView
+      ? [`读取摄像头失败（${error.name}），请检查浏览器权限。`, `Camera list failed (${error.name}). Check browser permissions.`]
+      : ["无法读取摄像头，请检查浏览器的摄像头权限。", "Cannot list cameras. Check the browser's camera permission."]));
   }
   renderControls();
 }
@@ -552,8 +551,8 @@ async function authorizeDevices() {
     if (choice !== permissionChoice) return;
     await readDevices(devices);
   } catch (error) {
-    if (choice === permissionChoice) node("assist-status").textContent = testView ? productText(`摄像头授权失败（${error.name}）。`, `Camera permission failed (${error.name}).`)
-      : productText("无法访问摄像头，请检查设备和浏览器权限。", "Cannot access the camera. Check the device and browser permissions.");
+    if (choice === permissionChoice) setStatusText("assist-status", ...(testView ? [`摄像头授权失败（${error.name}）。`, `Camera permission failed (${error.name}).`]
+      : ["无法访问摄像头，请检查设备和浏览器权限。", "Cannot access the camera. Check the device and browser permissions."]));
   }
   finally { if (choice === permissionChoice) { sourceStarting = null; renderControls(); } }
 }
@@ -568,22 +567,21 @@ async function requestEntryMediaPermissions() {
   const releaseAudio = speechOutput.reserveMicrophone();
   const choice = ++permissionChoice, target = testView ? "assist-status" : "product-camera-message";
   sourceStarting = "permission";
-  setStatusText(target, productText("正在申请摄像头和麦克风权限。", "Requesting camera and microphone permission."));
+  setStatusText(target, "正在申请摄像头和麦克风权限。", "Requesting camera and microphone permission.");
   renderControls();
   try {
     const devices = await requestPageMediaPermissions(navigator.mediaDevices);
     if (choice !== permissionChoice || boundaryStopped) return;
     await readDevices(devices);
     if (choice !== permissionChoice || boundaryStopped) return;
-    setStatusText(target, productText("摄像头和麦克风权限已就绪；临时媒体流已关闭。", "Camera and microphone permission is ready; temporary media streams are closed."));
+    setStatusText(target, "摄像头和麦克风权限已就绪；临时媒体流已关闭。", "Camera and microphone permission is ready; temporary media streams are closed.");
   } catch (error) {
     if (choice === permissionChoice && !boundaryStopped) {
       const detail = error?.name || "UnavailableError";
-      const message = productText(
+      setStatusText(target,
         `摄像头或麦克风授权失败（${detail}）。请检查网站权限与设备后重新打开页面。`,
         `Camera or microphone permission failed (${detail}). Check site permissions and devices, then reload this page.`,
       );
-      setStatusText(target, message);
     }
   } finally {
     releaseAudio();
@@ -602,8 +600,8 @@ async function selectFile() {
     const operation = videoReplay.loadFile(file); renderControls(); await operation;
     if (choice !== fileChoice) return;
     fileReady = true; node("assist-video-file").value = "";
-    node("assist-video-status").textContent = productText(`${file.name} · ${videoReplay.video.duration.toFixed(2)} s；点击开始视频检测。`, `${file.name} · ${videoReplay.video.duration.toFixed(2)} s. Select Start video detection to begin.`);
-  } catch (error) { if (choice === fileChoice) node("assist-video-status").textContent = productText(`视频未就绪：${error.message}`, `Video is not ready: ${error.message}`); }
+    setStatusText("assist-video-status", `${file.name} · ${videoReplay.video.duration.toFixed(2)} s；点击开始视频检测。`, `${file.name} · ${videoReplay.video.duration.toFixed(2)} s. Select Start video detection to begin.`);
+  } catch (error) { if (choice === fileChoice) setStatusText("assist-video-status", `视频未就绪：${error.message}`, `Video is not ready: ${error.message}`); }
   renderControls();
 }
 
@@ -615,7 +613,7 @@ async function startVideo() {
   activateSpeech();
   sourceStarting = "video"; boundaryStopped = false; renderControls();
   try { await videoReplay.start(); }
-  catch (error) { node("assist-video-status").textContent = productText(`未开始：${error.message}`, `Not started: ${error.message}`); }
+  catch (error) { setStatusText("assist-video-status", `未开始：${error.message}`, `Not started: ${error.message}`); }
   finally { if (sourceStarting === "video") sourceStarting = null; renderControls(); }
 }
 
@@ -631,10 +629,10 @@ function stopPerception(reason = "user", stopOutput = true) {
   riskSpeechCache?.cancelPending(reason);
   videoReplay.stop(reason);
   if (cameraApp.mode !== "idle") cameraApp.stop();
-  node("assist-status").textContent = testView ? productText("感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent.")
-    : productText("环境检测已停止。", "Obstacle detection stopped.");
-  setStatusText("assist-result-status", testView ? productText("感知已停止；最后画面不触发提醒。", "Perception stopped; the last frame does not trigger alerts.")
-    : productText("检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."));
+  setStatusText("assist-status", ...(testView ? ["感知已停止；导航状态保持独立。", "Perception stopped; navigation state remains independent."]
+    : ["环境检测已停止。", "Obstacle detection stopped."]));
+  setStatusText("assist-result-status", ...(testView ? ["感知已停止；最后画面不触发提醒。", "Perception stopped; the last frame does not trigger alerts."]
+    : ["检测已停止；保留最后画面和识别结果。", "Detection stopped. The last frame and results remain visible."]));
   renderControls();
 }
 
@@ -651,9 +649,9 @@ function renderStopStatus(cleanupCompleted) {
     !speech.active_request && !speech.engine_speaking && !speech.engine_pending &&
     !output.active.speech && !output.active.vibration && !activation.owned_request_id &&
     !activation.cancel_failed && !tester?.describe().request_pending;
-  setStatusText("assist-status", stopped
-    ? productText("导航与环境检测已停止。", "Navigation and obstacle detection stopped.")
-    : productText("尚未确认全部停止。请再次点击停止；若仍未停止，请关闭页面。", "Cannot confirm everything has stopped. Tap Stop again; if it persists, close this page."));
+  setStatusText("assist-status", ...(stopped
+    ? ["导航与环境检测已停止。", "Navigation and obstacle detection stopped."]
+    : ["尚未确认全部停止。请再次点击停止；若仍未停止，请关闭页面。", "Cannot confirm everything has stopped. Tap Stop again; if it persists, close this page."]));
 }
 
 /* Functionality: Stop the two inputs and owned outputs on an explicit all-stop action.
@@ -674,7 +672,7 @@ function stopAll(reason = "user", stopNavigation = true) {
     if (stopNavigation && (navigation.active || navigation.describe().reason === "stop_failed")) navigation.stop("user");
     cleanupCompleted = true;
   } finally {
-    if (testView) node("assist-status").textContent = productText("已请求停止全部；请查看导航和输出状态确认清理结果。", "Stop all was requested. Check navigation and output statuses to confirm cleanup.");
+    if (testView) setStatusText("assist-status", "已请求停止全部；请查看导航和输出状态确认清理结果。", "Stop all was requested. Check navigation and output statuses to confirm cleanup.");
     else {
       renderStopStatus(cleanupCompleted);
       // Native page lifecycle handlers stop original GPS after this capture listener returns.
@@ -701,12 +699,13 @@ function onBoundary(event) {
    * otherwise clips load on demand. Page reload explicitly recovers failure.
  * Constraints: No synthesis fallback, retry, speaker output, media permission or navigation work. */
 async function prepareRiskAudio() {
-  if (preparedSpeech) setStatusText("assist-status", "正在准备本地警报语音，请稍候……");
+  if (preparedSpeech) setStatusText("assist-status", "正在准备本地警报语音，请稍候……", "Preparing risk alert audio. Please wait.");
   try { await riskAudioResources.load(); }
   catch (error) { window.console.error("[PRS risk audio] Resource pack unavailable", {
     code: ["risk_audio_unavailable", "invalid_audio_resource"].includes(error?.code) ? error.code : "risk_audio_unavailable"}); }
-  if (preparedSpeech) setStatusText("assist-status", riskAudioResources.describe().state === "ready"
-    ? "警报语音已准备，可以开始检测。" : "警报语音准备失败，请重新加载页面。");
+  if (preparedSpeech) setStatusText("assist-status", ...(riskAudioResources.describe().state === "ready"
+    ? ["警报语音已准备，可以开始检测。", "Risk alert audio is ready. You can start detection."]
+    : ["警报语音准备失败，请重新加载页面。", "Risk alert audio could not load. Reload the page."]));
   renderDiagnostics(); renderControls();
 }
 
@@ -774,7 +773,7 @@ function initialize() {
     activateSpeech();
     cameraFailure = null;
     if (!testView) {
-      setStatusText("assist-status", productText("正在开启后置摄像头，请允许摄像头权限。", "Opening the rear camera. Please allow camera access."));
+      setStatusText("assist-status", "正在开启后置摄像头，请允许摄像头权限。", "Opening the rear camera. Please allow camera access.");
       node("message").textContent = "";
     }
     sourceStarting = "camera"; boundaryStopped = false; renderControls();
@@ -782,7 +781,8 @@ function initialize() {
   node("assist-stop-all").addEventListener("click", () => stopAll());
   doc.addEventListener("visibilitychange", onBoundary, true);
   window.addEventListener("pagehide", onBoundary, true);
-  if (!testView) observeProductLanguage();
+  observeProductLanguage();
+  setStatusText("assist-status", "感知尚未开始。", "Obstacle detection has not started.");
   enableDefaultOutputs(); readVoices(); renderControls();
   void prepareRiskAudio();
   void requestEntryMediaPermissions();

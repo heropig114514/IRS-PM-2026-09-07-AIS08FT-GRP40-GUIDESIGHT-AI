@@ -1,8 +1,12 @@
 /** Responsibilities: Local MVP language catalog and rule-derived spoken text.
- * Implementation: Explicit zh-CN/en-US text; preserve algorithm labels, distances and risk fields.
- * Related Modules: guidance.js, local-mvp.js; existing i18n.js controls the rest of the page.
- * Declaration Index: languageOf; text; riskText; resultText.
- * Variable Index: CATALOG contains local-only UI; DIRECTIONS/LEVELS map server enums to spoken labels.
+ * Implementation: Explicit zh-CN/en-US text and bounded passive display snapshots; preserve algorithm
+ * labels, distances and risk fields independently of speech configuration or source lifecycle.
+ * Related Modules: guidance.js, local-mvp.js, assist-mvp.js; existing i18n.js controls static page text.
+ * Declaration Index: languageOf; text; riskText; resultText; AssistPresentation;
+ * AssistPresentation.constructor; AssistPresentation.setText; AssistPresentation.setResults;
+ * AssistPresentation.renderText; AssistPresentation.renderResults; AssistPresentation.refresh.
+ * Variable Index: CATALOG contains local-only UI; DIRECTIONS/LEVELS map server enums to spoken labels;
+ * texts retains one bilingual state per fixed binding; results retains at most 50 display-only rows.
  */
 const CATALOG = {
   title: ["本地中台 MVP", "Local integration MVP"],
@@ -66,4 +70,62 @@ export function resultText(box, language) {
   const index = languageOf(language) === "zh-CN" ? 0 : 1;
   const distance = Number.isFinite(box.distance_m) ? `${box.distance_m.toFixed(1)} m` : text("noDistance", language);
   return `${box.label} · ID ${box.track_id ?? "?"} · ${distance} · ${(DIRECTIONS[box.direction] || DIRECTIONS.unknown)[index]} · ${(LEVELS[box.risk_level] || LEVELS.unknown)[index]}${Number.isFinite(box.ttc_sec) ? ` · TTC ${box.ttc_sec.toFixed(1)} s` : ""}`;
+}
+
+/** Functionality: Keep current integration display text in the interface language.
+ * Logic: Retain bilingual strings and scalar result rows so stopped results can be translated again.
+ * Constraints: No speech, risk selection, capture time, media, network, or controller ownership. */
+export class AssistPresentation {
+  /** Functionality: Bind a page's passive presentation state. Inputs: Document. Outputs: Empty maps.
+   * Logic: Read interface language at render time. Constraints: No listener or device acquisition. */
+  constructor(doc) { this.doc = doc; this.texts = new Map(); this.results = new Map(); }
+
+  /** Functionality: Replace one current localized status. Inputs: Fixed ID and bilingual text.
+   * Outputs: Current-language DOM text. Logic: Retain both variants, replacing the previous state.
+   * Constraints: Strings only; a static product label cannot overwrite an owned dynamic status. */
+  setText(id, chinese, english = chinese) {
+    if (typeof chinese !== "string" || typeof english !== "string") throw new TypeError("Display text must be a string");
+    const target = this.doc.getElementById(id);
+    target.removeAttribute("data-product-copy"); target.setAttribute("data-language-original", "");
+    this.texts.set(id, {chinese, english}); this.renderText(id);
+  }
+
+  /** Functionality: Retain only the last bounded result-list presentation. Inputs: Fixed ID and boxes.
+   * Outputs: At most 50 localized rows. Logic: Copy only scalar fields used by resultText.
+   * Constraints: Never retain image data, source timestamps, algorithm objects or speech eligibility. */
+  setResults(id, boxes) {
+    this.results.set(id, boxes.slice(0, 50).map(box => ({label: box.label, track_id: box.track_id,
+      distance_m: box.distance_m, direction: box.direction, risk_level: box.risk_level, ttc_sec: box.ttc_sec})));
+    this.doc.getElementById(id).setAttribute("data-language-original", ""); this.renderResults(id);
+  }
+
+  /** Functionality: Render one retained status without replacing another controller's update.
+   * Inputs: Fixed ID, retained strings and document language. Outputs: Changed text only.
+   * Logic: Drop ownership when another writer changes the text. Constraints: No lifecycle replay. */
+  renderText(id) {
+    const record = this.texts.get(id), target = this.doc.getElementById(id);
+    if (record.rendered !== undefined && target.textContent !== record.rendered) {
+      this.texts.delete(id); return;
+    }
+    record.rendered = languageOf(this.doc.documentElement.lang) === "zh-CN" ? record.chinese : record.english;
+    if (target.textContent !== record.rendered) target.textContent = record.rendered;
+  }
+
+  /** Functionality: Translate retained result rows using the interface language. Inputs: Fixed list ID.
+   * Outputs: Text-only list. Logic: Rebuild from display scalars, including after perception stopped.
+   * Constraints: Speech language and queued calibration cannot influence display language. */
+  renderResults(id) {
+    const list = this.doc.getElementById(id); list.replaceChildren();
+    for (const box of this.results.get(id)) {
+      const item = this.doc.createElement("li"); item.textContent = resultText(box, this.doc.documentElement.lang); list.append(item);
+    }
+  }
+
+  /** Functionality: Apply a language change to the current display only. Inputs: Document language.
+   * Outputs: Repainted statuses and retained rows. Logic: Current records replace old translations.
+   * Constraints: No source restart, new alert, timestamp refresh or speech action. */
+  refresh() {
+    for (const id of this.texts.keys()) this.renderText(id);
+    for (const id of this.results.keys()) this.renderResults(id);
+  }
 }

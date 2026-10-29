@@ -194,18 +194,22 @@ class AssistTests(SimpleTestCase):
             self.assertEqual(json.loads(raw), {"code": "assist_template_unavailable"})
 
     async def test_canonical_asset_closure(self):
-        """Functionality: Check the real combined page's entire static JS import closure.
-        Inputs: rendered script paths, exact assist and original software asset allowlists.
-        Outputs: every local module maps to an existing canonical /assets file once.
-        Logic: recursively resolve static imports using browser URL rules and inspect served bytes.
+        """Functionality: Check both views' static JS imports and shared live-camera stylesheet.
+        Inputs: both views with live display disabled/enabled and canonical asset allowlists.
+        Outputs: every local module maps to an existing /assets file; the shared style is served.
+        Logic: render both feature settings, recursively resolve static imports using browser URL
+        rules and inspect served bytes.
         Constraints: no legacy aliases, dynamic import, network or module execution.
         """
         todo = []
-        for view, path in (("product", "/maps/"), ("test", "/maps/test")):
-            html, _ = render_assist_page(view=view)
-            todo.extend(urljoin(ORIGIN + path, item) for item in
-                        re.findall(r'<script[^>]+src="([^"]+)"', html.decode())
-                        if not item.startswith("https://"))
+        for enabled in ("", "1"):
+            with patch.dict("os.environ", {"PRS_LATENCY_PANEL": enabled,
+                                           "PRS_RISK_TTL_MS": "2000"}):
+                for view, path in (("product", "/maps/"), ("test", "/maps/test")):
+                    html, _ = render_assist_page(view=view)
+                    todo.extend(urljoin(ORIGIN + path, item) for item in
+                                re.findall(r'<script[^>]+src="([^"]+)"', html.decode())
+                                if not item.startswith("https://"))
         seen = set()
         app = AssistApplication(AsyncMock())
         imports = re.compile(r'(?:\bfrom\s+|\bimport\s*)["\']([^"\']+)["\']')
@@ -230,6 +234,13 @@ class AssistTests(SimpleTestCase):
                 todo.append(urljoin(url, dependency))
         self.assertIn(ORIGIN + "/assets/speech-output.js", seen)
         self.assertIn(ORIGIN + "/assets/integration/risk-speech-cache.js", seen)
+        for name in ("live-latency.js", "live-camera-overlay.js", "local-motion.js"):
+            self.assertIn(ORIGIN + "/assets/integration/" + name, seen)
+        style = "live-camera.css"
+        self.assertEqual(ASSIST_ASSETS[style], "text/css")
+        start, raw = await http_call(app, "/assets/integration/" + style)
+        self.assertEqual(start["status"], 200)
+        self.assertEqual(raw, (FRONTEND / "integration" / style).read_bytes())
         self.assertNotIn(ORIGIN + "/assets/integration/maps-navigation-speech.js", seen)
 
     async def test_asset_and_route_isolation(self):

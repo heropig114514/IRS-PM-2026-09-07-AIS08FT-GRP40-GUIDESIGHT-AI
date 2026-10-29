@@ -1,11 +1,13 @@
 /* Responsibilities: Combine brief detection hints and bounded local visual tracking.
- * Implementation: Separate 150 ms layer lifetimes; source-index matching prevents duplicate boxes.
+ * Implementation: Separate 150 ms layer lifetimes; source-index matching prevents duplicate boxes;
+ * each redraw follows the current interface language without altering detection metadata.
  * Related Modules: live-latency.js, local-motion.js, tests/live-camera-overlay.test.mjs.
  * Declaration Index: overlayLifetime; validBox; LiveCameraOverlay; LiveCameraOverlay.constructor;
  * LiveCameraOverlay.clear; LiveCameraOverlay.clearTracking; LiveCameraOverlay.show;
  * LiveCameraOverlay.fits; LiveCameraOverlay.drawBox; LiveCameraOverlay.redraw.
  * Variable Index: source retains the newest detection; motion is a same-source visual estimate;
- * seen/hinted retain only source indices for scalar counts, never exported geometry.
+ * seen/hinted retain only source indices for scalar counts, never exported geometry;
+ * language reads the current interface language and is injectable for deterministic presentation checks.
  */
 /** Functionality: Bound visibility. Inputs: capture/current time and deadline. Outputs: milliseconds.
  * Logic: reject expired/future captures. Constraints: tracking never refreshes original capture age. */
@@ -24,12 +26,14 @@ function validBox(box) {
  * Logic: independent source/track deadlines and source-index deduplication.
  * Constraints: visual estimates never update inference, risk, distance or speech. */
 export class LiveCameraOverlay {
-  /** Functionality: Bind dependencies. Inputs: DOM, clock, timers, metrics callback. Outputs: idle overlay.
-   * Logic: retain original deadline. Constraints: native timers require their global receiver. */
+  /** Functionality: Bind dependencies. Inputs: DOM, clock, timers, metrics and language callbacks.
+   * Outputs: idle overlay. Logic: retain original deadline and read language only when drawing.
+   * Constraints: native timers require their global receiver; no document defaults to Chinese. */
   constructor({video, canvas, label, maxAgeMs, onMetrics = () => {}, now = () => performance.now(),
+    language = () => globalThis.document?.documentElement?.lang || "zh-CN",
     setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
     clearTimer = timer => globalThis.clearTimeout(timer)}) {
-    Object.assign(this, {video, canvas, label, maxAgeMs, onMetrics, now, setTimer, clearTimer});
+    Object.assign(this, {video, canvas, label, maxAgeMs, onMetrics, now, language, setTimer, clearTimer});
     this.timer = null; this.source = this.motion = null;
   }
   /** Functionality: Release both layers. Inputs: layer/timer state. Outputs: hidden overlay.
@@ -69,10 +73,11 @@ export class LiveCameraOverlay {
       Number.isFinite(meta.width) && Number.isFinite(meta.height) && meta.width > 0 && meta.height > 0 &&
       Math.abs((this.video.videoWidth / this.video.videoHeight) / (meta.width / meta.height) - 1) <= .03;
   }
-  /** Functionality: Draw one hint or track. Inputs: context, box, dimensions and layer kind.
-   * Outputs: canvas drawing. Logic: dashed unlabeled historical hints, solid labeled tracked estimates.
-   * Constraints: short hint labels are omitted to reduce dense-scene clutter and main-thread work. */
-  drawBox(context, box, meta, tracked) {
+  /** Functionality: Draw one hint or track. Inputs: context, box, dimensions, layer kind and language.
+   * Outputs: canvas drawing. Logic: dashed unlabeled hints and solid labeled tracked estimates;
+   * only a missing target name uses a localized placeholder.
+   * Constraints: preserve server labels and distances; omit short hint labels to limit clutter. */
+  drawBox(context, box, meta, tracked, chinese) {
     const width = this.video.clientWidth, height = this.video.clientHeight;
     const scale = Math.min(width / meta.width, height / meta.height);
     const ox = (width - meta.width * scale) / 2, oy = (height - meta.height * scale) / 2;
@@ -82,7 +87,7 @@ export class LiveCameraOverlay {
     context.strokeStyle = box.alert_required ? '#ff7043' : '#00ff8c';
     context.strokeRect(ox+x1*scale, oy+y1*scale, (x2-x1)*scale, (y2-y1)*scale);
     if (!tracked) return;
-    const text = `${box.label || '目标'}${Number.isFinite(box.distance_m) ? ` ${box.distance_m.toFixed(1)}m` : ''}`;
+    const text = `${box.label || (chinese ? '目标' : 'Object')}${Number.isFinite(box.distance_m) ? ` ${box.distance_m.toFixed(1)}m` : ''}`;
     const x = Math.max(0, ox+x1*scale), y = Math.max(18, oy+y1*scale);
     context.font = '14px sans-serif';
     context.fillStyle = '#102019'; context.fillRect(x, y-18, Math.min(width-x, context.measureText(text).width+6), 18);
@@ -91,13 +96,15 @@ export class LiveCameraOverlay {
   /** Functionality: Compose layers and report counts. Inputs: current time/layers. Outputs: drawing/metrics.
    * Logic: each source box is drawn once; expirations never reset during redraw. Track updates can
    * replace matching hints but cannot erase other live hints. Count unique boxes drawn during this
-   * detection's lifetime separately from currently hidden boxes. Constraints: counts do not prove
+   * detection's lifetime separately from currently hidden boxes; read interface language once per draw.
+   * Constraints: language changes never renew deadlines or alter source fields; counts do not prove
    * sensor-to-screen paint or model accuracy; exports contain no identities or coordinates. */
   redraw() {
     if (this.timer !== null) this.clearTimer(this.timer);
     this.timer = null;
     const {canvas, video, label, source, motion} = this;
     const context = canvas.getContext('2d'), now = this.now();
+    const chinese = /^zh(?:-|$)/i.test(this.language());
     context.setTransform(1, 0, 0, 1, 0, 0); context.clearRect(0, 0, canvas.width, canvas.height);
     canvas.hidden = label.hidden = true;
     if (!source) return false;
@@ -122,7 +129,7 @@ export class LiveCameraOverlay {
     source.meta.boxes.forEach((box, index) => {
       let reason = null;
       if (tracked.has(index)) {
-        this.drawBox(context, tracked.get(index), motion.meta, true);
+        this.drawBox(context, tracked.get(index), motion.meta, true, chinese);
         trackCount++; this.seen.add(index);
       } else if (!viewReady) reason = 'preview_unavailable';
       else if (!this.fits(source.meta)) reason = 'aspect_mismatch';
@@ -130,7 +137,7 @@ export class LiveCameraOverlay {
       else if (!overlayLifetime(source.capturedAt, now, this.maxAgeMs)) reason = 'detection_expired';
       else if (source.expiresAt <= now) reason = 'hint_expired';
       else {
-        this.drawBox(context, box, source.meta, false);
+        this.drawBox(context, box, source.meta, false, chinese);
         hintCount++; this.seen.add(index); this.hinted.add(index);
       }
       if (reason) hiddenReasons[reason] = (hiddenReasons[reason] || 0) + 1;
@@ -138,9 +145,10 @@ export class LiveCameraOverlay {
     this.trackedPeak = Math.max(this.trackedPeak, trackCount);
     const visible = hintCount + trackCount, total = source.meta.boxes.length;
     if (visible) {
-      label.textContent = `${((now-source.capturedAt)/1000).toFixed(1)} 秒前检测 · `
-        + (trackCount ? `本地跟踪（估计位置）${trackCount}` : '')
-        + (hintCount ? `${trackCount ? ' · ' : ''}虚线提示 ${hintCount}` : '');
+      const age = ((now-source.capturedAt)/1000).toFixed(1);
+      label.textContent = (chinese ? `${age} 秒前检测 · ` : `Detected ${age} s ago · `)
+        + (trackCount ? (chinese ? `本地跟踪（估计位置）${trackCount}` : `Local tracking (estimated positions) ${trackCount}`) : '')
+        + (hintCount ? `${trackCount ? ' · ' : ''}${chinese ? '虚线提示' : 'Dashed hints'} ${hintCount}` : '');
       canvas.hidden = label.hidden = false;
     }
     this.onMetrics({frame_index: source.meta.index, tracking_epoch: source.meta.tracking_epoch,

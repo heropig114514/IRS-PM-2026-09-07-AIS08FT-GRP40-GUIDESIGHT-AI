@@ -14,24 +14,36 @@ It does require an explicitly started connector and a continuously running lapto
 Keep the generated hostname exact; rebuilding a temporary tunnel requires updating
 the Web process's `MOBILE_PUBLIC_ORIGIN`. Do not use wildcard Host/Origin acceptance.
 
-For an explicit image latency session, set `PRS_LATENCY_PANEL=1` on this Web process.
-The explicit latency page selects `low-latency-2` and retains `metadata-v1`, original
+Set `PRS_LATENCY_PANEL=1` on this Web process to enable the shared live-camera display.
+The product entry `/mvp/maps/` retains the camera preview, detection overlays, current
+target list and manual speech recovery. It does not render latency statistics, tracking
+switches or export controls. Open `/mvp/maps/test` for those diagnostic controls; the
+direct local equivalents are `/maps/` and `/maps/test`. Both views use the same capture,
+tracking and speech controllers. Do not start detection in both sessions at once.
+The product retains its explicitly configured risk deadline and prepared-speech mode.
+The diagnostic page keeps its original one-second risk deadline and detailed category wording;
+moving the measurement controls does not change its warning policy.
+
+The enabled display selects `low-latency-2` unless `PRS_CAMERA_PROFILE` explicitly
+selects another supported profile. The product page retains `metadata-v1`, the original
 640-pixel capture bound and JPEG quality 0.8. At most two captured, transmitted or
-awaiting-display frames are admitted; the first frame completes alone. Other product
-pages retain `low-latency-1`; `standard` retains its original bound. The page adds a scalar JSON
-export. First-frame timing is separate from subsequent median/P95/max and completion
-FPS. Capture-to-decode includes encoding, transport, inference and result decode, but
-excludes sensor buffering and physical display refresh. At most the first 3000 frames
-per session are retained; no images, detection labels or positions are included.
+awaiting-display frames are admitted; the first frame completes alone. Without this
+flag the default remains `low-latency-1`; `standard` retains its original bound.
+Only the diagnostic page collects and exports the scalar latency report. First-frame
+timing is separate from subsequent median/P95/max and completion FPS. Capture-to-decode
+includes encoding, transport, inference and result decode, but excludes sensor buffering
+and physical display refresh. At most the first 3000 frames per session are retained;
+no images, detection labels or positions are included.
 
 A passing desktop fixture test confirms transport and software behavior, not physical
 phone permissions, wireless latency or speaker playback. Record the actual connector
 edge and phone export. A public tunnel is an access option, not a promised latency gain.
 
-The explicit latency page uses one live camera view sharing the existing capture
-stream. The source-bound result snapshot is hidden. Detection runs independently;
+The enabled product and diagnostic pages use one live camera view sharing the existing
+capture stream. The source-bound result snapshot is hidden. Detection runs independently;
 the optional local tracker reprojects validated boxes into subsequent image coordinates.
-Its checkbox is on by default on this explicit test page. A dedicated Worker samples
+Tracking is enabled on the product page; its default-on comparison checkbox is available
+only on the diagnostic page. A dedicated Worker samples
 the preview at a ceiling of 12 Hz, longest edge 320, with one outstanding local frame.
 It retains at most 28 grayscale pyramids and 2.1 seconds of local history. When a GPU
 result arrives, features from its exact retained source JPEG are replayed through that
@@ -102,7 +114,7 @@ speedup or a new model prediction. Keep comparison fixtures, transport, model an
 quality constant; lower JPEG quality and three-frame feedback pacing were investigated
 but are not active in this version.
 
-For the phone DEMO approved on 2026-10-29, set these variables on the Web process:
+For the prepared-speech phone configuration, set these variables on the Web process:
 
 ```text
 PRS_LATENCY_PANEL=1
@@ -117,8 +129,9 @@ results are suppressed. Already-started speech may finish its sentence. Track/se
 ownership, latest semantic confirmation, priority and cooldown checks remain active.
 
 Prepared speech mode serves the two verified startup clips locally and preloads the
-96 bilingual risk clips before enabling detection (about 4 MB). The visible voice
-test button preserves the original user-gesture audio activation. With the explicit
+96 bilingual risk clips before enabling detection (about 4 MB). The visible speech
+recovery button preserves the original user-gesture audio activation on both views.
+Removing diagnostic controls does not remove that recovery action. With the explicit
 live-overlay prepared-speech page, risks speak the grade, direction, named target
 (person, bicycle, car, motorcycle or chair) and confirmed approach where applicable.
 Other classes are described as obstacles with their original direction and grade;
@@ -137,11 +150,10 @@ hostname must be refreshed when that service is recreated. Without this variable
 the original local TTS backend is used. A first uncached phrase may need preparation
 and another fresh detection before it can play; this is not a two-second TTS SLA.
 
-Desktop Chrome with a synthetic camera verified real GPU results, one advancing
-preview, camera release on stop, real prepared PCM scheduling for a 1.5-second-old
-risk without a synthesis request, and suppression of a 2.1-second-old risk. Synthetic
-risk fixtures verify software paths only; physical phone audibility remains a
-separate check.
+Browser verification should cover actual GPU results, one advancing preview, camera
+release on stop, and prepared PCM scheduling without a synthesis request. Check fresh
+and expired risk cases against the configured capture-age limit. Synthetic risk
+fixtures verify software paths only; physical phone audibility remains a separate check.
 
 One-slot capture waits for the pending result before arming any remaining cadence
 timer. With a network round trip longer than one frame interval, the next capture
@@ -151,11 +163,9 @@ ceiling; the standard multi-frame profile is unchanged. This does not prove that
 all observed phone idle gaps are caused by browser timer throttling.
 
 Overlay timers must call the Window timer with its global receiver, not as a method
-of the overlay instance. An unbound native timer caused `Illegal invocation` after
-drawing, leaving boxes visible and aborting telemetry for those frames. Exports made
-before this fix may omit frames with boxes: their completion FPS and inter-sample
-gaps cannot establish true capture stalls. The current collector records each frame
-before the optional overlay, keeps original frame indices, and counts overlay errors.
+of the overlay instance. Drawing failures must not abort frame telemetry or leave
+expired boxes visible. The diagnostic collector records each frame before the optional
+overlay, keeps original frame indices, and counts overlay errors.
 Browser verification must check real timer expiry, observer errors and equality
 between received and exported frame counts; a screenshot alone is insufficient.
 
@@ -167,34 +177,18 @@ session counter. These fields distinguish stale/no-alert/paused/preparing/cooldo
 states without saving object labels, media or location. Timing and warning eligibility
 must be checked on the physical phone; desktop playback does not prove audibility.
 
-Read-only route inspection found a Windows system proxy at 127.0.0.1:7897 and an
-active aTrust virtual adapter. The connector's observed TCP socket was directly from
-192.168.10.8 to Cloudflare port 7844 using the Wi-Fi route; proxy environment variables
-were removed from its launch environment. The observed LAX edge alone cannot establish
-that the system proxy caused the detour. Transparent VPN interception remains possible;
-no VPN settings were changed and no VPN-off comparison was performed.
+### Phone measurement method
 
-### Phone measurement on 2026-10-29
-
-The completed phone export (`prs-live-latency-v1`, `low-latency-1`, `metadata-v1`)
-contained 108 frames over 167.845 seconds from first to last result: 0.6375 completed
-results/s. Subsequent-frame capture-to-decode median was 1433 ms, P95 2355.2 ms,
-maximum 3482 ms. Worker processing median was 46.25 ms, P95 202.11 ms; capture/JPEG
-encoding median was 11 ms and result decoding median 21 ms. Worker time represented
-4.78% of total steady-state elapsed frame work, while transport minus worker time
-represented 93.10%. That residual includes network, connector and Web overhead; it
-is not a one-way network measurement. The exported summary was independently
-recomputed and matched, and the timing decomposition error was zero.
-
-105 of 108 results were already over one second old when received. The connector
-registered at `lax01`; a temporary QUIC trial registered at `lax08`. A 12-pair
-desktop echo comparison at 70,190 bytes measured median 2021 ms for the existing
-HTTP/2 route and 2994 ms for the QUIC trial. The QUIC trial was stopped and was not
-deployed. Echo returns the entire payload, unlike compact detection results, and
-the two connector endpoints also differ, so this does not isolate protocol effects.
-The camera preview improvement changes usability, not these measured inference
-latencies. Faster detection requires improving the route/deployment, then measuring
-again; these results do not establish a low-latency public demo.
+Keep individual measurements, connector edges and network observations in structured
+reports. Record the actual camera profile, result transport, frame count, capture-age
+distribution and first/steady timing boundaries. Recompute summary percentiles from
+the retained rows and check timing decomposition before comparing deployments.
+Transport time minus worker time includes network, connector and Web overhead; it
+is not a one-way network measurement. An observed connector edge does not identify
+the cause of a route detour. Record proxy and VPN conditions explicitly rather than
+inferring them from the edge location. Echo and compact detection results have
+different payloads, so their timings do not isolate transport protocol effects.
+Preview smoothness and local tracking updates are separate from inference latency.
 
 ## Existing application-server tunnel: plan and boundaries
 

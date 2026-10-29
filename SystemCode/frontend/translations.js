@@ -4,11 +4,22 @@
  * Related Modules: i18n.js, index.html, maps.html, camera.js, live-detection-client.js,
  * frame-pipeline.js, maps-page.js, navigation-ui.js, vibration.js, speech-output.js, scene-client.js,
  * integration/maps-navigation-speech.js, integration/assist-mvp.js, integration/assist-panel.html,
+ * integration/live-camera.html, integration/live-latency.html,
  * SystemCode/backend/integration/assist.py.
  * Declaration Index: None.
  * Variable Index: translations — fixed Chinese-to-English UI dictionary; contains no coordinates or image data.
  */
 export const translations = {
+  "实时取景与风险提醒": "Live camera and risk alerts",
+  "手机实时取景": "Live phone camera preview",
+  "恢复语音": "Restore voice",
+  "实时画面延迟测试": "Live camera latency test",
+  "连续检测 30–60 秒后停止，导出测试结果。这里测量取帧、编码、传输、推理和结果解码的总耗时，不包含摄像头内部缓冲与屏幕刷新。": "Run detection for 30–60 seconds, then stop and export the results. This measures capture, encoding, transport, inference and result decoding; it excludes camera buffering and screen refresh.",
+  "实线框：优先跟踪高风险目标，最多 6 个，位置为本地估计。虚线框：其他已识别目标的原位置，短暂显示 0.15 秒。距离和警报仍以后台检测为准。": "Solid boxes: up to 6 targets are tracked locally, prioritizing higher risk; positions are estimates. Dashed boxes: other detected targets briefly appear at their original positions for 0.15 seconds. Distances and alerts still come from backend detection.",
+  "本地跟踪目标框": "Track object boxes locally",
+  "导出延迟结果 JSON": "Export latency results as JSON",
+  "仅记录本次前 3000 帧的耗时、警报状态、检出／绘制数量和未跟踪原因，以及最近 300 条语音状态变化，不保存图片、目标名称或位置。绘制次数不代表模型识别准确率。": "Records timings, alert states, detection and display counts, and tracking exclusion reasons for the first 3000 frames, plus the latest 300 speech state changes. Images, object names and positions are not saved. Drawing counts do not measure detection accuracy.",
+  "导航与环境检测已停止。": "Navigation and obstacle detection stopped.",
   "常驻 GPU · 80 类": "Resident GPU · 80 classes",
   "YOLO26n 检测 80 类；常驻 GPU 服务返回标注图像。": "YOLO26n detects 80 classes; the resident GPU service returns annotated images.",
   "图像由本机或自有服务器的常驻 GPU 处理。首帧可能等待初始化；每次只接收一个视频会话，持续运行直到停止或出错。不会自动切换至其他服务。": "Images are processed by the resident GPU on your computer or server. The first frame may wait for initialization. One video session runs until stopped or an error occurs. The service never switches automatically.",

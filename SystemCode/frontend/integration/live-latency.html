@@ -1,27 +1,15 @@
-<!-- Responsibilities: Expose native preview, visual tracking controls and scalar latency export.
-     Implementation: Explicit demo-only composition. Related Modules: live-latency.js.
+<!-- Responsibilities: Expose latency measurement and visual tracking diagnostics on the test page.
+     Implementation: Optional controls for the shared live preview; never included in the product view.
+     Related Modules: live-camera.html; live-latency.js; assist.py.
      Declaration Index: None. Variable Index: None. -->
-<figure id="live-camera-figure" class="product-detection-view" hidden>
-  <figcaption>实时取景与风险提醒</figcaption>
-  <div class="live-camera-stage">
-    <video id="live-camera-preview" muted autoplay playsinline aria-label="手机实时取景"></video>
-    <canvas id="live-camera-overlay" hidden aria-hidden="true"></canvas>
-    <span id="live-camera-age" hidden></span>
-  </div>
-  <p class="product-hint">实线框：优先跟踪高风险目标，最多 6 个，位置为本地估计。虚线框：其他已识别目标的原位置，短暂显示 0.15 秒。失去可靠跟踪后不保留实线框；超过 2 秒的检测不画框。距离和警报仍以后台检测为准。</p>
-  <label><input id="live-motion-enabled" type="checkbox" checked> 本地跟踪目标框</label>
-  <p id="live-motion-status" class="product-hint" role="status">等待开始跟踪。</p>
-  <p id="live-box-counts" class="product-hint">等待检测目标统计。</p>
-  <p class="product-hint">语音播报风险、方向和常见目标名称；其他类别统称“障碍物”，具体名称与距离见下方列表。</p>
-</figure>
-<section class="product-card" aria-labelledby="live-latency-title">
+<section id="live-latency-panel" class="product-card" aria-labelledby="live-latency-title">
   <h2 id="live-latency-title">实时画面延迟测试</h2>
   <p>连续检测 30–60 秒后停止，导出测试结果。这里测量取帧、编码、传输、推理和结果解码的总耗时，不包含摄像头内部缓冲与屏幕刷新。</p>
-  <p>取景直接在手机显示，检测使用本机 GPU，传输经过 Cloudflare。警报只使用有效期内的检测结果。</p>
-  <button id="live-speech-test" class="button secondary" type="button">试听／恢复语音</button>
-  <p id="live-speech-feedback" role="status"></p>
-  <pre id="live-latency-values">等待开始检测。</pre>
+  <p>实线框：优先跟踪高风险目标，最多 6 个，位置为本地估计。虚线框：其他已识别目标的原位置，短暂显示 0.15 秒。距离和警报仍以后台检测为准。</p>
+  <label><input id="live-motion-enabled" type="checkbox" checked> 本地跟踪目标框</label>
+  <p id="live-motion-status" role="status" data-language-original></p>
+  <p id="live-box-counts" data-language-original></p>
+  <pre id="live-latency-values" data-language-original></pre>
   <button id="live-latency-export" class="button secondary" type="button" disabled>导出延迟结果 JSON</button>
   <p>仅记录本次前 3000 帧的耗时、警报状态、检出／绘制数量和未跟踪原因，以及最近 300 条语音状态变化，不保存图片、目标名称或位置。绘制次数不代表模型识别准确率。</p>
 </section>
-<script type="module" src="../assets/integration/live-latency.js"></script>

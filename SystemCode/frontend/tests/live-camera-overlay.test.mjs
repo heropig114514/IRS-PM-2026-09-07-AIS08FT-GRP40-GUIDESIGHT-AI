@@ -1,8 +1,8 @@
-/* Responsibilities: Verify layered drawing, source identity and scalar accounting.
- * Implementation: Controlled canvas and clock, without camera or model substitutes.
+/* Responsibilities: Verify layered drawing, source identity, bilingual labels and scalar accounting.
+ * Implementation: Controlled canvas, language and clock, without camera or model substitutes.
  * Related Modules: integration/live-camera-overlay.js.
- * Declaration Index: fixture; detection; tracked.
- * Variable Index: per-test clock, strokes and metrics; no media or network.
+ * Declaration Index: fixture; detection; tracked; testOverlayLanguage.
+ * Variable Index: per-test clock, strokes, labels and metrics; no media or network.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -57,18 +57,20 @@ test("overlay clears on expiry and suppresses old or rotated results", () => {
   assert.equal(overlay.show(event), false);
 });
 
-/** Functionality: Bind a deterministic canvas. Inputs: None. Outputs: overlay and clock control.
- * Logic: observe real drawing calls and deadlines. Constraints: not physical screen paint. */
-function fixture() {
-  const state={now:500,strokes:[],metrics:[],timers:[],dash:[]};
-  const context={setTransform(){},clearRect(){state.strokes=[];},setLineDash(value){state.dash=value;},
+/** Functionality: Bind a deterministic canvas. Inputs: Optional interface-language getter.
+ * Outputs: overlay, labels and clock control. Logic: observe real drawing calls and deadlines.
+ * Constraints: not physical screen paint. */
+function fixture(language) {
+  const state={now:500,strokes:[],texts:[],metrics:[],timers:[],dash:[]};
+  const context={setTransform(){},clearRect(){state.strokes=[];state.texts=[];},setLineDash(value){state.dash=value;},
     strokeRect(...coordinates){state.strokes.push({coordinates,dashed:state.dash.length>0});},
-    measureText(){return {width:20};},fillRect(){},fillText(){}};
+    measureText(){return {width:20};},fillRect(){},fillText(value){state.texts.push(value);}};
   const canvas={width:0,height:0,hidden:true,getContext:()=>context};
   const video={videoWidth:640,videoHeight:480,clientWidth:320,clientHeight:240};
-  const overlay=new LiveCameraOverlay({video,canvas,label:{},maxAgeMs:2000,now:()=>state.now,
+  const label={};
+  const overlay=new LiveCameraOverlay({video,canvas,label,maxAgeMs:2000,now:()=>state.now,language,
     onMetrics:value=>state.metrics.push(value),setTimer(fn,delay){state.timers.push({fn,delay});return state.timers.length;},clearTimer(){}});
-  return {state,overlay,video,canvas};
+  return {state,overlay,video,canvas,label};
 }
 /** Functionality: Build distinct source boxes. Inputs: count/index/epoch. Outputs: camera event.
  * Logic: valid independent geometry. Constraints: no inference claim. */
@@ -116,4 +118,33 @@ test('expired and rotated sources report explicit non-display reasons',()=>{
   state.now=500;video.videoWidth=480;video.videoHeight=640;overlay.show(detection(8,2));
   assert.deepEqual(state.metrics.at(-1).hidden_reasons,{aspect_mismatch:8});
   assert.equal(state.metrics.at(-1).displayed_unique_count,0);
+});
+
+/** Functionality: Follow interface language on each redraw, including missing-target labels.
+ * Inputs: One retained source, local estimates and Chinese/English language switches.
+ * Outputs: Bilingual age/track/hint text and unchanged geometry, source fields and deadlines.
+ * Logic: Change only the injected language while redrawing the same active layers.
+ * Constraints: No new detection, speech, refreshed lifetime or physical display claim. */
+test('language switches redraw all overlay labels without renewing source lifetimes', function testOverlayLanguage() {
+  let language = 'zh-CN';
+  const {state,overlay,canvas,label}=fixture(()=>language), source=detection(3);
+  source.result.metadata.boxes[0].label=''; source.result.metadata.boxes[0].distance_m=2;
+  source.result.metadata.boxes[1].label='person';
+  const original=JSON.stringify(source);
+  overlay.show(source); overlay.show(tracked(source,2));
+  assert.equal(label.textContent,'0.5 秒前检测 · 本地跟踪（估计位置）2 · 虚线提示 1');
+  assert.deepEqual(state.texts,['目标 2.0m','person']);
+  const deadline=overlay.source.expiresAt, motionDeadline=overlay.motion.expiresAt;
+  const geometry=structuredClone(state.strokes), metrics=structuredClone(state.metrics.at(-1));
+  language='en-US'; assert.equal(overlay.redraw(),true);
+  assert.equal(label.textContent,'Detected 0.5 s ago · Local tracking (estimated positions) 2 · Dashed hints 1');
+  assert.deepEqual(state.texts,['Object 2.0m','person']);
+  assert.doesNotMatch(label.textContent,/\p{Script=Han}/u);
+  assert.deepEqual(state.strokes,geometry); assert.deepEqual(state.metrics.at(-1),metrics);
+  language='zh-CN'; overlay.redraw();
+  assert.equal(label.textContent,'0.5 秒前检测 · 本地跟踪（估计位置）2 · 虚线提示 1');
+  assert.deepEqual(state.texts,['目标 2.0m','person']);
+  assert.equal(JSON.stringify(source),original);
+  assert.equal(overlay.source.expiresAt,deadline); assert.equal(overlay.motion.expiresAt,motionDeadline);
+  language='en'; state.now=650; assert.equal(overlay.redraw(),false); assert.equal(canvas.hidden,true);
 });
