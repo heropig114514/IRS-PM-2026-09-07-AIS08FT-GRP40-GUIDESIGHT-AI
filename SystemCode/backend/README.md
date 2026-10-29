@@ -40,7 +40,7 @@ The algorithm emits risk fields only. After explicit user activation, local Guid
 and schedules shared browser speech/vibration without changing scoring rules.
 Per-class traffic-light threshold, the centre ROI pass, front-light marking, and the pedestrian
 light-colour classifier study (results and integration contract) are in [TRAFFIC-LIGHT.md](TRAFFIC-LIGHT.md).
-The opt-in 87-class walking-aid model (`PRS_DETECTION_MODEL=yolo26n-walk`: poles, bollards, cones,
+The default 87-class walking-aid model (`PRS_DETECTION_MODEL=yolo26n-walk`: poles, bollards, cones,
 stairs and pedestrian-light colour) is described in [WALK-MODEL.md](WALK-MODEL.md).
 
 Qwen2.5-VL scene description (`POST /scene/describe/`) is documented in [VLM.md](VLM.md). Local model

@@ -247,7 +247,7 @@ def main(argv=None):
     parser.add_argument("--input", type=Path, default=TEST_ROOT / "samples/bus.jpg",
                         help="Image or directory; default: bundled official bus image")
     parser.add_argument("--output", type=Path, required=True, help="New output directory")
-    # Defaults follow PRS_DETECTION_MODEL (COCO yolo26n unless the walk model is selected).
+    # Defaults follow PRS_DETECTION_MODEL (yolo26n-walk unless COCO yolo26n is selected).
     parser.add_argument("--weights", type=Path, default=model_files()[0])
     parser.add_argument("--manifest", type=Path, default=model_files()[1])
     parser.add_argument("--depth-weights", type=Path, default=ROOT / "models/yolo26n-depth.pt")

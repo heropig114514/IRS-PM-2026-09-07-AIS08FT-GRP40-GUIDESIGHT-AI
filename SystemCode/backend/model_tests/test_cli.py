@@ -197,5 +197,5 @@ class DepthCliTests(SimpleTestCase):
                 self.assertEqual(cli.main(["--output", str(root / "output")]), 0)
             args = run.call_args.args[0]
             self.assertEqual(args.input, cli.TEST_ROOT / "samples/bus.jpg")
-            self.assertEqual(args.weights, cli.ROOT / "models/yolo26n.pt")
+            self.assertEqual(args.weights, cli.ROOT / "models/yolo26n-walk.pt")
             self.assertEqual(args.depth_weights, cli.ROOT / "models/yolo26n-depth.pt")

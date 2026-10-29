@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 def load_detector(distance_config=None):
     """Functionality: Load the existing native FP32 complete pipeline and record actual assets.
-    Inputs: PRS_DETECTION_MODEL-selected model files (default COCO yolo26n), optional
+    Inputs: PRS_DETECTION_MODEL-selected model files (default yolo26n-walk), optional
     startup-frozen distance profile. Outputs: detector and fingerprints.
     Logic: preflight selected local files/CUDA; A uses original constructors/default rules;
     B does not open/hash/initialize depth weights; C wraps the same depth fusion with tracking.
