@@ -1,11 +1,11 @@
-/* Responsibilities: Arbitrate live assistant replies, navigation and algorithm-required risk output in one owner.
+/* Responsibilities: Arbitrate signal, assistant, navigation and algorithm-required risk output in one owner.
  * Implementation: Latest-source scheduling, separate monotonic/GPS clocks, existing short-text
  * policies, a temporary FIFO for live assistant replies, owned preemption, queued synthesis preparation,
  * current semantic confirmation before first PCM, same-target sentence completion and
  * start-based channel cooldowns. Assistant replies use automatic bilingual TTS language selection;
  * risk/navigation guidance follows the explicit UI language. Long replies use safe text boundaries.
  * Related Modules: video-alerts.js, navigation-speech.js, maps-navigation-bridge.js, events.js,
- * catalog.js, ../navigation.js, ../speech-output.js, ../vibration.js; no core/device creation.
+ * catalog.js, signal-alerts.js, ../navigation.js, ../speech-output.js, ../vibration.js; no core/device creation.
  * Declaration Index: splitAssistantReply; AssistGuidanceManager; AssistGuidanceManager.constructor;
  * AssistGuidanceManager.navPort.begin; AssistGuidanceManager.navPort.ingest;
  * AssistGuidanceManager.navPort.stop; AssistGuidanceManager.navPort.describe;
@@ -18,6 +18,8 @@
  * AssistGuidanceManager.stopNavigation; AssistGuidanceManager.riskFresh;
  * AssistGuidanceManager.riskPreparationCurrent; AssistGuidanceManager.riskSpeechConfirmation;
  * AssistGuidanceManager.sameConfirmedRiskTarget;
+ * AssistGuidanceManager.speechRiskBoxes; AssistGuidanceManager.refreshSignal;
+ * AssistGuidanceManager.signalCurrent;
  * AssistGuidanceManager.navigationFresh; AssistGuidanceManager.navigationCandidate;
  * AssistGuidanceManager.refreshNavigation; AssistGuidanceManager.eligible;
  * AssistGuidanceManager.driverOwns; AssistGuidanceManager.cancel;
@@ -34,8 +36,10 @@
  * synthesis provenance stays unchanged while separately reported confirmation identifies the current source;
  * confirmedTarget freezes actual speech-start target/session/epoch identity independently of the synthesis source;
  * assistantReplies/assistantReplySequence retain only queued live reply text and request identity;
- * navigationRevision/completedNavigation deduplicate completed steps; paused/reasons require
- * explicit recovery; schedulerTimer expires sources without retrying failed output.
+ * navigationRevision/completedNavigation deduplicate completed steps;
+ * signalState/signalRevision/completedSignal deduplicate front-light transitions per perception session;
+ * lastSignalCapture bounds encounters using the original frame TTL, independently of tracking IDs;
+ * paused/reasons require explicit recovery; schedulerTimer expires sources without retrying failed output.
  */
 import {EventBus} from "./events.js";
 import {languageOf} from "./catalog.js";
@@ -43,6 +47,7 @@ import {MAX_TEXT_LENGTH} from "../speech-output.js";
 import {briefVideoAlertText, preparedVideoAlertText, selectVideoAlert, videoAlertText} from "./video-alerts.js";
 import {navigationSpeechText} from "./navigation-speech.js";
 import {NAVIGATION_POLICY} from "../navigation.js";
+import {selectFrontSignal, signalSpeechText} from "./signal-alerts.js";
 
 const RISK_TTL_MS = 1000, COOLDOWN_MS = 3000;
 const PATTERNS = {1: {name: "short", duration: 200}, 2: {name: "short", duration: 200},
@@ -66,7 +71,7 @@ function splitAssistantReply(text) {
 }
 
 /* Functionality: Own assistant reply, navigation and risk speech plus vibration for one assistance page.
- * Logic: Risk precedes live assistant replies, which precede navigation; assistant replies resume
+ * Logic: Risk precedes front-light transitions, then live assistant replies and navigation; replies resume
  * in order after higher-priority work, and completed navigation steps are not repeated.
  * Constraints: Disabled initially; no algorithms, navigation controls, voice replacement or failed-output retries. */
 export class AssistGuidanceManager {
@@ -90,6 +95,8 @@ export class AssistGuidanceManager {
     this.latestRisk = this.latestNavigation = null;
     this.riskGeneration = this.navigationGeneration = 0;
     this.trackingEpoch = null; this.riskSpeechState = null;
+    this.signalState = this.latestSignal = this.completedSignal = this.lastSignalCapture = null;
+    this.signalRevision = 0;
     this.histories = {speech: new Map(), vibration: new Map()};
     this.active = {speech: null, vibration: null};
     this.paused = {speech: false, vibration: false};
@@ -122,7 +129,7 @@ export class AssistGuidanceManager {
    * Logic: Local event stream. Constraints: No source replay or browser/device acquisition. */
   subscribe(listener) { return this.events.subscribe(listener); }
 
-  /* Functionality: Explain current risk speech eligibility without changing output decisions.
+  /* Functionality: Explain obstacle-risk speech eligibility independently of signal transitions.
    * Inputs: Original capture clock, server alert flags, ownership and driver state.
    * Outputs: Finite reason, frame age/count and pause code without objects, media or utterance text.
    * Logic: Preserve configured capture freshness, algorithm-required selection and per-track cooldown;
@@ -130,7 +137,7 @@ export class AssistGuidanceManager {
    * Constraints: Read-only; no risk reclassification, timestamp refresh, retry or physical-audio claim. */
   riskSpeechStatus() {
     const input = this.latestRisk, age = input ? this.now() - input.capturedAt : null;
-    const boxes = input?.metadata.boxes ?? [], box = selectVideoAlert(boxes);
+    const boxes = input?.metadata.boxes ?? [], box = selectVideoAlert(this.speechRiskBoxes());
     const active = this.active.speech, driver = this.speech?.describe();
     const state = !this.riskEnabled ? "disabled" : !this.riskSessionId ? "idle" : !input ? "waiting"
       : this.paused.speech ? "paused" : active?.kind === "risk" && active.started ? "playing"
@@ -152,6 +159,9 @@ export class AssistGuidanceManager {
   describe() {
     return {risk_enabled: this.riskEnabled, navigation_enabled: this.navigationEnabled,
       risk_speech: this.riskSpeechStatus(),
+      signal_state: this.latestSignal?.state ?? null,
+      signal_pending: Boolean(this.latestSignal && (this.completedSignal?.revision !== this.signalRevision ||
+        this.completedSignal?.language !== this.language)),
       risk_session_id: this.riskSessionId, navigation_run_id: this.navigationRunId,
       queued_assistant_replies: this.assistantReplies.length,
       paused: {...this.paused}, reasons: {...this.reasons},
@@ -168,8 +178,9 @@ export class AssistGuidanceManager {
    * Constraints: No box body, spoken text, instruction or GPS coordinate. */
   context(descriptor) {
     return {kind: descriptor?.kind ?? null, ...descriptor?.source,
-      source: descriptor?.kind === "risk" ? "perception" : descriptor?.kind === "navigation" ? "navigation" : null,
+      source: ["risk", "signal"].includes(descriptor?.kind) ? "perception" : descriptor?.kind === "navigation" ? "navigation" : null,
       notice: descriptor?.notice ?? null,
+      ...(descriptor?.kind === "signal" ? {signal_state: descriptor.state} : {}),
       track_id: descriptor?.box?.track_id ?? null, alert_priority: descriptor?.box?.alert_priority ?? null,
       ...(descriptor?.confirmedTarget ? {confirmed_track_id: descriptor.confirmedTarget.track_id,
         confirmed_tracking_epoch: descriptor.confirmedTarget.tracking_epoch} : {})};
@@ -285,6 +296,8 @@ export class AssistGuidanceManager {
     if (epoch !== this.trackingEpoch) {
       this.trackingEpoch = epoch;
       this.histories.speech.clear(); this.histories.vibration.clear();
+      this.signalState = this.latestSignal = this.completedSignal = this.lastSignalCapture = null;
+      this.signalRevision++;
     }
     this.latestRisk = structuredClone({capturedAt, metadata}); this.pump(); return this.describe();
   }
@@ -295,8 +308,10 @@ export class AssistGuidanceManager {
   stopRisk(reason = "risk_stop") {
     this.riskSessionId = this.latestRisk = this.trackingEpoch = null; this.riskGeneration++;
     this.histories.speech.clear(); this.histories.vibration.clear();
+    this.signalState = this.latestSignal = this.completedSignal = this.lastSignalCapture = null;
+    this.signalRevision++;
     for (const channel of ["speech", "vibration"])
-      if (this.active[channel]?.kind === "risk") this.cancel(channel, reason, true);
+      if (["risk", "signal"].includes(this.active[channel]?.kind)) this.cancel(channel, reason, true);
     this.report("risk_stopped", {reason}); this.pump(); return this.describe();
   }
 
@@ -358,7 +373,7 @@ export class AssistGuidanceManager {
    * use an ineligible/cooled-down target merely because an older phrase has finished synthesis. */
   riskSpeechConfirmation(descriptor) {
     if (!this.riskPreparationCurrent(descriptor)) return null;
-    const boxes = this.latestRisk.metadata.boxes, highest = selectVideoAlert(boxes);
+    const boxes = this.speechRiskBoxes(), highest = selectVideoAlert(boxes);
     if (!highest || highest.alert_priority !== descriptor.box.alert_priority) return null;
     const matches = boxes.filter(box => box.alert_required === true && box.alert_priority === highest.alert_priority &&
       this.riskText(box, this.language) === descriptor.speechText && this.eligible(box, "speech"));
@@ -375,6 +390,50 @@ export class AssistGuidanceManager {
     return Boolean(descriptor?.started && confirmed && box &&
       confirmed.track_id === box.track_id && confirmed.session_id === this.riskSessionId &&
       confirmed.generation === this.riskGeneration && confirmed.tracking_epoch === this.trackingEpoch);
+  }
+
+  /* Functionality: Keep pedestrian-signal semantics out of generic obstacle speech only.
+   * Inputs: Current original boxes. Outputs: Existing boxes except merged pedestrian signals.
+   * Logic: Signal colour has a separate announcement path, including unknown/no-TTC signals.
+   * Constraints: No risk fields are changed; all original boxes remain eligible for vibration. */
+  speechRiskBoxes() { return (this.latestRisk?.metadata.boxes ?? []).filter(box => box.label !== "pedestrian light"); }
+
+  /* Functionality: Retain the current front-light transition without using risk or track thresholds.
+   * Inputs: Latest frame, interface language and original capture clock. Outputs: Pending descriptor or null.
+   * Logic: Deduplicate colour within one encounter; a capture gap of the existing TTL starts a new encounter.
+   * Unknown frames revoke current permission without repeatedly announcing a briefly occluded same colour.
+   * Constraints: Does not infer colour, update source timestamps, announce or maintain cross-phone state. */
+  refreshSignal() {
+    if (this.lastSignalCapture !== null && this.now() - this.lastSignalCapture >= this.riskMaxAgeMs) {
+      this.signalState = this.completedSignal = this.lastSignalCapture = null; this.signalRevision++;
+    }
+    const box = this.riskEnabled && this.riskSessionId && this.riskFresh()
+      ? selectFrontSignal(this.latestRisk.metadata.boxes) : null;
+    if (!box) { this.latestSignal = null; return null; }
+    if (box.light_state !== this.signalState) {
+      this.signalState = box.light_state; this.signalRevision++;
+    }
+    this.lastSignalCapture = this.latestRisk.capturedAt;
+    this.latestSignal = {kind: "signal", state: box.light_state, box, signalRevision: this.signalRevision,
+      generation: this.riskGeneration, source: Object.freeze({session_id: this.riskSessionId,
+        frame_index: this.latestRisk.metadata.index, captured_at_ms: this.latestRisk.capturedAt,
+        tracking_epoch: this.trackingEpoch})};
+    return this.completedSignal?.revision === this.signalRevision && this.completedSignal?.language === this.language
+      ? null : this.latestSignal;
+  }
+
+  /* Functionality: Require current algorithm evidence before starting or continuing signal speech.
+   * Inputs: Submitted descriptor and newest signal source. Outputs: Current matching signal box or null.
+   * Logic: Match session, generation, epoch, transition, colour, language and voice against a fresh frame.
+   * Constraints: A stale/unknown/red replacement revokes green immediately, even after playback started. */
+  signalCurrent(descriptor) {
+    if (!this.riskEnabled || !this.riskSessionId || !this.riskFresh() ||
+        descriptor?.generation !== this.riskGeneration || descriptor.source.session_id !== this.riskSessionId ||
+        descriptor.source.tracking_epoch !== this.trackingEpoch || descriptor.signalRevision !== this.signalRevision ||
+        descriptor.speechLanguage !== this.language || descriptor.speechVoiceId !== this.voiceId) return null;
+    const box = selectFrontSignal(this.latestRisk.metadata.boxes);
+    return box && box.light_state === descriptor.state && signalSpeechText(box.light_state, this.language) === descriptor.speechText
+      ? box : null;
   }
 
   /* Functionality: Check source GPS age on the epoch clock. Inputs: Core snapshot.
@@ -468,10 +527,10 @@ export class AssistGuidanceManager {
     }
   }
 
-  /* Functionality: Submit one backend risk, navigation or assistant utterance.
+  /* Functionality: Submit one backend risk, signal, navigation or assistant utterance.
    * Inputs: Frozen descriptor/text.
    * Outputs: Request ownership or diagnosed pause/suppression. Logic: Protect all foreign speech.
-   * Constraints: Only risk requests carry the explicit risk-preparation purpose; backend Cherry is
+   * Constraints: Only risk/signal requests carry the explicit prepared-audio purpose; backend Cherry is
    * mandatory and no local voice, automatic enablement, retry or scene/manual preemption is permitted. */
   submitSpeech(descriptor, text) {
     const status = this.speech?.describe();
@@ -492,7 +551,7 @@ export class AssistGuidanceManager {
     let result;
     try { result = this.speech.speak(text, {language, voice_id: this.voiceId,
       rate: Number(this.speech.rate?.value ?? 2), volume: Number(this.speech.volume?.value ?? 1),
-      ...(descriptor.kind === "risk" ? {purpose: "risk"} : {})}); }
+      ...(["risk", "signal"].includes(descriptor.kind) ? {purpose: "risk"} : {})}); }
     catch { result = {accepted: false, reason: "speak_failed"}; }
     const pending = this.pendingSubmission; this.pendingSubmission = null;
     if (!result?.accepted) return this.pause("speech", result?.reason || "speak_failed", pending);
@@ -550,9 +609,16 @@ export class AssistGuidanceManager {
           !this.riskSpeechConfirmation(active)) {
         this.cancel(channel, "risk_changed_before_start"); this.pump();
       }
+      if (this.active[channel] === active && active.kind === "signal" && !active.started && !active.cancelFailed &&
+          !this.signalCurrent(active)) {
+        this.cancel(channel, "signal_changed_before_start"); this.pump();
+      }
       return;
     }
     if (event.phase === "start") {
+      if (active.kind === "signal" && !this.signalCurrent(active)) {
+        this.cancel(channel, "signal_changed_before_start"); this.pump(); return;
+      }
       const confirmation = channel === "speech" && active.kind === "risk" ? this.riskSpeechConfirmation(active) : null;
       active.started = true;
       if (confirmation) active.confirmedTarget = Object.freeze({track_id: confirmation.track_id,
@@ -567,7 +633,7 @@ export class AssistGuidanceManager {
       }
       this.report("output_start", {channel, request_id: active.requestId, ...this.context(active),
         actual_start: true, hardware_verified: false,
-        capture_to_start_ms: active.kind === "risk" ? this.now() - active.source.captured_at_ms : null,
+        capture_to_start_ms: ["risk", "signal"].includes(active.kind) ? this.now() - active.source.captured_at_ms : null,
         ...(confirmation ? {confirmed_track_id: confirmation.track_id, confirmed_frame_index: this.latestRisk.metadata.index,
           confirmed_capture_to_start_ms: this.now() - this.latestRisk.capturedAt} : {})});
     } else if (["end", "cancel", "error"].includes(event.phase)) {
@@ -577,6 +643,11 @@ export class AssistGuidanceManager {
       else { this.active[channel] = null; active.finished = true; }
       if (event.phase === "end" && active.kind === "navigation" && active.revision === this.navigationRevision &&
           active.generation === this.navigationGeneration) this.completedNavigation = active.revision;
+      if (event.phase === "end" && active.kind === "signal") {
+        if (!active.started) this.pause(channel, "signal_not_started", active);
+        else if (this.signalCurrent(active))
+          this.completedSignal = {revision: active.signalRevision, language: active.speechLanguage};
+      }
       if (event.phase === "end" && active.kind === "assistant") {
         const reply = this.assistantReplies[0];
         if (reply?.id === active.replyId) {
@@ -603,6 +674,8 @@ export class AssistGuidanceManager {
     const delays = [];
     if (this.riskEnabled && this.latestRisk && this.riskFresh())
       delays.push(this.riskMaxAgeMs - (this.now() - this.latestRisk.capturedAt));
+    if (this.riskEnabled && this.lastSignalCapture !== null)
+      delays.push(this.riskMaxAgeMs - (this.now() - this.lastSignalCapture));
     if (this.navigationEnabled && this.navigation && this.navigation.notice !== "error")
       delays.push(NAVIGATION_POLICY.max_fix_age_ms - (this.epochNow() - this.navigation.snapshot.position.timestamp));
     const speech = this.active.speech;
@@ -616,14 +689,15 @@ export class AssistGuidanceManager {
     if (Number.isFinite(delay)) this.schedulerTimer = this.setTimer(() => { this.schedulerTimer = null; this.pump(); }, delay);
   }
 
-  /* Functionality: Arbitrate current risk, queued assistant replies and real navigation.
+  /* Functionality: Arbitrate current risk, front-light transitions, assistant replies and navigation.
    * Inputs: Independent source/driver state. Outputs: Owned speech/vibration actions.
    * Logic: Retain risk synthesis as preparation through fresh-frame target/meaning changes until
    * first PCM requires exact current confirmation. A started short sentence finishes for its actual
    * confirmed target even if that target escalates; latest valid escalation is reconsidered on completion.
    * Higher priority from another target or tracker epoch still preempts immediately;
    * no-alert preparation yields to available assistant/navigation work. Risk preempts owned navigation
-   * or assistant replies; replies preempt navigation and
+   * or assistant replies; signal transitions use speech cooldown gaps and preempt replies/navigation;
+   * replies preempt navigation and
    * continue in FIFO order; latest fresh navigation resumes after higher-priority speech.
    * Constraints: No manual/foreign preemption, frame FIFO, algorithm changes or failed cleanup retries. */
   pump() {
@@ -633,28 +707,35 @@ export class AssistGuidanceManager {
     try {
       this.refreshNavigation();
       const box = this.riskEnabled && this.riskSessionId && this.riskFresh()
+        ? selectVideoAlert(this.speechRiskBoxes()) : null;
+      const vibrationBox = this.riskEnabled && this.riskSessionId && this.riskFresh()
         ? selectVideoAlert(this.latestRisk.metadata.boxes) : null;
+      const signal = this.refreshSignal();
+      const riskSpeechReady = box && this.eligible(box, "speech");
       const speech = this.active.speech;
       if (speech?.kind === "risk") {
         const expiredQueued = !speech.started && !this.riskFresh();
-        const yieldPreparation = !speech.started && !box && (this.assistantReplies.length > 0 ||
+        const yieldPreparation = !speech.started && !box && (signal || this.assistantReplies.length > 0 ||
           this.navigationEnabled && this.navigation && this.completedNavigation !== this.navigation.revision);
         const interruptingRisk = speech.started && box
-          ? selectVideoAlert(this.latestRisk.metadata.boxes.filter(candidate => !this.sameConfirmedRiskTarget(speech, candidate))) : box;
+          ? selectVideoAlert(this.speechRiskBoxes().filter(candidate => !this.sameConfirmedRiskTarget(speech, candidate))) : box;
         if ((!speech.started && !this.riskPreparationCurrent(speech)) ||
             interruptingRisk && interruptingRisk.alert_priority > speech.box.alert_priority || yieldPreparation)
           this.cancel("speech", expiredQueued ? "risk_expired_before_start"
             : yieldPreparation ? "risk_preparation_yield" : "risk_changed");
-      } else if (speech?.kind === "navigation" && (box || this.assistantReplies.length))
-        this.cancel("speech", box ? "risk_preempted_navigation" : "assistant_reply_priority");
-      else if (speech?.kind === "assistant" && box) this.cancel("speech", "risk_preempted_assistant");
+      } else if (speech?.kind === "signal" && (!this.signalCurrent(speech) || riskSpeechReady))
+        this.cancel("speech", riskSpeechReady ? "risk_preempted_signal" : "signal_changed");
+      else if (speech?.kind === "navigation" && (box || signal || this.assistantReplies.length))
+        this.cancel("speech", box ? "risk_preempted_navigation" : signal ? "signal_priority" : "assistant_reply_priority");
+      else if (speech?.kind === "assistant" && (box || signal))
+        this.cancel("speech", box ? "risk_preempted_assistant" : "signal_priority");
       const vibration = this.active.vibration;
       if (vibration) {
         if (!vibration.elapsed && this.now() >= vibration.endsAt) {
           vibration.elapsed = true;
           this.report("pattern_elapsed", {channel: "vibration", request_id: vibration.requestId, ...this.context(vibration), hardware_verified: false});
         }
-        if (!box || box.alert_priority > vibration.box.alert_priority || vibration.elapsed && this.eligible(box, "vibration"))
+        if (!vibrationBox || vibrationBox.alert_priority > vibration.box.alert_priority || vibration.elapsed && this.eligible(vibrationBox, "vibration"))
           this.cancel("vibration", "risk_changed");
       }
       if (box) {
@@ -662,13 +743,19 @@ export class AssistGuidanceManager {
           source: Object.freeze({session_id: this.riskSessionId, frame_index: this.latestRisk.metadata.index,
             captured_at_ms: this.latestRisk.capturedAt, tracking_epoch: this.trackingEpoch})};
         if (!this.active.speech && this.eligible(box, "speech")) this.submitSpeech(descriptor, this.riskText(box, this.language));
-        if (!this.active.vibration && this.eligible(box, "vibration")) this.submitVibration(descriptor);
-      } else if (!this.active.speech && this.assistantReplies.length) {
+      }
+      if (vibrationBox && !this.active.vibration && this.eligible(vibrationBox, "vibration"))
+        this.submitVibration({kind: "risk", box: vibrationBox, generation: this.riskGeneration,
+          source: Object.freeze({session_id: this.riskSessionId, frame_index: this.latestRisk.metadata.index,
+            captured_at_ms: this.latestRisk.capturedAt, tracking_epoch: this.trackingEpoch})});
+      if (!this.active.speech && signal && !riskSpeechReady)
+        this.submitSpeech(signal, signalSpeechText(signal.state, this.language));
+      else if (!box && !this.active.speech && this.assistantReplies.length) {
         const reply = this.assistantReplies[0];
         this.submitSpeech({kind: "assistant", replyId: reply.id,
           source: Object.freeze({reply_id: reply.id, part_index: reply.index + 1,
             part_count: reply.chunks.length})}, reply.chunks[reply.index]);
-      } else if (!this.active.speech && this.navigationEnabled && this.navigation &&
+      } else if (!box && !this.active.speech && this.navigationEnabled && this.navigation &&
           this.completedNavigation !== this.navigation.revision)
         this.submitSpeech(this.navigation, navigationSpeechText(this.navigation.snapshot, this.language));
     } finally {

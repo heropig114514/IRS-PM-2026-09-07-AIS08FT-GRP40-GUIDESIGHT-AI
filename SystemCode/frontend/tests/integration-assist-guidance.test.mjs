@@ -11,7 +11,7 @@
  * Speech.describe; Speech.voiceList; Speech.speak; Speech.start; Speech.end; Speech.error;
  * Speech.manual; Speech.stopOwned; Vibration; Vibration.constructor; Vibration.subscribe;
  * Vibration.emit; Vibration.describe; Vibration.testPattern; Vibration.stopOwned;
- * box; navigationSnapshot; fixture; fixture.risk; fixture.navigation;
+ * box; signalBox; navigationSnapshot; fixture; fixture.risk; fixture.navigation;
  * testDisabled; testNavigationOnly; testAssistantReplyQueue; testAssistantReplyPriority;
  * testRiskOnly; testPreemption; testLatestNavigation;
  * testCompletedNavigation; testRiskCompletion; testEscalation; testSameTargetRepeats;
@@ -27,6 +27,9 @@
  * testVoice; testEpochReset; testSessionIsolation; testGlobalStop; testPort; testMetadata;
  * testRiskSpeechReasons; testRiskSpeechDeadlines; testRiskSpeechOwnership; testRiskSpeechTransition;
  * testTerminalNavigation; testVibrationFailure.
+ * testInitialSignal; testSignalColourChanges; testSignalInvalidation; testSignalBeforeStart;
+ * testSignalPriority; testSignalManualOwnership; testSignalLifecycle; testSignalFailure;
+ * testSignalEncounter; testSignalInstances; testSignalVibration.
  * Variable Index: None. Driver utterance bodies remain only in test memory; all sources are synthetic.
  * Constraints: Passing tests does not verify actual cameras, GPS, GPU, browser TTS or physical motors.
  */
@@ -181,6 +184,18 @@ function box(overrides = {}) {
   return {track_id: 7, label: "person", direction: "front_left", risk_level: "high", alert_priority: 3,
     alert_required: true, ttc_sec: 1, distance_m: 8, motion_state: "approaching", relative_speed_mps: -3,
     risk_reasons: ["approaching", "closing_mps_ge_2"], ...overrides};
+}
+
+/* Functionality: Supply the algorithm's merged front pedestrian signal, independent of TTC.
+ * Inputs: Colour and explicit field overrides. Outputs: New source fixture.
+ * Logic: Include existing class and colour-score schema with no confirmed tracking/depth.
+ * Constraints: These fixtures test integration only and never replace the classifier. */
+function signalBox(state = "red", overrides = {}) {
+  return {label: "pedestrian light", class_id: 84, front_light: true, light_state: state,
+    light_scores: {red: state === "red" ? 0.8 : 0, green: state === "green" ? 0.8 : 0, off: state === "unknown" ? 0.8 : 0},
+    score: 0.8, track_id: null, direction: "front", risk_level: "unknown", alert_priority: 0,
+    alert_required: false, ttc_sec: null, distance_m: null, motion_state: "unknown",
+    relative_speed_mps: null, risk_reasons: [], ...overrides};
 }
 
 /* Functionality: Supply the existing navigation snapshot contract. Inputs: Epoch/overrides.
@@ -924,4 +939,157 @@ test("explicit two-second demo policy accepts delayed risk and expires before pl
   assert.equal(expired.manager.riskSpeechStatus().state, "stale");
   assert.equal(expired.events.filter(event => event.phase === "output_start" && event.channel === "speech").length, 0);
   expired.manager.dispose();
+});
+
+/* Functionality: Announce an initially green light and avoid repeating unchanged source frames.
+ * Inputs: Fresh untracked green signal frames. Outputs: One exact prepared sentence.
+ * Logic: Complete once, then refresh beyond ordinary risk cooldown. Constraints: No TTC needed. */
+test("initial green signals use prepared speech once despite continuous frames", function testInitialSignal() {
+  const f = fixture(); f.risk([signalBox("green")]);
+  assert.equal(f.speech.current.text, "绿灯，请通行。");
+  assert.equal(f.speech.current.options.purpose, "risk");
+  assert.equal(f.manager.active.speech.kind, "signal");
+  f.speech.start(); f.speech.end();
+  for (let index = 0; index < 25; index++) { f.clock.advance(200); f.risk([signalBox("green")]); }
+  assert.equal(f.speech.requests.length, 1); assert.equal(f.vibration.requests.length, 0);
+  f.manager.configure({voiceId: "Cherry", language: "en-US"});
+  assert.equal(f.speech.current.text, "Green light. Please proceed.");
+  f.speech.start(); f.speech.end(); f.risk([signalBox("green")]);
+  assert.equal(f.speech.requests.length, 2); f.manager.dispose();
+});
+
+/* Functionality: Announce red/green transitions once and revoke an obsolete started instruction.
+ * Inputs: Same-frame-authority colour changes. Outputs: Current exact sentence without channel pause.
+ * Logic: Intentional replacement differs from a driver error. Constraints: No colour calculation. */
+test("red to green and green to red replace obsolete signal speech", function testSignalColourChanges() {
+  const f = fixture(); f.risk([signalBox("red")]);
+  assert.equal(f.speech.current.text, "前方是红灯，请等待。");
+  f.speech.start(); const red = f.speech.current.id;
+  f.risk([signalBox("green")]);
+  assert.deepEqual(f.speech.attempts, [red]); assert.equal(f.speech.current.text, "绿灯，请通行。");
+  f.speech.start(); const green = f.speech.current.id;
+  f.risk([signalBox("red")]);
+  assert.deepEqual(f.speech.attempts, [red, green]); assert.equal(f.speech.current.text, "前方是红灯，请等待。");
+  assert.equal(f.manager.paused.speech, false);
+  f.speech.start(); f.speech.end(); f.risk([signalBox("red")]);
+  assert.equal(f.speech.requests.length, 3); f.manager.dispose();
+});
+
+/* Functionality: Cancel green on unknown, ambiguous, nonfront or stale evidence.
+ * Inputs: Independent source invalidations. Outputs: No residual green request or automatic error recovery.
+ * Logic: Source permission applies during the complete signal sentence. Constraints: No safe-road claim. */
+test("green speech never survives lost or expired signal evidence", function testSignalInvalidation() {
+  for (const boxes of [[signalBox("unknown")], [signalBox("green", {front_light: false})],
+    [signalBox("green"), signalBox("red")], [signalBox("green", {light_scores: null})], []]) {
+    const f = fixture(); f.risk([signalBox("green")]); f.speech.start();
+    f.risk(boxes); assert.equal(f.speech.current, null); assert.equal(f.speech.requests.length, 1);
+    assert.equal(f.manager.paused.speech, false); f.manager.dispose();
+  }
+  const stale = fixture(); stale.risk([signalBox("green")]); stale.speech.start();
+  stale.clock.advance(1000); assert.equal(stale.speech.current, null);
+  assert.equal(stale.manager.describe().signal_state, null); stale.manager.dispose();
+});
+
+/* Functionality: Recheck fresh signal semantics at the exact first-PCM gate.
+ * Inputs: Current source changes without a separate scheduling callback. Outputs: No stale green start.
+ * Logic: before_start pumps current evidence. Constraints: Driver events do not establish audibility. */
+test("queued green is confirmed again before first PCM", function testSignalBeforeStart() {
+  const f = fixture(); f.risk([signalBox("green")]);
+  const old = f.speech.current.id;
+  f.manager.latestRisk.metadata.boxes = [signalBox("red")];
+  f.speech.start();
+  assert.equal(f.events.filter(event => event.phase === "output_start" && event.request_id === old).length, 0);
+  assert.equal(f.speech.current.text, "前方是红灯，请等待。");
+  f.speech.start(); f.speech.end(); f.manager.dispose();
+});
+
+/* Functionality: Keep obstacle warnings first while permitting signal speech in their cooldown gap.
+ * Inputs: Red light plus independent algorithm-required hazards. Outputs: Risk/signal priority and resume.
+ * Logic: Interrupted signal completion stays pending. Constraints: Original warning grade unchanged. */
+test("risk preempts signals and an interrupted fresh signal resumes completely", function testSignalPriority() {
+  const f = fixture(); f.risk([signalBox(), box()]);
+  assert.equal(f.manager.active.speech.kind, "risk"); f.speech.start(); f.speech.end();
+  assert.equal(f.manager.active.speech.kind, "signal"); f.speech.start();
+  f.risk([signalBox(), box({track_id: 8, risk_level: "critical", alert_priority: 4})]);
+  assert.equal(f.manager.active.speech.kind, "risk"); assert.match(f.speech.current.text, /^危险/);
+  f.speech.start(); f.speech.end();
+  assert.equal(f.manager.active.speech.kind, "signal"); assert.equal(f.speech.current.text, "前方是红灯，请等待。");
+  f.speech.start(); f.speech.end();
+  assert.equal(f.speech.requests.filter(item => item.text === "前方是红灯，请等待。").length, 2);
+  assert.equal(f.speech.current, null); f.manager.dispose();
+});
+
+/* Functionality: Protect manual output and insert signals before assistant/navigation speech.
+ * Inputs: Explicit foreign request and existing owned sources. Outputs: Independent ownership order.
+ * Logic: Only manager-owned output may be replaced. Constraints: No implicit audio activation. */
+test("signals preserve manual speech and arbitrate through the existing owner", function testSignalManualOwnership() {
+  const f = fixture(); const manual = f.speech.manual(); f.risk([signalBox("green")]);
+  assert.equal(f.speech.current.id, manual); assert.equal(f.speech.requests.length, 0);
+  f.speech.end(); assert.equal(f.manager.active.speech.kind, "signal");
+  f.speech.start(); f.speech.end(); f.manager.dispose();
+  const g = fixture(); g.navigation(); g.manager.enqueueAssistantReply("Current assistant reply.");
+  g.risk([signalBox("red")]); assert.equal(g.manager.active.speech.kind, "signal");
+  g.speech.start(); g.speech.end(); assert.equal(g.manager.active.speech.kind, "assistant");
+  g.speech.start(); g.speech.end(); assert.equal(g.manager.active.speech.kind, "navigation");
+  g.manager.dispose();
+});
+
+/* Functionality: Scope signal encounters to perception generations, tracker epochs and global stop.
+ * Inputs: Explicit source and lifecycle boundaries. Outputs: Cancellation and fresh future encounters.
+ * Logic: The same colour can announce in a new session. Constraints: No automatic source restart. */
+test("signal ownership is cleared on stop, session and epoch boundaries", function testSignalLifecycle() {
+  const f = fixture(); f.risk([signalBox("green")]); f.speech.start(); f.speech.end();
+  f.manager.ingestRisk({sessionId: f.manager.riskSessionId, capturedAt: f.clock.now(),
+    metadata: {index: 2, tracking_epoch: 2, boxes: [signalBox("green")]}});
+  assert.equal(f.speech.requests.length, 2); f.manager.stopRisk(); assert.equal(f.speech.current, null);
+  f.risk([signalBox("green")]); assert.equal(f.speech.requests.length, 3);
+  f.manager.stop("page_hidden"); assert.equal(f.speech.current, null);
+  assert.equal(f.manager.riskSessionId, null); assert.equal(f.manager.latestSignal, null);
+  f.clock.advance(5000); assert.equal(f.speech.requests.length, 3); f.manager.dispose();
+});
+
+/* Functionality: Preserve explicit recovery after signal output or cancellation failure.
+ * Inputs: Driver failures and fresh changed colours. Outputs: Paused ownership without retries.
+ * Logic: New frames cannot clear failure latches. Constraints: Recovery is a user action. */
+test("signal driver and cancellation failures require explicit recovery", function testSignalFailure() {
+  const f = fixture(); f.risk([signalBox("green")]); f.speech.error();
+  f.risk([signalBox("red")]); assert.equal(f.speech.requests.length, 1); assert.equal(f.manager.paused.speech, true);
+  f.manager.resume("speech"); assert.equal(f.speech.current.text, "前方是红灯，请等待。"); f.manager.dispose();
+  const g = fixture(); g.risk([signalBox("green")]); g.speech.start(); g.speech.cancelFailure = true;
+  g.risk([signalBox("red")]); assert.equal(g.manager.paused.speech, true); assert.equal(g.speech.attempts.length, 1);
+  g.risk([signalBox("red")]); g.risk([signalBox("unknown")]); assert.equal(g.speech.attempts.length, 1);
+  g.speech.cancelFailure = false; g.manager.stop(); assert.equal(g.speech.current, null); g.manager.dispose();
+});
+
+/* Functionality: Ignore short occlusion without forgetting a completed colour, then bound the encounter.
+ * Inputs: Unknown frames and the original TTL. Outputs: Same-colour dedup or new encounter after loss.
+ * Logic: Reuse capture freshness instead of an additional recognition threshold. Constraints: No stale green. */
+test("short signal occlusion deduplicates but a lost encounter can announce again", function testSignalEncounter() {
+  const f = fixture(); f.risk([signalBox("green")]); f.speech.start(); f.speech.end();
+  f.clock.advance(200); f.risk([signalBox("unknown")]);
+  f.clock.advance(200); f.risk([signalBox("green")]); assert.equal(f.speech.requests.length, 1);
+  f.clock.advance(200); f.risk([signalBox("unknown")]);
+  f.clock.advance(1000); f.risk([signalBox("green")]); assert.equal(f.speech.requests.length, 2); f.manager.dispose();
+});
+
+/* Functionality: Isolate signal dedup and colour state for three independent assistance pages.
+ * Inputs: Three explicit manager instances. Outputs: Independent initial and changed utterances.
+ * Logic: No module-level transition state. Constraints: This is not physical phone/audio testing. */
+test("three page managers never share signal colour or completion state", function testSignalInstances() {
+  const pages = [fixture(), fixture(), fixture()];
+  for (const f of pages) { f.risk([signalBox("red")]); f.speech.start(); f.speech.end(); }
+  pages[0].risk([signalBox("green")]);
+  assert.equal(pages[0].speech.current.text, "绿灯，请通行。");
+  assert.equal(pages[1].speech.current, null); assert.equal(pages[2].speech.current, null);
+  for (const f of pages) f.manager.dispose();
+});
+
+/* Functionality: Keep algorithm-required vibration while avoiding a generic obstacle name for a signal.
+ * Inputs: Signal with existing risk flags. Outputs: Signal speech plus original vibration pattern.
+ * Logic: Separate spoken semantics from unchanged risk metadata. Constraints: No risk reclassification. */
+test("pedestrian light speech is semantic while risk vibration stays unchanged", function testSignalVibration() {
+  const f = fixture(); const light = signalBox("red", {track_id: 5, risk_level: "critical", alert_priority: 4, alert_required: true});
+  f.risk([light]); assert.equal(f.speech.current.text, "前方是红灯，请等待。");
+  assert.equal(f.vibration.current.name, "long"); assert.equal(light.alert_priority, 4);
+  assert.equal(f.manager.latestRisk.metadata.boxes[0].alert_required, true); f.manager.dispose();
 });

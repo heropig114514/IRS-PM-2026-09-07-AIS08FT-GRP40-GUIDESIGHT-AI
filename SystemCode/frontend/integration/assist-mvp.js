@@ -1,17 +1,19 @@
 /* Responsibilities: Connect original navigation/MCP, camera or file perception to one output owner.
  * Implementation: Default-enabled unified outputs, entry-time temporary camera/microphone permission checks,
- * one backend bilingual voice preference, on-demand bilingual risk fragments and bounded PCM reuse,
+ * one backend bilingual voice preference, bilingual risk/signal resources and bounded PCM reuse,
  * synchronous user-gesture audio unlock, prioritized accepted assistant reply speech and
  * one-click product rear-camera acquisition,
  * canonical shared module URLs, independent source lifecycles, explicit controls and a diagnostic-only idle transport check,
  * original frame transports and passive maps snapshots; no navigation or algorithm calculations.
  * Related Modules: assist-panel.html/assist.css/assist-guidance.js; maps-navigation-bridge.js,
  * devices.js/video-replay.js/catalog.js/voice-preferences.js/risk-speech-cache.js/risk-audio-resources.js;
+ * signal-audio-resources.js;
  * original camera/navigation/speech/vibration singletons.
  * Declaration Index: navigationPort.begin; navigationPort.stop; node; productText; setStatusText; renderControls; renderResults; onSource; renderDiagnostics; guidanceDiagnostic; onGuidance; applyVoice;
  * renderRiskSpeechStatus; renderSpeechActivation; activateSpeech; testSpeech; resumeSpeech; enableDefaultOutputs; startProductCamera; cameraFailureMessage;
  * readVoices; readProductVoices; observeProductLanguage; readDevices; authorizeDevices; requestEntryMediaPermissions; selectFile; startVideo; stopPerception; renderStopStatus; stopAll;
  * onBoundary; speakAssistantReply; prepareRiskAudio; initialize; guidanceManager; speechActivation; navigationBridge; videoReplay; assistReady.
+ * preparedSpeechResources.prepare; speechResourcesReady.
  * Variable Index: presentation retains bounded bilingual display state independently of speech;
  * riskOwner/sessionId identify the active perception generation; sourceStarting
  * locks user source choice during permission/admission; permissionChoice invalidates late page-entry,
@@ -26,7 +28,8 @@
  * testView retains localized manual diagnostic choices; voicePreference stores backend TTS availability;
  * languageObserver watches only the document language and never starts or cancels speech;
  * cameraFailure retains a finite native error type across the core's following stop event;
- * riskAudioResources validates the same-origin bilingual pack without speaking or acquiring media;
+ * riskAudioResources/signalAudioResources validate fixed same-origin packs without media/output;
+ * preparedSpeechResources dispatches exact phrases to those independent bounded loaders;
  * riskSpeechCache retains bounded composed/generated warning audio, or is null without WebSocket support; speechDiagnostics
  * retains at most 100 body-free speech transitions on the diagnostic page, never media or utterance text;
  * GUIDANCE_PHASE_LABELS provides bilingual lifecycle labels to guidanceDiagnostic.
@@ -46,6 +49,7 @@ import {AssistPresentation} from "./catalog.js";
 import {interfaceSpeechLanguage} from "./voice-preferences.js";
 import {RiskSpeechCache} from "./risk-speech-cache.js";
 import {RiskAudioResources} from "./risk-audio-resources.js";
+import {SignalAudioResources} from "./signal-audio-resources.js";
 export {cameraApp} from "../camera.js";
 export {navigation} from "../navigation-ui.js";
 export {speechOutput} from "../speech-output.js";
@@ -90,8 +94,26 @@ let fileChoice = 0, permissionChoice = 0, boundaryStopped = false, stoppingAll =
 const riskAudioResources = new RiskAudioResources({fetch: window.fetch?.bind(window), crypto: window.crypto,
   origin: window.location.origin, loadPolicy: preparedSpeech ? "full" : "on-demand",
   baseUrl: new URL("assets/risk-audio/", new URL(doc.documentElement.dataset.apiBase || "../", window.location.href)).href});
+const signalAudioResources = new SignalAudioResources({fetch: window.fetch?.bind(window), crypto: window.crypto,
+  origin: window.location.origin,
+  baseUrl: new URL("assets/signal-audio/", new URL(doc.documentElement.dataset.apiBase || "../", window.location.href)).href});
+const preparedSpeechResources = {
+  /* Functionality: Resolve exact signal phrases before ordinary risk compositions.
+   * Inputs: Existing short-speech command. Outputs: Verified PCM or explicit uncovered null.
+   * Logic: Each resource owner validates its fixed corpus; rejection is terminal.
+   * Constraints: No synthesis fallback on asset failure, wording substitution or output activation. */
+  async prepare(request) {
+    return await signalAudioResources.prepare(request) ?? riskAudioResources.prepare(request);
+  },
+};
+/* Functionality: Keep product input readiness tied to both immutable speech packs.
+ * Inputs: Resource lifecycle snapshots. Outputs: Boolean. Logic: Both packs must finish validation.
+ * Constraints: Readiness does not request devices or authorize any announcement. */
+function speechResourcesReady() {
+  return riskAudioResources.describe().state === "ready" && signalAudioResources.describe().state === "ready";
+}
 const riskSpeechCache = typeof window.WebSocket === "function" ? new RiskSpeechCache({WebSocket: window.WebSocket, origin: window.location.origin,
-  resources: riskAudioResources,
+  resources: preparedSpeechResources,
   setTimer: window.setTimeout.bind(window), clearTimer: window.clearTimeout.bind(window),
   queueTask: window.queueMicrotask.bind(window)}) : null;
 const speechDiagnostics = [];
@@ -175,7 +197,7 @@ function renderControls() {
   node("assist-devices-authorize").disabled = busy;
   node("assist-devices-refresh").disabled = busy;
   node("start").disabled = busy || !camera || testView && !cameraApp.localDeviceId ||
-    preparedSpeech && riskAudioResources.describe().state !== "ready";
+    preparedSpeech && !speechResourcesReady();
   if (!testView) node("product-camera-start").disabled = node("start").disabled;
 }
 
@@ -280,6 +302,7 @@ function renderDiagnostics(event = null) {
   if (!testView) return;
   if (event && (event.channel === "speech" || ["risk_session", "risk_stopped", "stopped"].includes(event.phase))) {
     const fields = ["phase", "at", "channel", "kind", "request_id", "reason", "session_id", "frame_index",
+      "signal_state",
       "track_id", "alert_priority", "captured_at_ms", "capture_to_start_ms", "confirmed_track_id",
       "confirmed_frame_index", "confirmed_capture_to_start_ms"];
     speechDiagnostics.push(Object.fromEntries(fields.filter(field => Object.hasOwn(event, field) &&
@@ -289,7 +312,9 @@ function renderDiagnostics(event = null) {
   }
   node("assist-stats").textContent = JSON.stringify({input: videoReplay.stats,
     risk_audio: riskSpeechCache?.describe() ?? {supported: false},
-    prepared_audio: riskAudioResources.describe(), speech_events: speechDiagnostics}, null, 2);
+    prepared_audio: riskAudioResources.describe(), prepared_signals: signalAudioResources.describe(),
+    signal_state: guidanceManager.describe().signal_state,
+    speech_events: speechDiagnostics}, null, 2);
 }
 
 /* Functionality: Present product output availability or localized diagnostic lifecycle and recovery controls.
@@ -700,10 +725,10 @@ function onBoundary(event) {
  * Constraints: No synthesis fallback, retry, speaker output, media permission or navigation work. */
 async function prepareRiskAudio() {
   if (preparedSpeech) setStatusText("assist-status", "正在准备本地警报语音，请稍候……", "Preparing risk alert audio. Please wait.");
-  try { await riskAudioResources.load(); }
+  try { await Promise.all([riskAudioResources.load(), signalAudioResources.load()]); }
   catch (error) { window.console.error("[PRS risk audio] Resource pack unavailable", {
     code: ["risk_audio_unavailable", "invalid_audio_resource"].includes(error?.code) ? error.code : "risk_audio_unavailable"}); }
-  if (preparedSpeech) setStatusText("assist-status", ...(riskAudioResources.describe().state === "ready"
+  if (preparedSpeech) setStatusText("assist-status", ...(speechResourcesReady()
     ? ["警报语音已准备，可以开始检测。", "Risk alert audio is ready. You can start detection."]
     : ["警报语音准备失败，请重新加载页面。", "Risk alert audio could not load. Reload the page."]));
   renderDiagnostics(); renderControls();

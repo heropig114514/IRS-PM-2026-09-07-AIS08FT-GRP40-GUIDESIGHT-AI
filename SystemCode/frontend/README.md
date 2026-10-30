@@ -31,6 +31,29 @@ Risk speech takes priority when the algorithm requests an alert. After it ends, 
 
 The unified entry uses an explicit continuous PRF2 session without automatic reconnect. The older standalone test page keeps its existing session limit in default offline mode. Opening the old GPU page in unified mode displays an explicit entry-point notice. Maps, real ORS, and device GPS remain subject to existing software prerequisites. Video risk does not generate a navigation route or automatic obstacle-avoidance advice. Native engine start/end events and Vibration API acceptance do not prove physical speaker or motor output.
 
+## Pedestrian signal announcements
+
+The unified page consumes the walk model's selected front pedestrian signal from the same
+validated camera/video frames. Red announces “前方是红灯，请等待。” / “Red light ahead. Please wait.”;
+green announces “绿灯，请通行。” / “Green light. Please proceed.”. An initial green signal is
+eligible immediately; a completed same-color announcement is not repeated on every frame.
+Red-to-green transitions produce a new announcement. Unknown colors, generic traffic-light
+classes and ambiguous front-signal selections never produce a green announcement.
+
+The shared output owner prioritizes collision-risk speech, then signal announcements, assistant
+replies and navigation. Signal speech needs the same explicit browser audio activation and fresh
+camera evidence as other automatic output. Before playback, the latest frame must still support
+the selected color. A red, unknown, missing or expired current signal cancels an old green request,
+including already-started speech. Source/session/epoch changes and stop/hide clear signal state.
+Completed-color deduplication is local to each phone; tracking IDs and valid depth/TTC estimates
+are not prerequisites for announcing an algorithm-confirmed signal color.
+
+Four complete Chinese/English clips under `assets/signal-audio/` use the fixed Cherry voice,
+24 kHz mono PCM and pre-generated 2× rate. The page validates their manifest, WAV/PCM identities
+and hashes before use, then reuses the existing risk PCM cache and Web Audio player. These
+utterances require no runtime synthesis. Signal assets do not change model thresholds, risk
+calculations, navigation routes or the existing ordinary risk resource pack.
+
 ## Standalone Local Perception
 
 The local MVP runs through integration.asgi at http://127.0.0.1:8766/live/. It enables a separate local CUDA mode and browser Guidance. The original config.asgi page retains Echo/HF modes and disables the local option. See ../backend/LOCAL-MVP.md for setup, both environments, launchers, validation targets, and device boundaries.

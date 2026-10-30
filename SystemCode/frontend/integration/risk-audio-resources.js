@@ -112,7 +112,7 @@ function validateManifest(value) {
  * Inputs: Exact file bytes and validated descriptor. Outputs: Detached raw PCM bytes.
  * Logic: Require the fixed 44-byte RIFF/PCM16 mono header and matching declared sample count.
  * Constraints: No general codec, resampling, trimming, inserted silence or WAV-container concatenation. */
-function pcmFromWav(bytes, clip) {
+export function pcmFromWav(bytes, clip) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (bytes.length !== clip.byte_length || bytes.length < 46 || view.getUint32(0) !== 0x52494646 ||
       view.getUint32(8) !== 0x57415645 || view.getUint32(12) !== 0x666d7420 || view.getUint32(36) !== 0x64617461 ||

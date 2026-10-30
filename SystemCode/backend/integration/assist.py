@@ -6,6 +6,7 @@ SystemCode/frontend/maps.html and SystemCode/frontend/integration/assist-*.
 Declaration Index: render_assist_page; assist_response; risk_audio_manifest; AssistApplication;
 AssistApplication.__init__; AssistApplication.__call__; AssistApplication.page;
 AssistApplication.asset; AssistApplication.risk_audio; AssistApplication.status;
+AssistApplication.signal_audio;
 AssistApplication.status.collect.
 Variable Index: ASSIST_ASSETS — canonical integration module/MIME allowlist;
 ENTRY_REQUIRED — explicit guidance for standalone 55-second GPU pages in assist mode;
@@ -23,6 +24,7 @@ from urllib.parse import urlsplit
 
 from .protocol import local_session_seconds, web_origins
 from .services import FRONTEND, IntegrationApplication
+from .signal_audio import serve_signal_audio
 
 logger = logging.getLogger(__name__)
 CAMERA_PROFILES = frozenset({
@@ -41,6 +43,8 @@ ASSIST_ASSETS = {
     "assist-guidance.js": "text/javascript",
     "risk-speech-cache.js": "text/javascript",
     "risk-audio-resources.js": "text/javascript",
+    "signal-audio-resources.js": "text/javascript",
+    "signal-alerts.js": "text/javascript",
     "speech-activation.js": "text/javascript",
     "voice-preferences.js": "text/javascript",
     "product-ui.js": "text/javascript",
@@ -237,6 +241,8 @@ class AssistApplication:
                 return await self.asset(scope, send)
             if path.startswith("/assets/risk-audio/"):
                 return await self.risk_audio(scope, send)
+            if path.startswith("/assets/signal-audio/"):
+                return await self.signal_audio(scope, send)
             if path.startswith("/assets/"):
                 name = path.removeprefix("/assets/")
                 if "\\" in name or any(part in {".", "..", ""} for part in name.split("/")):
@@ -344,6 +350,14 @@ class AssistApplication:
                 remaining -= len(chunk)
                 await send({"type": "http.response.body", "body": chunk,
                             "more_body": remaining > 0})
+
+    async def signal_audio(self, scope, send):
+        """Functionality: Publish the exact prepared red/green bilingual speech pack.
+        Inputs: canonical asset GET/HEAD. Outputs: verified manifest or WAV response.
+        Logic: delegate bounded fixed-path validation. Constraints: no TTS generation or alias.
+        """
+        return await serve_signal_audio(scope, send, FRONTEND / "assets/signal-audio",
+                                        assist_response)
 
     async def status(self, scope, send):
         """Functionality: Report the original worker health with an honest assist feature policy.

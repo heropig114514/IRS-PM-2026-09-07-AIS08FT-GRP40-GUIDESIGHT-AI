@@ -289,6 +289,25 @@ The unified entry preloads the Chinese/English pack from `/mvp/assets/risk-audio
 
 Explicit stop, disable, source completion and page hiding cancel pending risk consumers. Completed compositions remain in bounded, expiring page memory; source resources remain reusable without starting playback. See [limits and diagnostics](../frontend/README.md) for pack readiness and prepared/native preparation counters. No runtime audio-file creation, alternate voice or automatic retry is introduced. Measure asset loading, ready-asset playback and uncovered cloud synthesis separately. Actual phone audibility and full-sentence playback require listening verification.
 
+## Pedestrian signal speech
+
+With the walk detector, the unified page announces the algorithm's selected front pedestrian
+signal independently of distance/TTC-based obstacle alerts. Red says “前方是红灯，请等待。”;
+green says “绿灯，请通行。”. English follows the interface language. A first green detection
+can announce directly; red-to-green transitions announce the new state once. Continuous
+same-color detections do not repeat a completed announcement.
+
+Generic traffic-light detections, unselected lights and unknown or ambiguous colors cannot
+authorize a green announcement. Current capture freshness and latest-color confirmation remain
+required through playback; red/unknown/lost evidence cancels an outdated green message. Collision
+risk speech takes priority, and ordinary navigation resumes only when its existing freshness
+conditions hold. Each phone retains its own signal state within its own inference session.
+
+The fixed Chinese/English red/green resources are published at `/mvp/assets/signal-audio/` and
+preloaded alongside ordinary risk audio. Their 2× PCM is played through the existing shared
+driver and browser activation gate; signal playback does not request runtime cloud synthesis.
+Asset failures are explicit and do not silently select another voice or synthesis service.
+
 ## Test and Diagnostic Interface
 
 The diagnostic page is a separate public page at [the unified test URL](https://47.239.50.129/mvp/maps/test), without a trailing slash; the product page intentionally does not display a link to it. Manual speech, fixed backend voice metadata, rate/volume controls, manual camera selection, video replay, frame statistics, and output-lifecycle diagnostics are available only there. Both pages request camera and microphone permission on entry, then close the temporary media tracks. The recording button toggles capture in both pages: tap once to start and again to finish and send. Product recordings are capped at 20 seconds and can be cancelled explicitly. Recording starts only after the corresponding control is activated. The diagnostic navigation area also offers “Fill NUS example”; it fills fixed origin/destination values only, and users must still plan the route. The example does not represent device location. Both pages use backend TTS; the diagnostic page can submit English and Chinese explicitly or let the service detect either language. The two pages have separate browser sessions; stop input before switching and do not start detection on both pages simultaneously. Both interfaces reuse the original algorithms, navigation, and output drivers; the diagnostic page does not introduce a second risk policy.

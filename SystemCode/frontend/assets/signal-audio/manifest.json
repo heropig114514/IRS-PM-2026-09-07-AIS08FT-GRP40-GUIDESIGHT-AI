@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "voice": "Cherry",
+  "rate": 2,
+  "sample_rate": 24000,
+  "format": "pcm_s16le_mono",
+  "model": "qwen3-tts-flash-realtime",
+  "clips": [
+    {
+      "language": "zh-CN",
+      "state": "red",
+      "text": "前方是红灯，请等待。",
+      "path": "zh-CN/red.wav",
+      "sha256": "720aa3160fe562af0a786bd73125ce703e849396e98190876ef5a6a4e08df2ea",
+      "pcm_sha256": "5d581a0d45b2304730f18cc5a8bfcca5bf66972dab1c735181ae7eff977acc15",
+      "byte_length": 48740,
+      "pcm_byte_length": 48696,
+      "samples": 24348,
+      "duration_ms": 1014.5
+    },
+    {
+      "language": "zh-CN",
+      "state": "green",
+      "text": "绿灯，请通行。",
+      "path": "zh-CN/green.wav",
+      "sha256": "bf9c5412df364b588ad984c41b12b23d167077baa624c351a92bbf1c6e3401c2",
+      "pcm_sha256": "0068312575a062e5bfb7ee4d88e743a5d1c341fde098eb6f1062acd115491b62",
+      "byte_length": 35300,
+      "pcm_byte_length": 35256,
+      "samples": 17628,
+      "duration_ms": 734.5
+    },
+    {
+      "language": "en-US",
+      "state": "red",
+      "text": "Red light ahead. Please wait.",
+      "path": "en-US/red.wav",
+      "sha256": "25da1d9749c331abf8bbb33334ed02f1c5fd8bfdcc05f686b483104cbed0ece0",
+      "pcm_sha256": "af0393474d5ecc330790fdcdafca6c21c9128f2c60001556b8c9fe4cec8a58db",
+      "byte_length": 60260,
+      "pcm_byte_length": 60216,
+      "samples": 30108,
+      "duration_ms": 1254.5
+    },
+    {
+      "language": "en-US",
+      "state": "green",
+      "text": "Green light. Please proceed.",
+      "path": "en-US/green.wav",
+      "sha256": "40f6e2059e12e2f3400c1ff2fb2e01e8acd21d8921064d9d2e905641f47b653c",
+      "pcm_sha256": "85ff71f59762256e022573de779fda1104d729514f788369ca4f35e908adcb35",
+      "byte_length": 60260,
+      "pcm_byte_length": 60216,
+      "samples": 30108,
+      "duration_ms": 1254.5
+    }
+  ]
+}
