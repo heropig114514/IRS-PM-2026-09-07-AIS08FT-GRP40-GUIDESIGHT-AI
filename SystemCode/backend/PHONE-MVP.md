@@ -109,6 +109,35 @@ After `prs-mvp-web.service` is active, run the following on the laptop to start 
 
 The launcher reads the app-server target and password from the ignored `SystemCode/backend/server_info.txt` through the existing pinned deployment helper. It validates the fixed server and SSH port, verifies the pinned server fingerprint, enables SSH keepalive, and never prints, places, or saves the password in command arguments or the run report. It checks that `prs-mvp-web.service` is already active, starts only `integration.inference.asgi` on the laptop, and establishes the loopback-only reverse tunnel. It reports model state from health without loading the model; native initialization begins only on the first real input. Logs and run details stay under the locally ignored `.venv/tmp/phone-mvp/` directory; `--log-dir` may select another directory under `backend`.
 
+## Concurrent phone detection
+
+The default deployment admits one detection session. To test three phones together, set
+`PRS_INFERENCE_SESSIONS=3` in the existing server Web environment and restart only
+`prs-mvp-web`. Start the laptop with the matching explicit capacity from `SystemCode/backend`:
+
+```powershell
+.\.venv\Scripts\python.exe -B tools/local_demo.py phone --sessions 3 --detector yolo26n-walk --profile low-latency --password-prompt --public-origin https://noble-treatment-canyon-garmin.trycloudflare.com
+```
+
+Verify the current exact public hostname before using the example. Each phone opens the same
+product URL in one foreground browser tab. A detection tab occupies one worker until it stops
+or disconnects; a fourth session receives `local_busy` instead of waiting in an unbounded queue.
+Navigation and prepared speech run in each phone's own page. Cloud speech retains its configured
+provider limits.
+
+The laptop's original inference port becomes a loopback-only dispatcher. Three original GPU
+workers use the next three ports and retain their own model instances, tracking IDs, distance
+history, frame geometry and capture clock. A WebSocket stays assigned to one worker throughout
+its session. Stopping one phone does not reset the other two. The dispatcher waits for native
+cleanup before making that worker available again. Algorithms, risk thresholds and frame/result
+protocols are unchanged.
+
+The shared GPU and network divide available throughput among phones. Model/CUDA memory grows
+with worker count; use the existing checkpoint and backend selections, and verify three moving
+streams before relying on latency measurements. Health exposes configured capacity, active
+sessions and available sessions. The launcher's preflight and eight-frame warmup cover each
+worker. No automatic reduction of worker count, model substitution or reconnect is performed.
+
 ## iPhone Operation
 
 The existing public HTTPS entry is the shared teammate entry; the optional LAN certificate

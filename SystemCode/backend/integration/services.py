@@ -4,7 +4,8 @@ explicit status/assets/local-only routing.
 Related Modules: integration.asgi/protocol/errors; integration.inference; config.asgi;
 SystemCode/frontend/integration. Existing software/algorithm implementation files remain
 untouched here.
-Declaration Index: NoRedirect; NoRedirect.redirect_request; read_health; http_response;
+Declaration Index: NoRedirect; NoRedirect.redirect_request; read_health; gateway_capacity;
+http_response;
 GatewaySession; GatewaySession.__init__;
 LocalGateway; LocalGateway.__init__; LocalGateway.__call__; LocalGateway.read_browser;
 LocalGateway.bridge; LocalGateway.forward; LocalGateway.return_results; LocalGateway.stop_provider;
@@ -18,12 +19,15 @@ METADATA_PROTOCOL — explicit browser-only subprotocol; metadata_only never cha
 submitted — attempted provider sends; forwarded — send-completed or worker-confirmed prefix;
 worker_verified — complete validated provider results; delivered — completed browser ASGI sends;
 LOCAL_DISABLED — explicit external-feature error, not provider fallback.
+PRS_INFERENCE_SESSIONS — explicit browser admission bound, one by default and at most three;
+native session isolation is owned by the separately configured inference pool.
 """
 
 import asyncio
 import hashlib
 import json
 import logging
+import os
 import struct
 import urllib.request
 from threading import BoundedSemaphore
@@ -118,6 +122,20 @@ def read_health(url):
     return body
 
 
+def gateway_capacity():
+    """Functionality: Bound simultaneous browser inference relays explicitly.
+    Inputs: PRS_INFERENCE_SESSIONS environment, default one. Outputs: integer one through three.
+    Logic: accept only canonical configured values before constructing admission.
+    Constraints: no automatic scaling; multiple relays require an isolated native worker pool.
+    """
+    value = os.environ.get("PRS_INFERENCE_SESSIONS", "1")
+    if value not in {"1", "2", "3"}:
+        raise IntegrationError(
+            "local_configuration_invalid", "PRS_INFERENCE_SESSIONS must be 1, 2 or 3."
+        )
+    return int(value)
+
+
 async def http_response(
     send,
     status,
@@ -181,18 +199,19 @@ class GatewaySession:
 
 
 class LocalGateway:
-    """Functionality: Connect one same-origin local browser stream to an explicit worker.
+    """Functionality: Connect bounded same-origin browser streams to an explicit inference entry.
     Logic: source validation, separate forwarding/result/stop loops and exact result identity.
     Constraints: no CUDA/model state, external service fallback, implicit retry or partial success.
     """
 
     def __init__(self, opener=None, admission=None):
-        """Functionality: Bind explicit connector and shared single-session capacity.
+        """Functionality: Bind explicit connector and configured shared relay capacity.
         Inputs: optional synthetic test dependencies. Outputs: lightweight callable.
         Logic: WebSocket import is lazy. Constraints: no connection or GPU work during construction.
         """
         self.opener = opener
-        self.admission = admission if admission is not None else BoundedSemaphore(1)
+        self.capacity = gateway_capacity()
+        self.admission = admission if admission is not None else BoundedSemaphore(self.capacity)
 
     async def __call__(self, scope, receive, send):
         """Functionality: Admit and close one browser relay with strict origin and host checks.

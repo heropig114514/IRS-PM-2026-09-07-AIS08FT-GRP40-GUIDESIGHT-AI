@@ -107,6 +107,15 @@ without taking over another tunnel. Multiple colleagues running this command sim
 not receive separate sessions or per-user routing. Closing the owned SSH connection releases its
 binding. Keep the terminal and GPU computer awake throughout a phone test.
 
+Multiple phones can share that one laptop tunnel when explicitly configured. Set the server
+Web environment's `PRS_INFERENCE_SESSIONS` to `3`, restart only `prs-mvp-web`, and start the
+laptop's `phone` command with `--sessions 3`. The laptop assigns each browser connection to
+one of three isolated GPU worker processes behind a loopback dispatcher; the native worker
+ports are the three ports after `--inference-port`. Do not start three separate tunnel owners.
+Each phone must stop its own detection to release its slot. The fourth active detection tab
+receives the existing busy error. Default capacity remains one. See
+[concurrent operation](PHONE-MVP.md#concurrent-phone-detection) for state isolation and limits.
+
 ## Publication and verification
 
 `main` is the source for the existing GitHub Actions server deployment. Successful checks stage

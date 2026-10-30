@@ -1,5 +1,6 @@
 """Responsibilities: Prepare and launch a reproducible teammate local inference demo.
-Implementation: Explicit venv/package/model preparation, fixed profiles and existing supervisors;
+Implementation: Explicit venv/package/model preparation, fixed profiles, bounded phone session
+capacity and existing supervisors;
 standard-library bootstrap, explicit local/LAN/server-relay entries and no system package install.
 Related Modules: deploy/local-demo.toml; tools.run_local_mvp/run_lan_mvp/run_phone_mvp;
 LOCAL-QUICKSTART.md; SERVER-RELAY.md.
@@ -209,7 +210,8 @@ def profile_environment(args):
 def launch_command(args):
     """Functionality: Build an explicit existing-supervisor command for the selected entry.
     Inputs: check/run/LAN/phone CLI arguments. Outputs: argv and isolated child environment.
-    Logic: all relative paths are backend-relative; align LAN Origin with the local Web port.
+    Logic: all relative paths are backend-relative; align LAN Origin with the local Web port and
+    forward the explicit phone session count without changing model or camera profile selections.
     Constraints: no implicit certificate trust, public tunnel, alternate GPU or optional API.
     """
     if args.command == "lan":
@@ -238,7 +240,7 @@ def launch_command(args):
     elif args.command == "phone":
         command = [str(web), "-B", "-m", "tools.run_phone_mvp", "--warmup",
                    "--inference-port", str(args.inference_port),
-                   "--public-origin", args.public_origin]
+                   "--public-origin", args.public_origin, "--sessions", str(args.sessions)]
         if args.inference_python:
             command += ["--inference-python", str((ROOT / args.inference_python).resolve())]
         if args.http_proxy:
@@ -267,7 +269,8 @@ def parse_args(argv=None):
     """Functionality: Parse portable preparation and explicit startup operations.
     Inputs: optional argument list. Outputs: namespace.
     Logic: low-latency Torch is the visible default; baseline/TensorRT remain explicit choices.
-    Constraints: LAN requires a chosen address/subnet and fresh owned state path.
+    Constraints: LAN requires a chosen address/subnet and fresh owned state path; phone capacity
+    is explicitly bounded to one, two or three independently tracked native pipelines.
     """
     root_parser = argparse.ArgumentParser(
         description="Prepare local GPU inference and select a local, LAN or server-relay demo."
@@ -303,6 +306,8 @@ def parse_args(argv=None):
                                 else ("assist", "video"), default="assist")
             parser.add_argument("--inference-python", type=Path)
             if name == "phone":
+                parser.add_argument("--sessions", type=int, choices=(1, 2, 3), default=1,
+                                    help="Isolated simultaneous phone inference sessions")
                 parser.add_argument("--public-origin", default="https://47.239.50.129")
                 parser.add_argument("--http-proxy")
                 parser.add_argument("--password-prompt", action="store_true")

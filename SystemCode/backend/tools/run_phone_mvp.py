@@ -1,15 +1,18 @@
-"""Responsibilities: Run only the laptop-hosted CUDA worker behind an app-server tunnel.
+"""Responsibilities: Run isolated laptop CUDA sessions behind one app-server tunnel.
 Implementation: Verify pinned local dependencies/checkpoints, confirm the separate app-server Web
-service, start the inference ASGI process, then reverse-forward its loopback port for on-demand use.
-Related Modules: integration.inference.asgi; integration.phone_deploy/relay;
+service, start one native worker per admitted phone and an optional loopback-only pool, then
+reverse-forward the stable inference port. Multi-session startup prewarms every worker explicitly.
+Related Modules: integration.inference.asgi/pool_asgi; integration.phone_deploy/relay;
 tools.deploy_phone_live.connect_server; tools.run_local_mvp; deploy/prs-mvp-web.service;
 PHONE-MVP.md.
 Declaration Index: proxy_endpoint; connect_interactive; public_ready; check_remote_binding;
 check_remote_health; check_web_service;
-verify_inference_port; supervise; run; main.
+inference_ports; verify_inference_port; verify_ready_capacity; start_inference;
+supervise; run; main.
 Variable Index: ROOT/STOP_REQUESTED and child helpers are reused from the local launcher;
 WEB_PORT/INFERENCE_REMOTE_PORT separate the permanent app-server Web listener from the laptop
 inference tunnel; client/relay/children/log_handles own only this run's resources;
+sessions/worker_ports select one to three process-isolated native pipelines without shared trackers;
 tools.deploy_phone_live.connect_server reads server_info.txt credentials without printing them.
 """
 
@@ -167,9 +170,10 @@ def check_remote_binding(client):
         raise StartupError("The inference tunnel is not bound to its dedicated loopback port.")
 
 
-def check_remote_health(client):
+def check_remote_health(client, capacity=1):
     """Functionality: Validate one inference health response through the live SSH tunnel.
-    Inputs: Pinned SSH client and fixed loopback health path. Outputs: Safe worker state summary.
+    Inputs: Pinned SSH client, expected capacity and fixed health path.
+    Outputs: Safe worker summary.
     Logic: Make one bounded remote curl request, then validate provider and boolean state fields.
     Constraints: Health may report an unloaded model; no frame is submitted and no load is claimed.
     """
@@ -194,6 +198,8 @@ def check_remote_health(client):
         raise StartupError(
             "The tunneled endpoint does not satisfy the local inference health contract."
         )
+    if capacity > 1:
+        verify_ready_capacity(health, capacity, idle=False)
     return {"health_status": "ok", "model_loaded": health["loaded"], "model_ready": health["ready"]}
 
 
@@ -206,6 +212,22 @@ def check_web_service(client):
     status, _ = remote_command(client, "systemctl is-active --quiet prs-mvp-web", check=False)
     if status:
         raise StartupError("The application-server prs-mvp-web service is not active.")
+
+
+def inference_ports(port, sessions=1):
+    """Functionality: Allocate fixed native-worker ports for one explicit session capacity.
+    Inputs: Primary loopback port and one, two or three sessions. Outputs: Native port tuple.
+    Logic: Single-session keeps its original port; pooled workers use the following ports.
+    Constraints: Validate the entire range before any socket probe; never select an alternate port.
+    """
+    if type(sessions) is not int or sessions not in {1, 2, 3}:
+        raise StartupError("Choose one, two or three inference sessions.")
+    if type(port) is not int or not 1024 <= port <= 65535:
+        raise StartupError("Choose an inference port between 1024 and 65535.")
+    ports = (port,) if sessions == 1 else tuple(range(port + 1, port + sessions + 1))
+    if ports[-1] > 65535:
+        raise StartupError("The inference worker ports exceed 65535; choose a lower primary port.")
+    return ports
 
 
 def verify_inference_port(port):
@@ -227,8 +249,85 @@ def verify_inference_port(port):
         ) from None
 
 
+def verify_ready_capacity(health, capacity, *, idle=True):
+    """Functionality: Refuse an incompletely warmed or mismatched multi-session pool.
+    Inputs: Local/tunneled health, requested capacity and prepublication-idle requirement.
+    Outputs: None or fixed failure. Logic: require ready native workers and valid pooled counters;
+    require full availability before publication and permit phone activity afterward.
+    Constraints: No health retries, lazy readiness claim or worker substitution.
+    """
+    if (health.get("status") != "ok" or health.get("provider") != "local"
+            or health.get("loaded") is not True or health.get("ready") is not True
+            or type(health.get("busy")) is not bool or idle and health["busy"]):
+        raise StartupError(
+            "Every native inference worker must be ready before publishing the pool."
+        )
+    if capacity > 1:
+        active, available = health.get("active_sessions"), health.get("available_sessions")
+        if (type(health.get("capacity")) is not int or health["capacity"] != capacity
+                or type(active) is not int or not 0 <= active <= capacity
+                or type(available) is not int or not 0 <= available <= capacity
+                or active + available != capacity
+                or health["busy"] is not (available == 0)
+                or health.get("accept_available") is not (available > 0)
+                or idle and (active != 0 or available != capacity)):
+            raise StartupError(
+                "The inference pool does not expose the requested session capacity."
+            )
+
+
+def start_inference(args, web_python, inference_python, environment, directory,
+                    children, log_handles, report):
+    """Functionality: Start and validate owned native workers and the optional local pool.
+    Inputs: Explicit startup selections, interpreters, environment and ownership/report lists.
+    Outputs: Child handles retained by the supervisor and bounded safe startup evidence.
+    Logic: Allocate independent native processes, warm each, then expose the Web-runtime pool.
+    Constraints: No local product Web process, shared tracker, automatic fallback or partial-ready
+    publication; the caller's finally block cleans every child on any failure.
+    """
+    sessions = getattr(args, "sessions", 1)
+    ports = inference_ports(args.inference_port, sessions)
+    worker_warmups = []
+    for port in ports:
+        name = "inference.log" if sessions == 1 else f"inference-{port}.log"
+        log_handle = (directory / name).open("ab")
+        log_handles.append(log_handle)
+        child = launch(inference_python, "integration.inference.asgi:application",
+                       port, environment.copy(), log_handle)
+        children.append(child)
+        wait_listener(child, port)
+        if getattr(args, "warmup", False) or sessions > 1:
+            from tools.run_public_mvp import warmup
+
+            records = asyncio.run(warmup(
+                WEB_PORT, port, expected_backend=environment.get("PRS_DEPTH_BACKEND", "torch"),
+            ))
+            if sessions == 1:
+                report["warmup"] = records
+            else:
+                worker_warmups.append({"port": port, "frames": records})
+        if sessions > 1:
+            verify_ready_capacity(read_health(port, "/health/"), 1)
+    if sessions > 1:
+        report["worker_warmups"] = worker_warmups
+        pool_environment = environment.copy()
+        pool_environment["PRS_INFERENCE_POOL_PORTS"] = ",".join(str(port) for port in ports)
+        log_handle = (directory / "inference-pool.log").open("ab")
+        log_handles.append(log_handle)
+        child = launch(web_python, "integration.inference.pool_asgi:application",
+                       args.inference_port, pool_environment, log_handle)
+        children.append(child)
+        wait_listener(child, args.inference_port)
+    health = read_health(args.inference_port, "/health/")
+    if sessions > 1:
+        verify_ready_capacity(health, sessions)
+    report["local_inference_health"] = {
+        "status": health["status"], "model_loaded": bool(health.get("loaded", False)),
+    }
+
+
 def supervise(relay, children):
-    """Functionality: Observe only the local inference child and its owned SSH tunnel.
+    """Functionality: Observe all owned inference children and their shared SSH tunnel.
     Inputs: Started relay and child handles. Outputs: None for manual stop or fixed failure.
     Logic: Check tunnel state while polling owned processes.
     Constraints: No retry, process restart or SSH reconnect; cancellation remains explicit.
@@ -247,9 +346,9 @@ def run(args):
     Inputs: Local check flag, inference port, log path and the ignored server_info.txt credential
     file or hidden prompt consumed by the pinned SSH helper. Outputs: readiness then service until
     stop, child exit or SSH failure.
-    Logic: Verify the Web unit first, launch only the CUDA worker, bind remote loopback 18767, and
+    Logic: Verify the Web unit, launch isolated CUDA workers and any local pool, bind 18767, and
     validate tunneled health plus the already-running public page; the password remains in memory.
-    Constraints: No local Web process, Nginx changes, ORS transfer,
+    Constraints: No local product Web process, Nginx changes, ORS transfer,
     GPU fallback, retry or restart.
     """
     origin = mobile_origin(getattr(args, "public_origin", PUBLIC_ORIGIN))
@@ -257,6 +356,8 @@ def run(args):
     interactive = getattr(args, "password_prompt", False)
     if proxy and not interactive:
         raise StartupError("An explicit proxy requires --password-prompt for SSH authentication.")
+    sessions = getattr(args, "sessions", 1)
+    worker_ports = inference_ports(args.inference_port, sessions)
     selected_web = getattr(args, "web_python", None)
     web_python = Path(selected_web).resolve() if selected_web else python_path(".venv")
     if selected_web and not web_python.is_file():
@@ -269,7 +370,8 @@ def run(args):
     inspect_environment(web_python, {**WEB_PACKAGES, "paramiko": "4.0.0"})
     inspect_environment(inference_python, INFERENCE_PACKAGES, cuda=True)
     verify_models()
-    verify_inference_port(args.inference_port)
+    for port in dict.fromkeys((args.inference_port, *worker_ports)):
+        verify_inference_port(port)
     directory_root = args.log_dir.resolve()
     if not directory_root.is_relative_to(ROOT):
         raise StartupError("Inference logs must stay inside backend.")
@@ -291,6 +393,8 @@ def run(args):
         "remote_inference_binding": f"127.0.0.1:{INFERENCE_REMOTE_PORT}",
         "web_service_on_application_server": True,
         "credential_saved": False,
+        "session_capacity": sessions,
+        "worker_ports": list(worker_ports),
     }
     STOP_REQUESTED.clear()
     signal.signal(signal.SIGINT, handle_signal)
@@ -302,29 +406,8 @@ def run(args):
         environment = child_environment(
             "", WEB_PORT, args.inference_port, web=False, assist=True, ors_key=""
         )
-        log_handle = (directory / "inference.log").open("ab")
-        log_handles.append(log_handle)
-        child = launch(
-            inference_python,
-            "integration.inference.asgi:application",
-            args.inference_port,
-            environment,
-            log_handle,
-        )
-        children.append(child)
-        wait_listener(child, args.inference_port)
-        if getattr(args, "warmup", False):
-            from tools.run_public_mvp import warmup
-
-            report["warmup"] = asyncio.run(warmup(
-                WEB_PORT, args.inference_port,
-                expected_backend=environment.get("PRS_DEPTH_BACKEND", "torch"),
-            ))
-        health = read_health(args.inference_port, "/health/")
-        report["local_inference_health"] = {
-            "status": health["status"],
-            "model_loaded": bool(health.get("loaded", False)),
-        }
+        start_inference(args, web_python, inference_python, environment, directory,
+                        children, log_handles, report)
         relay = RelayForward(
             client,
             local_port=args.inference_port,
@@ -332,7 +415,8 @@ def run(args):
             stop_event=STOP_REQUESTED,
         ).start()
         check_remote_binding(client)
-        report["remote_inference_health"] = check_remote_health(client)
+        report["remote_inference_health"] = (check_remote_health(client, sessions) if sessions > 1
+                                             else check_remote_health(client))
         report.update(public_ready(origin, proxy))
         report["inference_profile"] = {name: os.environ.get(name, "") for name in (
             "PRS_DETECTION_MODEL", "PRS_DEPTH_BACKEND", "PRS_DEPTH_FUSION",
@@ -346,7 +430,7 @@ def run(args):
             "The application-server pages remain available independently of this laptop.",
             flush=True,
         )
-        print("Ctrl+C stops only this inference process and its SSH tunnel.", flush=True)
+        print("Ctrl+C stops only this run's inference processes and SSH tunnel.", flush=True)
         print("Runtime report: " + str(directory / "runtime.json"), flush=True)
         supervise(relay, children)
     except RelayError as error:
@@ -371,14 +455,16 @@ def main():
     """Functionality: Parse the laptop inference supervisor CLI and report safe failures.
     Inputs: Explicit local flags; normal startup reads credentials through the pinned helper.
     Outputs: process exit status. Logic: check mode performs preflight only; normal mode owns one
-    worker and one tunnel. Constraints: No password argument, Nginx installer, public Web
-    process or automatic restart.
+    tunnel and one to three isolated workers. Constraints: No password argument, Nginx installer,
+    public Web process or automatic restart.
     """
     parser = argparse.ArgumentParser(
         description="Run laptop CUDA inference through the application's loopback SSH tunnel."
     )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--inference-port", type=int, default=8767)
+    parser.add_argument("--sessions", type=int, choices=(1, 2, 3), default=1,
+                        help="Independent phone sessions; two or three always prewarm every worker")
     parser.add_argument("--inference-python", type=Path,
                         help="Explicit prepared inference interpreter; default is .venv-inference")
     parser.add_argument("--web-python", type=Path,
