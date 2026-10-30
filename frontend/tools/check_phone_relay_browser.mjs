@@ -2,6 +2,7 @@
  * Implementation: Strict TLS, native fake-video capture and explicit
  * synthetic NUS watch callbacks; verify default-on controls without startup acquisition/output,
  * then a genuine start-click/native-TTS activation before automatic guidance.
+ * Model evidence admits legacy rules-v1 and vehicle-filter rules-v2 as the client does.
  * Related Modules: integration/assist-mvp.js, camera.js, navigation-ui.js, ai-control.js, speech-output.js;
  * backend/integration/assist.py and the separately deployed /mvp/ reverse proxy.
  * Declaration Index: requireGate; validateArguments; requireNew; safeFailure;
@@ -104,7 +105,9 @@ export function verifyModelEvidence(frames, sockets) {
       Number.isSafeInteger(frame.tracking_epoch) && frame.tracking_epoch >= 0 &&
       frame.tracking_epoch === matched[0].tracking_epoch && frame.source_sha256 === matched[0].source_sha256 &&
       frame.tracking_status === "active" && frame.tracking_model === "botsort" &&
-      frame.depth_model === "yolo26n-depth" && frame.depth_units === "m" && frame.risk_model === "rules-v1" &&
+      frame.depth_model === "yolo26n-depth" && frame.depth_units === "m" &&
+      ["rules-v1", "rules-v2"].includes(frame.risk_model) &&
+      frame.risk_model === matched[0].risk_model &&
       Number.isFinite(frame.capture_to_decoded_ms) && frame.capture_to_decoded_ms >= 0 &&
       socket.inputs.some(input => input.index === frame.index && input.capture_time_s === frame.capture_time_s)), "MODEL_FRAME_IDENTITY");
     requireGate(socket.inputs.every((input, index) => input.index === index && Number.isFinite(input.capture_time_s) &&

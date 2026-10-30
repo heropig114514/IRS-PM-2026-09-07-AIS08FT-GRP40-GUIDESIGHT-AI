@@ -1,6 +1,7 @@
 /* Responsibilities: Verify the released public guest assist surface and diagnostic page through Chrome.
  * Implementation: Trusted public HTTPS, native fake camera and TTS;
  * rear constraints, permission results, route and GPS use explicit fixtures; model frames are genuine.
+ * Model evidence admits legacy rules-v1 and vehicle-filter rules-v2 as the client does.
  * Related Modules: integration/assist-product.html, product-ui.js, assist-mvp.js, speech-activation.js;
  * check_phone_relay_browser.mjs provides shared evidence privacy helpers.
  * Declaration Index: validateArguments; verifyInitial; verifyProductSurface; verifyCameraRequest;
@@ -328,7 +329,8 @@ export async function run(options) {
       "NAVIGATION_RESTARTED_CAMERA");
     report.checks.frames = await page.evaluate(() => window.__productEvents.frames);
     requireGate(report.checks.frames.every(frame => frame.provider === "local" && frame.model === "yolo26n" &&
-      frame.tracking_model === "botsort" && frame.depth_model === "yolo26n-depth" && frame.risk_model === "rules-v1" &&
+      frame.tracking_model === "botsort" && frame.depth_model === "yolo26n-depth" &&
+      ["rules-v1", "rules-v2"].includes(frame.risk_model) &&
       frame.timestamp_source === "browser_capture" && Math.abs(frame.capture_time_s * 1000 - frame.captured_at_ms) < 0.000001), "PRODUCT_MODEL_CONTRACT_INVALID");
     report.checks.detected_target_frames = report.checks.frames.filter(frame => frame.target_count > 0).length;
     if (options.fakeCameraFile) requireGate(report.checks.detected_target_frames > 0, "PRODUCT_FAKE_VIDEO_TARGET_NOT_DETECTED");

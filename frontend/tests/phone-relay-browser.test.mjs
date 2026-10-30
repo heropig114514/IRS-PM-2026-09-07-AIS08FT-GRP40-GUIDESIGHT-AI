@@ -1,5 +1,5 @@
 /* Responsibilities: Verify public guest-relay checker boundaries, privacy and model-clock gates offline.
- * Implementation: Pure URL/evidence fixtures and temporary report artifacts; no browser or APIs.
+ * Implementation: Pure URL/evidence fixtures, v1/v2 rule identity and temporary report artifacts.
  * Related Modules: tools/check_phone_relay_browser.mjs; original PRF2 local model contract.
  * Declaration Index: fixture; rejectsCode.
  * Variable Index: URL/RUNTIME are explicit synthetic test inputs; fixture metadata is never model evidence.
@@ -129,6 +129,8 @@ test("explicit GPS fixture owns one watch, delivers fresh epoch fixes and releas
 test("model acceptance matches two real-format capture-clock sessions without accepting synthetic risk", () => {
   const value = fixture(), result = verifyModelEvidence(value.frames, value.sockets);
   assert.deepEqual(result.map(session => session.frames), [3, 3]);
+  const current = fixture(); current.frames.forEach(frame => { frame.risk_model = "rules-v2"; });
+  assert.deepEqual(verifyModelEvidence(current.frames, current.sockets).map(session => session.frames), [3, 3]);
   value.frames.push({...value.frames[0], session_id: "synthetic-phone-tts-only"});
   rejectsCode(() => verifyModelEvidence(value.frames, value.sockets), "FOREIGN_MODEL_FRAME");
 });
@@ -151,6 +153,10 @@ test("wire time, 55second contract, insecure WSS, metadata identity and reset fa
   value = fixture(); value.frames[0].capture_time_s += 0.001;
   rejectsCode(() => verifyModelEvidence(value.frames, value.sockets), "MODEL_FRAME_IDENTITY");
   value = fixture(); value.frames[0].provider = "synthetic";
+  rejectsCode(() => verifyModelEvidence(value.frames, value.sockets), "MODEL_FRAME_IDENTITY");
+  value = fixture(); value.frames[0].risk_model = "rules-v3";
+  rejectsCode(() => verifyModelEvidence(value.frames, value.sockets), "MODEL_FRAME_IDENTITY");
+  value = fixture(); value.frames[0].risk_model = "rules-v2";
   rejectsCode(() => verifyModelEvidence(value.frames, value.sockets), "MODEL_FRAME_IDENTITY");
   value = fixture(); value.sockets[1].inputs[2].capture_time_s = value.sockets[1].inputs[1].capture_time_s;
   rejectsCode(() => verifyModelEvidence(value.frames, value.sockets), "MODEL_FRAME_IDENTITY");

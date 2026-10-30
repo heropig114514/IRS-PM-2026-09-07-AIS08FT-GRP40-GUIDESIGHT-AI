@@ -1,6 +1,6 @@
 """Responsibilities: Define local capture-time packets and immutable inference identity.
 Implementation: PRF2 network-order uint32/float64 envelope; unchanged PRS1 response encoding.
-Related Modules: realtime.protocol; core.detector; integration.services/inference.services.
+Related Modules: realtime.protocol/risk; core.detector; integration.services/inference.services.
 Declaration Index: pack_request; unpack_request; read_manifest; model_contract;
 validate_contract; validate_result; local_session_seconds; web_origins; inference_url;
 is_loopback; is_stop.
@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 
 from core.detector import MAX_FRAME_BYTES
 from realtime.distance_config import DISTANCE_MODES
+from realtime.risk import RISK_MODEL
 
 from .errors import IntegrationError
 
@@ -151,7 +152,7 @@ def model_contract(session_id, manifest, loaded=False, *, distance_mode="depth",
         "depth_model": "yolo26n-depth",
         "depth_units": "m",
         "tracking_model": "botsort",
-        "risk_model": "rules-v1",
+        "risk_model": RISK_MODEL,
         "loaded": bool(loaded),
         "capabilities": {"detection": True, "depth": True, "tracking": True, "risk": True},
     }

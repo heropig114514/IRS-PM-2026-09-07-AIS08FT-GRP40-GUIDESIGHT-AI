@@ -1,6 +1,6 @@
 """Responsibilities: Probe the actual local MVP with a public static image and ordered frames.
 Implementation: Independent PRF2 client, response validator, explicit stop and second session.
-Related Modules: integration.asgi/inference; realtime.protocol; tools.fixtures/live_benchmark.
+Related Modules: integration.asgi/inference; realtime.protocol/risk; tools.fixtures/live_benchmark.
 Declaration Index: endpoint — loopback URL check; status — read integration health;
 probe_session — validate one real stream; run — inspect two streams; main — CLI/report boundary.
 Variable Index: ROOT — backend assets; REQUEST — independent network-order PRF2 header.
@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from realtime.protocol import MAX_PACKET_BYTES, unpack_result
+from realtime.risk import RISK_MODEL
 from tools.fixtures import fixture_bytes
 from tools.live_benchmark import validate
 
@@ -94,7 +95,7 @@ async def probe_session(url, jpeg, manifest, frames):
                                "capture_time_s": captured, "timestamp_source": "browser_capture",
                                "output_precision": "FP32", "tracking_status": "active",
                                "tracking_model": "botsort", "depth_units": "m",
-                               "risk_model": "rules-v1"}
+                               "risk_model": RISK_MODEL}
             if any(metadata.get(key) != value for key, value in expected_result.items()):
                 raise ValueError("Local sequence, timing or algorithm-stage identity mismatch")
             required = {"distance_m", "track_id", "motion_state", "relative_speed_mps",

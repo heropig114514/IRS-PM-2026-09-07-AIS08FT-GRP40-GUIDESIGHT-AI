@@ -10,6 +10,7 @@
  * riskMetadata; testRiskResults; testRiskFailures; testRiskCapacity; testLocalHello; testLocalCapture; testLocalCorrelation;
  * testDistanceModes; testDistanceModeFailures; testLocalContinuous; testSessionDurationAdmission;
  * testSessionDurationOptions; testHfDurationIsolation.
+ * testVehicleSuppression; testVehicleSuppressionFailures; testVehicleRuleVersions.
  * Variable Index: manifest/contract — original public model identity; plan — current deployment's
  * compute/quality contract; localContract is independent local capability admission; JPEG — synthetic markers;
  * duration options exercise explicit continuous-local admission with virtual timers, never actual long-running inference.
@@ -19,6 +20,8 @@ import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import test from "node:test";
 import {decodeResult, LiveDetectionClient} from "../live-detection-client.js";
+import {selectRisk} from "../integration/guidance.js";
+import {selectVideoAlert} from "../integration/video-alerts.js";
 
 const manifest = JSON.parse(await readFile(new URL("../../backend/models/yolo26n.json", import.meta.url)));
 const plan = JSON.parse(await readFile(new URL("../../backend/models/inference-plan.json", import.meta.url)));
@@ -451,6 +454,68 @@ function riskMetadata() {
     risk_reasons: ["distance_m_le_5", "approaching", "ttc_s_le_8", "direction_front", "class_person"]});
   return data;
 }
+
+/** Functionality: Accept explained vehicle suppression and keep it out of automatic output.
+ * Inputs: v2 vehicle packets with retained high/critical scores and an independent person alert.
+ * Outputs: Complete decoder acceptance; both guidance selectors skip the suppressed vehicle.
+ * Logic: Exercise decoder and real camera/video/assist selection functions together.
+ * Constraints: No duplicated distance thresholds or claim of physical audio verification. */
+test("v2 suppressed vehicles decode without selecting speech or vibration", async function testVehicleSuppression() {
+  for (const level of ["high", "critical"])
+    for (const reason of ["vehicle_outside_front_alert_range", "vehicle_outside_side_alert_range"]) {
+      const data = riskMetadata(); data.risk_model = "rules-v2";
+      Object.assign(data.boxes[0], {class_id: 2, label: "car", class_name: "car",
+        distance_m: 20, smoothed_distance_m: 20, relative_speed_mps: -5, ttc_sec: 4,
+        risk_score: level === "high" ? 62 : 75, risk_level: level, alert_priority: 0,
+        alert_required: false, risk_reasons: ["approaching", "class_car", reason]});
+      const {metadata} = await decodeResult(packet(0, data), 0, contract);
+      assert.deepEqual(metadata.boxes, data.boxes);
+      assert.equal(selectRisk(metadata.boxes), null);
+      assert.equal(selectVideoAlert(metadata.boxes), null);
+      const nearPerson = {...riskMetadata().boxes[0], track_id: 8};
+      assert.equal(selectRisk([...metadata.boxes, nearPerson]), nearPerson);
+      assert.equal(selectVideoAlert([...metadata.boxes, nearPerson]), nearPerson);
+    }
+});
+
+/** Functionality: Require a consistent explicit vehicle suppression, retaining v1 invariants.
+ * Inputs: Nonvehicles, unknown rule versions, absent reasons and contradictory alert flags.
+ * Outputs: Rejection before display or device output. Logic: Mutate one valid suppressed packet.
+ * Constraints: The browser validates semantics, not the server's configurable scoring policy. */
+test("vehicle suppression rejects missing or contradictory evidence", async function testVehicleSuppressionFailures() {
+  for (const changes of [
+    {model: "rules-v1"}, {model: "rules-v3"},
+    {box: {class_id: 0, label: "person", class_name: "person"}},
+    {box: {risk_reasons: ["approaching", "class_car"]}},
+    {box: {alert_required: true, alert_priority: 3}},
+    {box: {risk_level: "low", risk_score: 15}},
+  ]) {
+    const data = riskMetadata(); data.risk_model = changes.model || "rules-v2";
+    Object.assign(data.boxes[0], {class_id: 2, label: "car", class_name: "car",
+      alert_required: false, alert_priority: 0,
+      risk_reasons: ["class_car", "vehicle_outside_side_alert_range"]}, changes.box);
+    await assert.rejects(decodeResult(packet(0, data), 0, contract));
+  }
+});
+
+/** Functionality: Admit old/new local sessions and require matching result rule versions.
+ * Inputs: v1/v2 local handshakes and complete corresponding tracked-risk packets.
+ * Outputs: Accepted matching data, rejected cross-version results.
+ * Logic: Use real client admission and the decoder's local identity checks.
+ * Constraints: Backward compatibility does not permit a session to change policy versions. */
+test("local risk versions are explicit and remain correlated", async function testVehicleRuleVersions() {
+  for (const version of ["rules-v1", "rules-v2"]) {
+    const hello = {...localContract, risk_model: version};
+    const f = await admitted(fixture("local"), hello);
+    try {
+      const data = {...riskMetadata(), risk_model: version, provider: "local",
+        session_id: hello.session_id, capture_time_s: 2, timestamp_source: "browser_capture"};
+      await decodeResult(packet(0, data), 0, f.client.contract, {captureTimeS: 2});
+      data.risk_model = version === "rules-v1" ? "rules-v2" : "rules-v1";
+      await assert.rejects(decodeResult(packet(0, data), 0, f.client.contract, {captureTimeS: 2}));
+    } finally { f.client.stop(); }
+  }
+});
 
 /** Functionality: Preserve risk fields, unknown missing depth, and legacy packet acceptance.
  * Inputs: all five levels, finite long-horizon TTC, cached motion with no current depth.

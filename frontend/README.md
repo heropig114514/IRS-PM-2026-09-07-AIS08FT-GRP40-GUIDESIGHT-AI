@@ -184,6 +184,8 @@ Live results support BoT-SORT fields track_id/motion_state/relative_speed_mps/sm
 
 Results also support direction, TTC seconds, risk_score/risk_level/alert_priority/alert_required/risk_reasons. The client validates and preserves them; high/critical server annotations add concise TTC and level. Local Guidance consumes alert fields only after user activation and arbitrates speech/vibration with the navigation example; it does not rescore in the browser. Without current depth, risk is unknown and TTC is null even if motion history remains valid. Rules/defaults are in backend/RISK.md. Older packets remain compatible and metadata stays capped at 256 KiB.
 
+The client admits `rules-v1` and `rules-v2` and requires local result versions to match the session hello. Version 2 can retain a high/critical vehicle score while setting `alert_required=false` and `alert_priority=0`, with an explicit `vehicle_outside_front_alert_range` or `vehicle_outside_side_alert_range` reason. These targets remain visible but are excluded by both automatic guidance selectors. Suppression reasons are valid only for the backend's vehicle classes and v2; the client does not copy the backend's distance/TTC cutoffs. Reload the frontend when updating the backend to v2 so an old cached client does not reject the new version.
+
 
 ## Map Language Support and Browser Checks
 

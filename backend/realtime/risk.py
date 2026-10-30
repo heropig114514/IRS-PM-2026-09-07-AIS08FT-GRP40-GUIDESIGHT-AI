@@ -1,10 +1,11 @@
 """Responsibilities: Estimate TTC and deterministic risk after existing tracked motion fusion.
-Implementation: Stateless scalar rules; immutable, validated profile; no second track history.
+Implementation: Stateless scalar scoring and vehicle alert gates; validated immutable profile.
 Related Modules: realtime.detector/tracking; model_tests.run_depth/test_risk; zerogpu.live_worker.
 Declaration Index: RiskConfig; RiskConfig.__post_init__; _number; _bands; _weights;
 read_risk_config; estimate_ttc; estimate_direction; RiskAssessment; RiskAssessment.fields;
-_band_score; assess_object_risk; enrich_object_risk.
+_band_score; _vehicle_alert_suppression; assess_object_risk; enrich_object_risk.
 Variable Index: DIRECTIONS/MOTION_STATES/RISK_LEVELS — contract vocabularies;
+VEHICLE_CLASSES/SIDE_DIRECTIONS — classes and camera regions subject to vehicle alert gates;
 DEFAULT_RISK_CONFIG — immutable default thresholds/weights, never per-object state;
 RISK_MODEL — rule version; logger — aggregate unavailable-input diagnostics without media.
 """
@@ -18,7 +19,9 @@ from pathlib import Path
 DIRECTIONS = ("front_left", "front", "front_right", "left", "right", "behind", "unknown")
 MOTION_STATES = ("approaching", "moving_away", "stationary", "unknown")
 RISK_LEVELS = ("low", "medium", "high", "critical", "unknown")
-RISK_MODEL = "rules-v1"
+RISK_MODEL = "rules-v2"
+VEHICLE_CLASSES = frozenset(("car", "truck", "bus", "motorcycle", "bicycle", "scooter"))
+SIDE_DIRECTIONS = frozenset(("front_left", "front_right", "left", "right"))
 logger = logging.getLogger(__name__)
 
 
@@ -109,6 +112,11 @@ class RiskConfig:
     medium_alert_directions: tuple = ("front", "front_left", "front_right")
     front_left_fraction: float = 1 / 3
     front_right_fraction: float = 2 / 3
+    vehicle_alert_filter_enabled: bool = True
+    vehicle_front_distance_m: float = 10.0
+    vehicle_side_distance_m: float = 3.0
+    vehicle_front_ttc_sec: float = 3.0
+    vehicle_side_ttc_sec: float = 2.0
 
     def __post_init__(self):
         """Functionality: Reject malformed rule profiles before any model work.
@@ -116,7 +124,9 @@ class RiskConfig:
         Logic: check scalar ranges, ascending bands, vocabularies, score and priority boundaries.
         Constraints: no modification of supplied thresholds or experiment settings.
         """
-        for name in ("min_closing_speed_mps", "max_ttc_sec", "medium_alert_max_distance_m"):
+        for name in ("min_closing_speed_mps", "max_ttc_sec", "medium_alert_max_distance_m",
+                     "vehicle_front_distance_m", "vehicle_side_distance_m",
+                     "vehicle_front_ttc_sec", "vehicle_side_ttc_sec"):
             if _number(getattr(self, name), positive=True) is None:
                 raise ValueError(f"{name} must be finite and positive")
         for name in ("distance_bands", "ttc_bands", "closing_speed_bands"):
@@ -148,6 +158,10 @@ class RiskConfig:
                 or _number(self.front_right_fraction) is None
                 or not 0 < self.front_left_fraction < self.front_right_fraction < 1):
             raise ValueError("Direction fractions must satisfy 0 < left < right < 1")
+        if (type(self.vehicle_alert_filter_enabled) is not bool
+                or self.vehicle_side_distance_m > self.vehicle_front_distance_m
+                or not self.vehicle_side_ttc_sec <= self.vehicle_front_ttc_sec <= self.max_ttc_sec):
+            raise ValueError("Invalid vehicle alert policy")
 
 
 DEFAULT_RISK_CONFIG = RiskConfig()
@@ -184,8 +198,12 @@ def read_risk_config(path=None):
                 raise ValueError(f"{name} must be a JSON list")
             values[name] = tuple(values[name])
     profile = RiskConfig(**values)
-    logger.info("Risk profile loaded min_closing_speed_mps=%s max_ttc_sec=%s",
-                profile.min_closing_speed_mps, profile.max_ttc_sec)
+    logger.info("Risk profile loaded model=%s min_closing_speed_mps=%s max_ttc_sec=%s "
+                "vehicle_filter=%s vehicle_distances_m=%s/%s vehicle_ttc_sec=%s/%s",
+                RISK_MODEL, profile.min_closing_speed_mps, profile.max_ttc_sec,
+                profile.vehicle_alert_filter_enabled, profile.vehicle_front_distance_m,
+                profile.vehicle_side_distance_m, profile.vehicle_front_ttc_sec,
+                profile.vehicle_side_ttc_sec)
     return profile
 
 
@@ -270,13 +288,31 @@ def _band_score(value, bands, unit, *, lower=False):
     return weight, f"{unit}_{'ge' if lower else 'le'}_{threshold:g}"
 
 
+def _vehicle_alert_suppression(class_name, distance, direction, ttc, config):
+    """Functionality: Explain suppression of an otherwise eligible distant vehicle alert.
+    Inputs: normalized class/direction, valid smoothed meters, validated TTC or None, profile.
+    Outputs: suppression reason or None. Logic: keep proximity alerts and urgent approach;
+    use shorter distance/TTC windows only for known lateral regions in the camera view.
+    Constraints: does not create alerts or change scores; unknown/behind use frontal limits.
+    This is a camera-relative heuristic, not a lane or collision-path classifier.
+    """
+    if not config.vehicle_alert_filter_enabled or class_name not in VEHICLE_CLASSES:
+        return None
+    side = direction in SIDE_DIRECTIONS
+    distance_limit = config.vehicle_side_distance_m if side else config.vehicle_front_distance_m
+    ttc_limit = config.vehicle_side_ttc_sec if side else config.vehicle_front_ttc_sec
+    if distance <= distance_limit or (ttc is not None and ttc <= ttc_limit):
+        return None
+    return "vehicle_outside_side_alert_range" if side else "vehicle_outside_front_alert_range"
+
+
 def assess_object_risk(class_name, distance_m, direction, motion_state, relative_speed_mps,
                        ttc_sec, *, config=DEFAULT_RISK_CONFIG):
     """Functionality: Combine independent, inspectable distance/motion/TTC/direction/class scores.
     Inputs: current valid smoothed distance, direction, motion/speed and optional supplied TTC.
     Outputs: RiskAssessment. Logic: gate motion by speed sign; recompute TTC eligibility and
     use supplied TTC only if it agrees with the formula; suppress TTC contribution past horizon;
-    clamp sum to [0,100], map inclusive level cutoffs and selective medium alert policy.
+    clamp sum to [0,100], map levels, then apply medium and vehicle alert eligibility.
     Constraints: invalid depth is unknown; no class-only alert rule, learned model, or history.
     """
     distance = _number(distance_m, positive=True)
@@ -301,9 +337,11 @@ def assess_object_risk(class_name, distance_m, direction, motion_state, relative
     expected_ttc = estimate_ttc(distance, speed, motion, config=config)
     ttc = _number(ttc_sec, positive=True)
     ttc_score = 0
+    validated_ttc = None
     if (ttc is not None and expected_ttc is not None
             and math.isclose(ttc, expected_ttc, rel_tol=1e-6, abs_tol=1e-9)):
         if ttc <= config.max_ttc_sec:
+            validated_ttc = expected_ttc
             ttc_score, reason = _band_score(ttc, config.ttc_bands, "ttc_s")
             if reason:
                 reasons.append(reason)
@@ -327,6 +365,12 @@ def assess_object_risk(class_name, distance_m, direction, motion_state, relative
         level == "medium" and config.medium_alert_enabled and closing
         and distance <= config.medium_alert_max_distance_m
         and direction in config.medium_alert_directions)
+    if alert:
+        suppression = _vehicle_alert_suppression(class_key, distance, direction,
+                                                 validated_ttc, config)
+        if suppression is not None:
+            alert = False
+            reasons.append(suppression)
     return RiskAssessment(score, level, dict(config.alert_priorities)[level] if alert else 0,
                           alert, tuple(reasons), components)
 

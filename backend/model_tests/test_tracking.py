@@ -1,5 +1,5 @@
 """Responsibilities: Verify persistent BoT-SORT/CMC, bounded motion history and full fusion flow.
-Implementation: Deterministic frames/distances; real SDK association; controlled GPU predictions.
+Implementation: Deterministic frames/distances; real SDK association; mocked predictions/v2 risk.
 Related Modules: realtime.tracking/detector/depth/risk/protocol; zerogpu.live_worker; core.detector.
 Declaration Index: tracked_box; HistoryTests; HistoryTests.test_approaching;
 HistoryTests.test_moving_away; HistoryTests.test_stationary; HistoryTests.test_unknown_and_time;
@@ -471,7 +471,7 @@ class BoTSORTTests(SimpleTestCase):
             packet = pack_result({**metadata, "index": 0}, rendered)
             self.assertEqual(unpack_result(packet, 0), ({**metadata, "index": 0}, rendered))
             self.assertTrue(metadata["tracking_ms"] >= 0)
-            self.assertEqual(metadata["risk_model"], "rules-v1")
+            self.assertEqual(metadata["risk_model"], "rules-v2")
             self.assertGreaterEqual(metadata["risk_ms"], 0)
 
 

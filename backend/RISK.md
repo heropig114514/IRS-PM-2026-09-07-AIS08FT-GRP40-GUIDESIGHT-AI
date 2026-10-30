@@ -32,9 +32,40 @@ TTC values beyond the default 10-second evaluation horizon are **retained unchan
 | `medium_alert_directions` | front、front_left、front_right |
 | `front_left_fraction` / `front_right_fraction` | 1/3 and 2/3; a box center between or on the boundaries is front |
 
-Low/unknown does not alert; high/critical does. Medium priority is also 0 unless its alert condition is met. During motion-classification hysteresis, a label may temporarily disagree with the current speed sign: `approaching` receives its bonus only with valid negative speed, and `moving_away` receives a reduction only with valid positive speed. Unknown motion earns no motion-only bonus, though short distance can still be high risk. A supplied TTC that does not satisfy the current formula or eligibility contributes nothing to the TTC component and adds `ttc_inconsistent`, preventing inconsistent input from creating urgency.
+Low/unknown does not alert. High/critical is eligible for an alert, subject to the vehicle filter below. Medium priority is also 0 unless its alert condition is met. During motion-classification hysteresis, a label may temporarily disagree with the current speed sign: `approaching` receives its bonus only with valid negative speed, and `moving_away` receives a reduction only with valid positive speed. Unknown motion earns no motion-only bonus, though short distance can still be high risk. A supplied TTC that does not satisfy the current formula or eligibility contributes nothing to the TTC component and cannot bypass the vehicle filter; an inconsistent supplied TTC adds `ttc_inconsistent`.
 
 Reuse an existing valid `direction` when available; otherwise derive `front_left`, `front`, or `front_right` from the original box center's horizontal position. Clamp the box to frame boundaries first; invalid geometry yields `unknown`. Direction is **relative to the camera view**; walking direction and path intersection are not known. Box size is used only for direction, not distance.
+
+## Vehicle Alert Eligibility (`rules-v2`)
+
+An otherwise eligible alert for `car`, `truck`, `bus`, `motorcycle`, `bicycle`, or `scooter` must pass one of two gates: the vehicle is within its region's distance window, **or** its validated approaching TTC is within the urgent window. Limits are inclusive. The filter only suppresses existing alert requests; it never creates an alert, changes the five score components, lowers the displayed risk level, or removes a detection. Other classes, including people, obstacles, and traffic lights, keep their existing behavior.
+
+| Configuration | Default | Meaning |
+|---|---|---|
+| `vehicle_alert_filter_enabled` | `true` | Apply the vehicle eligibility gate after original scoring/alert selection |
+| `vehicle_front_distance_m` | 10 m | Distance window for `front`; also used for `unknown`/`behind` without known lateral evidence |
+| `vehicle_side_distance_m` | 3 m | Distance window for `front_left`, `front_right`, `left`, and `right` |
+| `vehicle_front_ttc_sec` | 3 s | Preserve urgent approaching vehicles beyond the frontal distance window |
+| `vehicle_side_ttc_sec` | 2 s | Preserve urgent approaching vehicles beyond the lateral distance window |
+
+The 10 m frontal window retains the existing outer distance-scoring band. The 3 m lateral window prioritizes nearby vehicles while reducing distant adjacent-road notifications. The 3 s/2 s TTC exceptions retain rapid approaches without using a blanket maximum distance. These are initial tunable heuristics, not calibrated collision thresholds. Side limits must not exceed frontal limits, and the frontal TTC limit must fit within `max_ttc_sec`. All four limits must be positive finite numbers; the enable flag must be boolean.
+
+Suppressed results retain their original score/level and TTC, set `alert_required=false` and `alert_priority=0`, and append `vehicle_outside_front_alert_range` or `vehicle_outside_side_alert_range` to `risk_reasons`. The frontend uses the alert fields for speech/vibration eligibility. A high/critical annotation can therefore remain visible without automatic output; suppression is not a safety classification. A missing, inconsistent, nonapproaching, or out-of-horizon TTC never enables the urgent exception. Close targets still use original alert eligibility even when motion is unavailable.
+
+Synthetic examples with unchanged valid input measurements:
+
+| Input vehicle | TTC | Previous alert | Filtered alert |
+|---|---|---|---|
+| Front, 20 m, closing at 2 m/s | 10 s | Yes | No |
+| Front-left, 20 m, closing at 5 m/s | 4 s | Yes | No |
+| Front-right, 8 m, closing at 2 m/s | 4 s | Yes | No |
+| Front, 20 m, closing at 10 m/s | 2 s | Yes | Yes |
+| Front-right, 8 m, closing at 4 m/s | 2 s | Yes | Yes |
+| Front-left, 3 m, closing at 0.5 m/s | 6 s | Yes | Yes |
+
+For a controlled comparison with the previous policy, pass `RiskConfig(vehicle_alert_filter_enabled=False)` or load `{"vehicle_alert_filter_enabled": false}` through the existing JSON profile reader. Scores, distance estimates, motion, TTC, and upstream model settings remain identical between paired inputs. This disables only the new gate; it still reports the current `rules-v2` implementation identity. Historical output files are not rewritten. Existing detection/distance experiments do not gain a new detector pass or scoring metric.
+
+This filter cannot distinguish opposing lanes, sidewalks, or paths that intersect the user. A vehicle in the center of the image can still be in another lane, and rotating the phone changes the camera-relative region. Monocular distance/motion errors can still produce nuisance alerts or delay useful ones. Real video replay and field calibration are needed to measure the tradeoff; synthetic regression tests do not establish a real-world false-alarm reduction percentage.
 
 ## Configuration and Use
 
@@ -95,7 +126,7 @@ All distances below are valid smoothed meters passed to the rules, and all direc
 }
 ```
 
-High/critical label: `ID 7 | bicycle | 2.1m | approaching | TTC 1.8s | CRITICAL`. Short-distance stationary high risk displays `TTC N/A`. Low/medium/unknown retain the original ordinary label; no new panel or announcement is added. Frame metadata adds `risk_model: rules-v1` and a separate `risk_ms`, which excludes model, tracking, rendering, and transport time. Existing fields remain, and the frontend continues to accept old packets without risk fields. New risk fields must be provided as a complete group; invalid results are rejected explicitly. Metadata remains limited to 256 KiB and JPEG to 1 MiB; tests retain coverage of the full 300-target case with risk reasons.
+High/critical label: `ID 7 | bicycle | 2.1m | approaching | TTC 1.8s | CRITICAL`. Short-distance stationary high risk displays `TTC N/A`. Low/medium/unknown retain the original ordinary label; no new panel or announcement is added. Current frame metadata reports `risk_model: rules-v2` and a separate `risk_ms`, which excludes model, tracking, rendering, and transport time. Existing fields remain, and the frontend accepts legacy `rules-v1` and packets without risk fields. Only v2 permits a suppressed high/critical vehicle with an explicit recognized suppression reason and zero alert priority. Local hello and result versions must match. Update/restart both local backend processes and reload the frontend together; an old cached client rejects v2 explicitly. New risk fields must be provided as a complete group; invalid results are rejected explicitly. Metadata remains limited to 256 KiB and JPEG to 1 MiB; tests cover the full 300-target case including suppression reasons.
 
 ## Checks and Limitations
 

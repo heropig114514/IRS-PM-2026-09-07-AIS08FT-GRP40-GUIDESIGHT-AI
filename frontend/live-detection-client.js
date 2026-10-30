@@ -16,6 +16,8 @@
  * Metadata limit is256KiB for300 fused/tracked objects retaining the existing box fields.
  * MOTION_STATES — accepted relative-motion labels; optional tracking fields remain additive.
  * RISK_LEVELS/DIRECTIONS — additive rule-result vocabularies; rule weights stay on the server.
+ * RISK_MODELS — legacy scoring and vehicle-filter versions; VEHICLE_CLASSES/VEHICLE_SUPPRESSIONS
+ * validate explicit server suppression without duplicating distance or TTC thresholds.
  * Valid unexpired motion may persist while the current raw depth is null; server owns timeout.
  * Instance contract/sequence/expected/pending/queued bound identity, order and memory;
  * connectWait/messageChain/stopped/notified coordinate cancellation and error delivery;
@@ -33,6 +35,9 @@ const STEADY_MS = 10000;
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const MOTION_STATES = new Set(["unknown", "approaching", "moving_away", "stationary"]);
 const RISK_LEVELS = new Set(["unknown", "low", "medium", "high", "critical"]);
+const RISK_MODELS = new Set(["rules-v1", "rules-v2"]);
+const VEHICLE_CLASSES = new Set(["car", "truck", "bus", "motorcycle", "bicycle", "scooter"]);
+const VEHICLE_SUPPRESSIONS = new Set(["vehicle_outside_front_alert_range", "vehicle_outside_side_alert_range"]);
 const DIRECTIONS = new Set(["front", "front_left", "front_right", "left", "right", "behind", "unknown"]);
 
 /** Functionality: Construct a native same-origin socket. Inputs: url. Outputs: WebSocket.
@@ -81,7 +86,7 @@ function validateSession(message, provider, localSessionSeconds) {
           (message.depth_model !== "yolo26n-depth" || message.depth_units !== "m")) ||
         (mode === "temporal_depth" && (message.distance_units !== "m" ||
           !Number.isSafeInteger(message.depth_interval) || message.depth_interval < 1)) ||
-        message.tracking_model !== "botsort" || message.risk_model !== "rules-v1" ||
+        message.tracking_model !== "botsort" || !RISK_MODELS.has(message.risk_model) ||
         ["detection", "tracking", "risk"].some(name => message.capabilities?.[name] !== true) ||
         message.capabilities?.depth !== !geometry ||
         Object.hasOwn(message, "validation"))
@@ -168,7 +173,7 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
     throw new Error("视频跟踪配置或耗时无效。");
   const trackIds = new Set();
   const hasRisk = Object.hasOwn(metadata, "risk_model");
-  if ((hasRisk && (!hasTracking || metadata.risk_model !== "rules-v1" ||
+  if ((hasRisk && (!hasTracking || !RISK_MODELS.has(metadata.risk_model) ||
        !Number.isFinite(metadata.risk_ms) || metadata.risk_ms < 0)) ||
       (!hasRisk && Object.hasOwn(metadata, "risk_ms")))
     throw new Error("视频风险规则或耗时无效。");
@@ -218,6 +223,11 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
     const riskFields = ["direction", "ttc_sec", "risk_score", "risk_level", "alert_priority",
       "alert_required", "risk_reasons"];
     if (hasRisk) {
+      const hasSuppression = Array.isArray(box.risk_reasons) &&
+        box.risk_reasons.some(reason => VEHICLE_SUPPRESSIONS.has(reason));
+      const suppressedVehicle = hasSuppression && metadata.risk_model === "rules-v2" &&
+        VEHICLE_CLASSES.has(box.label) && !box.alert_required && box.alert_priority === 0 &&
+        ["medium", "high", "critical"].includes(box.risk_level);
       if (riskFields.some(field => !Object.hasOwn(box, field)) ||
           !DIRECTIONS.has(box.direction) || !RISK_LEVELS.has(box.risk_level) ||
           (box.risk_score !== null && (!Number.isFinite(box.risk_score) || box.risk_score < 0 || box.risk_score > 100)) ||
@@ -226,7 +236,8 @@ export async function decodeResult(packet, expected, contract, {captureTimeS} = 
           typeof box.alert_required !== "boolean" ||
           (box.alert_required !== (box.alert_priority > 0)) ||
           (["low", "unknown"].includes(box.risk_level) && box.alert_required) ||
-          (["high", "critical"].includes(box.risk_level) && !box.alert_required) ||
+          (["high", "critical"].includes(box.risk_level) && !box.alert_required && !suppressedVehicle) ||
+          (hasSuppression && !suppressedVehicle) ||
           !Array.isArray(box.risk_reasons) || !box.risk_reasons.length || box.risk_reasons.length > 8 ||
           box.risk_reasons.some(reason => typeof reason !== "string" || !reason.length || reason.length > 64) ||
           (box.ttc_sec !== null && (!Number.isFinite(box.ttc_sec) || box.ttc_sec <= 0 ||
