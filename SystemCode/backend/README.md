@@ -23,6 +23,10 @@ using its own controller, `/ws/detect/local/` and the original dual models. Publ
 1x playback/two-clock constraints and Chrome checks are documented in the
 [local video guide](LOCAL-MVP.md#continuous-local-video-entry); no computer camera is required.
 
+For a complete offline MP4 with detection boxes, distance, risk and its original audio, use the
+[video export command](VIDEO-EXPORT.md). It processes every source frame and records an explicit
+stable or baseline perception profile, per-frame results and media verification.
+
 Street playback uses moving-camera MOT17-07 daylight and MOT17-10 night sequences with H.264 browser
 copies. Two original previews, two playback copies and their source manifest are versioned; complete
 annotations and run reports are managed separately. See the

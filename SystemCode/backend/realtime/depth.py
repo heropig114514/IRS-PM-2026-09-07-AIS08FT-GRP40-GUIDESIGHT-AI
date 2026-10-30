@@ -237,7 +237,8 @@ class DepthEstimator:
     def predict(self, image):
         """Functionality: Infer dense metric depth from the same decoded RGB frame as detection.
         Inputs: PIL RGB image and activated resident model. Outputs: aligned CUDA float HxW map.
-        Logic: original SDK preprocessing/alignment surrounds the explicit forward implementation;
+        Logic: map the local half flag to SDK quantize (16/None), preserving FP16/FP32;
+        original SDK preprocessing/alignment surrounds the explicit forward implementation;
         verify original shape,
         resize any remaining full-frame resolution difference with nearest on the same device.
         Constraints: reject missing/batched/CPU maps; no map download, heuristic, or detection-only
@@ -252,7 +253,7 @@ class DepthEstimator:
             options = ({"predictor": self._predictor_factory} if self._predictor_factory else {})
             results = self.model.predict(source=self.prepare_source(image),
                                          imgsz=self.image_size, device="cuda",
-                                         half=self.half,
+                                         quantize=16 if self.half else None,
                                          verbose=False, save=False, stream=False, **options)
             if len(results) != 1 or tuple(results[0].orig_shape) != (image.height, image.width):
                 raise DetectionError("depth_map_size", "Depth result frame identity mismatch.", 502)

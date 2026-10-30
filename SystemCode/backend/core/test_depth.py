@@ -225,7 +225,7 @@ class DepthTests(SimpleTestCase):
     def test_model_reuse_alignment_and_failures(self):
         """Functionality: Check one load/activation, same-frame GPU resizing and explicit failures.
         Inputs: local placeholder/fake YOLO with actual CUDA maps. Outputs: resident counts/errors.
-        Logic: exercise public estimator against original-shape mismatch and failed predictions.
+        Logic: exercise alignment/failures and deprecated-free FP32/FP16 SDK options.
         Constraints: requires actual CUDA; synthetic model does not validate real depth weights.
         """
         import torch
@@ -259,13 +259,15 @@ class DepthTests(SimpleTestCase):
             self.assertEqual(model.predict.call_count, 2)
             self.assertIs(model.predict.call_args.kwargs["source"], image)
             self.assertEqual(model.predict.call_args.kwargs["imgsz"], 768)
-            self.assertIs(model.predict.call_args.kwargs["half"], False)
+            self.assertIsNone(model.predict.call_args.kwargs["quantize"])
+            self.assertNotIn("half", model.predict.call_args.kwargs)
             experimental = DepthEstimator(path, "8.4.171", image_size=640, half=True)
             experimental.activate()
             aligned = experimental.predict(image)
             self.assertEqual(aligned.shape, (4, 6))
             self.assertEqual(model.predict.call_args.kwargs["imgsz"], 640)
-            self.assertIs(model.predict.call_args.kwargs["half"], True)
+            self.assertEqual(model.predict.call_args.kwargs["quantize"], 16)
+            self.assertNotIn("half", model.predict.call_args.kwargs)
             result.orig_shape = (6, 4)
             with self.assertRaises(DetectionError) as caught:
                 estimator.predict(image)
