@@ -1,0 +1,9 @@
+/* Responsibilities: Style the shared camera overlay and diagnostic timing output.
+ * Implementation: Scope styles to the live-preview elements without changing capture dimensions.
+ * Related Modules: live-camera.html; live-latency.html; live-camera-overlay.js.
+ * Declaration Index: None. Variable Index: None. */
+#live-latency-values { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+#live-camera-preview { display: block; width: 100%; max-height: 45vh; object-fit: contain; background: #102b2b; border-radius: 12px; }
+.live-camera-stage { position: relative; }
+#live-camera-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#live-camera-age { position: absolute; top: 8px; left: 8px; padding: 4px 8px; color: white; background: #102019dd; border-radius: 6px; font-size: 13px; }

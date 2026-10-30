@@ -1,0 +1,59 @@
+{
+  "explicit_cloudflare_authorization": true,
+  "temporary_hostname": "noble-treatment-canyon-garmin.trycloudflare.com",
+  "original_ip_direct_tcp": {
+    "80": "timeout at 5 seconds",
+    "443": "timeout at 5 seconds",
+    "22": "timeout at 5 seconds"
+  },
+  "original_services_and_certificate_valid": true,
+  "original_host_firewall": "UFW inactive, INPUT ACCEPT",
+  "new_entry_direct_without_proxy": true,
+  "http_pages": 200,
+  "websocket_text_and_binary_echo": true,
+  "cross_origin_request": 403,
+  "wrong_host": 421,
+  "admin_mcp_other_application_paths": 404,
+  "speech_browser_checks": 5,
+  "risk_phrase_tts_connections": 0,
+  "physical_phone_access": "Awaiting user confirmation",
+  "physical_phone_audio": "Awaiting user confirmation",
+  "inference_frames_submitted": 0,
+  "worker_health": {
+    "status": "ok",
+    "accept_available": true,
+    "loaded": false,
+    "ready": false,
+    "busy": false,
+    "depth_interval": 3
+  },
+  "verification": {
+    "django_check": 0,
+    "makemigrations_check_dry_run": 0,
+    "ruff_check": 0,
+    "backend_tests": {
+      "count": 487,
+      "skipped": 20,
+      "exit_code": 0
+    },
+    "frontend_previous_final": {
+      "count": 490,
+      "failed": 0
+    },
+    "nginx_config": "passed on server"
+  },
+  "limitations": [
+    "Original IP routing fault remains unresolved",
+    "Quick Tunnel has no uptime guarantee and its hostname changes if recreated",
+    "Cold model startup has not been benchmarked on colleague GPU",
+    "The additional relay is not a measured inference latency improvement"
+  ],
+  "initial_nginx_validation": "Long literal Origin key exceeded map_hash bucket; candidate removed before reload, replaced by exact anchored escaped regex and revalidated",
+  "phone_followup": {
+    "source": "user confirmation",
+    "page_reachable": true,
+    "calibration_audible": true,
+    "risk_speech_audible": false,
+    "next_step": "Investigate actual risk eligibility and end-to-end frame age without changing thresholds."
+  }
+}

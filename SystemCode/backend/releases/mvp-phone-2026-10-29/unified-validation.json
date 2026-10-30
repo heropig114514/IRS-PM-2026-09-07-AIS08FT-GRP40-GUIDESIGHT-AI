@@ -1,0 +1,611 @@
+{
+  "schema": 1,
+  "release": "mvp-phone-2026-10-29.1",
+  "scope": "One merged checkout, separate loopback ports, real GPU/TensorRT, temporary HTTPS, desktop Chrome with duplicated moving repository fixture; no physical phone/speaker claim",
+  "competing_service": "Accepted original service stayed available on the same laptop; functional regression, not an isolated speed benchmark",
+  "browser": {
+    "scope": "Desktop Chrome camera input is an explicitly duplicated moving fixture; real GPU detections and public transport. Synthetic risk tests real prepared content playback. No physical phone/speaker or model recall claim",
+    "errors": [],
+    "observerErrors": [],
+    "ttsSockets": 1,
+    "resourceReadyWaitMs": 19097,
+    "calibrationPlayback": true,
+    "previewAdvancing": true,
+    "singleVisibleCamera": true,
+    "exportedFrames": 31,
+    "denseFrames": 31,
+    "maxDetected": 11,
+    "maxDisplayed": 11,
+    "maxTracked": 6,
+    "denseDisplayAccounting": true,
+    "motion": {
+      "state": "idle",
+      "local_frames": 158,
+      "tracked_updates": 91,
+      "work_max_ms": 187.60000000149012,
+      "sample_max_ms": 2.100000001490116,
+      "work_total_ms": 3400.0000000447035,
+      "work_count": 187,
+      "last_update_at_ms": 45116.19999999553,
+      "first_update_at_ms": 32336.5,
+      "local_frame_age_max_ms": 215.5,
+      "visual_updates_fps": 7.0424188361253774,
+      "enabled": true,
+      "sample_fps_limit": 12,
+      "max_edge": 320
+    },
+    "noDroppedTelemetry": true,
+    "nativeTimerExpiry": true,
+    "workerMotion": {
+      "passed": true,
+      "scope": "Controlled translated image in the actual browser Worker; not phone accuracy",
+      "delayed_capture_age_ms": 664,
+      "expected_displacement_px": [
+        24,
+        16
+      ],
+      "max_edge_error_px": 0.0006103515625,
+      "worker_step_ms": [
+        2,
+        0.3999999985098839,
+        0.3999999985098839,
+        0.3999999985098839,
+        0.3999999985098839,
+        0.5,
+        0.3999999985098839,
+        0.5,
+        0.4000000059604645,
+        59.399999998509884
+      ],
+      "original_capture_timestamp_retained": true,
+      "epoch_reset_cleared": true
+    },
+    "ttsSocketsBeforeRisk": 1,
+    "riskPlayback": [
+      {
+        "phase": "output_start",
+        "risk_session_id": "controlled-audio-fixture",
+        "navigation_run_id": null,
+        "paused": {
+          "speech": false,
+          "vibration": false
+        },
+        "reasons": {
+          "speech": null,
+          "vibration": null
+        },
+        "at": 48080.79999999702,
+        "channel": "speech",
+        "request_id": 2,
+        "kind": "risk",
+        "session_id": "controlled-audio-fixture",
+        "frame_index": 1,
+        "captured_at_ms": 46576.69999999553,
+        "tracking_epoch": 1,
+        "source": "perception",
+        "notice": null,
+        "track_id": 7,
+        "alert_priority": 3,
+        "confirmed_track_id": 7,
+        "confirmed_tracking_epoch": 1,
+        "actual_start": true,
+        "hardware_verified": false,
+        "capture_to_start_ms": 1504.1000000014901,
+        "confirmed_frame_index": 1,
+        "confirmed_capture_to_start_ms": 1504.1000000014901
+      }
+    ],
+    "noRiskSynthesisNetwork": true,
+    "expiredRiskSuppressed": true,
+    "ttsSocketsBeforeUncoveredRisk": 1,
+    "uncachedChairFirstPlaybackWaitMs": 6,
+    "uncoveredRiskPlayback": {
+      "phase": "output_start",
+      "risk_session_id": "uncached-chair-fixture",
+      "navigation_run_id": null,
+      "paused": {
+        "speech": false,
+        "vibration": false
+      },
+      "reasons": {
+        "speech": null,
+        "vibration": null
+      },
+      "at": 49602.59999999404,
+      "channel": "speech",
+      "request_id": 3,
+      "kind": "risk",
+      "session_id": "uncached-chair-fixture",
+      "frame_index": 1,
+      "captured_at_ms": 48100.5,
+      "tracking_epoch": 1,
+      "source": "perception",
+      "notice": null,
+      "track_id": 8,
+      "alert_priority": 3,
+      "confirmed_track_id": 8,
+      "confirmed_tracking_epoch": 1,
+      "actual_start": true,
+      "hardware_verified": false,
+      "capture_to_start_ms": 1502.0999999940395,
+      "confirmed_frame_index": 1,
+      "confirmed_capture_to_start_ms": 1502.0999999940395
+    },
+    "anyClassPreparedWarning": true,
+    "contentUtterances": [
+      "\u8b66\u544a\uff0c\u5de6\u524d\u65b9\u6709\u884c\u4eba\u9760\u8fd1\u3002",
+      "\u8b66\u544a\uff0c\u5de6\u524d\u65b9\u6709\u6905\u5b50\u9760\u8fd1\u3002"
+    ],
+    "cameraReleased": true,
+    "frames": [
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1369
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 996.6999999955297
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1925.3999999985099
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1188.1999999955297
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 619.5999999940395
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 877.0999999940395
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 847.5
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 876.1000000014901
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 615.8999999985099
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1335
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1239.0999999940395
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 929.6999999955297
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 996.5999999940395
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1127.1999999955297
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1111.6000000014901
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 625
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1488.7000000029802
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 958.8999999985099
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 846
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 949.5
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 582.3999999985099
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 625.8999999985099
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 870.5
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 904
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1587.5
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1413.3000000044703
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 733.1000000014901
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 1130.8999999985099
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 942
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 963.6000000014901
+      },
+      {
+        "depth_backend": "tensorrt",
+        "captureToDecodedMs": 969.3999999985099
+      }
+    ],
+    "voiceEvents": [
+      {
+        "channel": "speech",
+        "phase": "submitted",
+        "request_id": 1,
+        "reason": null,
+        "at": 24131.79999999702
+      },
+      {
+        "channel": "speech",
+        "phase": "before_start",
+        "request_id": 1,
+        "reason": null,
+        "at": 26140.89999999851
+      },
+      {
+        "channel": "speech",
+        "phase": "start",
+        "request_id": 1,
+        "reason": null,
+        "at": 26142
+      },
+      {
+        "channel": "speech",
+        "phase": "end",
+        "request_id": 1,
+        "reason": null,
+        "at": 27013.89999999851
+      },
+      {
+        "channel": "speech",
+        "phase": "submitted",
+        "request_id": 2,
+        "reason": null,
+        "at": 48077.19999999553
+      },
+      {
+        "channel": "speech",
+        "phase": "before_start",
+        "request_id": 2,
+        "reason": null,
+        "at": 48079.29999999702
+      },
+      {
+        "channel": "speech",
+        "phase": "start",
+        "request_id": 2,
+        "reason": null,
+        "at": 48080.79999999702
+      },
+      {
+        "channel": "speech",
+        "phase": "end",
+        "request_id": 2,
+        "reason": null,
+        "at": 49374.29999999702
+      },
+      {
+        "channel": "speech",
+        "phase": "submitted",
+        "request_id": 3,
+        "reason": null,
+        "at": 49600.69999999553
+      },
+      {
+        "channel": "speech",
+        "phase": "before_start",
+        "request_id": 3,
+        "reason": null,
+        "at": 49601.69999999553
+      },
+      {
+        "channel": "speech",
+        "phase": "start",
+        "request_id": 3,
+        "reason": null,
+        "at": 49602.59999999404
+      },
+      {
+        "channel": "speech",
+        "phase": "end",
+        "request_id": 3,
+        "reason": null,
+        "at": 50734.19999999553
+      }
+    ],
+    "passed": true
+  },
+  "summary": {
+    "frames": 31,
+    "first_frame_ms": 1369,
+    "steady_p50_ms": 954.1999999992549,
+    "steady_p95_ms": 1543.0400000013408,
+    "steady_max_ms": 1925.3999999985099,
+    "server_p50_ms": 86.34300000267103,
+    "completion_fps": 1.9388236510628847,
+    "capture_gap_max_ms": 6.300000004470348,
+    "warning_starts": 0,
+    "overlay_errors": 0,
+    "frames_over_six_detections": 31,
+    "frames_with_undisplayed_boxes": 0
+  },
+  "worker_warmup": [
+    {
+      "rtt_ms": 6579.722300004505,
+      "server_ms": 929.4531000050483,
+      "inference_ms": 5.640600000333507,
+      "depth_ms": 234.5659999991767,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    },
+    {
+      "rtt_ms": 43.41959999874234,
+      "server_ms": 39.04010000405833,
+      "inference_ms": 5.887299994355999,
+      "depth_ms": 16.93599999998696,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    },
+    {
+      "rtt_ms": 36.84620000422001,
+      "server_ms": 33.15419999853475,
+      "inference_ms": 5.7803999952739105,
+      "depth_ms": 13.077600000542589,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    },
+    {
+      "rtt_ms": 35.630500002298504,
+      "server_ms": 31.882100003713276,
+      "inference_ms": 5.9118999997735955,
+      "depth_ms": 12.574599997606128,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    },
+    {
+      "rtt_ms": 36.74319999845466,
+      "server_ms": 33.0039000036777,
+      "inference_ms": 5.820899998070672,
+      "depth_ms": 12.856800000008661,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    },
+    {
+      "rtt_ms": 38.301200002024416,
+      "server_ms": 34.16009999637026,
+      "inference_ms": 5.628699997032527,
+      "depth_ms": 13.928599997598212,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    },
+    {
+      "rtt_ms": 38.08710000157589,
+      "server_ms": 34.30069999740226,
+      "inference_ms": 6.228599995665718,
+      "depth_ms": 13.729199999943376,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    },
+    {
+      "rtt_ms": 35.884200005966704,
+      "server_ms": 31.853299995418638,
+      "inference_ms": 5.856000003404915,
+      "depth_ms": 11.878299999807496,
+      "execution": {
+        "compute_dtype": "torch.float32",
+        "forward_dtype": "torch.float32",
+        "input_stride": [
+          1228800,
+          409600,
+          640,
+          1
+        ],
+        "pinned_input": true,
+        "graph_captured": true,
+        "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+        "capability": [
+          8,
+          6
+        ],
+        "torch": "2.8.0+cu126",
+        "cuda": "12.6",
+        "cpu_threads": 1,
+        "cpu_interop_threads": 1,
+        "tf32_matmul": false,
+        "tf32_cudnn": false,
+        "cudnn_benchmark": false
+      }
+    }
+  ],
+  "validation_instance_stopped": true
+}

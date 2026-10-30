@@ -1,0 +1,7 @@
+# Responsibilities: Declare the PostgreSQL runtime driver and base backend dependencies.
+# Implementation: Install explicitly in production; connection failures do not fall back to SQLite.
+# Related Modules: requirements.txt, config/production.py.
+# Declaration Index: None.
+# Variable Index: None.
+-r requirements.txt
+psycopg[binary]==3.3.3

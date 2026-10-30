@@ -1,9 +1,12 @@
-# Responsibilities: Run dependency, Django, media/AI-control contract, and Ruff checks for the backend and frontend.
-# Implementation: Ubuntu/Python 3.12/Node 22; tests do not use the network or download/run real models.
-# Related Modules: backend/core/tests.py/test_echo.py/test_maps.py/test_ai_control.py;
-# frontend/tests/*.test.mjs, frontend/ai-control.js。
-# Declaration Index: None。
-# Variable Index: DJANGO_SECRET_KEY — random configuration stored in GITHUB_ENV for the current job only.
+# Responsibilities: Run dependency, Django, branch-coverage, protocol, syntax, and Ruff checks for backend and frontend, then deploy the isolated Phone MVP.
+# Implementation: Ubuntu/Python 3.12/Node 22; CPU Torch/SDK execute inference unit tests without
+# a GPU. Deployment packages only runtime source and metadata after checks pass.
+# Related Modules: SystemCode/backend/core/tests.py/test_echo.py/test_maps.py/test_ai_control.py;
+# SystemCode/frontend/tests/*.test.mjs, SystemCode/frontend/ai-control.js, SystemCode/backend/pyproject.toml.
+# Declaration Index: jobs.backend - CI checks; jobs.deploy-mvp - isolated production activation.
+# Variable Index: DJANGO_SECRET_KEY - ephemeral CI configuration; PRS_DEPLOY_* - SSH deployment inputs;
+# PRS_MVP_RUNTIME - existing isolated Python runtime; backend coverage fails below 85%;
+# frontend coverage fails below 85% lines, 80% branches, or 80% functions.
 name: Backend checks
 
 on:
@@ -17,18 +20,25 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    env:
+      YOLO_OFFLINE: '1'
+      YOLO_AUTOINSTALL: '0'
     defaults:
       run:
-        working-directory: backend
+        working-directory: SystemCode/backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: backend/requirements*.txt
+          cache-dependency-path: SystemCode/backend/requirements*.txt
       - name: Install dependencies
         run: python -m pip install -r requirements-dev.txt
+      - name: Install CPU inference test dependencies
+        run: |
+          python -m pip install 'torch==2.8.0+cpu' 'torchvision==0.23.0+cpu' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements-depth.txt
       - name: Generate temporary CI configuration
         run: |
           python - <<'PY'
@@ -36,6 +46,7 @@ jobs:
           import secrets
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
               env_file.write('DJANGO_SECRET_KEY=' + secrets.token_urlsafe(48) + '\n')
+              env_file.write('YOLO_CONFIG_DIR=' + os.environ['RUNNER_TEMP'] + '\n')
           PY
       - name: Check dependencies
         run: python -m pip check
@@ -43,22 +54,100 @@ jobs:
         run: python manage.py check
       - name: Check migrations
         run: python manage.py makemigrations --check --dry-run
-      - name: Test backend
-        run: python manage.py test
+      - name: Test backend with branch coverage
+        run: python -m coverage run manage.py test
+      - name: Enforce backend code coverage
+        run: python -m coverage report
       - name: Lint backend
         run: ruff check .
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test frontend protocol
-        working-directory: frontend
-        run: node --test tests/*.test.mjs
+      - name: Test frontend with code coverage gates
+        working-directory: SystemCode/frontend
+        run: npm run test:coverage
       - name: Check frontend syntax
-        working-directory: frontend
+        working-directory: SystemCode/frontend
+        run: find . -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+
+  deploy-mvp:
+    name: Deploy isolated Phone MVP
+    needs: backend
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: prs-mvp-production
+      cancel-in-progress: false
+    env:
+      PRS_DEPLOY_HOST: ${{ secrets.PRS_DEPLOY_HOST }}
+      PRS_DEPLOY_PORT: ${{ vars.PRS_DEPLOY_PORT || '22' }}
+      PRS_DEPLOY_USER: ${{ secrets.PRS_DEPLOY_USER }}
+      PRS_DEPLOY_SSH_KEY: ${{ secrets.PRS_DEPLOY_SSH_KEY }}
+      PRS_DEPLOY_KNOWN_HOSTS: ${{ secrets.PRS_DEPLOY_KNOWN_HOSTS }}
+      PRS_MVP_RUNTIME: ${{ vars.PRS_MVP_RUNTIME }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate deployment configuration
+        shell: bash
         run: |
-          node --check camera.js
-          node --check echo-client.js
-          node --check live-detection-client.js
-          node --check ai-control.js
-          node --check maps-client.js
-          node --check maps-page.js
+          set -euo pipefail
+          for name in PRS_DEPLOY_HOST PRS_DEPLOY_USER PRS_DEPLOY_SSH_KEY PRS_DEPLOY_KNOWN_HOSTS PRS_MVP_RUNTIME; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing GitHub secret or variable: $name" >&2
+              exit 1
+            fi
+          done
+          if [[ ! "$PRS_DEPLOY_PORT" =~ ^[0-9]+$ ]]; then
+            echo "PRS_DEPLOY_PORT must be numeric" >&2
+            exit 1
+          fi
+          if [[ ! "$PRS_MVP_RUNTIME" =~ ^/opt/prs-practice/runtimes/[A-Za-z0-9_-]+$ ]]; then
+            echo "PRS_MVP_RUNTIME must point to the owned MVP runtime" >&2
+            exit 1
+          fi
+      - name: Configure pinned SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$PRS_DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$PRS_DEPLOY_SSH_KEY" > "$HOME/.ssh/prs_mvp_deploy_key"
+          chmod 600 "$HOME/.ssh/prs_mvp_deploy_key"
+      - name: Build source archive
+        shell: bash
+        run: |
+          tar --create --gzip --file "$RUNNER_TEMP/prs-mvp-${GITHUB_SHA}.tar.gz" \
+            -C SystemCode \
+            --exclude='backend/benchmarks' \
+            --exclude='backend/model_tests' \
+            --exclude='backend/notebooks' \
+            --exclude='backend/tools' \
+            --exclude='backend/core/test_*.py' \
+            --exclude='backend/models/*.pt' \
+            --exclude='backend/.venv*' \
+            --exclude='backend/.kaggle-bundle' \
+            --exclude='backend/.space-bundle' \
+            --exclude='backend/.deploy-work' \
+            --exclude='backend/.coverage' \
+            --exclude='backend/.ruff_cache' \
+            --exclude='backend/db.sqlite3*' \
+            --exclude='backend/.env' \
+            --exclude='backend/.env.*' \
+            --exclude='backend/server_info.txt' \
+            --exclude='frontend/tests' \
+            --exclude='frontend/node_modules' \
+            --exclude='frontend/test-results' \
+            backend frontend
+      - name: Upload and activate MVP release
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh_opts=(-p "$PRS_DEPLOY_PORT" -i "$HOME/.ssh/prs_mvp_deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          scp_opts=(-P "$PRS_DEPLOY_PORT" -i "$HOME/.ssh/prs_mvp_deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          remote_archive="/tmp/prs-mvp-${GITHUB_SHA}.tar.gz"
+          scp "${scp_opts[@]}" "$RUNNER_TEMP/prs-mvp-${GITHUB_SHA}.tar.gz" "$PRS_DEPLOY_USER@$PRS_DEPLOY_HOST:$remote_archive"
+          printf -v remote_args '%q ' "$remote_archive" "$GITHUB_SHA" "/opt/prs-practice/mvp" "$PRS_MVP_RUNTIME" "prs-mvp-web.service"
+          ssh "${ssh_opts[@]}" "$PRS_DEPLOY_USER@$PRS_DEPLOY_HOST" "bash -s -- $remote_args" < SystemCode/backend/deploy/auto_deploy_mvp.sh
+          printf -v remote_archive_quoted '%q' "$remote_archive"
+          ssh "${ssh_opts[@]}" "$PRS_DEPLOY_USER@$PRS_DEPLOY_HOST" "rm -f -- $remote_archive_quoted"

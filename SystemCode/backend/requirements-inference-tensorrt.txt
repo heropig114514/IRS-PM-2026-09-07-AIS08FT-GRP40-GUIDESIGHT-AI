@@ -1,0 +1,7 @@
+# Responsibilities: Declare the optional native TensorRT depth serving environment.
+# Implementation: Extend native inference pins without ONNX export or ORT dependencies.
+# Related Modules: requirements-inference.txt; realtime.depth_runtime; DEPTH-EXPORT.md.
+# Declaration Index: None.
+# Variable Index: None.
+-r requirements-inference.txt
+tensorrt-cu12==10.13.3.9

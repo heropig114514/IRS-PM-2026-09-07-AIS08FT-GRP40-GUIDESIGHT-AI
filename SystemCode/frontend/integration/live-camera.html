@@ -1,0 +1,17 @@
+<!-- Responsibilities: Present the shared live camera preview and speech recovery control.
+     Implementation: Reuse the existing capture stream and overlay; diagnostics are composed separately.
+     Related Modules: live-latency.js; assist.py.
+     Declaration Index: None. Variable Index: None. -->
+<div id="live-speech-controls" class="product-actions">
+  <button id="live-speech-test" class="button secondary" type="button">恢复语音</button>
+  <p id="live-speech-feedback" role="status" data-language-original></p>
+</div>
+<figure id="live-camera-figure" class="product-detection-view" hidden>
+  <figcaption>实时取景与风险提醒</figcaption>
+  <div class="live-camera-stage">
+    <video id="live-camera-preview" muted autoplay playsinline aria-label="手机实时取景"></video>
+    <canvas id="live-camera-overlay" hidden aria-hidden="true"></canvas>
+    <span id="live-camera-age" hidden></span>
+  </div>
+</figure>
+<script type="module" src="../assets/integration/live-latency.js"></script>

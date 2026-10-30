@@ -1,8 +1,0 @@
-# Responsibilities: Declare local and CI check dependencies.
-# Implementation: Includes vision/web dependencies, pinned Ruff, and Paramiko for deployment tooling; tests mock external HTTP/SSH services.
-# Related Modules: requirements-vision.txt, pyproject.toml, core/test_hf.py, tools/deploy_phone_live.py, core/test_deploy_phone_live.py。
-# Declaration Index: None。
-# Variable Index: None。
--r requirements-vision.txt
-ruff==0.16.6
-paramiko==4.0.0

@@ -1,0 +1,38 @@
+# Responsibilities: Run the isolated camera/HF/MCP service, listening only on 127.0.0.1:8766.
+# Implementation: One worker, MCP lifespan enabled, five transport input queues, explicit resource budgets, and no automatic restart; runtime directory is writable and source is read-only.
+# Related Modules: config.camera_server, core.hf_video_relay/ai_mcp/ai_bridge, nginx.locations.conf.
+# Declaration Index: None.
+# Variable Index: User/Group — prs-camera service identity; EnvironmentFile — dedicated credentials;
+# MemoryMax/CPUQuota/TasksMax — isolated service budgets; ExecStart — fixed ASGI runtime arguments.
+# OPENBLAS_NUM_THREADS limits numerical-library threads to avoid contention with other applications.
+# WebSocket limit 1310728 includes 1 MiB JPEG, 256 KiB fusion/tracking metadata, and an 8-byte header; input queue remains 5.
+[Unit]
+Description=PRS camera echo and YOLO26 service
+After=network.target
+
+[Service]
+Type=simple
+User=prs-camera
+Group=prs-camera
+WorkingDirectory=/opt/prs-practice/current/backend
+EnvironmentFile=/etc/prs-camera/app.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=OPENBLAS_NUM_THREADS=1
+ExecStart=/opt/prs-practice/runtime-venv/bin/python -m uvicorn config.asgi:application --host 127.0.0.1 --port 8766 --workers 1 --lifespan on --ws websockets-sansio --ws-max-size 1310728 --ws-max-queue 5 --ws-per-message-deflate false --no-proxy-headers
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StateDirectory=prs-practice
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/prs-practice
+MemoryMax=256M
+CPUQuota=20%
+TasksMax=32
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+# Responsibilities: Pin optional Windows CUDA depth export experiment dependencies.
+# Implementation: Install in a separate environment sharing the existing native Torch SDK read-only.
+# Related Modules: DEPTH-EXPORT.md; tools.benchmark_depth_export; requirements-inference.txt.
+# Declaration Index: None.
+# Variable Index: None.
+onnx==1.17.0
+onnxruntime-gpu==1.23.2
+tensorrt-cu12==10.13.3.9

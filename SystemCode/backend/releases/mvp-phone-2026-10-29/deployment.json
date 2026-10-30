@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "release": "mvp-phone-2026-10-29.1",
+  "snapshot_at_utc": "2026-10-29T11:19:14.048788+00:00",
+  "accepted_public_url": "https://solely-omaha-salvation-president.trycloudflare.com/mvp/maps/",
+  "url_lifetime": "Temporary hostname; requires the laptop, web, GPU and connector to stay running",
+  "image_path": [
+    "iPhone Safari HTTPS/WSS",
+    "Cloudflare quick tunnel",
+    "Windows laptop cloudflared HTTP/2 IPv4",
+    "loopback web 127.0.0.1:8766",
+    "loopback GPU worker 127.0.0.1:8767",
+    "RTX 3060 Laptop GPU"
+  ],
+  "source_layout_at_acceptance": {
+    "web": "phone-speech-recovery checkout, SystemCode/backend",
+    "gpu": "resident-inference-optimization checkout, backend, revision 68126bc",
+    "release": "Both implementations are integrated into this single SystemCode checkout; independently validated before publication"
+  },
+  "cloudflared": {
+    "version": "2026.10.5",
+    "sha256": "db4e4c413612a0916f3e1679d3caaf376f94911952d163028fb726fb2e0516a9",
+    "proxy_policy": "Connector excludes inherited proxy variables; OS VPN routing remains possible"
+  },
+  "gpu_runtime": {
+    "python": "3.12.14",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.8.0+cu126",
+    "cuda": "12.6",
+    "cudnn": 91002,
+    "ultralytics": "8.4.171",
+    "onnx": "1.17.0",
+    "onnxruntime": "1.23.2",
+    "tensorrt": "10.13.3.9",
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "compute_capability": [
+      8,
+      6
+    ]
+  },
+  "depth_precision": "FP32",
+  "depth_tf32": false,
+  "depth_input_shapes": [
+    [
+      1,
+      3,
+      768,
+      576
+    ],
+    [
+      1,
+      3,
+      768,
+      608
+    ],
+    [
+      1,
+      3,
+      576,
+      768
+    ],
+    [
+      1,
+      3,
+      608,
+      768
+    ],
+    [
+      1,
+      3,
+      448,
+      768
+    ]
+  ],
+  "detector": "yolo26n (80-class), explicitly selected for accepted MVP",
+  "repository_default_detector": "yolo26n-walk (87-class), preserved from main; not this accepted preset",
+  "depth_checkpoint_sha256": "befed1b8561d8b2eaa66274b070cdfc9c44853bda6d6d62a04759f9383af74e9",
+  "optional_tts_upstream": "https://noble-treatment-canyon-garmin.trycloudflare.com",
+  "prepared_risk_tts_network_required": false,
+  "optional_features_unvalidated": [
+    "ORS live route planning",
+    "assistant cloud provider",
+    "physical depth ground truth"
+  ],
+  "historical_server": {
+    "host": "47.239.50.129",
+    "os": "Ubuntu 22.04",
+    "gpu": false,
+    "role": "Older webpage/SSH relay",
+    "inference_forward_port": 18767,
+    "in_current_image_path": false,
+    "current_remote_availability": "Not probed for this release"
+  }
+}

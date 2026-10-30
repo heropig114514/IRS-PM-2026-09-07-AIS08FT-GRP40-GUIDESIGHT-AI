@@ -1,0 +1,55 @@
+{
+  "release": "mvp-phone-2026-10-29.1",
+  "evidence_type": "physical iPhone Safari export and operator acceptance",
+  "source_file": "prs-live-latency-2026-10-29T10-46-24.870Z.json",
+  "source_sha256": "02b861475e50169518bd22df3b45734067db554e13efac0f86bec03362441aff",
+  "operator_report": "Current state is fully usable",
+  "limits": [
+    "No source images, positions, device identifiers or credentials included",
+    "Capture-to-decode excludes sensor latency and physical refresh",
+    "Local visual updates are optical flow, not detector throughput",
+    "Zero undrawn boxes is canvas accounting, not model recall or physical paint proof"
+  ],
+  "report": {
+    "schema": "prs-live-latency-v1",
+    "started_at": "2026-10-29T10:44:48.910Z",
+    "measurement": "capture through result decode; excludes sensor buffering and display refresh",
+    "transport": "metadata-v1",
+    "profile": "low-latency-2",
+    "warning_max_age_ms": 2000,
+    "risk_speech_style": "prepared",
+    "overlay_max_ms": 150,
+    "display": "live-overlay",
+    "box_display_policy": "tiered-v1",
+    "local_tracking": {
+      "state": "idle",
+      "local_frames": 873,
+      "tracked_updates": 1005,
+      "work_max_ms": 92,
+      "sample_max_ms": 31,
+      "work_total_ms": 15262.000000000045,
+      "work_count": 1104,
+      "last_update_at_ms": 116074,
+      "first_update_at_ms": 32447.000000000004,
+      "local_frame_age_max_ms": 169.00000000000364,
+      "visual_updates_fps": 12.00569194159781,
+      "enabled": true,
+      "sample_fps_limit": 12,
+      "max_edge": 320
+    },
+    "summary": {
+      "frames": 231,
+      "first_frame_ms": 1436,
+      "steady_p50_ms": 675.5,
+      "steady_p95_ms": 1093.6999999999998,
+      "steady_max_ms": 1575,
+      "server_p50_ms": 68.33440000082192,
+      "completion_fps": 2.706359945872801,
+      "capture_gap_max_ms": 9,
+      "warning_starts": 19,
+      "overlay_errors": 0,
+      "frames_over_six_detections": 142,
+      "frames_with_undisplayed_boxes": 0
+    }
+  }
+}

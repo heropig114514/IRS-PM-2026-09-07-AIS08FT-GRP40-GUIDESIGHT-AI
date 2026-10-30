@@ -1,0 +1,10 @@
+{
+  "hostname": "noble-treatment-canyon-garmin.trycloudflare.com",
+  "connected": true,
+  "binary": "/opt/prs-practice/tools/cloudflared-2026.10.5",
+  "sha256": "e1bc0cf084fd9e590554fe769a86b1db46701c3f847a43d902f7b974a4e16298",
+  "version": "cloudflared version 2026.10.5 (built 2026-10-27-13:25 UTC)",
+  "unit": "prs-phone-access.service",
+  "origin": "http://127.0.0.1:18770",
+  "local_laptop_required": false
+}

@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- Responsibilities: Independent local-video inference and native-output test entry.
+Implementation: Explicit File chooser/admission mode, muted1x video, shared native output controls with adjustable 2x speech default
+and short direction/category/fast-approach alert speech.
+Related Modules: video-mvp.js/video-replay.js/video-alerts.js/video.css; integration.asgi; /live/assets native controllers.
+Declaration Index: None. Variable Index: None; DOM IDs bind the replay and existing device controllers. -->
+<html lang="zh-CN" data-local-mvp="true">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PRS · 本地连续视频测试</title>
+    <link rel="stylesheet" href="/live/assets/camera.css" />
+    <link rel="stylesheet" href="/integration/assets/video.css" />
+    <script type="module" src="/integration/assets/video-mvp.js"></script>
+  </head>
+  <body class="video-mvp">
+    <main>
+      <header><h1>本地连续视频测试</h1><a href="/live/">摄像头入口</a></header>
+      <section class="workspace">
+        <p>明确选择本机视频。原文件只在浏览器解码；发送的是最大边640、JPEG质量0.8的采样帧。本页不申请摄像头或麦克风权限。</p>
+        <label>本机视频文件 <input id="video-file" type="file" accept="video/*" /></label>
+        <label>显示模式 <select id="video-pending-limit"><option value="12">标准缓冲（默认）</option><option value="3">低延迟演示</option></select></label>
+        <p>低延迟模式最多同时处理3帧，减少等待；标准模式最多12帧。满载时仅跳过尚未采集的源画面，已发送帧仍按顺序显示。模式仅在开始前选择。</p>
+        <div class="video-actions"><button id="video-start" class="button primary" disabled>开始本地检测</button><button id="video-stop" class="button secondary" disabled>停止</button></div>
+        <p id="video-status" role="status" aria-live="polite">请选择本机视频。</p>
+        <p>视频以1倍速前进，不循环、不跳转；首帧检测独占期间仍继续播放，未采集源帧单独统计。输入上限30FPS；服务端最多55秒，结束后须手动开始。已播完的视频须重新选择。</p>
+        <p>首次启动可能需要较长时间加载模型。演示前先运行一次，出现结果后停止，等待服务空闲，再重新选择视频开始正式演示。</p>
+        <div class="video-images">
+          <figure><figcaption>本地视频 · 1× · 无音频</figcaption><video id="video-source" muted playsinline preload="metadata" disablepictureinpicture></video></figure>
+          <figure><figcaption>最新算法标注</figcaption><img id="video-result" alt="算法返回的最新标注画面" hidden /></figure>
+        </div>
+        <p id="video-result-status" role="status">等待检测结果。</p>
+        <ol id="video-results"></ol>
+        <pre id="video-stats" aria-label="源视频和采样帧统计">尚无会话统计。</pre>
+      </section>
+      <section class="workspace">
+        <h2>本地引导</h2>
+        <label><input id="video-guidance-enabled" type="checkbox" />启用本地引导（默认关闭）</label>
+        <label>引导语言 <select id="video-guidance-language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label>
+        <label>引导语音（只允许匹配语言的本地声音）<select id="video-guidance-voice"><option value="">请选择本地声音</option></select></label>
+        <div class="video-actions"><button id="video-voices-refresh" class="button secondary">读取本地声音</button><button id="video-resume-speech" class="button secondary" disabled>手动恢复语音通道</button><button id="video-resume-vibration" class="button secondary" disabled>手动恢复震动通道</button></div>
+        <p>还需单独启用下方语音/震动开关。服务端决定风险；采集后超过1秒的结果保留显示，但不新建提醒。已经起播的视频警报允许说完，不因短暂空告警或结果过期而截断；更高等级、停止或视频结束仍可打断。通道错误后需手动恢复；语音提交、引擎开始和整句完成分别记录，API接受不证明实际声音或马达。</p>
+        <p>语音只播风险提示、目标相对画面的方向和算法识别的类别；较快接近时加“靠近”，慢速或接近状态未确认时不加。距离和TTC保留在检测结果中，不朗读。同等级仍优先提醒预计碰撞时间更短的目标。</p>
+        <button id="video-navigation-demo" class="button secondary">回放示例导航事件（demo）</button>
+        <p>demo只测试调度，不是GPS或路线导航。最多一条待处理指令，原始有效期10秒。</p>
+        <p id="video-guidance-status" role="status" aria-live="polite">本地引导已关闭。</p>
+      </section>
+      <section id="speech-test" class="workspace speech-test">
+        <h2>原生语音输出 <span id="speech-status" class="status">正在检查接口</span></h2>
+        <label><input id="speech-enabled" type="checkbox" disabled />启用语音输出</label>
+        <label class="speech-field">手动朗读文本（最多1000个字符）<textarea id="speech-text" rows="2" maxlength="2000" disabled>这是 PRS 本地视频语音测试。</textarea></label>
+        <div class="speech-settings">
+          <label>朗读语言 <select id="speech-language" disabled><option value="zh-CN">中文朗读</option><option value="en-US">English</option></select></label>
+          <label>语音选择 <select id="speech-voice" disabled><option value="">须明确选择本地声音</option></select></label>
+          <label>语速（默认2倍，可调整） <output id="speech-rate-value">2.0×</output><input id="speech-rate" type="range" min="0.5" max="2" step="0.1" value="2" disabled /></label>
+          <label>音量 <output id="speech-volume-value">100%</output><input id="speech-volume" type="range" min="0" max="1" step="0.1" value="1" disabled /></label>
+        </div>
+        <div class="video-actions"><button id="speech-play" class="button primary" disabled>朗读文本</button><button id="speech-stop" class="button secondary" disabled>停止朗读</button></div>
+        <p id="speech-message" role="status"></p><p id="speech-request">尚无语音请求。</p>
+        <p>本地入口拒绝默认或远程声音，不会替换失效声音。引擎start事件不代表实际扬声器已被听到。</p>
+      </section>
+      <section id="vibration-test" class="workspace vibration-test">
+        <h2>原生震动输出 <span id="vibration-status" class="status">正在检查接口</span></h2>
+        <label><input id="vibration-enabled" type="checkbox" disabled />启用震动测试</label>
+        <div class="video-actions"><button class="button secondary" data-vibration-pattern="short" disabled>短震 · 200 ms</button><button class="button secondary" data-vibration-pattern="long" disabled>长震 · 800 ms</button><button class="button secondary" data-vibration-pattern="double" disabled>双震 · 150 / 100 / 150 ms</button><button id="vibration-stop" class="button secondary" disabled>停止震动</button></div>
+        <p id="vibration-message" role="status"></p><p>桌面可能拒绝接口；只记录API接受/拒绝，物理马达未验证。</p>
+      </section>
+    </main>
+  </body>
+</html>

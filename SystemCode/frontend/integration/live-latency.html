@@ -1,0 +1,15 @@
+<!-- Responsibilities: Expose latency measurement and visual tracking diagnostics on the test page.
+     Implementation: Optional controls for the shared live preview; never included in the product view.
+     Related Modules: live-camera.html; live-latency.js; assist.py.
+     Declaration Index: None. Variable Index: None. -->
+<section id="live-latency-panel" class="product-card" aria-labelledby="live-latency-title">
+  <h2 id="live-latency-title">实时画面延迟测试</h2>
+  <p>连续检测 30–60 秒后停止，导出测试结果。这里测量取帧、编码、传输、推理和结果解码的总耗时，不包含摄像头内部缓冲与屏幕刷新。</p>
+  <p>实线框：优先跟踪高风险目标，最多 6 个，位置为本地估计。虚线框：其他已识别目标的原位置，短暂显示 0.15 秒。距离和警报仍以后台检测为准。</p>
+  <label><input id="live-motion-enabled" type="checkbox" checked> 本地跟踪目标框</label>
+  <p id="live-motion-status" role="status" data-language-original></p>
+  <p id="live-box-counts" data-language-original></p>
+  <pre id="live-latency-values" data-language-original></pre>
+  <button id="live-latency-export" class="button secondary" type="button" disabled>导出延迟结果 JSON</button>
+  <p>仅记录本次前 3000 帧的耗时、警报状态、检出／绘制数量和未跟踪原因，以及最近 300 条语音状态变化，不保存图片、目标名称或位置。绘制次数不代表模型识别准确率。</p>
+</section>

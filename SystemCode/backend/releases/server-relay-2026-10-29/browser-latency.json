@@ -1,0 +1,35 @@
+{
+  "scope": "Desktop Chrome via operator proxy, duplicated moving repository fixture, real GPU; not a physical phone measurement or isolated RTT",
+  "route": [
+    "phone",
+    "Cloudflare server-side entry",
+    "47.239.50.129 nginx",
+    "server Web 127.0.0.1:18766",
+    "server SSH reverse binding 127.0.0.1:18767",
+    "explicit HTTP CONNECT proxy for local SSH",
+    "local GPU 127.0.0.1:8877"
+  ],
+  "summary": {
+    "frames": 30,
+    "first_frame_ms": 2811.10000000149,
+    "steady_p50_ms": 3229.7999999970198,
+    "steady_p95_ms": 5062.759999999404,
+    "steady_max_ms": 5196.89999999851,
+    "server_p50_ms": 94.07850000570761,
+    "completion_fps": 0.5625355221784805,
+    "capture_gap_max_ms": 4.299999997019768,
+    "warning_starts": 0,
+    "overlay_errors": 0,
+    "frames_over_six_detections": 30,
+    "frames_with_undisplayed_boxes": 30
+  },
+  "measurement": "capture through result decode; excludes sensor buffering and display refresh",
+  "profile": "low-latency-2",
+  "warning_max_age_ms": 2000,
+  "warning_deadline_changed": false,
+  "real_response_continuity": "passed: 30 frames",
+  "low_latency_visual_acceptance": "FAILED: all 30 results expired before display/audio admission",
+  "inference_queue_limit": 1,
+  "errors": [],
+  "phone_measurement_pending": true
+}
