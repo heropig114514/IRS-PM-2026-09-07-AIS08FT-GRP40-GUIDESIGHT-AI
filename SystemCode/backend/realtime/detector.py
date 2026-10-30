@@ -16,6 +16,7 @@ object_tracker — instance-owned BoT-SORT/history; tracking_ms covers associati
 risk_config — immutable TTC/rule profile; risk_ms — separate stateless scalar scoring timer.
 distance_strategy/performance/performance_epoch — owned strategy and per-epoch frame statistics.
 Metadata forward_event_ms is detection CUDA replay timing; inference_ms is transfer-inclusive.
+video_refinement is an optional export-owned temporal policy, absent in live/baseline runs.
 """
 
 import hashlib
@@ -118,7 +119,8 @@ class ResidentDetector:
         stateless TTC/risk; render. C cached distances are not new motion measurements.
         Never constructs/resets tracking here; current missing depth produces unknown risk.
         Depth failures still propagate; unavailable tracking is explicitly reported with old labels.
-        Constraints: explicit compute identity is returned; no added NMS, threshold/codec change;
+        Constraints: explicit compute identity is returned; baseline has no added NMS/thresholds;
+        attached video_refinement applies and audits the explicitly selected export policy;
         production callers must supply a qualified plan before selecting lower precision.
         Failures propagate.
         Timings include server processing; graph_setup_ms is nonzero only on the first real frame.
@@ -159,6 +161,18 @@ class ResidentDetector:
                 box["xyxy"] = [x1 + x_offset, y1 + y_offset, x2 + x_offset, y2 + y_offset]
             boxes = merge_boxes(boxes, roi_boxes)
         boxes = pedestrian_lights(boxes, getattr(self, "light_rule", None))
+        refinement = getattr(self, "video_refinement", None)
+        object_tracker = getattr(self, "object_tracker", None)
+        frame_time = started if timestamp is None else timestamp
+        if refinement is not None:
+            epoch = object_tracker.epoch if object_tracker is not None else 0
+            if getattr(self, "refinement_epoch", None) != epoch:
+                refinement.reset()
+                self.refinement_epoch = epoch
+            thresholds = dict(class_conf)
+            if getattr(self, "light_rule", None) is not None:
+                thresholds[PEDESTRIAN_LIGHT] = self.light_rule["class_confidence"]
+            boxes = refinement.filter_detections(boxes, frame_time, thresholds)
         boxes = mark_front_light(boxes, image.size)
         decoded_at = time.perf_counter()
         object_tracker = getattr(self, "object_tracker", None)
@@ -182,10 +196,14 @@ class ResidentDetector:
         fused_at = time.perf_counter()
         if object_tracker is not None:
             boxes = object_tracker.enrich(boxes, started if timestamp is None else timestamp)
+        if refinement is not None:
+            boxes = refinement.refine_motion(boxes, frame_time)
         motion_at = time.perf_counter()
         if object_tracker is not None:
             boxes = enrich_object_risk(boxes, image.size,
                                        config=getattr(self, "risk_config", DEFAULT_RISK_CONFIG))
+            if refinement is not None:
+                boxes = refinement.stabilize_risk(boxes, frame_time)
         risk_at = time.perf_counter()
         result = annotate(image, boxes)
         finished = time.perf_counter()
@@ -212,6 +230,9 @@ class ResidentDetector:
                                      if getattr(self, "cache_evidence", None) else {})}}
         if roi:
             metadata.update(roi=True, roi_ms=roi_ms)
+        if refinement is not None:
+            metadata.update(refinement_profile=refinement.profile["name"],
+                            refinement_audit=refinement.audit)
         if getattr(self, "light_rule", None) is not None:
             metadata.update(light_model=self.manifest["model"],
                             light_green_threshold=self.light_rule["green_threshold"])

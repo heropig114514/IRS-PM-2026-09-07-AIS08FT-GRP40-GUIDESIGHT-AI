@@ -1,0 +1,7 @@
+# Responsibilities: Declare offline video export dependencies for the GPU runtime.
+# Implementation: Reuse inference pins; PyAV bundles FFmpeg decoding/H.264/MP4 support.
+# Related Modules: video_export.media/services; tools.export_video; VIDEO-EXPORT.md.
+# Declaration Index: None.
+# Variable Index: av==19.0.2 — pinned media timestamps, encoder and packet-copy APIs.
+-r requirements-inference.txt
+av==19.0.2

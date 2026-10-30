@@ -22,6 +22,8 @@ The existing pinned Ultralytics **8.4.171** supports the depth task. Use the off
 Provision the weights locally before starting; this integration does not download them implicitly.
 Existing detection weights, COCO evidence, 640 letterbox, confidence0.25, precision/Graph plan
 and JPEG80 remain unchanged. Depth independently uses768px, FP32 and the official predictor.
+The local `half` option maps to SDK `quantize=None` (FP32) or `quantize=16` (FP16),
+avoiding per-frame legacy-argument warnings without changing precision or filtering other logs.
 In this pinned version the depth predictor removes its own padding and scales to the original
 image ([source](https://github.com/ultralytics/ultralytics/blob/v8.4.171/ultralytics/models/yolo/depth/predict.py)).
 Any remaining full-frame map resolution mismatch is resized on GPU using nearest interpolation
