@@ -18,6 +18,8 @@ The [`Video/`](Video/README.md) directory is reserved for the project demonstrat
 
 ## SECTION 5 : USER GUIDE
 
+Project website: [GuideSight AI](https://47.239.50.129/mvp/maps/)
+
 - [System code guide](SystemCode/README.md)
 - [Current phone deployment: Ubuntu relay and local GPU](SystemCode/backend/SERVER-RELAY.md)
 - [Accepted phone MVP: deployment and reproducible startup](SystemCode/backend/MVP-RELEASE.md)
