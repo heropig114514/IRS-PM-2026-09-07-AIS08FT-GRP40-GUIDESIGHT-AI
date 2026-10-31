@@ -237,3 +237,49 @@ The fresh output folder contains `distance_ranges.csv` (MAE, counts, coverage, R
 and `metrics.json` (same values, source hashes and distance definition). Existing reports are
 never overwritten; choose a new output folder for each invocation. Other methods can be selected
 with `--method b`, `c` or `e`. Run from `SystemCode/backend/` with the existing evaluation Python environment.
+
+### Full continuous inference with errors restricted to GT below 30 meters
+
+`range_report --method all --edges 0 30` produces one four-method table for `[0,30)`.
+It selects observations using GT distance after the original full-scene matching. Predictions
+above 30 meters are still counted when their GT is below 30 meters; predictions are never clipped.
+Coverage in this table uses all GT below 30 meters, including missed targets. Errors are null
+when no valid predictions exist. The original full-range metrics remain available separately.
+No original weighted-MAE formula is reassigned to this new range.
+
+The following commands rerun all 1,771 continuous frames, then summarize the newly saved outputs.
+They use the existing KITTI agnostic E checkpoint and the original depth interval, warmup, IoU
+and stage profiling settings. The data and evaluation environment remain in the legacy backend
+directory, while code and new outputs are under `SystemCode/backend`. Both detector/depth files
+in the current models directory have the same hashes as the legacy experiment weights.
+
+```powershell
+$project = 'D:\PRS-PracticeModule\PRS-PracticeModule'
+$legacy = "$project\backend"
+$py = "$legacy\.venv-evaluation\Scripts\python.exe"
+Set-Location "$project\SystemCode\backend"
+$out = 'model_tests/outputs/sanpo-abce-kitti-agnostic-lt30-full-01'
+
+& $py -X utf8 -m model_tests.unified_evaluation.sanpo_comparison `
+  --method all `
+  --root "$legacy\model_tests\datasets\sanpo" `
+  --frames "$legacy\model_tests\datasets\sanpo\reports\continuous-diagnostic-01\frames.jsonl" `
+  --processed "$legacy\model_tests\datasets\sanpo\processed-continuous-diagnostic-01" `
+  --e-checkpoint "$legacy\models\experiments\object-distance-kitti-agnostic-01\best.pt" `
+  --device cuda:0 --depth-interval 5 --warmup 3 --match-iou 0.5 `
+  --depth-image-size 768 --depth-precision fp32 `
+  --allow-diagnostic-sessions --profile-stages `
+  --output $out
+if ($LASTEXITCODE -ne 0) { throw 'Comparison failed; inspect the worker logs.' }
+
+& $py -X utf8 -m model_tests.unified_evaluation.range_report `
+  --run $out --method all --edges 0 30 --output "$out/lt30"
+if ($LASTEXITCODE -ne 0) { throw 'Range report failed.' }
+```
+
+The requested error table is `lt30/distance_ranges.csv`, with per-method provenance in
+`lt30/<method>/metrics.json`. Full-frame latency/FPS remain in the parent `comparison.csv`;
+its MAE is still the explicitly preserved all-range metric. Reusing an output directory is
+rejected. Choose a fresh suffix when rerunning. No `--limit` is set, and far-only/unannotated
+frames still run through the normal temporal sequence. These remain mixed-session diagnostic
+results, not an official held-out SANPO Test benchmark.

@@ -2,12 +2,13 @@
 Implementation: Reuse DistanceMetrics; group by GT meters without rerunning models or matching.
 Related Modules: object_distance.metrics; unified_evaluation.scoring/reporting.
 Declaration Index: summarize_ranges; export_report; main.
-Variable Index: EDGES defines half-open requested GT distance intervals in meters.
+Variable Index: EDGES defines default half-open GT distance intervals in meters.
 """
 
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from object_distance.metrics import DistanceMetrics
@@ -18,13 +19,20 @@ from .scoring import valid_distance
 EDGES = (0, 5, 10, 20)
 
 
-def summarize_ranges(observations):
-    """Functionality: Calculate conditional errors and all-GT coverage for three near bands.
-    Inputs: original per-GT observations. Outputs: band rows and accounted observation counts.
+def summarize_ranges(observations, edges=EDGES):
+    """Functionality: Calculate conditional errors and all-GT coverage for explicit near bands.
+    Inputs: original per-GT observations and increasing edges. Outputs: rows and GT counts.
     Logic: validate identities/targets, retain misses, group by GT rather than predicted distance.
     Constraints: no rematching, filtering by class, zero-error substitution or weight fitting.
     """
-    metrics = DistanceMetrics(EDGES)
+    edges = tuple(edges)
+    if (
+        len(edges) < 2
+        or any(isinstance(e, bool) or not math.isfinite(e) or e < 0 for e in edges)
+        or any(a >= b for a, b in zip(edges[:-1], edges[1:], strict=True))
+    ):
+        raise ValueError("Require at least two finite, nonnegative, strictly increasing edges")
+    metrics = DistanceMetrics(edges)
     seen = set()
     for row in observations:
         key = row["key"]
@@ -40,13 +48,13 @@ def summarize_ranges(observations):
         metrics.add(target, prediction, row["class_name"])
     summary = metrics.summary()
     bands = []
-    for lower, upper in zip(EDGES[:-1], EDGES[1:], strict=True):
+    for lower, upper in zip(edges[:-1], edges[1:], strict=True):
         selected = [r for r in observations if lower <= r["target_m"] < upper]
         scores = summary[f"range:{lower}-{upper}m"]
         total, valid = scores["ground_truth_objects"], scores["valid_predictions"]
         bands.append(
             {
-                "gt_range_m": f"[{lower}, {upper})",
+                "gt_range_m": f"[{lower:g}, {upper:g})",
                 "gt_objects": total,
                 "matched_objects": sum(r["matched"] for r in selected),
                 "valid_predictions": valid,
@@ -59,15 +67,15 @@ def summarize_ranges(observations):
     return {
         "total_gt_objects": len(observations),
         "gt_objects_outside_requested_ranges": sum(
-            r["target_m"] >= EDGES[-1] for r in observations
+            not edges[0] <= r["target_m"] < edges[-1] for r in observations
         ),
         "bands": bands,
     }
 
 
-def export_report(run, method, output):
+def export_report(run, method, output, edges=EDGES):
     """Functionality: Export reproducible near-band statistics beside an existing experiment.
-    Inputs: run directory, lower-case method and fresh output directory. Outputs: JSON/CSV report.
+    Inputs: run directory, method, fresh output directory and edges. Outputs: JSON/CSV report.
     Logic: require a completed pass; hash saved inputs and preserve the original target definition.
     Constraints: read-only source access; an existing output directory is never overwritten.
     """
@@ -78,7 +86,7 @@ def export_report(run, method, output):
         raise ValueError("Require a completed pass for the requested method")
     data = (source / "observations.jsonl").read_bytes()
     observations = [json.loads(line) for line in data.decode("utf-8").splitlines()]
-    summary = summarize_ranges(observations)
+    summary = summarize_ranges(observations, edges)
     if summary["total_gt_objects"] != result["metrics"]["overall"]["ground_truth_objects"]:
         raise ValueError("Saved GT count disagrees with completed pass")
     report = {
@@ -89,9 +97,11 @@ def export_report(run, method, output):
         "distance_target": result["distance_target"],
         "split": result["split"],
         "scope": "all_GT_within_each_requested_range",
+        "range_edges_m": list(edges),
         "protocol": "GT-distance half-open bands; errors use matched positive finite predictions; "
         "coverage includes missed GT; absent valid predictions produce null errors. "
-        "GT at or above 20 meters is counted outside these bands, not discarded from source data.",
+        "GT outside the requested edges is counted separately, not discarded from source data. "
+        "Predictions are never clipped or filtered by the requested GT range.",
         **summary,
     }
     output = Path(output)
@@ -106,16 +116,28 @@ def export_report(run, method, output):
 
 def main(argv=None):
     """Functionality: Expose saved-output range evaluation without model inference.
-    Inputs: --run, --method and --output. Outputs: report files and printed band JSON.
+    Inputs: --run, --method, --edges and --output. Outputs: reports and printed band JSON.
     Logic: delegate to validated export. Constraints: execute from backend; no GPU required.
     """
-    parser = argparse.ArgumentParser(description="Report GT ranges 0-5, 5-10 and 10-20 meters")
+    parser = argparse.ArgumentParser(description="Report saved predictions by explicit GT ranges")
     parser.add_argument("--run", type=Path, required=True)
-    parser.add_argument("--method", choices=list("abce"), default="a")
+    parser.add_argument("--method", choices=[*"abce", "all"], default="a")
+    parser.add_argument("--edges", type=float, nargs="+", default=EDGES,
+                        help="Increasing half-open GT edges, e.g. --edges 0 30")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
-    report = export_report(args.run, args.method, args.output)
-    print(json.dumps(report["bands"], indent=2, allow_nan=False))
+    summarize_ranges([], args.edges)
+    if args.method == "all":
+        args.output.mkdir(parents=True, exist_ok=False)
+        rows = []
+        for method in "abce":
+            report = export_report(args.run, method, args.output / method, args.edges)
+            rows.extend({"method": method.upper(), **band} for band in report["bands"])
+        write_csv(args.output / "distance_ranges.csv", list(rows[0]), rows)
+    else:
+        report = export_report(args.run, args.method, args.output, args.edges)
+        rows = report["bands"]
+    print(json.dumps(rows, indent=2, allow_nan=False))
 
 
 if __name__ == "__main__":
