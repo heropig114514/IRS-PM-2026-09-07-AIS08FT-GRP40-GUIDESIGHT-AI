@@ -3,6 +3,8 @@ Implementation: Hand-calculated boundaries, missing predictions and temporary so
 Related Modules: model_tests.unified_evaluation.range_report.
 Declaration Index: observation; RangeReportTests; RangeReportTests.test_boundaries_and_missing;
 RangeReportTests.test_invalid_and_empty; RangeReportTests.test_export_preserves_sources.
+RangeReportTests.test_thirty_meter_gt_limit; RangeReportTests.test_invalid_edges;
+RangeReportTests.test_all_methods_cli.
 Variable Index: None.
 """
 
@@ -10,8 +12,9 @@ import json
 import tempfile
 from pathlib import Path
 from unittest import TestCase
+from unittest.mock import patch
 
-from model_tests.unified_evaluation.range_report import export_report, summarize_ranges
+from model_tests.unified_evaluation.range_report import export_report, main, summarize_ranges
 
 
 def observation(key, target, prediction, matched=True):
@@ -28,6 +31,67 @@ class RangeReportTests(TestCase):
     Logic: known errors cross prediction boundaries but stay grouped by GT distance.
     Constraints: tests cover reporting, not depth model accuracy.
     """
+
+    def test_thirty_meter_gt_limit(self):
+        """Functionality: Apply the near-range restriction only to GT, preserving large errors.
+        Inputs: near GT predicted beyond 30m, a miss, and GT at/above 30m predicted nearby.
+        Outputs: MAE 40m, coverage 1/2 and two excluded GT observations.
+        Logic: use [0,30) with the existing matching. Constraints: never clip predicted distance.
+        """
+        report = summarize_ranges([
+            observation("near", 10, 50), observation("miss", 20, None, False),
+            observation("edge", 30, 1), observation("far", 40, 2),
+        ], (0, 30))
+        band = report["bands"][0]
+        self.assertEqual(band["gt_range_m"], "[0, 30)")
+        self.assertEqual(band["mae_m"], 40)
+        self.assertEqual(band["abs_rel"], 4)
+        self.assertEqual(band["coverage"], 0.5)
+        self.assertEqual(band["matched_objects"], 1)
+        self.assertEqual(report["gt_objects_outside_requested_ranges"], 2)
+
+    def test_invalid_edges(self):
+        """Functionality: Reject ambiguous/invalid ranges before exporting files.
+        Inputs: missing, duplicate, descending, negative and nonfinite edges. Outputs: ValueError.
+        Logic: explicit boundaries only. Constraints: do not reorder or repair caller input.
+        """
+        for edges in ((), (0,), (0, 0), (30, 0), (-1, 30), (0, float("nan")), (0, True)):
+            with self.subTest(edges=edges), self.assertRaises(ValueError):
+                summarize_ranges([], edges)
+
+    def test_all_methods_cli(self):
+        """Functionality: Export one four-method table with actual observation-weighted MAEs.
+        Inputs: completed fake passes with different predictions. Outputs: four CSV rows.
+        Logic: invoke the CLI with [0,30) edges and preserve source bytes.
+        Constraints: no inference, threshold change, or overwrite of an existing export.
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            snapshots = {}
+            for index, method in enumerate("abce"):
+                source = root / "passes" / f"{method}-predicted"
+                source.mkdir(parents=True)
+                path = source / "observations.jsonl"
+                raw = json.dumps(observation("near", 10, 11 + index)) + "\n"
+                path.write_text(raw, encoding="utf-8")
+                snapshots[path] = path.read_bytes()
+                (source / "result.json").write_text(json.dumps({
+                    "status": "complete", "method": method, "distance_target": "fixture_m",
+                    "split": "fixture", "metrics": {"overall": {"ground_truth_objects": 1}},
+                }), encoding="utf-8")
+            output = root / "ranges"
+            args = ["--run", str(root), "--method", "all", "--edges", "0", "30",
+                    "--output", str(output)]
+            with patch("builtins.print"):
+                main(args)
+            for index, method in enumerate("abce"):
+                report = json.loads((output / method / "metrics.json").read_text())
+                self.assertEqual(report["bands"][0]["mae_m"], index + 1)
+                self.assertEqual(report["range_edges_m"], [0, 30])
+            self.assertEqual(len((output / "distance_ranges.csv").read_text().splitlines()), 5)
+            self.assertTrue(all(path.read_bytes() == raw for path, raw in snapshots.items()))
+            with self.assertRaises(FileExistsError):
+                main(args)
 
     def test_boundaries_and_missing(self):
         """Functionality: Assign exact edges once and retain missed objects in denominators.
