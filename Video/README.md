@@ -1,5 +1,12 @@
-# System Demonstration Video
+# Final Presentation Video
 
-This directory is reserved for the system modelling and use-case demonstration video described by the submission template.
+[Download the GuideSight AI final presentation video](IRS-PM-2026-09-07-AIS08FT-GRP40-GUIDESIGHT-AI-Final-Presentation-Video.mp4).
 
-No presentation video is included yet. The tracked MOT17 clips under [`SystemCode/backend/model_tests/datasets/street-video/mot17/`](../SystemCode/backend/model_tests/datasets/street-video/mot17/) are evaluation fixtures, not a project demonstration recording, and remain in place for the existing test workflow.
+The recording is approximately 13 minutes 10 seconds long and includes the project introduction, system demonstration, architecture, algorithms, and evaluation.
+
+The MP4 is stored with Git LFS. To download the full video after cloning, run these commands from the repository root:
+
+```sh
+git lfs install
+git lfs pull --include="Video/*.mp4"
+```
